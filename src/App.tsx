@@ -29,6 +29,8 @@ if (typeof document !== 'undefined') {
 import { usePdfStore } from './stores/pdfStore'
 import { useSignatureStore } from './stores/signatureStore'
 
+const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_PDF'
+
 function isPdfFile(file: File) {
   return file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
 }
@@ -144,7 +146,7 @@ export default function App() {
       </main>
 
       {!doc && !loading && (
-        <footer className="border-t border-slate-200 bg-white">
+        <footer className="mt-auto border-t border-slate-200 bg-white">
           <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center gap-3 sm:gap-4 text-xs text-slate-500">
             <div className="flex items-center gap-2">
               <span>
