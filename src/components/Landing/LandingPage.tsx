@@ -72,7 +72,7 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="h-full overflow-auto">
+    <div>
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8 lg:py-14">
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           {/* Left: animated PDF illustration */}

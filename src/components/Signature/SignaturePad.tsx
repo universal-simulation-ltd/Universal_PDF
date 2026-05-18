@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Stage, Layer, Line } from 'react-konva'
 import type Konva from 'konva'
 import { useSignatureStore } from '../../stores/signatureStore'
@@ -14,9 +14,27 @@ export default function SignaturePad() {
   const openEmailVerify = useSignatureStore((s) => s.openEmailVerify)
 
   const stageRef = useRef<Konva.Stage>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [padW, setPadW] = useState(PAD_W)
   const [lines, setLines] = useState<number[][]>([])
   const drawingRef = useRef(false)
   const [name, setName] = useState('')
+
+  useEffect(() => {
+    if (!open) return
+    const el = containerRef.current
+    if (!el) return
+    const measure = () => {
+      const available = Math.max(200, Math.min(PAD_W, el.clientWidth))
+      setPadW(Math.floor(available))
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [open])
+
+  const padH = Math.round((padW / PAD_W) * PAD_H)
 
   if (!open) return null
 
@@ -70,8 +88,8 @@ export default function SignaturePad() {
     const pad = 10
     minX = Math.max(0, minX - pad)
     minY = Math.max(0, minY - pad)
-    maxX = Math.min(PAD_W, maxX + pad)
-    maxY = Math.min(PAD_H, maxY + pad)
+    maxX = Math.min(padW, maxX + pad)
+    maxY = Math.min(padH, maxY + pad)
     const w = maxX - minX
     const h = maxY - minY
     const stage = stageRef.current!
@@ -112,11 +130,11 @@ export default function SignaturePad() {
             ×
           </button>
         </div>
-        <div className="border-2 border-dashed border-slate-300 rounded bg-slate-50 inline-block">
+        <div ref={containerRef} className="border-2 border-dashed border-slate-300 rounded bg-slate-50 w-full">
           <Stage
             ref={stageRef}
-            width={PAD_W}
-            height={PAD_H}
+            width={padW}
+            height={padH}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}

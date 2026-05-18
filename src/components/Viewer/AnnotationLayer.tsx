@@ -79,6 +79,7 @@ interface Props {
   pageIndex: number
   width: number
   height: number
+  scale: number
 }
 
 function isResizable(a: Annotation): boolean {
@@ -167,7 +168,7 @@ function SignatureImage({
   )
 }
 
-export default function AnnotationLayer({ pageIndex, width, height }: Props) {
+export default function AnnotationLayer({ pageIndex, width, height, scale }: Props) {
   const tool = useAnnotationStore((s) => s.tool)
   const color = useAnnotationStore((s) => s.color)
   const strokeWidth = useAnnotationStore((s) => s.strokeWidth)
@@ -229,7 +230,8 @@ export default function AnnotationLayer({ pageIndex, width, height }: Props) {
   }, [selectedId, annotations, editingId])
 
   function getPos(e: Konva.KonvaEventObject<PointerEvent>) {
-    return e.target.getStage()!.getPointerPosition()!
+    const p = e.target.getStage()!.getPointerPosition()!
+    return { x: p.x / scale, y: p.y / scale }
   }
 
   function onPointerDown(e: Konva.KonvaEventObject<PointerEvent>) {
@@ -269,18 +271,19 @@ export default function AnnotationLayer({ pageIndex, width, height }: Props) {
         y: pos.y,
         text: '',
         color,
-        fontSize,
+        fontSize: fontSize / scale,
         fontFamily
       })
       setEditingId(id)
     } else if (tool === 'tick' || tool === 'cross') {
+      const tickSize = 28 / scale
       add({
         id: crypto.randomUUID(),
         pageIndex,
         type: tool,
-        x: pos.x - 14,
-        y: pos.y - 14,
-        size: 28,
+        x: pos.x - tickSize / 2,
+        y: pos.y - tickSize / 2,
+        size: tickSize,
         color
       })
     } else if (tool === 'rect' || tool === 'redact') {
@@ -290,7 +293,7 @@ export default function AnnotationLayer({ pageIndex, width, height }: Props) {
       const sigState = useSignatureStore.getState()
       const active = sigState.signatures.find((x) => x.id === sigState.activeId)
       if (active) {
-        const targetW = 160
+        const targetW = 160 / scale
         const ratio = active.height / active.width
         const sigId = crypto.randomUUID()
         const labelId = active.verifiedEmail ? crypto.randomUUID() : undefined
@@ -312,10 +315,10 @@ export default function AnnotationLayer({ pageIndex, width, height }: Props) {
             pageIndex,
             type: 'text',
             x: pos.x - targetW / 2,
-            y: pos.y + (targetW * ratio) / 2 + 4,
+            y: pos.y + (targetW * ratio) / 2 + 4 / scale,
             text: `✓ Verified as: ${active.verifiedEmail}`,
             color: '#16a34a',
-            fontSize: 10,
+            fontSize: 10 / scale,
             linkedTo: sigId
           })
         }
@@ -326,7 +329,7 @@ export default function AnnotationLayer({ pageIndex, width, height }: Props) {
       if (src) {
         const img = new Image()
         img.onload = () => {
-          const targetW = 200
+          const targetW = 200 / scale
           const ratio = img.naturalHeight / img.naturalWidth
           add({
             id: crypto.randomUUID(),
@@ -374,7 +377,7 @@ export default function AnnotationLayer({ pageIndex, width, height }: Props) {
           type: 'draw',
           points: currentLine,
           color,
-          strokeWidth
+          strokeWidth: strokeWidth / scale
         })
       } else if (tool === 'highlight' && currentLine.length >= 4) {
         add({
@@ -383,7 +386,7 @@ export default function AnnotationLayer({ pageIndex, width, height }: Props) {
           type: 'draw',
           points: currentLine,
           color,
-          strokeWidth: HIGHLIGHT_STROKE_WIDTH,
+          strokeWidth: HIGHLIGHT_STROKE_WIDTH / scale,
           opacity: HIGHLIGHT_OPACITY
         })
       } else if (tool === 'rect') {
@@ -564,7 +567,7 @@ export default function AnnotationLayer({ pageIndex, width, height }: Props) {
     'crosshair'
   const touchAction = (tool === 'select' || tool === 'form' || tool === 'hand') ? 'pan-y pinch-zoom' : 'none'
 
-  const ghostSigWidth = 160
+  const ghostSigWidth = 160 / scale
   const ghostSigHeight = activeSignature
     ? (ghostSigWidth * activeSignature.height) / activeSignature.width
     : 0
@@ -574,6 +577,8 @@ export default function AnnotationLayer({ pageIndex, width, height }: Props) {
       <Stage
         width={width}
         height={height}
+        scaleX={scale}
+        scaleY={scale}
         style={{
           position: 'absolute',
           inset: 0,
@@ -837,6 +842,7 @@ export default function AnnotationLayer({ pageIndex, width, height }: Props) {
       {editingAnnotation && (
         <TextEditor
           annotation={editingAnnotation}
+          scale={scale}
           onCommit={commitEdit}
           onCancel={() => {
             if (!editingAnnotation.text.trim()) {
@@ -865,8 +871,8 @@ export default function AnnotationLayer({ pageIndex, width, height }: Props) {
             }}
             style={{
               position: 'absolute',
-              left: selected.x + selected.width + 6,
-              top: selected.y - 4,
+              left: (selected.x + selected.width) * scale + 6,
+              top: selected.y * scale - 4,
               zIndex: 20
             }}
             className="w-8 h-8 rounded-full bg-white shadow-lg border border-slate-300 hover:border-orange-500 hover:bg-orange-50 flex items-center justify-center text-base leading-none"
@@ -881,10 +887,12 @@ export default function AnnotationLayer({ pageIndex, width, height }: Props) {
 
 function TextEditor({
   annotation,
+  scale,
   onCommit,
   onCancel
 }: {
   annotation: TextAnnotation
+  scale: number
   onCommit: (value: string) => void
   onCancel: () => void
 }) {
@@ -939,10 +947,10 @@ function TextEditor({
       }}
       style={{
         position: 'absolute',
-        left: annotation.x,
-        top: annotation.y,
+        left: annotation.x * scale,
+        top: annotation.y * scale,
         color: annotation.color,
-        fontSize: annotation.fontSize + 'px',
+        fontSize: (annotation.fontSize * scale) + 'px',
         fontFamily: FONT_STACK[annotation.fontFamily ?? 'sans'],
         lineHeight: 1,
         background: 'transparent',
@@ -950,8 +958,8 @@ function TextEditor({
         outline: 'none',
         padding: '0 2px',
         minWidth: '120px',
-        width: Math.max(120, value.length * annotation.fontSize * 0.6 + 24) + 'px',
-        height: annotation.fontSize * 1.25 + 'px',
+        width: Math.max(120, value.length * annotation.fontSize * 0.6 * scale + 24) + 'px',
+        height: annotation.fontSize * 1.25 * scale + 'px',
         zIndex: 10
       }}
     />
