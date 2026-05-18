@@ -3,6 +3,7 @@ export type Tool =
   | 'hand'
   | 'text'
   | 'draw'
+  | 'highlight'
   | 'rect'
   | 'tick'
   | 'cross'
@@ -30,6 +31,9 @@ export type DrawAnnotation = Base & {
   points: number[]
   color: string
   strokeWidth: number
+  // Set for highlighter strokes so they render with a translucent fill.
+  // Pencil strokes leave this undefined and render fully opaque.
+  opacity?: number
 }
 
 export type RectAnnotation = Base & {

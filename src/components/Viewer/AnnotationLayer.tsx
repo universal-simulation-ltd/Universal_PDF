@@ -21,6 +21,9 @@ const FONT_STACK: Record<FontFamily, string> = {
   mono: '"Courier New", Courier, monospace'
 }
 
+const HIGHLIGHT_STROKE_WIDTH = 16
+const HIGHLIGHT_OPACITY = 0.4
+
 function getAnnotationIdFromTarget(target: Konva.Node | null): string | null {
   let node: Konva.Node | null = target
   while (node) {
@@ -252,7 +255,7 @@ export default function AnnotationLayer({ pageIndex, width, height }: Props) {
       return
     }
     const pos = getPos(e)
-    if (tool === 'draw') {
+    if (tool === 'draw' || tool === 'highlight') {
       drawingRef.current = true
       setCurrentLine([pos.x, pos.y])
     } else if (tool === 'text') {
@@ -371,6 +374,16 @@ export default function AnnotationLayer({ pageIndex, width, height }: Props) {
           points: currentLine,
           color,
           strokeWidth
+        })
+      } else if (tool === 'highlight' && currentLine.length >= 4) {
+        add({
+          id: crypto.randomUUID(),
+          pageIndex,
+          type: 'draw',
+          points: currentLine,
+          color,
+          strokeWidth: HIGHLIGHT_STROKE_WIDTH,
+          opacity: HIGHLIGHT_OPACITY
         })
       } else if (tool === 'rect') {
         const [x1, y1, x2, y2] = currentLine
@@ -582,6 +595,7 @@ export default function AnnotationLayer({ pageIndex, width, height }: Props) {
                     points={a.points}
                     stroke={a.color}
                     strokeWidth={a.strokeWidth}
+                    opacity={a.opacity ?? 1}
                     lineCap="round"
                     lineJoin="round"
                     tension={0.4}
@@ -681,6 +695,18 @@ export default function AnnotationLayer({ pageIndex, width, height }: Props) {
               points={currentLine}
               stroke={color}
               strokeWidth={strokeWidth}
+              lineCap="round"
+              lineJoin="round"
+              tension={0.4}
+            />
+          )}
+          {currentLine && tool === 'highlight' && (
+            <Line
+              listening={false}
+              points={currentLine}
+              stroke={color}
+              strokeWidth={HIGHLIGHT_STROKE_WIDTH}
+              opacity={HIGHLIGHT_OPACITY}
               lineCap="round"
               lineJoin="round"
               tension={0.4}

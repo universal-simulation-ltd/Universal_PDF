@@ -216,6 +216,7 @@ export async function buildAnnotatedPdfBytes(
               end: { x: sx(pts[i + 2]), y: toY(pts[i + 3]) },
               thickness: sw(a.strokeWidth),
               color: hexToPdfRgb(a.color),
+              opacity: a.opacity,
               lineCap: LineCapStyle.Round
             })
           }

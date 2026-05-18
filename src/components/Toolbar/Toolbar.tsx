@@ -40,6 +40,9 @@ const COLORS = [
   { hex: '#9333ea', name: 'Purple' }
 ]
 
+const HIGHLIGHT_YELLOW = '#eab308'
+const HIGHLIGHT_GREEN = '#16a34a'
+
 const DRAW_SHAPES: { id: Tool; icon: string; label: string }[] = [
   { id: 'tick', icon: '✓', label: 'Tick' },
   { id: 'cross', icon: '✗', label: 'Cross' },
@@ -133,7 +136,7 @@ export function useToolbarKeyboardShortcuts(enabled: boolean) {
   }, [enabled, selectedId, remove, undo, redo, add])
 }
 
-const isDrawShape = (t: Tool) => t === 'tick' || t === 'cross' || t === 'rect'
+const isDrawShape = (t: Tool) => t === 'tick' || t === 'cross' || t === 'rect' || t === 'highlight'
 
 // --- DESKTOP TOOLS (left, inline in header) -------------------------------
 export function ToolbarDesktopTools() {
@@ -363,12 +366,33 @@ export function ToolbarDesktopTools() {
 
       <div className="w-px h-6 bg-slate-700 mx-1" />
 
-      {/* Pencil + colours + combined options panel */}
+      {/* Pencil + highlighter + colours + combined options panel */}
       <div ref={drawGroupRef} className="relative flex items-start gap-1">
         {toolBtn('draw', '✎', 'Free draw', 'draw')}
+        <button
+          onClick={() => {
+            setTool('highlight')
+            setColor(HIGHLIGHT_YELLOW)
+          }}
+          title="Highlighter"
+          className={`w-9 h-9 rounded flex items-center justify-center text-lg font-semibold transition-colors ${
+            tool === 'highlight' ? 'bg-orange-600' : 'hover:bg-slate-700'
+          }`}
+        >
+          <span className="inline-block w-5 h-2 rounded-sm" style={{ backgroundColor: HIGHLIGHT_YELLOW, opacity: 0.85 }} />
+        </button>
         <div className="flex items-center gap-1 self-center ml-1">
-          {colorSwatch('#000000', 'Black', true, () => setOpenPanel('draw'))}
-          {colorSwatch('#ffffff', 'White', true, () => setOpenPanel('draw'))}
+          {tool === 'highlight' ? (
+            <>
+              {colorSwatch(HIGHLIGHT_YELLOW, 'Yellow', true, () => setOpenPanel('draw'))}
+              {colorSwatch(HIGHLIGHT_GREEN, 'Green', true, () => setOpenPanel('draw'))}
+            </>
+          ) : (
+            <>
+              {colorSwatch('#000000', 'Black', true, () => setOpenPanel('draw'))}
+              {colorSwatch('#ffffff', 'White', true, () => setOpenPanel('draw'))}
+            </>
+          )}
         </div>
         <PlusBox panel="draw" />
         {openPanel === 'draw' && (
@@ -587,6 +611,18 @@ export function ToolbarMobile() {
     if (openPanel === 'draw') {
       return (
         <div className="flex items-center gap-2 flex-wrap max-w-[92vw]">
+          <button
+            onClick={() => {
+              setTool('highlight')
+              setColor(HIGHLIGHT_YELLOW)
+            }}
+            title="Highlighter"
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+              tool === 'highlight' ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            <span className="inline-block w-6 h-2.5 rounded-sm" style={{ backgroundColor: HIGHLIGHT_YELLOW, opacity: 0.85 }} />
+          </button>
           {DRAW_SHAPES.map((s) => (
             <button
               key={s.id}
