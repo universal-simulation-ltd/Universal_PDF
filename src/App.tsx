@@ -11,10 +11,8 @@ import SignaturePad from './components/Signature/SignaturePad'
 import StampPicker from './components/Signature/StampPicker'
 import EmailVerifyModal from './components/Signature/EmailVerifyModal'
 import SignatureImport from './components/Signature/SignatureImport'
-import AIToolsPanel from './components/AI/AIToolsPanel'
 import LandingPage from './components/Landing/LandingPage'
 import LivePreview from './components/Preview/LivePreview'
-import EnterpriseMenu from './components/Header/EnterpriseMenu'
 import VersionChip from './components/Header/VersionChip'
 import FileMenu from './components/Toolbar/FileMenu'
 import MobileWelcomeToast from './components/Onboarding/MobileWelcomeToast'
@@ -46,8 +44,6 @@ export default function App() {
 
   const stampPickerOpen = useSignatureStore((s) => s.stampPickerOpen)
   const emailVerifyOpen = useSignatureStore((s) => s.emailVerifyOpen)
-
-  const [aiOpen, setAiOpen] = useState(false)
 
   useToolbarKeyboardShortcuts(!!doc)
 
@@ -132,12 +128,6 @@ export default function App() {
           </div>
         </div>
         </div>
-        <div className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2">
-          <EnterpriseMenu
-            onAIOpen={() => setAiOpen(true)}
-            aiEnabled={!!doc}
-          />
-        </div>
       </header>
 
       {doc && <ToolbarMobile />}
@@ -214,7 +204,6 @@ export default function App() {
       <SignatureImport />
       {stampPickerOpen && <StampPicker />}
       {emailVerifyOpen && <EmailVerifyModal />}
-      <AIToolsPanel open={aiOpen} onClose={() => setAiOpen(false)} />
       <LivePreview />
     </div>
   )
