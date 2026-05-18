@@ -14,6 +14,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const canUndo = useAnnotationStore((s) => s.past.length > 0)
   const canRedo = useAnnotationStore((s) => s.future.length > 0)
   const clearAll = useAnnotationStore((s) => s.clearAll)
+  const setTool = useAnnotationStore((s) => s.setTool)
 
   const doc = usePdfStore((s) => s.doc)
   const numPages = usePdfStore((s) => s.numPages)
@@ -249,6 +250,16 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
               <span aria-hidden="true">☰</span>
               <span className="flex-1 text-left">{pageNavOpen ? 'Hide pages panel' : 'Show pages panel'}</span>
               <span className="text-[11px] text-slate-400 tabular-nums">{numPages}</span>
+            </button>
+          )}
+
+          {doc && (
+            <button
+              onClick={() => { setTool('redact'); setOpen(false) }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
+            >
+              <span aria-hidden="true">▮</span>
+              <span className="flex-1 text-left">Redact Text</span>
             </button>
           )}
 
