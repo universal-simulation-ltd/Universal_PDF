@@ -1,7 +1,8 @@
 import { PDFDocument, StandardFonts, LineCapStyle, degrees } from 'pdf-lib'
-import type { Annotation } from '../types/annotations'
+import type { Annotation, RedactAnnotation } from '../types/annotations'
 import type { FormFieldValue } from '../stores/formStore'
 import { hexToPdfRgb } from './colors'
+import { pdfjsLib, type PDFDocumentProxy } from './pdfjs'
 
 // Rotate (x, y) around (cx, cy) by `rad` radians.
 function rotatePoint(x: number, y: number, cx: number, cy: number, rad: number): [number, number] {
@@ -74,24 +75,56 @@ function smoothPolyline(points: number[], tension = 0.4, samplesPerSeg = 12) {
   return out.flat()
 }
 
+// Render one source page through pdfjs at high DPI, paint each redact rect
+// black on the resulting canvas, then return the JPEG bytes. The redact
+// coordinates come from the editor's canvas space (at `annotationScale`)
+// and are mapped to the render canvas via the ratio.
+async function rasterizePageWithRedacts(
+  pdfjsDoc: PDFDocumentProxy,
+  pageIndex: number,
+  redacts: RedactAnnotation[],
+  annotationScale: number
+): Promise<Uint8Array> {
+  const page = await pdfjsDoc.getPage(pageIndex + 1)
+  const renderScale = 2
+  const viewport = page.getViewport({ scale: renderScale })
+  const canvas = document.createElement('canvas')
+  canvas.width = viewport.width
+  canvas.height = viewport.height
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('Canvas 2D context unavailable')
+  await page.render({ canvasContext: ctx, viewport }).promise
+
+  const k = renderScale / annotationScale
+  ctx.fillStyle = '#000000'
+  for (const r of redacts) {
+    ctx.fillRect(r.x * k, r.y * k, r.width * k, r.height * k)
+  }
+
+  const blob: Blob = await new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error('toBlob failed'))),
+      'image/jpeg',
+      0.92
+    )
+  })
+  return new Uint8Array(await blob.arrayBuffer())
+}
+
 export async function buildAnnotatedPdfBytes(
   sourceBytes: ArrayBuffer,
   annotations: Annotation[],
   scale: number,
   formValues?: FormFieldValue[]
 ): Promise<Uint8Array> {
-  const pdf = await PDFDocument.load(sourceBytes)
-  const fontSans = await pdf.embedFont(StandardFonts.Helvetica)
-  const fontSerif = await pdf.embedFont(StandardFonts.TimesRoman)
-  const fontMono = await pdf.embedFont(StandardFonts.Courier)
-  const pickFont = (fam?: 'sans' | 'serif' | 'mono') =>
-    fam === 'serif' ? fontSerif : fam === 'mono' ? fontMono : fontSans
-  const pages = pdf.getPages()
+  const sourcePdf = await PDFDocument.load(sourceBytes)
 
-  // Fill PDF form fields if any
+  // Fill PDF form fields if any. Flatten so values bake into the page
+  // content streams — that way any redacted page rasterizes with the user's
+  // typed values baked in, and copyPages preserves them on other pages too.
   if (formValues && formValues.length > 0) {
     try {
-      const form = pdf.getForm()
+      const form = sourcePdf.getForm()
       for (const fv of formValues) {
         if (!fv.value) continue
         try {
@@ -101,15 +134,64 @@ export async function buildAnnotatedPdfBytes(
           // Field not found or not a text field — skip silently
         }
       }
-      // Flatten form so values are baked in
       try { form.flatten() } catch { /* ignore if form can't be flattened */ }
     } catch {
       // No form fields or form not supported
     }
   }
 
+  // Group redact annotations by page — these drive the rasterize-and-rebuild
+  // pass below.
+  const redactsByPage = new Map<number, RedactAnnotation[]>()
+  for (const a of annotations) {
+    if (a.type === 'redact') {
+      if (!redactsByPage.has(a.pageIndex)) redactsByPage.set(a.pageIndex, [])
+      redactsByPage.get(a.pageIndex)!.push(a)
+    }
+  }
+
+  // If any page needs redaction, rebuild the document so redacted pages
+  // become flat raster images (no original text/forms survive in the
+  // content stream). Pages without redacts are copied across unchanged.
+  let pdf: PDFDocument
+  if (redactsByPage.size > 0) {
+    const flatBytes = await sourcePdf.save()
+    const pdfjsDoc = await pdfjsLib.getDocument({ data: flatBytes.slice() }).promise
+
+    const out = await PDFDocument.create()
+    for (let i = 0; i < sourcePdf.getPageCount(); i++) {
+      const srcPage = sourcePdf.getPage(i)
+      const { width, height } = srcPage.getSize()
+      if (redactsByPage.has(i)) {
+        const imgBytes = await rasterizePageWithRedacts(
+          pdfjsDoc,
+          i,
+          redactsByPage.get(i)!,
+          scale
+        )
+        const img = await out.embedJpg(imgBytes)
+        const newPage = out.addPage([width, height])
+        newPage.drawImage(img, { x: 0, y: 0, width, height })
+      } else {
+        const [copied] = await out.copyPages(sourcePdf, [i])
+        out.addPage(copied)
+      }
+    }
+    pdf = out
+  } else {
+    pdf = sourcePdf
+  }
+
+  const fontSans = await pdf.embedFont(StandardFonts.Helvetica)
+  const fontSerif = await pdf.embedFont(StandardFonts.TimesRoman)
+  const fontMono = await pdf.embedFont(StandardFonts.Courier)
+  const pickFont = (fam?: 'sans' | 'serif' | 'mono') =>
+    fam === 'serif' ? fontSerif : fam === 'mono' ? fontMono : fontSans
+  const pages = pdf.getPages()
+
   const byPage = new Map<number, Annotation[]>()
   for (const a of annotations) {
+    if (a.type === 'redact') continue
     if (!byPage.has(a.pageIndex)) byPage.set(a.pageIndex, [])
     byPage.get(a.pageIndex)!.push(a)
   }
@@ -196,16 +278,27 @@ export async function buildAnnotatedPdfBytes(
           // Konva top-left is (a.x, a.y); pdf-lib wants the bottom-left of
           // the un-rotated rectangle in its own coordinate system.
           const [bx, by] = rotatePoint(a.x, a.y + a.height, a.x, a.y, rad)
-          page.drawRectangle({
-            x: sx(bx),
-            y: toY(by),
-            width: sw(a.width),
-            height: sw(a.height),
-            borderColor: hexToPdfRgb(a.color),
-            borderWidth: sw(2),
-            opacity: 0,
-            rotate: rot ? degrees(-rot) : undefined
-          })
+          if (a.filled) {
+            page.drawRectangle({
+              x: sx(bx),
+              y: toY(by),
+              width: sw(a.width),
+              height: sw(a.height),
+              color: hexToPdfRgb(a.color),
+              rotate: rot ? degrees(-rot) : undefined
+            })
+          } else {
+            page.drawRectangle({
+              x: sx(bx),
+              y: toY(by),
+              width: sw(a.width),
+              height: sw(a.height),
+              borderColor: hexToPdfRgb(a.color),
+              borderWidth: sw(2),
+              opacity: 0,
+              rotate: rot ? degrees(-rot) : undefined
+            })
+          }
           break
         }
         case 'draw': {

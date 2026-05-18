@@ -53,6 +53,7 @@ function getAnnotationBBox(a: Annotation): { x: number; y: number; width: number
       return { x: a.x - 2, y: a.y - 2, width: w + 4, height: a.fontSize * 1.25 + 4 }
     }
     case 'rect':
+    case 'redact':
       return { x: a.x - 2, y: a.y - 2, width: a.width + 4, height: a.height + 4 }
     case 'tick':
     case 'cross':
@@ -81,7 +82,7 @@ interface Props {
 }
 
 function isResizable(a: Annotation): boolean {
-  return a.type === 'image' || a.type === 'rect'
+  return a.type === 'image' || a.type === 'rect' || a.type === 'redact'
 }
 
 function isTransformable(a: Annotation): boolean {
@@ -282,7 +283,7 @@ export default function AnnotationLayer({ pageIndex, width, height }: Props) {
         size: 28,
         color
       })
-    } else if (tool === 'rect') {
+    } else if (tool === 'rect' || tool === 'redact') {
       drawingRef.current = true
       setCurrentLine([pos.x, pos.y, pos.x, pos.y])
     } else if (tool === 'signature') {
@@ -354,7 +355,7 @@ export default function AnnotationLayer({ pageIndex, width, height }: Props) {
     if (!drawingRef.current) return
     setCurrentLine((prev) => {
       if (!prev) return null
-      if (tool === 'rect') return [prev[0], prev[1], pos.x, pos.y]
+      if (tool === 'rect' || tool === 'redact') return [prev[0], prev[1], pos.x, pos.y]
       return [...prev, pos.x, pos.y]
     })
   }
@@ -401,6 +402,23 @@ export default function AnnotationLayer({ pageIndex, width, height }: Props) {
             width: w,
             height: h,
             color
+          })
+        }
+      } else if (tool === 'redact') {
+        const [x1, y1, x2, y2] = currentLine
+        const x = Math.min(x1, x2)
+        const y = Math.min(y1, y2)
+        const w = Math.abs(x2 - x1)
+        const h = Math.abs(y2 - y1)
+        if (w > 4 && h > 4) {
+          add({
+            id: crypto.randomUUID(),
+            pageIndex,
+            type: 'redact',
+            x,
+            y,
+            width: w,
+            height: h
           })
         }
       }
@@ -506,7 +524,7 @@ export default function AnnotationLayer({ pageIndex, width, height }: Props) {
   function onShapeTransformEnd(a: Annotation, e: Konva.KonvaEventObject<Event>) {
     const node = e.target
     const rotation = node.rotation()
-    if (a.type === 'image' || a.type === 'rect') {
+    if (a.type === 'image' || a.type === 'rect' || a.type === 'redact') {
       const newWidth = Math.max(8, node.width() * node.scaleX())
       const newHeight = Math.max(8, node.height() * node.scaleY())
       node.scaleX(1)
@@ -629,8 +647,21 @@ export default function AnnotationLayer({ pageIndex, width, height }: Props) {
                     rotation={a.rotation ?? 0}
                     width={a.width}
                     height={a.height}
+                    fill={a.filled ? a.color : undefined}
                     stroke={a.color}
-                    strokeWidth={2}
+                    strokeWidth={a.filled ? 0 : 2}
+                  />
+                )
+              case 'redact':
+                return (
+                  <Rect
+                    key={a.id}
+                    {...common}
+                    x={a.x}
+                    y={a.y}
+                    width={a.width}
+                    height={a.height}
+                    fill="#000000"
                   />
                 )
               case 'tick': {
@@ -727,6 +758,20 @@ export default function AnnotationLayer({ pageIndex, width, height }: Props) {
               />
             )
           })()}
+          {currentLine && tool === 'redact' && (() => {
+            const [x1, y1, x2, y2] = currentLine
+            return (
+              <Rect
+                listening={false}
+                x={Math.min(x1, x2)}
+                y={Math.min(y1, y2)}
+                width={Math.abs(x2 - x1)}
+                height={Math.abs(y2 - y1)}
+                fill="#000000"
+                opacity={0.7}
+              />
+            )
+          })()}
 
           {tool === 'signature' && activeSignature && hoverPos && (
             <SignatureGhost
@@ -801,6 +846,35 @@ export default function AnnotationLayer({ pageIndex, width, height }: Props) {
           }}
         />
       )}
+
+      {(() => {
+        if (tool !== 'select') return null
+        if (draggingId) return null
+        const selected = annotations.find((a) => a.id === selectedId)
+        if (!selected || selected.type !== 'rect') return null
+        const filled = !!selected.filled
+        return (
+          <button
+            type="button"
+            title={filled ? 'Clear fill' : 'Fill with active colour'}
+            aria-label={filled ? 'Clear fill' : 'Fill with active colour'}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              update(selected.id, { filled: !filled } as Partial<Annotation>)
+            }}
+            style={{
+              position: 'absolute',
+              left: selected.x + selected.width + 6,
+              top: selected.y - 4,
+              zIndex: 20
+            }}
+            className="w-8 h-8 rounded-full bg-white shadow-lg border border-slate-300 hover:border-orange-500 hover:bg-orange-50 flex items-center justify-center text-base leading-none"
+          >
+            <span aria-hidden="true">{filled ? '⌫' : '🪣'}</span>
+          </button>
+        )
+      })()}
     </>
   )
 }

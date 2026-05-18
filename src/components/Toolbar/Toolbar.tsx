@@ -13,6 +13,24 @@ const FONT_OPTIONS: { id: FontFamily; label: string; preview: string; css: strin
 
 const LONG_PRESS_MS = 450
 
+function HighlighterIcon({ className = 'w-6 h-6' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden="true"
+    >
+      {/* Yellow marker body */}
+      <path d="M16 3 L21 8 L12 17 L7 12 Z" fill="#fde047" stroke="#a16207" strokeWidth="0.8" strokeLinejoin="round" />
+      {/* Dark chisel tip */}
+      <path d="M7 12 L12 17 L10 19 L5 19 L4 18 L4 14 Z" fill="#1e293b" stroke="#0f172a" strokeWidth="0.8" strokeLinejoin="round" />
+      {/* Highlight swipe under tip */}
+      <path d="M3 22 L13 22" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" opacity="0.9" />
+    </svg>
+  )
+}
+
 function PictureFrameIcon({ active = false, className = 'w-6 h-6' }: { active?: boolean; className?: string }) {
   const frame = active ? '#fff' : '#fbbf24'
   const sky = '#7dd3fc'
@@ -147,6 +165,7 @@ export function ToolbarDesktopTools() {
   const setTool = useAnnotationStore((s) => s.setTool)
   const setColor = useAnnotationStore((s) => s.setColor)
   const setStrokeWidth = useAnnotationStore((s) => s.setStrokeWidth)
+  const setSelected = useAnnotationStore((s) => s.setSelected)
   const remove = useAnnotationStore((s) => s.remove)
   const fontSize = useAnnotationStore((s) => s.fontSize)
   const setFontSize = useAnnotationStore((s) => s.setFontSize)
@@ -223,7 +242,7 @@ export function ToolbarDesktopTools() {
       pressTimer.current = null
     }
   }
-  function handleToolClick(id: Tool, panel?: Panel) {
+  function handleToolClick(id: Tool, panel?: Panel, defaultColor?: string) {
     if (longPressed.current) {
       longPressed.current = false
       return
@@ -232,14 +251,20 @@ export function ToolbarDesktopTools() {
       togglePanel(panel)
     } else {
       setTool(id)
+      if (defaultColor) {
+        // Deselect first so setColor doesn't repaint the currently selected
+        // annotation when the user is really just switching tools.
+        setSelected(null)
+        setColor(defaultColor)
+      }
     }
   }
 
-  function toolBtn(id: Tool, icon: string, label: string, panel?: Panel) {
+  function toolBtn(id: Tool, icon: string, label: string, panel?: Panel, defaultColor?: string) {
     return (
       <button
         key={id}
-        onClick={() => handleToolClick(id, panel)}
+        onClick={() => handleToolClick(id, panel, defaultColor)}
         onPointerDown={() => startLongPress(panel)}
         onPointerUp={endLongPress}
         onPointerLeave={endLongPress}
@@ -368,18 +393,19 @@ export function ToolbarDesktopTools() {
 
       {/* Pencil + highlighter + colours + combined options panel */}
       <div ref={drawGroupRef} className="relative flex items-start gap-1">
-        {toolBtn('draw', '✎', 'Free draw', 'draw')}
+        {toolBtn('draw', '✎', 'Free draw', 'draw', '#000000')}
         <button
-          onClick={() => {
-            setTool('highlight')
-            setColor(HIGHLIGHT_YELLOW)
-          }}
-          title="Highlighter"
-          className={`w-9 h-9 rounded flex items-center justify-center text-lg font-semibold transition-colors ${
+          onClick={() => handleToolClick('highlight', 'draw', HIGHLIGHT_YELLOW)}
+          onPointerDown={() => startLongPress('draw')}
+          onPointerUp={endLongPress}
+          onPointerLeave={endLongPress}
+          onPointerCancel={endLongPress}
+          title="Highlighter — tap again or long-press for options"
+          className={`w-9 h-9 rounded flex items-center justify-center transition-colors ${
             tool === 'highlight' ? 'bg-orange-600' : 'hover:bg-slate-700'
           }`}
         >
-          <span className="inline-block w-5 h-2 rounded-sm" style={{ backgroundColor: HIGHLIGHT_YELLOW, opacity: 0.85 }} />
+          <HighlighterIcon className="w-5 h-5" />
         </button>
         <div className="flex items-center gap-1 self-center ml-1">
           {tool === 'highlight' ? (
@@ -494,6 +520,7 @@ export function ToolbarMobile() {
   const setTool = useAnnotationStore((s) => s.setTool)
   const setColor = useAnnotationStore((s) => s.setColor)
   const setStrokeWidth = useAnnotationStore((s) => s.setStrokeWidth)
+  const setSelected = useAnnotationStore((s) => s.setSelected)
   const undo = useAnnotationStore((s) => s.undo)
   const canUndo = useAnnotationStore((s) => s.past.length > 0)
   const remove = useAnnotationStore((s) => s.remove)
@@ -555,7 +582,7 @@ export function ToolbarMobile() {
       pressTimer.current = null
     }
   }
-  function handleToolClick(id: Tool, panel?: Panel) {
+  function handleToolClick(id: Tool, panel?: Panel, defaultColor?: string) {
     if (longPressed.current) {
       longPressed.current = false
       return
@@ -564,6 +591,10 @@ export function ToolbarMobile() {
       togglePanel(panel)
     } else {
       setTool(id)
+      if (defaultColor) {
+        setSelected(null)
+        setColor(defaultColor)
+      }
     }
   }
 
@@ -613,15 +644,18 @@ export function ToolbarMobile() {
         <div className="flex items-center gap-2 flex-wrap max-w-[92vw]">
           <button
             onClick={() => {
+              if (tool !== 'highlight') {
+                setSelected(null)
+                setColor(HIGHLIGHT_YELLOW)
+              }
               setTool('highlight')
-              setColor(HIGHLIGHT_YELLOW)
             }}
             title="Highlighter"
             className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
               tool === 'highlight' ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
           >
-            <span className="inline-block w-6 h-2.5 rounded-sm" style={{ backgroundColor: HIGHLIGHT_YELLOW, opacity: 0.85 }} />
+            <HighlighterIcon className="w-6 h-6" />
           </button>
           {DRAW_SHAPES.map((s) => (
             <button
@@ -678,12 +712,12 @@ export function ToolbarMobile() {
     return null
   })()
 
-  function mobileBtnWithPlus(id: Tool, icon: string, label: string, panel: Panel) {
+  function mobileBtnWithPlus(id: Tool, icon: string, label: string, panel: Panel, defaultColor?: string) {
     const active = tool === id || (panel === 'draw' && isDrawShape(tool))
     return (
       <div className="flex flex-col items-center justify-center flex-1 h-full relative">
         <button
-          onClick={() => handleToolClick(id, panel)}
+          onClick={() => handleToolClick(id, panel, defaultColor)}
           onPointerDown={() => startLongPress(panel)}
           onPointerUp={endLongPress}
           onPointerLeave={endLongPress}
@@ -767,7 +801,7 @@ export function ToolbarMobile() {
         )}
 
         {/* Draw with + (includes shapes/stroke/colour in panel) */}
-        {mobileBtnWithPlus('draw', '✎', 'Draw', 'draw')}
+        {mobileBtnWithPlus('draw', '✎', 'Draw', 'draw', '#000000')}
 
         {/* Text with + */}
         {mobileBtnWithPlus('text', 'T', 'Text', 'text')}

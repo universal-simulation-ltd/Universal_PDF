@@ -5,6 +5,7 @@ export type Tool =
   | 'draw'
   | 'highlight'
   | 'rect'
+  | 'redact'
   | 'tick'
   | 'cross'
   | 'image'
@@ -44,6 +45,16 @@ export type RectAnnotation = Base & {
   height: number
   color: string
   rotation?: number
+  // When true the rectangle is painted with `color` instead of just outlined.
+  filled?: boolean
+}
+
+export type RedactAnnotation = Base & {
+  type: 'redact'
+  x: number
+  y: number
+  width: number
+  height: number
 }
 
 export type MarkAnnotation = Base & {
@@ -69,5 +80,6 @@ export type Annotation =
   | TextAnnotation
   | DrawAnnotation
   | RectAnnotation
+  | RedactAnnotation
   | MarkAnnotation
   | ImageAnnotation

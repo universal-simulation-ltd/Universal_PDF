@@ -102,8 +102,8 @@ export async function createExamplePdfFile(): Promise<File> {
     const tips = [
       'Click the Pages button in the toolbar to open page thumbnails',
       'Drag a thumbnail up or down to reorder pages',
-      'Click the ✕ on a thumbnail to delete that page',
-      'Use ↑ / ↓ buttons for precise reordering'
+      'Click the × on a thumbnail to delete that page',
+      'Use the up / down buttons for precise reordering'
     ]
     let ty = cardTop - 42
     for (const t of tips) {
