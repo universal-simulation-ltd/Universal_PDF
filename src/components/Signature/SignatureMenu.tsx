@@ -82,8 +82,10 @@ export default function SignatureMenu({ openUpward = false, compact = false }: S
       )}
 
       {open && (
-        <div className={`absolute right-0 w-80 bg-white text-slate-900 rounded-lg shadow-xl border border-slate-200 z-40 overflow-hidden ${
-          openUpward ? 'bottom-full mb-2' : 'top-full mt-1'
+        <div className={`bg-white text-slate-900 rounded-lg shadow-xl border border-slate-200 overflow-hidden ${
+          compact
+            ? 'fixed bottom-[4.5rem] left-1/2 -translate-x-1/2 w-80 max-w-[calc(100vw-1rem)] z-50'
+            : `absolute right-0 w-80 z-40 ${openUpward ? 'bottom-full mb-2' : 'top-full mt-1'}`
         }`}>
           {/* Tab bar */}
           <div className="flex border-b border-slate-100">

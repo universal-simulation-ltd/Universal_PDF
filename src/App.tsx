@@ -108,7 +108,7 @@ export default function App() {
   return (
     <div className="flex flex-col h-full bg-slate-100">
       <UniversalBar />
-      <header className="bg-slate-900 text-white relative">
+      <header className="bg-slate-900 text-white relative z-10">
         <div className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
           <FileMenu variant="header" />
           <VersionChip />
@@ -131,7 +131,7 @@ export default function App() {
       {doc && <ToolbarMobile />}
       {doc && <MobileWelcomeToast />}
 
-      <main className="flex-1 min-h-0 pb-16 md:pb-0">
+      <main className={`flex-1 min-h-0 md:pb-0${doc ? ' pb-16' : ' overflow-auto'}`}>
         {loading ? (
           <div className="h-full flex items-center justify-center text-slate-500">
             Loading PDF…
