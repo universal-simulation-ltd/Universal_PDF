@@ -100,6 +100,32 @@ export default function PdfViewer() {
     }
   }, [])
 
+  // Ctrl/Cmd+Wheel zooms the PDF instead of the browser page
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+
+    function onWheel(e: WheelEvent) {
+      if (!el || (!e.ctrlKey && !e.metaKey)) return
+      e.preventDefault()
+      const zoomDelta = -e.deltaY * 0.001
+      const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomRef.current * Math.exp(zoomDelta)))
+      const ratio = newZoom / zoomRef.current
+      const rect = el.getBoundingClientRect()
+      const relX = e.clientX - rect.left
+      const relY = e.clientY - rect.top
+      setZoom(newZoom)
+      requestAnimationFrame(() => {
+        if (!el) return
+        el.scrollLeft = (el.scrollLeft + relX) * ratio - relX
+        el.scrollTop = (el.scrollTop + relY) * ratio - relY
+      })
+    }
+
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [])
+
   // Hand-tool drag-to-pan
   useEffect(() => {
     if (tool !== 'hand') return
@@ -144,6 +170,24 @@ export default function PdfViewer() {
       el.removeEventListener('pointercancel', onUp)
     }
   }, [tool])
+
+  // On initial load, zoom out if the page is wider than the scroll container
+  // (typical on mobile). Caps at 1 so desktop zoom is never increased.
+  useEffect(() => {
+    if (!doc) return
+    const el = scrollRef.current
+    if (!el) return
+    let cancelled = false
+    doc.getPage(1).then((page) => {
+      if (cancelled) return
+      const pageWidth = page.getViewport({ scale: BASE_SCALE }).width
+      const available = el.clientWidth - 32 // px-4 padding × 2
+      if (available > 0) {
+        setZoom(Math.max(MIN_ZOOM, Math.min(1, available / pageWidth)))
+      }
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [doc])
 
   // Publish the rendered document width and the document scroll-container's
   // scrollbar width as CSS custom properties so the top toolbar and the
