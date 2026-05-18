@@ -1,6 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="12" fill="#0f172a"/>
-  <path d="M16 14h22l10 10v36H16z" fill="#fff"/>
-  <path d="M38 14v10h10" fill="#cbd5e1"/>
-  <path d="M22 38l6 6 14-14" stroke="#ea580c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Orange background -->
+  <rect width="64" height="64" rx="13" fill="#ea580c"/>
+  <!-- Document page (L-shape with fold cutout) -->
+  <polygon points="10,6 38,6 38,22 54,22 54,58 10,58" fill="white"/>
+  <!-- Folded corner (back of page) -->
+  <polygon points="38,6 54,22 38,22" fill="#fdba74"/>
+  <!-- Fold crease -->
+  <line x1="38" y1="6" x2="54" y2="22" stroke="#ea580c" stroke-width="0.75" opacity="0.35"/>
+  <!-- Bold PDF text -->
+  <text x="32" y="50" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="900" fill="#ea580c" letter-spacing="1">PDF</text>
 </svg>

@@ -61,7 +61,7 @@ export default function PdfPage({ doc, pageIndex, scale }: Props) {
       style={size ? { width: size.width, height: size.height } : undefined}
     >
       <canvas ref={canvasRef} className="block" />
-      {size && <AnnotationLayer pageIndex={pageIndex} width={size.width} height={size.height} />}
+      {size && <AnnotationLayer pageIndex={pageIndex} width={size.width} height={size.height} scale={scale} />}
       {size && page && (
         <FormFieldLayer
           page={page}

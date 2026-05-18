@@ -17,16 +17,12 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const setTool = useAnnotationStore((s) => s.setTool)
 
   const doc = usePdfStore((s) => s.doc)
-  const numPages = usePdfStore((s) => s.numPages)
   const fileName = usePdfStore((s) => s.fileName)
-  const pageNavOpen = usePdfStore((s) => s.pageNavOpen)
-  const togglePageNav = usePdfStore((s) => s.togglePageNav)
   const loadFile = usePdfStore((s) => s.loadFile)
   const renameFile = usePdfStore((s) => s.renameFile)
   const reset = usePdfStore((s) => s.reset)
 
   const canClear = annotations.length > 0
-  const canShowPages = !!doc && numPages > 1
   const canRename = !!doc && !!fileName
 
   const [open, setOpen] = useState(false)
@@ -143,7 +139,12 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
           title="Universal PDF — menu"
           className="flex items-center gap-2 px-1.5 py-1 rounded-md hover:bg-white/5 transition-colors text-white"
         >
-          <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-orange-600 text-white text-[11px] font-bold">U</span>
+          <svg viewBox="0 0 24 24" className="w-6 h-6 shrink-0" aria-hidden="true">
+            <rect width="24" height="24" rx="5" fill="#ea580c"/>
+            <polygon points="4,2.5 14.5,2.5 14.5,8 20,8 20,21.5 4,21.5" fill="white"/>
+            <polygon points="14.5,2.5 20,8 14.5,8" fill="#fdba74"/>
+            <text x="12" y="18" textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize="6" fontWeight="900" fill="#ea580c" letterSpacing="0.4">PDF</text>
+          </svg>
           <span className="hidden sm:inline font-semibold tracking-tight">Universal PDF</span>
           <svg viewBox="0 0 12 12" className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true">
             <path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -240,17 +241,6 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                 </button>
               </div>
             </div>
-          )}
-
-          {canShowPages && (
-            <button
-              onClick={() => { togglePageNav(); setOpen(false) }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
-            >
-              <span aria-hidden="true">☰</span>
-              <span className="flex-1 text-left">{pageNavOpen ? 'Hide pages panel' : 'Show pages panel'}</span>
-              <span className="text-[11px] text-slate-400 tabular-nums">{numPages}</span>
-            </button>
           )}
 
           {doc && (
