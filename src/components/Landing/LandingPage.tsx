@@ -94,10 +94,6 @@ export default function LandingPage() {
 
           {/* Right: open / create card */}
           <div className="order-1 lg:order-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-50 text-orange-700 text-xs font-medium ring-1 ring-orange-200 mb-4">
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-orange-500" />
-              Free · No upload · Works offline
-            </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-slate-900">
               Universal PDFs that <span className="text-orange-600">just work</span>.
             </h1>
