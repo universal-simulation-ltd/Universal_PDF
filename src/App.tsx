@@ -150,14 +150,14 @@ export default function App() {
           <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center gap-3 sm:gap-4 text-xs text-slate-500">
             <div className="flex items-center gap-2">
               <span>
-                Open source — self-host free or PRO hosted by{' '}
+                Open source — self-host free use on{' '}
                 <a
                   href="https://www.unisim.co.uk"
                   target="_blank"
                   rel="noreferrer"
                   className="text-slate-700 hover:text-orange-600 underline-offset-2 hover:underline"
                 >
-                  UNI SIM
+                  UNISIM.co.uk
                 </a>
               </span>
             </div>
