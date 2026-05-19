@@ -110,7 +110,7 @@ export default function App() {
   return (
     <div className="flex flex-col h-full bg-slate-100">
       <UniversalBar />
-      <header className="bg-slate-900 text-white relative z-10">
+      <header className="bg-slate-900 text-white relative z-30">
         <div className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
           <FileMenu variant="header" />
           <VersionChip />
