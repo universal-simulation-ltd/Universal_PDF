@@ -240,6 +240,7 @@ export default function PdfViewer() {
   if (!doc) return null
 
   const handCursor = tool === 'hand' ? 'grab' : undefined
+  const zoomDisabled = !['select', 'hand', 'form'].includes(tool)
 
   return (
     <div className="flex flex-col h-full">
@@ -274,21 +275,24 @@ export default function PdfViewer() {
           <div className="flex items-center gap-2 justify-end">
             <button
               onClick={() => setZoom((z) => Math.max(MIN_ZOOM, +(z - ZOOM_STEP).toFixed(2)))}
-              className="w-7 h-7 rounded bg-white border border-slate-300 hover:bg-slate-50"
+              disabled={zoomDisabled}
+              className={`w-7 h-7 rounded border ${zoomDisabled ? 'border-slate-200 text-slate-300 cursor-not-allowed bg-white' : 'bg-white border-slate-300 hover:bg-slate-50'}`}
               aria-label="Zoom out"
             >
               −
             </button>
             <button
               onClick={() => setZoom(1)}
+              disabled={zoomDisabled}
               title="Reset to 100% (actual size)"
-              className="w-14 text-center tabular-nums rounded hover:bg-white border border-transparent hover:border-slate-300"
+              className={`w-14 text-center tabular-nums rounded border border-transparent ${zoomDisabled ? 'text-slate-300 cursor-not-allowed' : 'hover:bg-white hover:border-slate-300'}`}
             >
               {Math.round(zoom * 100)}%
             </button>
             <button
               onClick={() => setZoom((z) => Math.min(MAX_ZOOM, +(z + ZOOM_STEP).toFixed(2)))}
-              className="w-7 h-7 rounded bg-white border border-slate-300 hover:bg-slate-50"
+              disabled={zoomDisabled}
+              className={`w-7 h-7 rounded border ${zoomDisabled ? 'border-slate-200 text-slate-300 cursor-not-allowed bg-white' : 'bg-white border-slate-300 hover:bg-slate-50'}`}
               aria-label="Zoom in"
             >
               +
