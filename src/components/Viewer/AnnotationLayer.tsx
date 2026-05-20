@@ -190,6 +190,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const annotations = allAnnotations.filter((a) => a.pageIndex === pageIndex)
 
   const drawingRef = useRef(false)
+  const activePointerIds = useRef(new Set<number>())
   const [currentLine, setCurrentLine] = useState<number[] | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
@@ -235,6 +236,13 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   }
 
   function onPointerDown(e: Konva.KonvaEventObject<PointerEvent>) {
+    activePointerIds.current.add(e.evt.pointerId)
+    if (activePointerIds.current.size > 1) {
+      // Multi-touch (pinch-to-zoom) — abort any in-progress drawing stroke
+      drawingRef.current = false
+      setCurrentLine(null)
+      return
+    }
     if (editingId) return // ignore stage events while typing
     if (tool === 'hand') return // pan handled by PdfViewer
     // Let Konva's Transformer own clicks on its anchors / rotate knob —
@@ -365,10 +373,12 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
 
   function onPointerLeaveStage() {
     setHoverPos(null)
+    activePointerIds.current.clear()
     onPointerUp()
   }
 
-  function onPointerUp() {
+  function onPointerUp(e?: Konva.KonvaEventObject<PointerEvent>) {
+    if (e) activePointerIds.current.delete(e.evt.pointerId)
     if (drawingRef.current && currentLine) {
       if (tool === 'draw' && currentLine.length >= 4) {
         add({
