@@ -56,7 +56,7 @@ export default function FileNameEditor() {
             cancel()
           }
         }}
-        className="px-2 py-0.5 rounded bg-white text-slate-900 text-sm w-56 max-w-[40vw] outline-none border border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-500"
+        className="px-2 py-0.5 rounded bg-white text-slate-900 text-base w-56 max-w-[40vw] outline-none border border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-500"
         aria-label="Rename file"
       />
     )
