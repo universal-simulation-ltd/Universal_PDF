@@ -147,7 +147,7 @@ export default function App() {
 
       {!doc && !loading && (
         <footer className="mt-auto border-t border-slate-200 bg-white">
-          <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center gap-3 sm:gap-4 text-xs text-slate-500">
+          <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex flex-row items-center gap-3 sm:gap-4 text-xs text-slate-500">
             <div className="flex items-center gap-2">
               <span>
                 100% Free and Open Source from{' '}
@@ -161,7 +161,7 @@ export default function App() {
                 </a>
               </span>
             </div>
-            <div className="sm:ml-auto flex items-center gap-3">
+            <div className="ml-auto flex items-center gap-3">
               <a
                 href={REPO_URL}
                 target="_blank"
