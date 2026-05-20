@@ -76,10 +76,14 @@ export default function FormFieldLayer({ page, pageIndex, scale, pageHeight }: P
         const isActive = activeField === f.fieldName
         const val =
           values.find((v) => v.pageIndex === pageIndex && v.fieldName === f.fieldName)?.value ?? ''
+        // iOS Safari zooms the page when an input's font-size is below 16px.
+        // We always render at 16px and scale the element down via CSS transform.
+        const desiredFontSize = Math.min(14, f.ch * 0.65)
+        const fontScale = desiredFontSize / 16
         return (
           <div
             key={f.fieldName}
-            className="absolute pointer-events-auto"
+            className="absolute pointer-events-auto overflow-hidden"
             style={{
               left: f.cx,
               top: f.cy,
@@ -100,8 +104,14 @@ export default function FormFieldLayer({ page, pageIndex, scale, pageHeight }: P
                     setActiveField(null)
                   }
                 }}
-                className="w-full h-full px-1 border-2 border-orange-500 bg-orange-50/80 text-slate-900 outline-none"
-                style={{ fontSize: Math.min(14, f.ch * 0.65) }}
+                className="px-1 border-2 border-orange-500 bg-orange-50/80 text-slate-900 outline-none"
+                style={{
+                  fontSize: 16,
+                  transform: `scale(${fontScale})`,
+                  transformOrigin: 'left top',
+                  width: `${f.cw / fontScale}px`,
+                  height: `${f.ch / fontScale}px`,
+                }}
               />
             ) : (
               <div
