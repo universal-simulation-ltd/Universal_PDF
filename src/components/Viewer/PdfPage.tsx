@@ -25,9 +25,19 @@ export default function PdfPage({ doc, pageIndex, scale }: Props) {
       // Use the logical viewport for sizing (CSS pixels) and a separate
       // physical viewport for the canvas backing store so the bitmap stays
       // crisp on high-DPI screens.
-      const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
+      //
+      // Cap DPR at 2 — no perceptible sharpness gain above 2× for PDF bitmaps —
+      // and further clamp so the canvas never exceeds ~16 M pixels (iOS Safari's
+      // hard limit; crossing it causes the tab to crash and reload).
+      const rawDpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
       const cssViewport = p.getViewport({ scale })
-      const renderViewport = p.getViewport({ scale: scale * dpr })
+      const MAX_CANVAS_PIXELS = 16_000_000
+      const effectiveDpr = Math.min(
+        rawDpr,
+        2,
+        Math.sqrt(MAX_CANVAS_PIXELS / (cssViewport.width * cssViewport.height))
+      )
+      const renderViewport = p.getViewport({ scale: scale * effectiveDpr })
       const canvas = canvasRef.current
       if (!canvas) return
       const ctx = canvas.getContext('2d')
