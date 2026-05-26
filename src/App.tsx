@@ -113,7 +113,7 @@ export default function App() {
         product="pdf"
         productLogo={<ProductLogo />}
         fileMenu={<FileMenu variant="header" />}
-        contentMaxWidth="100%"
+        suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
       />
       {doc && (
         <div className="bg-slate-900 text-white relative z-30" style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}>
