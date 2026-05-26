@@ -13,10 +13,10 @@ import EmailVerifyModal from './components/Signature/EmailVerifyModal'
 import SignatureImport from './components/Signature/SignatureImport'
 import LandingPage from './components/Landing/LandingPage'
 import LivePreview from './components/Preview/LivePreview'
-import VersionChip from './components/Header/VersionChip'
+import ProductLogo from './components/Header/ProductLogo'
 import FileMenu from './components/Toolbar/FileMenu'
 import MobileWelcomeToast from './components/Onboarding/MobileWelcomeToast'
-import { UniversalBar } from '@unisim/sdk'
+import { UniversalAppsNavBar } from '@unisim/sdk'
 
 // Apply the saved language to <html lang> on first mount.
 import { persistLang, readSavedLang } from './lib/lang'
@@ -109,26 +109,27 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-full bg-slate-100">
-      <UniversalBar />
-      <header className="bg-slate-900 text-white relative z-30">
-        <div className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-          <FileMenu variant="header" />
-          <VersionChip />
-        </div>
-        <div style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}>
-        <div
-          className="mx-auto w-full flex items-center justify-between gap-3 py-2 min-h-[52px]"
-          style={{ maxWidth: 'clamp(600px, var(--doc-display-width, 80rem), 80rem)' }}
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            {doc && <ToolbarDesktopTools />}
+      <UniversalAppsNavBar
+        product="pdf"
+        productLogo={<ProductLogo />}
+        fileMenu={<FileMenu variant="header" />}
+        contentMaxWidth="100%"
+      />
+      {doc && (
+        <div className="bg-slate-900 text-white relative z-30" style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}>
+          <div
+            className="mx-auto w-full flex items-center justify-between gap-3 py-2 min-h-[52px] px-3"
+            style={{ maxWidth: 'clamp(600px, var(--doc-display-width, 80rem), 80rem)' }}
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <ToolbarDesktopTools />
+            </div>
+            <div className="flex items-center gap-2 justify-end">
+              <ToolbarDesktopActions />
+            </div>
           </div>
-          <div className="flex items-center gap-2 justify-end">
-            {doc && <ToolbarDesktopActions />}
-          </div>
         </div>
-        </div>
-      </header>
+      )}
 
       {doc && <ToolbarMobile />}
       {doc && <MobileWelcomeToast />}

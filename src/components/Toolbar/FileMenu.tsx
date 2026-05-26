@@ -62,9 +62,12 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
     e.target.value = ''
   }
 
+  // Header variant lives inside <UniversalAppsNavBar />'s white chrome —
+  // light pill, slate text, slate hover. Toolbar variant still ships in the
+  // dark slate-900 toolbar below the editor on desktop.
   const triggerClass =
     variant === 'header'
-      ? 'h-8 px-3 rounded-md bg-white/10 hover:bg-white/15 text-white text-sm font-medium ring-1 ring-white/15 flex items-center gap-1.5'
+      ? 'h-8 px-3 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium ring-1 ring-slate-200 flex items-center gap-1.5'
       : 'h-10 px-3 rounded bg-slate-700 hover:bg-slate-600 text-sm font-medium flex items-center gap-1.5 text-white'
 
   useEffect(() => {
@@ -131,38 +134,17 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
 
   return (
     <div className="relative" ref={ref}>
-      {variant === 'header' ? (
-        <button
-          onClick={() => setOpen((o) => !o)}
-          aria-haspopup="true"
-          aria-expanded={open}
-          title="Universal PDF — menu"
-          className="flex items-center gap-2 px-1.5 py-1 rounded-md hover:bg-white/5 transition-colors text-white"
-        >
-          <svg viewBox="0 0 24 24" className="w-6 h-6 shrink-0" aria-hidden="true">
-            <rect width="24" height="24" rx="5" fill="#ea580c"/>
-            <polygon points="4,2.5 14.5,2.5 14.5,8 20,8 20,21.5 4,21.5" fill="white"/>
-            <polygon points="14.5,2.5 20,8 14.5,8" fill="#fdba74"/>
-            <text x="12" y="18" textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize="6" fontWeight="900" fill="#ea580c" letterSpacing="0.4">PDF</text>
-          </svg>
-          <span className="hidden sm:inline font-semibold tracking-tight">Universal PDF</span>
-          <svg viewBox="0 0 12 12" className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true">
-            <path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-      ) : (
-        <button
-          onClick={() => setOpen((o) => !o)}
-          className={triggerClass}
-          aria-haspopup="true"
-          aria-expanded={open}
-        >
-          File
-          <svg viewBox="0 0 12 12" className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true">
-            <path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-      )}
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className={triggerClass}
+        aria-haspopup="true"
+        aria-expanded={open}
+      >
+        File
+        <svg viewBox="0 0 12 12" className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true">
+          <path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
       <input
         ref={fileInputRef}
         type="file"
