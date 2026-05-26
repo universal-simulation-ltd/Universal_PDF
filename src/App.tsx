@@ -151,7 +151,7 @@ export default function App() {
           <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex flex-row items-center gap-3 sm:gap-4 text-xs text-slate-500">
             <div className="flex items-center gap-2">
               <span>
-                100% Free and Open Source from{' '}
+                100% Open source and free. Hosted by{' '}
                 <a
                   href="https://www.unisim.co.uk"
                   target="_blank"
