@@ -51,6 +51,25 @@ The dev server runs at <http://localhost:5173>. Build for production with `npm r
 
 Pushes to `main` auto-deploy to GitHub Pages via the [Actions workflow](.github/workflows/deploy.yml).
 
+## Desktop app (Windows)
+
+The same client-side app can be packaged as a native desktop app with
+[Electron](https://www.electronjs.org/). The Electron main process lives in
+[`electron/main.cjs`](electron/main.cjs) and loads the built bundle; the
+`desktop` Vite mode builds with a relative `base` (`./`) and without the PWA
+service worker so assets resolve over `file://`.
+
+```sh
+npm run build:desktop   # build the web bundle for Electron (dist/)
+npm run electron        # run the packaged-style app against that build
+npm run dist:win        # build + produce a Windows installer in release/
+```
+
+`npm run dist:win` emits an NSIS `.exe` installer under `release/`. **It must
+run on Windows** (or Linux/macOS with Wine) because electron-builder packages a
+platform-native binary; cross-building from a plain Linux host won't produce a
+working Windows `.exe`. The first run downloads the Electron binary (~100 MB).
+
 ## Stack
 
 - **Vite 6 + React 18 + TypeScript** — app shell

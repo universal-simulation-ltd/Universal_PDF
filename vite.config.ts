@@ -5,10 +5,13 @@ import { VitePWA } from 'vite-plugin-pwa'
 import pkg from './package.json' with { type: 'json' }
 
 // Universal PDF is served at opensource.unisim.co.uk/pdf in production. `base`
-// controls where built assets resolve from; in local dev it stays `/`. Derived
-// from Vite's `mode` so the config needs no Node `process` typings.
+// controls where built assets resolve from; in local dev it stays `/`. The
+// `desktop` mode targets the Electron build, which loads index.html over
+// `file://`, so assets must resolve relative to it (`./`). Derived from Vite's
+// `mode` so the config needs no Node `process` typings.
 export default defineConfig(({ mode }) => {
-  const BASE_PATH = mode === 'production' ? '/pdf/' : '/'
+  const isDesktop = mode === 'desktop'
+  const BASE_PATH = isDesktop ? './' : mode === 'production' ? '/pdf/' : '/'
   return {
     base: BASE_PATH,
     define: {
@@ -17,7 +20,9 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(),
-      VitePWA({
+      // The PWA service worker is for the hosted web app only — under Electron's
+      // `file://` origin it cannot register and is unnecessary, so skip it.
+      ...(isDesktop ? [] : [VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['favicon.svg'],
         manifest: {
@@ -38,7 +43,7 @@ export default defineConfig(({ mode }) => {
           navigateFallback: `${BASE_PATH}index.html`,
         },
         devOptions: { enabled: false }
-      })
+      })]),
     ],
     optimizeDeps: {
       exclude: ['canvas']
