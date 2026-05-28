@@ -4,12 +4,18 @@
   "private": true,
   "type": "module",
   "license": "MIT",
+  "author": "Universal Simulation Ltd",
   "description": "Universal PDFs that just work. Free and open source PDF viewer + editor.",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:desktop": "tsc -b && vite build --mode desktop",
     "preview": "vite preview",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "electron": "electron .",
+    "dist": "npm run build:desktop && electron-builder",
+    "dist:win": "npm run build:desktop && electron-builder --win"
   },
   "dependencies": {
     "@unisim/sdk": "^0.15.0",
@@ -26,9 +32,33 @@
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.2",
     "vite": "^6.0.5",
     "vite-plugin-pwa": "^0.21.1"
+  },
+  "build": {
+    "appId": "uk.co.unisim.pdf",
+    "productName": "Universal PDF",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "public/unisim-icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }
