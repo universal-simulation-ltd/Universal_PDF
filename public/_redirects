@@ -1,0 +1,23 @@
+# Cloudflare Pages rewrites — Universal PDF is served under /pdf/ but the built
+# files in dist/ are flat (Vite's `base: '/pdf/'` only rewrites URLs INSIDE the
+# HTML; it does not place files in dist/pdf/).
+#
+# 200 status = transparent rewrite (URL bar unchanged). Order matters — more
+# specific rules first, broad SPA fallback last.
+
+# Service-worker + PWA artefacts (must be reachable at their real names so
+# vite-plugin-pwa's registration works).
+/pdf/sw.js                /sw.js                200
+/pdf/registerSW.js        /registerSW.js        200
+/pdf/manifest.webmanifest /manifest.webmanifest 200
+/pdf/workbox-*            /workbox-:splat       200
+
+# Hashed asset bundles and any other top-level public/ files.
+/pdf/assets/*             /assets/:splat        200
+
+# Static files referenced from index.html / the SDK navbar.
+/pdf/favicon.svg          /favicon.svg          200
+/pdf/unisim-icon.png      /unisim-icon.png      200
+
+# SPA fallback — everything else under /pdf/ serves the shell.
+/pdf/*                    /index.html           200
