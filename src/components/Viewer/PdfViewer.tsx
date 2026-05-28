@@ -244,7 +244,7 @@ export default function PdfViewer() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="bg-slate-100 border-b border-slate-200">
+      <div className="hidden md:block bg-slate-100 border-b border-slate-200">
         <div style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}>
         <div
           className="mx-auto w-full grid grid-cols-[auto_1fr_auto] items-center gap-2 py-1.5 text-sm text-slate-600"
