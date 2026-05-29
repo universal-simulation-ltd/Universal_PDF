@@ -864,11 +864,45 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       )}
 
       {(() => {
+        // Delete affordance on the currently-selected object — same visibility
+        // as the resize/rotate Transformer (any selection, not while dragging or
+        // editing text). Sits just off the top-right corner.
+        if (draggingId || editingId) return null
+        const selected = annotations.find((a) => a.id === selectedId)
+        if (!selected) return null
+        const bbox = getAnnotationBBox(selected)
+        return (
+          <button
+            type="button"
+            title="Delete"
+            aria-label="Delete selected object"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); remove(selected.id) }}
+            style={{
+              position: 'absolute',
+              left: (bbox.x + bbox.width) * scale + 8,
+              top: bbox.y * scale - 8,
+              zIndex: 21
+            }}
+            className="w-8 h-8 rounded-full bg-white shadow-lg border border-slate-300 text-red-600 hover:bg-red-600 hover:text-white hover:border-red-600 flex items-center justify-center transition-colors"
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 7h16" />
+              <path d="M9 7V5h6v2" />
+              <path d="M6 7l1 13h10l1-13" />
+              <path d="M10 11v6M14 11v6" />
+            </svg>
+          </button>
+        )
+      })()}
+
+      {(() => {
         if (tool !== 'select') return null
         if (draggingId) return null
         const selected = annotations.find((a) => a.id === selectedId)
         if (!selected || selected.type !== 'rect') return null
         const filled = !!selected.filled
+        const bbox = getAnnotationBBox(selected)
         return (
           <button
             type="button"
@@ -881,8 +915,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             }}
             style={{
               position: 'absolute',
-              left: (selected.x + selected.width) * scale + 6,
-              top: selected.y * scale - 4,
+              left: (bbox.x + bbox.width) * scale + 8,
+              top: bbox.y * scale - 8 + 36,
               zIndex: 20
             }}
             className="w-8 h-8 rounded-full bg-white shadow-lg border border-slate-300 hover:border-orange-500 hover:bg-orange-50 flex items-center justify-center text-base leading-none"
