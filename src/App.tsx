@@ -120,33 +120,32 @@ export default function App() {
       )}
       {doc && (
         <div className="bg-slate-900 text-white relative z-30" style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}>
-          {/* Mobile: suite switcher centred in the header */}
-          <div className="md:hidden absolute inset-0 flex items-center justify-center">
-            <SuiteSwitcher
-              current="pdf"
-              products={DEFAULT_UNIVERSAL_APPS_PRODUCTS}
-              align="left"
-              portalHref="https://opensource.unisim.co.uk"
-              portalLabel={{ eyebrow: 'Universal Simulation', title: 'Universal Apps' }}
-              githubHref="https://github.com/universal-simulation-ltd"
-            >
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-slate-800 active:bg-slate-700 cursor-pointer select-none">
-                <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" aria-hidden="true">
-                  <rect width="24" height="24" rx="5" fill="#ea580c" />
-                  <polygon points="4,2.5 14.5,2.5 14.5,8 20,8 20,21.5 4,21.5" fill="white" />
-                  <polygon points="14.5,2.5 20,8 14.5,8" fill="#fdba74" />
-                  <text x="12" y="18" textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize="6" fontWeight="900" fill="#ea580c" letterSpacing="0.4">PDF</text>
-                </svg>
-                <span className="font-semibold text-sm text-white whitespace-nowrap">Universal PDF</span>
-              </div>
-            </SuiteSwitcher>
-          </div>
           <div
             className="mx-auto w-full flex items-center justify-between gap-3 py-2 min-h-[52px] px-3"
             style={{ maxWidth: 'clamp(600px, var(--doc-display-width, 80rem), 80rem)' }}
           >
             <div className="flex items-center gap-2 min-w-0">
               <FileMenu variant="toolbar" />
+              <div className="md:hidden">
+                <SuiteSwitcher
+                  current="pdf"
+                  products={DEFAULT_UNIVERSAL_APPS_PRODUCTS}
+                  align="left"
+                  portalHref="https://opensource.unisim.co.uk"
+                  portalLabel={{ eyebrow: 'Universal Simulation', title: 'Universal Apps' }}
+                  githubHref="https://github.com/universal-simulation-ltd"
+                >
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-slate-800 active:bg-slate-700 cursor-pointer select-none">
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" aria-hidden="true">
+                      <rect width="24" height="24" rx="5" fill="#ea580c" />
+                      <polygon points="4,2.5 14.5,2.5 14.5,8 20,8 20,21.5 4,21.5" fill="white" />
+                      <polygon points="14.5,2.5 20,8 14.5,8" fill="#fdba74" />
+                      <text x="12" y="18" textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize="6" fontWeight="900" fill="#ea580c" letterSpacing="0.4">PDF</text>
+                    </svg>
+                    <span className="font-semibold text-sm text-white whitespace-nowrap">Universal PDF</span>
+                  </div>
+                </SuiteSwitcher>
+              </div>
               <ToolbarDesktopTools />
             </div>
             <div className="flex items-center gap-2 justify-end">
