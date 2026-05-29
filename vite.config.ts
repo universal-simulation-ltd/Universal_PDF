@@ -49,7 +49,7 @@ export default defineConfig(({ mode }) => {
       exclude: ['canvas']
     },
     worker: {
-      format: 'es'
+      format: 'iife'
     }
   }
 })
