@@ -19,5 +19,8 @@
 /pdf/favicon.svg          /favicon.svg          200
 /pdf/unisim-icon.png      /unisim-icon.png      200
 
+# Bare /pdf (no trailing slash) — redirect to canonical /pdf/ so the SPA loads.
+/pdf                      /pdf/                 301
+
 # SPA fallback — everything else under /pdf/ serves the shell.
 /pdf/*                    /index.html           200
