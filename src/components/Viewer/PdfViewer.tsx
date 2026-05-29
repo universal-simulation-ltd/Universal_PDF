@@ -11,6 +11,8 @@ const BASE_SCALE = 96 / 72
 const MIN_ZOOM = 0.25
 const MAX_ZOOM = 4
 const ZOOM_STEP = 0.1
+// Quick presets offered when you click the % label while at 100%.
+const ZOOM_PRESETS = [50, 75, 125, 150]
 
 export default function PdfViewer() {
   const doc = usePdfStore((s) => s.doc)
@@ -20,11 +22,35 @@ export default function PdfViewer() {
   const tool = useAnnotationStore((s) => s.tool)
   const [zoom, setZoom] = useState(1)
   const scale = zoom * BASE_SCALE
+  const [zoomMenuOpen, setZoomMenuOpen] = useState(false)
+  const zoomMenuRef = useRef<HTMLDivElement>(null)
 
   // Keep a ref to the current zoom so the long-lived touch handlers below
   // can read it without re-binding on every change.
   const zoomRef = useRef(zoom)
   zoomRef.current = zoom
+
+  // Close the zoom-presets menu on outside-click / Escape, and whenever the
+  // zoom leaves 100% (the presets menu only applies at 100%).
+  useEffect(() => {
+    if (!zoomMenuOpen) return
+    function onDown(e: MouseEvent) {
+      if (zoomMenuRef.current && !zoomMenuRef.current.contains(e.target as Node)) setZoomMenuOpen(false)
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setZoomMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [zoomMenuOpen])
+
+  useEffect(() => {
+    if (Math.round(zoom * 100) !== 100) setZoomMenuOpen(false)
+  }, [zoom])
 
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -241,6 +267,7 @@ export default function PdfViewer() {
 
   const handCursor = tool === 'hand' ? 'grab' : undefined
   const zoomDisabled = !['select', 'hand', 'form'].includes(tool)
+  const atHundred = Math.round(zoom * 100) === 100
 
   return (
     <div className="flex flex-col h-full">
@@ -281,14 +308,32 @@ export default function PdfViewer() {
             >
               −
             </button>
-            <button
-              onClick={() => setZoom(1)}
-              disabled={zoomDisabled}
-              title="Reset to 100% (actual size)"
-              className={`w-14 text-center tabular-nums rounded border border-transparent ${zoomDisabled ? 'text-slate-300 cursor-not-allowed' : 'hover:bg-white hover:border-slate-300'}`}
-            >
-              {Math.round(zoom * 100)}%
-            </button>
+            <div className="relative" ref={zoomMenuRef}>
+              <button
+                onClick={() => { if (atHundred) setZoomMenuOpen((o) => !o); else setZoom(1) }}
+                disabled={zoomDisabled}
+                title={atHundred ? 'Zoom presets' : 'Reset to 100% (actual size)'}
+                aria-haspopup={atHundred ? 'menu' : undefined}
+                aria-expanded={atHundred ? zoomMenuOpen : undefined}
+                className={`w-14 text-center tabular-nums rounded border border-transparent ${zoomDisabled ? 'text-slate-300 cursor-not-allowed' : 'hover:bg-white hover:border-slate-300'}`}
+              >
+                {Math.round(zoom * 100)}%
+              </button>
+              {zoomMenuOpen && atHundred && (
+                <div role="menu" className="absolute top-full right-0 mt-1 w-20 bg-white border border-slate-200 rounded-lg shadow-xl py-1 z-50">
+                  {ZOOM_PRESETS.map((p) => (
+                    <button
+                      key={p}
+                      role="menuitem"
+                      onClick={() => { setZoom(Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, p / 100))); setZoomMenuOpen(false) }}
+                      className="w-full text-center tabular-nums px-3 py-1.5 text-sm text-slate-700 hover:bg-orange-50 hover:text-orange-700"
+                    >
+                      {p}%
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <button
               onClick={() => setZoom((z) => Math.min(MAX_ZOOM, +(z + ZOOM_STEP).toFixed(2)))}
               disabled={zoomDisabled}
