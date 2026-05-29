@@ -70,13 +70,6 @@ export default function SignatureMenu({ openUpward = false, compact = false }: S
         >
           <span>✍</span>
           <span>Sign</span>
-          {active && (
-            <img
-              src={active.dataUrl}
-              alt=""
-              className="h-6 max-w-12 bg-white rounded px-1"
-            />
-          )}
           <span className="opacity-60 text-xs">▾</span>
         </button>
       )}
