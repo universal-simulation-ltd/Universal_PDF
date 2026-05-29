@@ -1,0 +1,5 @@
+# Force HTTPS: instruct browsers to only ever connect over TLS (mirrors the
+# marketing site). The HTTP→HTTPS redirect itself is the Cloudflare zone
+# "Always Use HTTPS" setting.
+/*
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
