@@ -153,7 +153,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
         onChange={onPick}
       />
       {open && (
-        <div className={`absolute ${variant === 'header' ? 'left-0 mt-2' : 'right-0 mt-1'} w-60 bg-white text-slate-900 rounded-lg shadow-xl border border-slate-200 z-50 overflow-hidden`}>
+        <div className={`absolute left-0 ${variant === 'header' ? 'mt-2' : 'mt-1'} w-60 bg-white text-slate-900 rounded-lg shadow-xl border border-slate-200 z-50 overflow-hidden`}>
           {doc && (
             <button
               onClick={() => { reset(); setOpen(false) }}
