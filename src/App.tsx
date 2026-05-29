@@ -148,6 +148,7 @@ export default function App() {
               <ToolbarDesktopTools />
             </div>
             <div className="flex items-center gap-2 justify-end">
+              <span className="text-xs text-slate-400 select-none whitespace-nowrap">100% Free · 100% Open source</span>
               <ToolbarDesktopActions />
             </div>
           </div>
