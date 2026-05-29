@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { UniversalProvider } from '@unisim/sdk'
 import App from './App'
+import ErrorBoundary from './components/ErrorBoundary'
 import { usePdfStore } from './stores/pdfStore'
 import { useAnnotationStore } from './stores/annotationStore'
 import { useSignatureStore } from './stores/signatureStore'
@@ -24,8 +25,10 @@ const universalConfig = {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <UniversalProvider config={universalConfig}>
-      <App />
-    </UniversalProvider>
+    <ErrorBoundary>
+      <UniversalProvider config={universalConfig}>
+        <App />
+      </UniversalProvider>
+    </ErrorBoundary>
   </React.StrictMode>
 )
