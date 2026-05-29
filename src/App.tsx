@@ -113,14 +113,6 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-full bg-slate-100">
-      {doc && suiteNavOpen && (
-        <div
-          className="bg-white border-b border-slate-200 px-3 py-1.5 flex items-center"
-          style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}
-        >
-          <FileMenu variant="header" />
-        </div>
-      )}
       {(!doc || suiteNavOpen) && (
         <UniversalAppsNavBar
           product="pdf"
@@ -152,6 +144,7 @@ export default function App() {
                 </svg>
               </button>
               <span className="shrink-0 w-px h-6 bg-slate-700" aria-hidden="true" />
+              <FileMenu variant="toolbar" />
               <ToolbarDesktopTools />
             </div>
             <div className="flex items-center gap-2 justify-end">
