@@ -47,6 +47,10 @@ export default function App() {
 
   useToolbarKeyboardShortcuts(!!doc)
 
+  // When a PDF is open the suite navbar collapses to reclaim vertical space; a
+  // hamburger on the dark toolbar toggles it back. With no doc it's always shown.
+  const [suiteNavOpen, setSuiteNavOpen] = useState(false)
+
   useEffect(() => {
     refreshRecents()
     // If we landed on /#abc12345, try to reopen that PDF straight from
