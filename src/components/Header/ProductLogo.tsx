@@ -18,7 +18,7 @@ export default function ProductLogo() {
           PDF
         </text>
       </svg>
-      <span className="hidden sm:inline font-semibold tracking-tight text-[15px]">
+      <span className="font-semibold tracking-tight text-[15px]">
         Universal PDF
       </span>
     </a>
