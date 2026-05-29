@@ -49,7 +49,7 @@ npm run dev
 
 The dev server runs at <http://localhost:5173>. Build for production with `npm run build`.
 
-Pushes to `main` auto-deploy to GitHub Pages via the [Actions workflow](.github/workflows/deploy.yml).
+Pushes to `main` auto-deploy via Cloudflare Pages, which serves the app at <https://opensource.unisim.co.uk/pdf>. The production build sets Vite `base: '/pdf/'` and ships a `public/_redirects` file that rewrites `/pdf/*` onto the flat `dist/` output.
 
 ## Desktop app (Windows)
 
