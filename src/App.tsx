@@ -113,6 +113,14 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-full bg-slate-100">
+      {doc && suiteNavOpen && (
+        <div
+          className="bg-white border-b border-slate-200 px-3 py-1.5 flex items-center"
+          style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}
+        >
+          <FileMenu variant="header" />
+        </div>
+      )}
       {(!doc || suiteNavOpen) && (
         <UniversalAppsNavBar
           product="pdf"
