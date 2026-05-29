@@ -47,9 +47,6 @@ export default function App() {
 
   useToolbarKeyboardShortcuts(!!doc)
 
-  // When a PDF is open the suite navbar collapses to reclaim vertical space; a
-  // hamburger on the dark toolbar toggles it back. With no doc it's always shown.
-  const [suiteNavOpen, setSuiteNavOpen] = useState(false)
 
   useEffect(() => {
     refreshRecents()
@@ -113,11 +110,11 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-full bg-slate-100">
-      {(!doc || suiteNavOpen) && (
+      {!doc && (
         <UniversalAppsNavBar
           product="pdf"
           productLogo={<ProductLogo />}
-          fileMenu={!doc ? <FileMenu variant="header" /> : undefined}
+          fileMenu={<FileMenu variant="header" />}
           suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
         />
       )}
@@ -128,22 +125,6 @@ export default function App() {
             style={{ maxWidth: 'clamp(600px, var(--doc-display-width, 80rem), 80rem)' }}
           >
             <div className="flex items-center gap-2 min-w-0">
-              <button
-                onClick={() => setSuiteNavOpen((v) => !v)}
-                title={suiteNavOpen ? 'Hide menu' : 'Show menu'}
-                aria-label="Toggle suite menu"
-                aria-expanded={suiteNavOpen}
-                className="shrink-0 w-9 h-9 flex items-center justify-center rounded text-slate-200 hover:bg-slate-700 transition-colors"
-              >
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                  {suiteNavOpen ? (
-                    <><path d="M6 6l12 12" /><path d="M18 6L6 18" /></>
-                  ) : (
-                    <><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></>
-                  )}
-                </svg>
-              </button>
-              <span className="shrink-0 w-px h-6 bg-slate-700" aria-hidden="true" />
               <FileMenu variant="toolbar" />
               <ToolbarDesktopTools />
             </div>
