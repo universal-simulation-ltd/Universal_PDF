@@ -130,7 +130,6 @@ export default function App() {
             style={{ maxWidth: 'clamp(600px, var(--doc-display-width, 80rem), 80rem)' }}
           >
             <div className="flex items-center gap-2 min-w-0">
-              <FileMenu variant="toolbar" />
               <div className="md:hidden">
                 <SuiteSwitcher
                   current="pdf"
@@ -151,6 +150,7 @@ export default function App() {
                   </div>
                 </SuiteSwitcher>
               </div>
+              <FileMenu variant="toolbar" />
               <ToolbarDesktopTools />
             </div>
             <div className="flex items-center gap-2 justify-end">
