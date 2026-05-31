@@ -70,6 +70,12 @@ run on Windows** (or Linux/macOS with Wine) because electron-builder packages a
 platform-native binary; cross-building from a plain Linux host won't produce a
 working Windows `.exe`. The first run downloads the Electron binary (~100 MB).
 
+To cut a release, push a `v*` tag — the
+[`build-windows`](.github/workflows/build-windows.yml) workflow builds the
+installer on `windows-latest` and attaches it to the matching GitHub Release.
+Manual `workflow_dispatch` also works for ad-hoc builds; the installer is
+uploaded as a workflow artifact in that case.
+
 ## Stack
 
 - **Vite 6 + React 18 + TypeScript** — app shell
