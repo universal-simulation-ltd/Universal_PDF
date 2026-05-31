@@ -12,7 +12,7 @@ export type Tool =
   | 'signature'
   | 'form'
 
-type Base = { id: string; pageIndex: number; linkedTo?: string }
+type Base = { id: string; pageIndex: number }
 
 export type FontFamily = 'sans' | 'serif' | 'mono'
 

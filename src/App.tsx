@@ -9,7 +9,6 @@ import PdfViewer from './components/Viewer/PdfViewer'
 import PageNavigator from './components/Viewer/PageNavigator'
 import SignaturePad from './components/Signature/SignaturePad'
 import StampPicker from './components/Signature/StampPicker'
-import EmailVerifyModal from './components/Signature/EmailVerifyModal'
 import SignatureImport from './components/Signature/SignatureImport'
 import LandingPage from './components/Landing/LandingPage'
 import LivePreview from './components/Preview/LivePreview'
@@ -47,7 +46,6 @@ export default function App() {
   const loadFromCurrentUrl = usePdfStore((s) => s.loadFromCurrentUrl)
 
   const stampPickerOpen = useSignatureStore((s) => s.stampPickerOpen)
-  const emailVerifyOpen = useSignatureStore((s) => s.emailVerifyOpen)
 
   useToolbarKeyboardShortcuts(!!doc)
 
@@ -238,7 +236,6 @@ export default function App() {
       <SignaturePad />
       <SignatureImport />
       {stampPickerOpen && <StampPicker />}
-      {emailVerifyOpen && <EmailVerifyModal />}
       <LivePreview />
     </div>
   )

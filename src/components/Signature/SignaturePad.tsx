@@ -11,7 +11,6 @@ export default function SignaturePad() {
   const open = useSignatureStore((s) => s.padOpen)
   const closePad = useSignatureStore((s) => s.closePad)
   const add = useSignatureStore((s) => s.add)
-  const openEmailVerify = useSignatureStore((s) => s.openEmailVerify)
 
   const stageRef = useRef<Konva.Stage>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -73,7 +72,7 @@ export default function SignaturePad() {
     closePad()
   }
 
-  function save(andVerify = false) {
+  function save() {
     if (lines.length === 0) return
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
     for (const line of lines) {
@@ -102,17 +101,11 @@ export default function SignaturePad() {
       mimeType: 'image/png'
     })
     const sigName = name.trim() || `Signature ${useSignatureStore.getState().signatures.length + 1}`
-    const id = add({ name: sigName, dataUrl, width: w, height: h })
+    add({ name: sigName, dataUrl, width: w, height: h })
     setLines([])
     setName('')
     closePad()
-    if (andVerify) {
-      openEmailVerify(id)
-    } else {
-      // Arm the signature tool so the user can immediately drop the new
-      // signature — the active signature was set by add() above.
-      useAnnotationStore.getState().setTool('signature')
-    }
+    useAnnotationStore.getState().setTool('signature')
   }
 
   return (
@@ -176,25 +169,13 @@ export default function SignaturePad() {
             Cancel
           </button>
           <button
-            onClick={() => save(false)}
+            onClick={save}
             disabled={lines.length === 0}
             className="px-4 py-2 bg-orange-600 hover:bg-orange-500 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded text-sm font-medium"
           >
             Save
           </button>
-          <button
-            onClick={() => save(true)}
-            disabled={lines.length === 0}
-            title="Save and verify with email"
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded text-sm font-medium flex items-center gap-1.5"
-          >
-            <span>✉</span>
-            <span>Save &amp; Verify</span>
-          </button>
         </div>
-        <p className="mt-2 text-xs text-slate-400">
-          "Save &amp; Verify" lets you attach a verified email address to this signature.
-        </p>
       </div>
     </div>
   )

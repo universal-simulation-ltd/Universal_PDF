@@ -8,7 +8,6 @@ export interface Signature {
   width: number
   height: number
   createdAt: number
-  verifiedEmail?: string
 }
 
 export type ImportTarget = 'signature' | 'stamp'
@@ -20,21 +19,16 @@ interface SignatureState {
   importOpen: boolean
   importTarget: ImportTarget
   stampPickerOpen: boolean
-  emailVerifyOpen: boolean
-  pendingVerifyId: string | null
   add: (sig: Omit<Signature, 'id' | 'createdAt'>) => string
   remove: (id: string) => void
   setActive: (id: string | null) => void
   rename: (id: string, name: string) => void
-  setVerifiedEmail: (id: string, email: string) => void
   openPad: () => void
   closePad: () => void
   openImport: (target?: ImportTarget) => void
   closeImport: () => void
   openStampPicker: () => void
   closeStampPicker: () => void
-  openEmailVerify: (id: string) => void
-  closeEmailVerify: () => void
 }
 
 export const useSignatureStore = create<SignatureState>()(
@@ -46,8 +40,6 @@ export const useSignatureStore = create<SignatureState>()(
       importOpen: false,
       importTarget: 'signature',
       stampPickerOpen: false,
-      emailVerifyOpen: false,
-      pendingVerifyId: null,
       add: (sig) => {
         const id = crypto.randomUUID()
         set((s) => ({
@@ -66,18 +58,12 @@ export const useSignatureStore = create<SignatureState>()(
         set((s) => ({
           signatures: s.signatures.map((x) => (x.id === id ? { ...x, name } : x))
         })),
-      setVerifiedEmail: (id, email) =>
-        set((s) => ({
-          signatures: s.signatures.map((x) => (x.id === id ? { ...x, verifiedEmail: email } : x))
-        })),
       openPad: () => set({ padOpen: true }),
       closePad: () => set({ padOpen: false }),
       openImport: (target = 'signature') => set({ importOpen: true, importTarget: target }),
       closeImport: () => set({ importOpen: false }),
       openStampPicker: () => set({ stampPickerOpen: true }),
-      closeStampPicker: () => set({ stampPickerOpen: false }),
-      openEmailVerify: (id) => set({ emailVerifyOpen: true, pendingVerifyId: id }),
-      closeEmailVerify: () => set({ emailVerifyOpen: false, pendingVerifyId: null })
+      closeStampPicker: () => set({ stampPickerOpen: false })
     }),
     {
       name: 'universal-pdf-signatures',
