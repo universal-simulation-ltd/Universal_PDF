@@ -710,10 +710,14 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           {(() => {
             const selected = annotations.find((a) => a.id === selectedId)
             const resizable = selected ? isResizable(selected) : false
+            // Redactions are baked as axis-aligned black boxes (the export
+            // rasteriser ignores rotation), so don't offer a rotate handle
+            // that would silently do nothing.
+            const rotatable = selected ? selected.type !== 'redact' : true
             return (
               <Transformer
                 ref={trRef}
-                rotateEnabled
+                rotateEnabled={rotatable}
                 resizeEnabled={resizable}
                 keepRatio={selected?.type === 'image'}
                 rotateAnchorOffset={28}
