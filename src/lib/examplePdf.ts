@@ -7,7 +7,6 @@ const SLATE_600 = rgb(0.34, 0.39, 0.46)
 const SLATE_400 = rgb(0.58, 0.64, 0.72)
 const SLATE_200 = rgb(0.89, 0.91, 0.93)
 const GREEN_600 = rgb(0.05, 0.59, 0.41)
-const GREEN_50 = rgb(0.93, 0.99, 0.96)
 const BLUE_50 = rgb(0.94, 0.97, 1)
 const BLUE_400 = rgb(0.38, 0.65, 0.98)
 
@@ -228,24 +227,6 @@ export async function createExamplePdfFile(): Promise<File> {
     )
     page.drawText('Alex Morgan', { x: sigX + 16, y: imgY + 42, size: 10, font: bold, color: SLATE_900 })
     page.drawText('Director of Operations', { x: sigX + 16, y: imgY + 29, size: 8, font, color: SLATE_600 })
-
-    const badgeY = imgY + 10
-    const badgeText = 'Verified: alex@example.com'
-    const badgeW = bold.widthOfTextAtSize(badgeText, 8) + 26
-    page.drawRectangle({ x: sigX + 12, y: badgeY, width: badgeW, height: 14, color: GREEN_50, borderColor: GREEN_600, borderWidth: 0.5 })
-    page.drawLine({
-      start: { x: sigX + 16, y: badgeY + 6 },
-      end: { x: sigX + 19, y: badgeY + 3.5 },
-      thickness: 1.2,
-      color: GREEN_600
-    })
-    page.drawLine({
-      start: { x: sigX + 19, y: badgeY + 3.5 },
-      end: { x: sigX + 24, y: badgeY + 10 },
-      thickness: 1.2,
-      color: GREEN_600
-    })
-    page.drawText(badgeText, { x: sigX + 28, y: badgeY + 3.5, size: 8, font: bold, color: GREEN_600 })
 
     // Annotations row
     y = imgY - 40

@@ -20,7 +20,6 @@ export default function SignatureMenu({ openUpward = false, compact = false }: S
   const openPad = useSignatureStore((s) => s.openPad)
   const openImport = useSignatureStore((s) => s.openImport)
   const openStampPicker = useSignatureStore((s) => s.openStampPicker)
-  const openEmailVerify = useSignatureStore((s) => s.openEmailVerify)
   const remove = useSignatureStore((s) => s.remove)
 
   const tool = useAnnotationStore((s) => s.tool)
@@ -125,24 +124,8 @@ export default function SignatureMenu({ openUpward = false, compact = false }: S
                   />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">{s.name}</div>
-                    {s.verifiedEmail && (
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">
-                          ✓ Verified: {s.verifiedEmail}
-                        </span>
-                      </div>
-                    )}
                   </div>
                   <div className="flex flex-col gap-1">
-                    {tab === 'signatures' && !s.verifiedEmail && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); openEmailVerify(s.id); setOpen(false) }}
-                        title="Verify email"
-                        className="text-slate-300 hover:text-blue-600 text-xs px-1"
-                      >
-                        ✉
-                      </button>
-                    )}
                     <button
                       onClick={(e) => { e.stopPropagation(); remove(s.id) }}
                       className="text-slate-300 hover:text-red-600 text-sm"

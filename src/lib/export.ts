@@ -221,44 +221,9 @@ export async function buildAnnotatedPdfBytes(
         case 'text': {
           const rot = a.rotation ?? 0
           const rad = (rot * Math.PI) / 180
-          // Verified-signature labels prefix the text with U+2713 ("✓ "),
-          // which WinAnsi can't encode. Render it as a vector tick (matching
-          // the example PDF) and continue the text after.
-          const hasTick = a.text.startsWith('✓')
-          const bodyRaw = hasTick ? a.text.replace(/^✓\s*/, '') : a.text
-          const body = sanitizeForWinAnsi(bodyRaw)
-          const tickSize = hasTick ? a.fontSize * 0.85 : 0
-          const tickGap = hasTick ? a.fontSize * 0.25 : 0
-          const textOffsetX = tickSize + tickGap
-
-          if (hasTick) {
-            // Tick lives inside a tickSize × tickSize box anchored at (a.x, a.y).
-            // Same geometry as the standalone tick annotation, scaled to font size.
-            const s = tickSize
-            const segs: Array<[number, number, number, number]> = [
-              [a.x, a.y + s * 0.55, a.x + s * 0.35, a.y + s * 0.9],
-              [a.x + s * 0.35, a.y + s * 0.9, a.x + s, a.y + s * 0.1]
-            ]
-            for (const [x1, y1, x2, y2] of segs) {
-              const [rx1, ry1] = rotatePoint(x1, y1, a.x, a.y, rad)
-              const [rx2, ry2] = rotatePoint(x2, y2, a.x, a.y, rad)
-              page.drawLine({
-                start: { x: sx(rx1), y: toY(ry1) },
-                end: { x: sx(rx2), y: toY(ry2) },
-                thickness: sw(Math.max(0.9, a.fontSize / 8)),
-                color: hexToPdfRgb(a.color),
-                lineCap: LineCapStyle.Round
-              })
-            }
-          }
-
+          const body = sanitizeForWinAnsi(a.text)
           if (body) {
-            // Konva text top-left is (a.x + textOffsetX, a.y); the baseline sits
-            // roughly 0.8 * fontSize below. pdf-lib draws from the baseline, so
-            // we rotate the baseline-left point around the Konva pivot (top-left)
-            // and use it as the pdf-lib origin with the inverse rotation
-            // (PDF Y-axis is flipped relative to Konva).
-            const blKx = a.x + textOffsetX
+            const blKx = a.x
             const blKy = a.y + a.fontSize * 0.8
             const [bx, by] = rotatePoint(blKx, blKy, a.x, a.y, rad)
             page.drawText(body, {

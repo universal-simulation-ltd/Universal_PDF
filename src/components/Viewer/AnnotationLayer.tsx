@@ -129,7 +129,6 @@ function SignatureImage({
   onClick,
   onDblClick,
   onDragStart,
-  onDragMove,
   onDragEnd,
   onTransformEnd
 }: {
@@ -139,7 +138,6 @@ function SignatureImage({
   onClick: () => void
   onDblClick: () => void
   onDragStart: () => void
-  onDragMove: (e: Konva.KonvaEventObject<DragEvent>) => void
   onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void
   onTransformEnd: (e: Konva.KonvaEventObject<Event>) => void
 }) {
@@ -161,7 +159,6 @@ function SignatureImage({
       onDblClick={onDblClick}
       onDblTap={onDblClick}
       onDragStart={onDragStart}
-      onDragMove={onDragMove}
       onDragEnd={onDragEnd}
       onTransformEnd={onTransformEnd}
     />
@@ -197,16 +194,6 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // Pointer position used to render the ghost-signature preview that
   // follows the cursor while the signature tool is armed.
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null)
-  // ID of an annotation that, on its next drag, should move on its own
-  // (uncoupled from its linked partner). Re-armed via double-click.
-  const [unlinkOnceId, setUnlinkOnceId] = useState<string | null>(null)
-  // While a linked drag is in progress, remember the partner's start
-  // position so we can mirror the drag delta onto its Konva node.
-  const linkedDragRef = useRef<{
-    partnerId: string
-    partnerStart: { x: number; y: number }
-    draggerStart: { x: number; y: number }
-  } | null>(null)
   const editingAnnotation = annotations.find(
     (a) => a.id === editingId && a.type === 'text'
   ) as TextAnnotation | undefined
@@ -303,10 +290,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       if (active) {
         const targetW = 160 / scale
         const ratio = active.height / active.width
-        const sigId = crypto.randomUUID()
-        const labelId = active.verifiedEmail ? crypto.randomUUID() : undefined
         add({
-          id: sigId,
+          id: crypto.randomUUID(),
           pageIndex,
           type: 'image',
           x: pos.x - targetW / 2,
@@ -314,22 +299,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           width: targetW,
           height: targetW * ratio,
           src: active.dataUrl,
-          linkedTo: labelId
         })
-        // If signature has a verified email, place a linked label below it
-        if (labelId && active.verifiedEmail) {
-          add({
-            id: labelId,
-            pageIndex,
-            type: 'text',
-            x: pos.x - targetW / 2,
-            y: pos.y + (targetW * ratio) / 2 + 4 / scale,
-            text: `✓ Verified as: ${active.verifiedEmail}`,
-            color: '#16a34a',
-            fontSize: 10 / scale,
-            linkedTo: sigId
-          })
-        }
         useAnnotationStore.getState().setTool('select')
       }
     } else if (tool === 'image') {
@@ -454,61 +424,16 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
 
   function onTextDblClick(a: TextAnnotation) {
     if (tool !== 'select') return
-    if (a.linkedTo) {
-      // Linked text labels (e.g. the verified-signature caption) use
-      // double-click to unlink for the next move instead of entering edit
-      // mode — editing the auto-generated caption isn't a flow the user
-      // typically wants here.
-      setSelected(a.id)
-      setUnlinkOnceId(a.id)
-      return
-    }
     setEditingId(a.id)
     setSelected(a.id)
   }
 
-  function onLinkedDblClick(a: Annotation) {
-    if (tool !== 'select') return
-    if (!a.linkedTo) return
-    setSelected(a.id)
-    setUnlinkOnceId(a.id)
-  }
-
   function onShapeDragStart(a: Annotation) {
     setDraggingId(a.id)
-    // Set up linked-drag state if this annotation is paired and we
-    // haven't been told to move it on its own this time.
-    linkedDragRef.current = null
-    const partnerId = a.linkedTo
-    if (!partnerId || unlinkOnceId === a.id) return
-    const partner = allAnnotations.find((x) => x.id === partnerId)
-    const partnerNode = shapeRefs.current.get(partnerId)
-    if (!partner || !partnerNode || 'points' in partner) return
-    const draggerStartX = 'x' in a ? (a.x as number) : 0
-    const draggerStartY = 'y' in a ? (a.y as number) : 0
-    linkedDragRef.current = {
-      partnerId,
-      partnerStart: { x: partnerNode.x(), y: partnerNode.y() },
-      draggerStart: { x: draggerStartX, y: draggerStartY }
-    }
-  }
-
-  function onShapeDragMove(a: Annotation, e: Konva.KonvaEventObject<DragEvent>) {
-    const link = linkedDragRef.current
-    if (!link) return
-    const node = e.target
-    const dx = node.x() - link.draggerStart.x
-    const dy = node.y() - link.draggerStart.y
-    const partnerNode = shapeRefs.current.get(link.partnerId)
-    if (!partnerNode) return
-    partnerNode.position({ x: link.partnerStart.x + dx, y: link.partnerStart.y + dy })
-    partnerNode.getLayer()?.batchDraw()
-    void a // unused param kept for handler symmetry
   }
 
   function onShapeDragEnd(a: Annotation, e: Konva.KonvaEventObject<DragEvent>) {
     const node = e.target
-    const link = linkedDragRef.current
     setDraggingId(null)
     if (a.type === 'draw') {
       const dx = node.x()
@@ -519,19 +444,6 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     } else {
       update(a.id, { x: node.x(), y: node.y() } as Partial<Annotation>)
     }
-    if (link) {
-      const partnerNode = shapeRefs.current.get(link.partnerId)
-      if (partnerNode) {
-        update(link.partnerId, {
-          x: partnerNode.x(),
-          y: partnerNode.y()
-        } as Partial<Annotation>)
-      }
-    }
-    // The "unlink once" arming consumed by this drag — re-arm requires
-    // another double-click.
-    if (unlinkOnceId === a.id) setUnlinkOnceId(null)
-    linkedDragRef.current = null
   }
 
   function onShapeTransformEnd(a: Annotation, e: Konva.KonvaEventObject<Event>) {
@@ -608,8 +520,6 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               onClick: () => onShapeClick(a.id),
               onTap: () => onShapeClick(a.id),
               onDragStart: () => onShapeDragStart(a),
-              onDragMove: (e: Konva.KonvaEventObject<DragEvent>) =>
-                onShapeDragMove(a, e),
               onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) =>
                 onShapeDragEnd(a, e),
               onTransformEnd: (e: Konva.KonvaEventObject<Event>) =>
@@ -723,9 +633,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                     shapeRef={shapeRefSetter(a.id)}
                     draggable={selectable}
                     onClick={() => onShapeClick(a.id)}
-                    onDblClick={() => onLinkedDblClick(a)}
+                    onDblClick={() => onShapeClick(a.id)}
                     onDragStart={() => onShapeDragStart(a)}
-                    onDragMove={(e) => onShapeDragMove(a, e)}
                     onDragEnd={(e) => onShapeDragEnd(a, e)}
                     onTransformEnd={(e) => onShapeTransformEnd(a, e)}
                   />

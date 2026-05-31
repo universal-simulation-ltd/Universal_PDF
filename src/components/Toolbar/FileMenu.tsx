@@ -92,10 +92,10 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
         }
       }
     }
-    document.addEventListener('mousedown', onDoc)
+    document.addEventListener('mousedown', onDoc, true)
     document.addEventListener('keydown', onKey)
     return () => {
-      document.removeEventListener('mousedown', onDoc)
+      document.removeEventListener('mousedown', onDoc, true)
       document.removeEventListener('keydown', onKey)
     }
   }, [open, langSubOpen, renameOpen])
