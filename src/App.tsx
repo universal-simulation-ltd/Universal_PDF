@@ -15,11 +15,7 @@ import LivePreview from './components/Preview/LivePreview'
 import ProductLogo from './components/Header/ProductLogo'
 import FileMenu from './components/Toolbar/FileMenu'
 import MobileWelcomeToast from './components/Onboarding/MobileWelcomeToast'
-import { UniversalAppsNavBar, SuiteSwitcher, ChangelogMenu, DEFAULT_UNIVERSAL_APPS_PRODUCTS } from '@unisim/sdk'
-
-const PDF_AND_IMAGES_PRODUCTS = DEFAULT_UNIVERSAL_APPS_PRODUCTS.filter(
-  (p) => p.id === 'pdf' || p.id === 'images'
-)
+import { UniversalAppsNavBar, SuiteSwitcher, ChangelogMenu } from '@unisim/sdk'
 
 // Apply the saved language to <html lang> on first mount.
 import { persistLang, readSavedLang } from './lib/lang'
@@ -118,7 +114,6 @@ export default function App() {
           productLogo={<ProductLogo />}
           fileMenu={<FileMenu variant="header" />}
           suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
-          products={PDF_AND_IMAGES_PRODUCTS}
         />
       )}
       {doc && (
@@ -127,7 +122,6 @@ export default function App() {
             product="pdf"
             productLogo={<ProductLogo />}
             suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
-            products={PDF_AND_IMAGES_PRODUCTS}
           />
         </div>
       )}
@@ -141,7 +135,6 @@ export default function App() {
               <div className="md:hidden">
                 <SuiteSwitcher
                   current="pdf"
-                  products={PDF_AND_IMAGES_PRODUCTS}
                   align="left"
                   portalHref="https://opensource.unisim.co.uk"
                   portalLabel={{ eyebrow: 'Universal Simulation', title: 'Universal Apps' }}
