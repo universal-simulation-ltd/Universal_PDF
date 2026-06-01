@@ -122,6 +122,16 @@ export default function App() {
         />
       )}
       {doc && (
+        <div className="hidden md:block">
+          <UniversalAppsNavBar
+            product="pdf"
+            productLogo={<ProductLogo />}
+            suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
+            products={PDF_AND_IMAGES_PRODUCTS}
+          />
+        </div>
+      )}
+      {doc && (
         <div className="bg-slate-900 text-white relative z-30" style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}>
           <div
             className="mx-auto w-full flex items-center justify-between gap-3 py-2 min-h-[52px] px-3"
@@ -152,11 +162,12 @@ export default function App() {
               <ToolbarDesktopTools />
             </div>
             <div className="flex items-center gap-2 justify-end">
-              <span className="hidden md:inline text-xs text-slate-400 select-none whitespace-nowrap">100% Free · 100% Open source</span>
-              <ChangelogMenu
-                iconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
-                productFilter="pdf"
-              />
+              <div className="md:hidden">
+                <ChangelogMenu
+                  iconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
+                  productFilter="pdf"
+                />
+              </div>
               <ToolbarDesktopActions />
             </div>
           </div>
