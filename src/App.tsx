@@ -109,15 +109,17 @@ export default function App() {
   return (
     <div className="flex flex-col h-full bg-slate-100">
       {!doc && (
-        <UniversalAppsNavBar
-          product="pdf"
-          productLogo={<ProductLogo />}
-          fileMenu={<FileMenu variant="header" />}
-          suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
-        />
+        <div className="relative z-50">
+          <UniversalAppsNavBar
+            product="pdf"
+            productLogo={<ProductLogo />}
+            fileMenu={<FileMenu variant="header" />}
+            suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
+          />
+        </div>
       )}
       {doc && (
-        <div className="hidden md:block">
+        <div className="hidden md:block relative z-50">
           <UniversalAppsNavBar
             product="pdf"
             productLogo={<ProductLogo />}
@@ -126,12 +128,12 @@ export default function App() {
         </div>
       )}
       {doc && (
-        <div className="bg-slate-900 text-white relative z-30" style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}>
+        <div className="bg-slate-900 text-white relative z-[45] overflow-x-auto" style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}>
           <div
-            className="mx-auto w-full flex items-center justify-between gap-3 py-2 min-h-[52px] px-3"
+            className="mx-auto w-full min-w-max flex items-center justify-between gap-6 py-2 min-h-[52px] px-3"
             style={{ maxWidth: 'clamp(600px, var(--doc-display-width, 80rem), 80rem)' }}
           >
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-2 shrink-0 [&>*]:shrink-0">
               <div className="md:hidden">
                 <SuiteSwitcher
                   current="pdf"
@@ -154,7 +156,7 @@ export default function App() {
               <FileMenu variant="toolbar" />
               <ToolbarDesktopTools />
             </div>
-            <div className="flex items-center gap-2 justify-end">
+            <div className="flex items-center gap-2 justify-end shrink-0 [&>*]:shrink-0">
               <div className="md:hidden">
                 <ChangelogMenu
                   iconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
@@ -170,7 +172,7 @@ export default function App() {
       {doc && <ToolbarMobile />}
       {doc && <MobileWelcomeToast />}
 
-      <main className={`flex-1 min-h-0 md:pb-0${doc ? ' pb-16' : ' overflow-auto'}`}>
+      <main className={`flex-1 min-h-0 md:pb-0 ${doc ? 'pb-16' : 'overflow-auto'}`}>
         {loading ? (
           <div className="h-full flex items-center justify-center text-slate-500">
             Loading PDF…
