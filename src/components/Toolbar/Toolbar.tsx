@@ -320,7 +320,7 @@ export function ToolbarDesktopTools() {
   }
 
   return (
-    <div className="hidden md:flex items-center gap-1 text-white">
+    <div className="hidden md:flex items-center gap-1 text-white shrink-0 [&>*]:shrink-0">
       {/* Select / Hand with options panel */}
       <div ref={selectGroupRef} className="relative flex items-start">
         {toolBtn(
@@ -495,7 +495,7 @@ export function ToolbarDesktopActions() {
 
   return (
     <>
-      <div className="hidden md:flex items-center gap-2">
+      <div className="hidden md:flex items-center gap-2 shrink-0 [&>*]:shrink-0">
         <SignatureMenu />
         <button
           onClick={() => setExportOpen(true)}
