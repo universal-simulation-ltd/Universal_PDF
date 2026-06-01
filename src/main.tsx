@@ -16,11 +16,17 @@ if (import.meta.env.DEV) {
   }
 }
 
+// The packaged Electron renderer loads index.html over file://, which has
+// no parent zone to scope a cookie to — leave cookieDomain undefined so the
+// SDK falls back to localStorage. The browser web build (Vite mode
+// 'production') still rides the shared .unisim.co.uk cookie.
+const isDesktop = import.meta.env.MODE === 'desktop'
+
 const universalConfig = {
   supabaseUrl: import.meta.env.VITE_PLATFORM_SUPABASE_URL,
   supabaseAnonKey: import.meta.env.VITE_PLATFORM_SUPABASE_ANON_KEY,
   product: 'pdf' as const,
-  cookieDomain: import.meta.env.PROD ? '.unisim.co.uk' : undefined,
+  cookieDomain: !isDesktop && import.meta.env.PROD ? '.unisim.co.uk' : undefined,
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

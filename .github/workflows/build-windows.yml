@@ -27,6 +27,14 @@ jobs:
       - name: Build Windows installer
         run: npm run dist:win
         env:
+          # The platform Supabase URL + anon key are required to construct
+          # the SDK's Supabase client at boot; without them the renderer
+          # throws and the error boundary takes over (see PR #80). Both are
+          # public (anon key is designed for client exposure), but we route
+          # them via secrets to match how Cloudflare Pages injects them for
+          # the web build rather than committing them.
+          VITE_PLATFORM_SUPABASE_URL: ${{ secrets.VITE_PLATFORM_SUPABASE_URL }}
+          VITE_PLATFORM_SUPABASE_ANON_KEY: ${{ secrets.VITE_PLATFORM_SUPABASE_ANON_KEY }}
           # No code-signing cert configured. CSC_IDENTITY_AUTO_DISCOVERY=false
           # stops electron-builder from probing the keychain on hosted runners.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
