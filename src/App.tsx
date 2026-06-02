@@ -113,7 +113,6 @@ export default function App() {
           <UniversalAppsNavBar
             product="pdf"
             productLogo={<ProductLogo />}
-            fileMenu={<FileMenu variant="header" />}
             suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
           />
         </div>
@@ -130,7 +129,7 @@ export default function App() {
       {doc && (
         <div className="bg-slate-900 text-white relative z-[45] overflow-x-auto" style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}>
           <div
-            className="mx-auto w-full min-w-max flex items-center justify-between gap-6 py-2 min-h-[52px] px-3"
+            className="mx-auto w-full min-w-max flex items-center justify-between gap-6 py-2 min-h-[52px]"
             style={{ maxWidth: 'clamp(600px, var(--doc-display-width, 80rem), 80rem)' }}
           >
             <div className="flex items-center gap-2 shrink-0 [&>*]:shrink-0">
