@@ -368,20 +368,80 @@ export async function exportPdfWithAnnotations(
   downloadPdfBytes(bytes, outName)
 }
 
+// 'light' keeps everything lossless (text stays selectable) and just re-packs
+// the file with object streams. 'balanced' and 'strong' rasterize each page to
+// JPEG — losing text selectability but shrinking image-heavy PDFs a lot — with
+// progressively lower render resolution and JPEG quality.
+export type CompressQuality = 'light' | 'balanced' | 'strong'
+
+const RASTER_SETTINGS: Record<'balanced' | 'strong', { renderScale: number; jpegQuality: number }> = {
+  balanced: { renderScale: 1.5, jpegQuality: 0.7 },
+  strong: { renderScale: 1.0, jpegQuality: 0.45 }
+}
+
 export interface CompressResult {
   bytes: Uint8Array
   originalSize: number
   compressedSize: number
   fileName: string
+  quality: CompressQuality
+}
+
+// Render one source page through pdfjs at the given DPI and return JPEG bytes.
+async function rasterizePageToJpeg(
+  pdfjsDoc: PDFDocumentProxy,
+  pageIndex: number,
+  renderScale: number,
+  jpegQuality: number
+): Promise<Uint8Array> {
+  const page = await pdfjsDoc.getPage(pageIndex + 1)
+  const viewport = page.getViewport({ scale: renderScale })
+  const canvas = document.createElement('canvas')
+  canvas.width = viewport.width
+  canvas.height = viewport.height
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('Canvas 2D context unavailable')
+  // JPEG has no alpha — paint white first so transparent regions don't go black.
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  await page.render({ canvasContext: ctx, viewport }).promise
+  const blob: Blob = await new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error('toBlob failed'))),
+      'image/jpeg',
+      jpegQuality
+    )
+  })
+  return new Uint8Array(await blob.arrayBuffer())
 }
 
 export async function compressPdf(
   sourceBytes: ArrayBuffer,
-  fileName: string
+  fileName: string,
+  quality: CompressQuality = 'light'
 ): Promise<CompressResult> {
   const originalSize = sourceBytes.byteLength
-  const pdf = await PDFDocument.load(sourceBytes)
-  const bytes = await pdf.save({ useObjectStreams: true })
   const outName = fileName.replace(/\.pdf$/i, '') + '-compressed.pdf'
-  return { bytes, originalSize, compressedSize: bytes.byteLength, fileName: outName }
+
+  if (quality === 'light') {
+    const pdf = await PDFDocument.load(sourceBytes)
+    const bytes = await pdf.save({ useObjectStreams: true })
+    return { bytes, originalSize, compressedSize: bytes.byteLength, fileName: outName, quality }
+  }
+
+  const { renderScale, jpegQuality } = RASTER_SETTINGS[quality]
+  // pdfjs detaches the buffer it's handed, so give it a copy and keep the
+  // original for pdf-lib (which we use only to read each page's size).
+  const pdfjsDoc = await pdfjsLib.getDocument({ data: sourceBytes.slice(0) }).promise
+  const srcPdf = await PDFDocument.load(sourceBytes)
+  const out = await PDFDocument.create()
+  for (let i = 0; i < srcPdf.getPageCount(); i++) {
+    const { width, height } = srcPdf.getPage(i).getSize()
+    const imgBytes = await rasterizePageToJpeg(pdfjsDoc, i, renderScale, jpegQuality)
+    const img = await out.embedJpg(imgBytes)
+    const page = out.addPage([width, height])
+    page.drawImage(img, { x: 0, y: 0, width, height })
+  }
+  const bytes = await out.save({ useObjectStreams: true })
+  return { bytes, originalSize, compressedSize: bytes.byteLength, fileName: outName, quality }
 }
