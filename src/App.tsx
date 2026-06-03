@@ -113,6 +113,7 @@ export default function App() {
           <UniversalAppsNavBar
             product="pdf"
             productLogo={<ProductLogo />}
+            productHomeHref={import.meta.env.BASE_URL}
             suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
           />
         </div>
@@ -122,6 +123,10 @@ export default function App() {
           <UniversalAppsNavBar
             product="pdf"
             productLogo={<ProductLogo />}
+            productHomeHref={import.meta.env.BASE_URL}
+            // Actions menu lives in the universal navbar (matches QR's pattern);
+            // the dark toolbar below is just drawing-tools + export controls.
+            fileMenu={<FileMenu variant="header" />}
             suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
           />
         </div>
@@ -152,7 +157,11 @@ export default function App() {
                   </div>
                 </SuiteSwitcher>
               </div>
-              <FileMenu variant="toolbar" />
+              {/* Mobile-only — desktop renders Actions inside the universal
+                  navbar instead, so this stays hidden from md upward. */}
+              <div className="md:hidden">
+                <FileMenu variant="toolbar" />
+              </div>
               <ToolbarDesktopTools />
             </div>
             <div className="flex items-center gap-2 justify-end shrink-0 [&>*]:shrink-0">
