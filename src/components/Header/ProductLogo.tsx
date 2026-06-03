@@ -1,13 +1,17 @@
-// Universal PDF wordmark — the click target the SuiteSwitcher dropdown
+// Universal PDF brand icon — the click target the SuiteSwitcher dropdown
 // attaches to inside <UniversalAppsNavBar />. Click navigates to the product
-// home; hover opens the apps switcher. The href MUST be import.meta.env.BASE_URL
+// home; hover opens the apps switcher.
+//
+// Icon-only by design: the navbar renders the product name ("Universal PDF")
+// from its own apps catalogue right beside this logo, so adding the wordmark
+// here would make the name appear twice. The href MUST be import.meta.env.BASE_URL
 // (e.g. '/pdf/' in prod, '/' in dev, './' on desktop) — a bare '/' resolves to
 // the origin root, which under path-routing is the opensource portal, not PDF.
 export default function ProductLogo() {
   return (
     <a
       href={import.meta.env.BASE_URL}
-      className="inline-flex items-center gap-2 text-slate-900 no-underline px-1 py-0.5 rounded-md hover:bg-slate-50"
+      className="inline-flex items-center text-slate-900 no-underline p-0.5 rounded-md hover:bg-slate-50"
       aria-label="Universal PDF — home"
     >
       <svg viewBox="0 0 24 24" className="w-6 h-6 shrink-0" aria-hidden="true">
@@ -18,9 +22,6 @@ export default function ProductLogo() {
           PDF
         </text>
       </svg>
-      <span className="font-semibold tracking-tight text-[15px]">
-        Universal PDF
-      </span>
     </a>
   )
 }

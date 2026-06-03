@@ -16,7 +16,7 @@ function formatRelative(ms: number): string {
 
 const RECENTS_LIMIT = 2
 
-export default function RecentFilesList() {
+export default function RecentFilesList({ className = 'mt-8 w-full max-w-md' }: { className?: string } = {}) {
   const recents = usePdfStore((s) => s.recents)
   const openRecent = usePdfStore((s) => s.openRecent)
   const removeRecent = usePdfStore((s) => s.removeRecent)
@@ -27,7 +27,7 @@ export default function RecentFilesList() {
   const extra = recents.length - visible.length
 
   return (
-    <div className="mt-8 w-full max-w-md">
+    <div className={className}>
       <div className="text-xs uppercase text-slate-500 font-medium mb-2 px-1 tracking-wide">
         Recent
         {extra > 0 && (
@@ -40,11 +40,11 @@ export default function RecentFilesList() {
         {visible.map((r) => (
           <div
             key={r.id}
-            className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg overflow-hidden"
+            className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg overflow-hidden"
           >
             <button
               onClick={() => openRecent(r.id)}
-              className="flex-1 flex items-center gap-3 p-3 hover:bg-slate-50 text-left min-w-0"
+              className="flex-1 flex items-center gap-3 p-3 hover:bg-slate-100 text-left min-w-0"
             >
               <span className="text-2xl shrink-0">📄</span>
               <div className="flex-1 min-w-0">
