@@ -72,9 +72,17 @@ const DRAW_SHAPES: { id: Tool; icon: string; label: string }[] = [
 type Panel = 'select' | 'text' | 'draw' | 'color' | null
 
 const SELECT_OPTIONS: { id: Tool; icon: string; label: string; help: string }[] = [
-  { id: 'select', icon: '↖', label: 'Select', help: 'Click annotations to move, resize or edit' },
+  { id: 'select', icon: '↖', label: 'Select', help: 'Click to move, resize or edit. On desktop, drag empty space to select many' },
+  { id: 'marquee', icon: '⛶', label: 'Select area', help: 'Drag a box to select many edits, then move/resize/rotate them together' },
   { id: 'hand', icon: '✋', label: 'Hand', help: 'Drag to pan around the PDF without selecting' }
 ]
+
+// Icon shown on the main Select-group button for the currently-active tool.
+const SELECT_GROUP_ICON: Partial<Record<Tool, string>> = {
+  select: '↖',
+  marquee: '⛶',
+  hand: '✋'
+}
 
 // Module-level in-app clipboard for annotations (Ctrl+C/X/V)
 let clipboardAnnotation: Annotation | null = null
@@ -83,9 +91,11 @@ let clipboardAnnotation: Annotation | null = null
 // Mounted once at the App level whenever a PDF is loaded.
 export function useToolbarKeyboardShortcuts(enabled: boolean) {
   const selectedId = useAnnotationStore((s) => s.selectedId)
+  const selectedIds = useAnnotationStore((s) => s.selectedIds)
   const undo = useAnnotationStore((s) => s.undo)
   const redo = useAnnotationStore((s) => s.redo)
   const remove = useAnnotationStore((s) => s.remove)
+  const removeMany = useAnnotationStore((s) => s.removeMany)
   const add = useAnnotationStore((s) => s.add)
 
   useEffect(() => {
@@ -146,6 +156,11 @@ export function useToolbarKeyboardShortcuts(enabled: boolean) {
         return
       }
       if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedIds.length > 1) {
+          e.preventDefault()
+          removeMany(selectedIds)
+          return
+        }
         if (!selectedId) return
         e.preventDefault()
         remove(selectedId)
@@ -153,7 +168,7 @@ export function useToolbarKeyboardShortcuts(enabled: boolean) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [enabled, selectedId, remove, undo, redo, add])
+  }, [enabled, selectedId, selectedIds, remove, removeMany, undo, redo, add])
 }
 
 const isDrawShape = (t: Tool) => t === 'tick' || t === 'cross' || t === 'rect' || t === 'ellipse' || t === 'highlight'
@@ -326,9 +341,9 @@ export function ToolbarDesktopTools() {
       {/* Select / Hand with options panel */}
       <div ref={selectGroupRef} className="relative flex items-start">
         {toolBtn(
-          tool === 'hand' ? 'hand' : 'select',
-          tool === 'hand' ? '✋' : '↖',
-          tool === 'hand' ? 'Hand — drag to pan' : 'Select / move',
+          tool === 'hand' ? 'hand' : tool === 'marquee' ? 'marquee' : 'select',
+          SELECT_GROUP_ICON[tool] ?? '↖',
+          tool === 'hand' ? 'Hand — drag to pan' : tool === 'marquee' ? 'Select area — drag a box' : 'Select / move',
           'select'
         )}
         <PlusBox panel="select" />
@@ -797,11 +812,11 @@ export function ToolbarMobile() {
         className="fixed bottom-0 left-0 right-0 z-40 h-16 bg-slate-900 border-t border-slate-700 flex items-stretch px-1"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        {/* Select / Hand with + */}
+        {/* Select / Select area / Hand with + */}
         {mobileBtnWithPlus(
-          tool === 'hand' ? 'hand' : 'select',
-          tool === 'hand' ? '✋' : '↖',
-          tool === 'hand' ? 'Hand' : 'Select',
+          tool === 'hand' ? 'hand' : tool === 'marquee' ? 'marquee' : 'select',
+          SELECT_GROUP_ICON[tool] ?? '↖',
+          tool === 'hand' ? 'Hand' : tool === 'marquee' ? 'Area' : 'Select',
           'select'
         )}
 
