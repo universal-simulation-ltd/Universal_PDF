@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { usePdfStore } from '../../stores/pdfStore'
 import { LANGS, persistLang, readSavedLang, type LangCode } from '../../lib/lang'
@@ -32,8 +33,10 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const [currentLang, setCurrentLang] = useState<LangCode>(readSavedLang())
   const [showOtherHint, setShowOtherHint] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const renameInputRef = useRef<HTMLInputElement>(null)
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null)
 
   const currentLangOpt = LANGS.find((l) => l.code === currentLang) ?? LANGS[0]
 
@@ -73,12 +76,20 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   useEffect(() => {
     if (!open) return
     function onDoc(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false)
-        setLangSubOpen(false)
-        setRenameOpen(false)
-        setShowOtherHint(false)
+      const target = e.target as Node
+      // The toolbar variant renders its panel in a portal outside `ref`, so
+      // check the menu element too — otherwise clicks inside it (rename input,
+      // language list) would count as "outside" and close the menu.
+      if (
+        (ref.current && ref.current.contains(target)) ||
+        (menuRef.current && menuRef.current.contains(target))
+      ) {
+        return
       }
+      setOpen(false)
+      setLangSubOpen(false)
+      setRenameOpen(false)
+      setShowOtherHint(false)
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') {
@@ -99,6 +110,30 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
       document.removeEventListener('keydown', onKey)
     }
   }, [open, langSubOpen, renameOpen])
+
+  // The toolbar variant lives inside the editor's dark bar, which sets
+  // `overflow-x-auto` — and per CSS that forces `overflow-y` to clip too, so an
+  // absolutely-positioned dropdown gets cut off and the PDF shows through. Pin
+  // the panel to the viewport (portal + fixed) anchored under the trigger so it
+  // escapes the scroll box and paints above the page.
+  useLayoutEffect(() => {
+    if (!open || variant !== 'toolbar') return
+    function place() {
+      const anchor = ref.current
+      if (!anchor) return
+      const r = anchor.getBoundingClientRect()
+      const width = 240 // w-60
+      const left = Math.max(8, Math.min(r.left, window.innerWidth - width - 8))
+      setMenuPos({ top: r.bottom + 4, left })
+    }
+    place()
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, true)
+    return () => {
+      window.removeEventListener('resize', place)
+      window.removeEventListener('scroll', place, true)
+    }
+  }, [open, variant])
 
   useEffect(() => {
     if (!renameOpen || !renameInputRef.current) return
@@ -132,6 +167,32 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
     setOpen(false)
   }
 
+  // Header variant nests inside the navbar chrome (no clipping), so a plain
+  // absolute panel is fine. Toolbar variant must escape the dark bar's
+  // overflow box, so it portals to <body> with fixed coords.
+  function renderMenu(body: React.ReactNode) {
+    const panelClass =
+      'w-60 bg-white text-slate-900 rounded-lg shadow-xl border border-slate-200'
+    if (variant === 'header') {
+      return (
+        <div ref={menuRef} className={`absolute right-0 mt-2 ${panelClass} overflow-hidden z-50`}>
+          {body}
+        </div>
+      )
+    }
+    if (!menuPos) return null
+    return createPortal(
+      <div
+        ref={menuRef}
+        style={{ position: 'fixed', top: menuPos.top, left: menuPos.left }}
+        className={`${panelClass} max-h-[80vh] overflow-y-auto z-[60]`}
+      >
+        {body}
+      </div>,
+      document.body,
+    )
+  }
+
   return (
     <div className="relative" ref={ref}>
       <button
@@ -152,8 +213,8 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
         hidden
         onChange={onPick}
       />
-      {open && (
-        <div className={`absolute ${variant === 'header' ? 'right-0 mt-2' : 'left-0 mt-1'} w-60 bg-white text-slate-900 rounded-lg shadow-xl border border-slate-200 z-50 overflow-hidden`}>
+      {open && renderMenu(
+        <>
           {doc && (
             <button
               onClick={() => { reset(); setOpen(false) }}
@@ -312,7 +373,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
               )}
             </div>
           )}
-        </div>
+        </>,
       )}
     </div>
   )
