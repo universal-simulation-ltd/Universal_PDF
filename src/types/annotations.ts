@@ -1,5 +1,6 @@
 export type Tool =
   | 'select'
+  | 'marquee'
   | 'hand'
   | 'text'
   | 'draw'

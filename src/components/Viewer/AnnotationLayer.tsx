@@ -77,6 +77,25 @@ function getAnnotationBBox(a: Annotation): { x: number; y: number; width: number
   }
 }
 
+// Highlighter strokes are free-draw lines that carry an opacity (pencil
+// strokes leave it undefined). They are intentionally left out of marquee
+// multi-select — the user can still grab them individually.
+function isHighlighter(a: Annotation): boolean {
+  return a.type === 'draw' && a.opacity !== undefined
+}
+
+function rectsIntersect(
+  a: { x: number; y: number; width: number; height: number },
+  b: { x: number; y: number; width: number; height: number }
+): boolean {
+  return (
+    a.x < b.x + b.width &&
+    a.x + a.width > b.x &&
+    a.y < b.y + b.height &&
+    a.y + a.height > b.y
+  )
+}
+
 interface Props {
   pageIndex: number
   width: number
@@ -131,15 +150,17 @@ function SignatureImage({
   onClick,
   onDblClick,
   onDragStart,
+  onDragMove,
   onDragEnd,
   onTransformEnd
 }: {
   a: ImageAnnotation
   shapeRef: (n: Konva.Node | null) => void
   draggable: boolean
-  onClick: () => void
+  onClick: (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => void
   onDblClick: () => void
   onDragStart: () => void
+  onDragMove: (e: Konva.KonvaEventObject<DragEvent>) => void
   onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void
   onTransformEnd: (e: Konva.KonvaEventObject<Event>) => void
 }) {
@@ -161,6 +182,7 @@ function SignatureImage({
       onDblClick={onDblClick}
       onDblTap={onDblClick}
       onDragStart={onDragStart}
+      onDragMove={onDragMove}
       onDragEnd={onDragEnd}
       onTransformEnd={onTransformEnd}
     />
@@ -175,10 +197,15 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const fontFamily = useAnnotationStore((s) => s.fontFamily)
   const allAnnotations = useAnnotationStore((s) => s.annotations)
   const selectedId = useAnnotationStore((s) => s.selectedId)
+  const selectedIds = useAnnotationStore((s) => s.selectedIds)
   const add = useAnnotationStore((s) => s.add)
   const update = useAnnotationStore((s) => s.update)
+  const updateMany = useAnnotationStore((s) => s.updateMany)
   const remove = useAnnotationStore((s) => s.remove)
+  const removeMany = useAnnotationStore((s) => s.removeMany)
   const setSelected = useAnnotationStore((s) => s.setSelected)
+  const setSelectedIds = useAnnotationStore((s) => s.setSelectedIds)
+  const toggleSelected = useAnnotationStore((s) => s.toggleSelected)
   const setTool = useAnnotationStore((s) => s.setTool)
 
   const activeSignature = useSignatureStore((s) => {
@@ -193,6 +220,19 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const [currentLine, setCurrentLine] = useState<number[] | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
+  // Rubber-band selection rectangle (mouse/pen only — see onPointerDown). Held
+  // in unscaled page coordinates and rendered as a dashed box while dragging.
+  const marqueeRef = useRef<{
+    startX: number
+    startY: number
+    curX: number
+    curY: number
+    moved: boolean
+  } | null>(null)
+  const [marquee, setMarquee] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null)
+  // While dragging a multi-selection, the dragged node's last position so we
+  // can apply the same delta to every other selected node each frame.
+  const groupDragLast = useRef<{ x: number; y: number } | null>(null)
   // Pointer position used to render the ghost-signature preview that
   // follows the cursor while the signature tool is armed.
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null)
@@ -217,21 +257,32 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const trRef = useRef<Konva.Transformer>(null)
   const shapeRefs = useRef(new Map<string, Konva.Node>())
 
+  // Annotations on this page that are part of the current selection.
+  const selectedOnPage = annotations.filter((a) => selectedIds.includes(a.id))
+  const isMulti = selectedOnPage.length > 1
+
   useEffect(() => {
     const tr = trRef.current
     if (!tr) return
-    const selected = annotations.find((a) => a.id === selectedId)
-    if (selected && isTransformable(selected) && !editingId) {
-      const node = shapeRefs.current.get(selected.id)
-      if (node) {
-        tr.nodes([node])
-        tr.getLayer()?.batchDraw()
-        return
+    if (!editingId && selectedOnPage.length > 0) {
+      // In a multi-selection every selected node (pen strokes included) joins
+      // the Transformer so they move / resize / rotate as one group. A lone
+      // free-draw stroke keeps its custom halo instead (see render below).
+      const useTransformer = isMulti || isTransformable(selectedOnPage[0])
+      if (useTransformer) {
+        const nodes = selectedOnPage
+          .map((a) => shapeRefs.current.get(a.id))
+          .filter((n): n is Konva.Node => !!n)
+        if (nodes.length > 0) {
+          tr.nodes(nodes)
+          tr.getLayer()?.batchDraw()
+          return
+        }
       }
     }
     tr.nodes([])
     tr.getLayer()?.batchDraw()
-  }, [selectedId, annotations, editingId])
+  }, [selectedIds, selectedOnPage, isMulti, annotations, editingId])
 
   function getPos(e: Konva.KonvaEventObject<PointerEvent>) {
     const p = e.target.getStage()!.getPointerPosition()!
@@ -242,8 +293,11 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     activePointerIds.current.add(e.evt.pointerId)
     if (activePointerIds.current.size > 1) {
       // Multi-touch (pinch-to-zoom) — abort any in-progress drawing stroke
+      // or rubber-band selection.
       drawingRef.current = false
       setCurrentLine(null)
+      marqueeRef.current = null
+      setMarquee(null)
       return
     }
     if (editingId) return // ignore stage events while typing
@@ -259,10 +313,35 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     if (e.target !== stage) {
       const hitId = getAnnotationIdFromTarget(e.target)
       if (hitId) {
+        // Shift-click adds / removes a single item from the selection.
+        if (e.evt.shiftKey && (tool === 'select' || tool === 'marquee')) {
+          toggleSelected(hitId)
+          if (tool !== 'select') setTool('select')
+          return
+        }
+        // Grabbing a member of an existing multi-selection should drag the
+        // whole group, not collapse it down to that one item.
+        const ids = useAnnotationStore.getState().selectedIds
+        if (ids.length > 1 && ids.includes(hitId)) {
+          if (tool !== 'select') setTool('select')
+          return
+        }
         setSelected(hitId)
         if (tool !== 'select') setTool('select')
         return
       }
+    }
+    // Rubber-band (marquee) selection. Always available with the dedicated
+    // marquee tool — touch included — since that tool reserves the gesture
+    // (touchAction: none). With the plain Select tool it's a mouse/pen-only
+    // shortcut so finger panning on mobile is never hijacked.
+    const canMarquee =
+      tool === 'marquee' || (tool === 'select' && e.evt.pointerType !== 'touch')
+    if (canMarquee) {
+      const p = getPos(e)
+      marqueeRef.current = { startX: p.x, startY: p.y, curX: p.x, curY: p.y, moved: false }
+      setMarquee({ x1: p.x, y1: p.y, x2: p.x, y2: p.y })
+      return
     }
     if (tool === 'select' || tool === 'form') {
       setSelected(null)
@@ -344,6 +423,14 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
 
   function onPointerMove(e: Konva.KonvaEventObject<PointerEvent>) {
     const pos = getPos(e)
+    if (marqueeRef.current) {
+      const m = marqueeRef.current
+      m.curX = pos.x
+      m.curY = pos.y
+      if (Math.abs(pos.x - m.startX) > 3 || Math.abs(pos.y - m.startY) > 3) m.moved = true
+      setMarquee({ x1: m.startX, y1: m.startY, x2: pos.x, y2: pos.y })
+      return
+    }
     if (tool === 'signature' && activeSignature) {
       setHoverPos({ x: pos.x, y: pos.y })
     } else if (hoverPos) {
@@ -365,6 +452,31 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
 
   function onPointerUp(e?: Konva.KonvaEventObject<PointerEvent>) {
     if (e) activePointerIds.current.delete(e.evt.pointerId)
+    if (marqueeRef.current) {
+      const m = marqueeRef.current
+      marqueeRef.current = null
+      setMarquee(null)
+      // A marquee that never moved is just a click on empty canvas — deselect.
+      if (!m.moved) {
+        setSelected(null)
+        return
+      }
+      const rx = Math.min(m.startX, m.curX)
+      const ry = Math.min(m.startY, m.curY)
+      const rw = Math.abs(m.curX - m.startX)
+      const rh = Math.abs(m.curY - m.startY)
+      const box = { x: rx, y: ry, width: rw, height: rh }
+      const hits = annotations.filter(
+        (a) => !isHighlighter(a) && rectsIntersect(getAnnotationBBox(a), box)
+      )
+      setSelectedIds(hits.map((a) => a.id))
+      // The marquee tool is a one-shot "draw the box" mode — once it has caught
+      // something, drop into Select so the group can immediately be moved /
+      // resized / rotated (touch included; group transforms aren't pointer-
+      // gated). An empty sweep leaves the tool armed for another try.
+      if (tool === 'marquee' && hits.length > 0) setTool('select')
+      return
+    }
     if (drawingRef.current && currentLine) {
       if (tool === 'draw' && currentLine.length >= 4) {
         add({
@@ -451,8 +563,11 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     }
   }
 
-  function onShapeClick(id: string) {
+  function onShapeClick(id: string, e?: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
     if (tool !== 'select') return
+    // Shift-clicks are handled on pointerdown (toggle); don't let the trailing
+    // click collapse the selection back to a single item.
+    if (e?.evt && 'shiftKey' in e.evt && e.evt.shiftKey) return
     setSelected(id)
   }
 
@@ -464,29 +579,153 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
 
   function onShapeDragStart(a: Annotation) {
     setDraggingId(a.id)
+    const ids = useAnnotationStore.getState().selectedIds
+    if (ids.length > 1 && ids.includes(a.id)) {
+      const node = shapeRefs.current.get(a.id)
+      groupDragLast.current = node ? { x: node.x(), y: node.y() } : null
+    } else {
+      groupDragLast.current = null
+    }
   }
 
-  function onShapeDragEnd(a: Annotation, e: Konva.KonvaEventObject<DragEvent>) {
+  // While dragging one member of a multi-selection, translate every other
+  // selected node by the same delta so the group moves rigidly together.
+  function onShapeDragMove(a: Annotation, e: Konva.KonvaEventObject<DragEvent>) {
+    const last = groupDragLast.current
+    if (!last) return
+    const ids = useAnnotationStore.getState().selectedIds
+    if (ids.length <= 1) return
     const node = e.target
-    setDraggingId(null)
+    const dx = node.x() - last.x
+    const dy = node.y() - last.y
+    if (dx === 0 && dy === 0) return
+    for (const id of ids) {
+      if (id === a.id) continue
+      const n = shapeRefs.current.get(id)
+      if (n) n.position({ x: n.x() + dx, y: n.y() + dy })
+    }
+    groupDragLast.current = { x: node.x(), y: node.y() }
+    trRef.current?.forceUpdate()
+    node.getLayer()?.batchDraw()
+  }
+
+  // Translate-only patch for a single node after a drag, branching on the
+  // type-specific position conventions (draw bakes into points; ellipse x/y
+  // is a centre). Shared by single-shape and group drag commits.
+  function nodeMovePatch(a: Annotation, node: Konva.Node): Partial<Annotation> {
     if (a.type === 'draw') {
       const dx = node.x()
       const dy = node.y()
       const next = a.points.map((v, i) => (i % 2 === 0 ? v + dx : v + dy))
       node.position({ x: 0, y: 0 })
-      update(a.id, { points: next })
-    } else if (a.type === 'ellipse') {
-      // Konva Ellipse position is its centre; we store the top-left bbox.
-      update(a.id, {
-        x: node.x() - a.width / 2,
-        y: node.y() - a.height / 2
-      } as Partial<Annotation>)
-    } else {
-      update(a.id, { x: node.x(), y: node.y() } as Partial<Annotation>)
+      return { points: next } as Partial<Annotation>
     }
+    if (a.type === 'ellipse') {
+      // Konva Ellipse position is its centre; we store the top-left bbox.
+      return { x: node.x() - a.width / 2, y: node.y() - a.height / 2 } as Partial<Annotation>
+    }
+    return { x: node.x(), y: node.y() } as Partial<Annotation>
+  }
+
+  function onShapeDragEnd(a: Annotation, e: Konva.KonvaEventObject<DragEvent>) {
+    setDraggingId(null)
+    const ids = useAnnotationStore.getState().selectedIds
+    if (groupDragLast.current && ids.length > 1) {
+      groupDragLast.current = null
+      const annos = useAnnotationStore.getState().annotations
+      const patches = ids
+        .map((id) => {
+          const n = shapeRefs.current.get(id)
+          const ann = annos.find((x) => x.id === id)
+          return n && ann ? { id, patch: nodeMovePatch(ann, n) } : null
+        })
+        .filter((p): p is { id: string; patch: Partial<Annotation> } => !!p)
+      updateMany(patches)
+      return
+    }
+    update(a.id, nodeMovePatch(a, e.target))
+  }
+
+  // Resize / rotate patch for one node, resetting Konva's transient scale so
+  // the new geometry lives in our model. Group resize also scales text/marks
+  // and bakes pen strokes (none of which resize in a single selection).
+  function nodeTransformPatch(a: Annotation, node: Konva.Node): Partial<Annotation> | null {
+    const rotation = node.rotation()
+    const sx = node.scaleX()
+    const sy = node.scaleY()
+    if (a.type === 'image' || a.type === 'rect' || a.type === 'redact') {
+      const width = Math.max(8, node.width() * sx)
+      const height = Math.max(8, node.height() * sy)
+      node.scaleX(1)
+      node.scaleY(1)
+      return { x: node.x(), y: node.y(), width, height, rotation } as Partial<Annotation>
+    }
+    if (a.type === 'ellipse') {
+      const width = Math.max(8, node.width() * sx)
+      const height = Math.max(8, node.height() * sy)
+      node.scaleX(1)
+      node.scaleY(1)
+      return {
+        x: node.x() - width / 2,
+        y: node.y() - height / 2,
+        width,
+        height,
+        rotation
+      } as Partial<Annotation>
+    }
+    if (a.type === 'text') {
+      const fontSize = Math.max(4, a.fontSize * sy)
+      node.scaleX(1)
+      node.scaleY(1)
+      return { x: node.x(), y: node.y(), fontSize, rotation } as Partial<Annotation>
+    }
+    if (a.type === 'tick' || a.type === 'cross') {
+      const size = Math.max(6, a.size * ((sx + sy) / 2))
+      node.scaleX(1)
+      node.scaleY(1)
+      return { x: node.x(), y: node.y(), size, rotation } as Partial<Annotation>
+    }
+    if (a.type === 'draw') {
+      // Bake the node's full transform (translate + scale + rotate) into the
+      // stored points, then reset the node to the identity. getTransform maps
+      // local -> layer space, which is our unscaled model space.
+      const tfm = node.getTransform().copy()
+      const pts: number[] = []
+      for (let i = 0; i < a.points.length; i += 2) {
+        const p = tfm.point({ x: a.points[i], y: a.points[i + 1] })
+        pts.push(p.x, p.y)
+      }
+      node.scaleX(1)
+      node.scaleY(1)
+      node.rotation(0)
+      node.position({ x: 0, y: 0 })
+      return { points: pts } as Partial<Annotation>
+    }
+    return null
+  }
+
+  // Commit a group resize / rotate as one history step. Fires from the
+  // Transformer itself; per-shape handlers bail out while a group is selected.
+  function onGroupTransformEnd() {
+    const tr = trRef.current
+    if (!tr) return
+    if (useAnnotationStore.getState().selectedIds.length <= 1) return
+    const annos = useAnnotationStore.getState().annotations
+    const patches = tr
+      .nodes()
+      .map((node) => {
+        const ann = annos.find((x) => x.id === node.id())
+        const patch = ann ? nodeTransformPatch(ann, node) : null
+        return patch ? { id: node.id(), patch } : null
+      })
+      .filter((p): p is { id: string; patch: Partial<Annotation> } => !!p)
+    if (patches.length) updateMany(patches)
+    tr.getLayer()?.batchDraw()
   }
 
   function onShapeTransformEnd(a: Annotation, e: Konva.KonvaEventObject<Event>) {
+    // Group transforms are committed once, centrally, by onGroupTransformEnd.
+    if (useAnnotationStore.getState().selectedIds.length > 1) return
     const node = e.target
     const rotation = node.rotation()
     if (a.type === 'image' || a.type === 'rect' || a.type === 'redact') {
@@ -538,9 +777,13 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const selectable = tool === 'select'
   const cursor =
     tool === 'hand' ? 'grab' :
+    tool === 'marquee' ? 'crosshair' :
     (tool === 'select' || tool === 'form') ? 'default' :
     tool === 'signature' && activeSignature ? 'none' :
     'crosshair'
+  // The marquee tool reserves drags for the selection box, so the page must
+  // not scroll under the gesture (touchAction: none). Select/hand/form keep
+  // vertical panning + pinch-zoom available to the browser.
   const touchAction = (tool === 'select' || tool === 'form' || tool === 'hand') ? 'pan-y pinch-zoom' : 'none'
 
   const ghostSigWidth = 160 / scale
@@ -571,9 +814,11 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             const common = {
               id: a.id,
               draggable: selectable,
-              onClick: () => onShapeClick(a.id),
-              onTap: () => onShapeClick(a.id),
+              onClick: (e: Konva.KonvaEventObject<MouseEvent>) => onShapeClick(a.id, e),
+              onTap: (e: Konva.KonvaEventObject<TouchEvent>) => onShapeClick(a.id, e),
               onDragStart: () => onShapeDragStart(a),
+              onDragMove: (e: Konva.KonvaEventObject<DragEvent>) =>
+                onShapeDragMove(a, e),
               onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) =>
                 onShapeDragEnd(a, e),
               onTransformEnd: (e: Konva.KonvaEventObject<Event>) =>
@@ -702,9 +947,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                     a={a}
                     shapeRef={shapeRefSetter(a.id)}
                     draggable={selectable}
-                    onClick={() => onShapeClick(a.id)}
+                    onClick={(e) => onShapeClick(a.id, e)}
                     onDblClick={() => onShapeClick(a.id)}
                     onDragStart={() => onShapeDragStart(a)}
+                    onDragMove={(e) => onShapeDragMove(a, e)}
                     onDragEnd={(e) => onShapeDragEnd(a, e)}
                     onTransformEnd={(e) => onShapeTransformEnd(a, e)}
                   />
@@ -794,19 +1040,45 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             />
           )}
 
+          {marquee && (() => {
+            const x = Math.min(marquee.x1, marquee.x2)
+            const y = Math.min(marquee.y1, marquee.y2)
+            return (
+              <Rect
+                listening={false}
+                x={x}
+                y={y}
+                width={Math.abs(marquee.x2 - marquee.x1)}
+                height={Math.abs(marquee.y2 - marquee.y1)}
+                fill="#ea580c"
+                opacity={0.08}
+                stroke="#ea580c"
+                strokeWidth={1}
+                dash={[4, 3]}
+              />
+            )
+          })()}
+
           {(() => {
-            const selected = annotations.find((a) => a.id === selectedId)
-            const resizable = selected ? isResizable(selected) : false
+            const single = !isMulti && selectedOnPage.length === 1 ? selectedOnPage[0] : null
+            // In a multi-selection the group box always offers resize + rotate;
+            // for a single object it follows that object's own capabilities.
+            const resizable = isMulti ? true : single ? isResizable(single) : false
             // Redactions are baked as axis-aligned black boxes (the export
             // rasteriser ignores rotation), so don't offer a rotate handle
             // that would silently do nothing.
-            const rotatable = selected ? selected.type !== 'redact' : true
+            const rotatable = isMulti
+              ? !selectedOnPage.some((a) => a.type === 'redact')
+              : single
+                ? single.type !== 'redact'
+                : true
             return (
               <Transformer
                 ref={trRef}
+                onTransformEnd={onGroupTransformEnd}
                 rotateEnabled={rotatable}
                 resizeEnabled={resizable}
-                keepRatio={selected?.type === 'image'}
+                keepRatio={!isMulti && single?.type === 'image'}
                 // Bigger rotate arm + anchors on touch so they clear the finger
                 // and are easy to grab; desktop keeps the compact sizing.
                 rotateAnchorOffset={coarsePointer ? 40 : 28}
@@ -884,6 +1156,44 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               position: 'absolute',
               left: (bbox.x + bbox.width) * scale + 8,
               top: bbox.y * scale - 8,
+              zIndex: 21
+            }}
+            className="w-8 h-8 rounded-full bg-white shadow-lg border border-slate-300 text-red-600 hover:bg-red-600 hover:text-white hover:border-red-600 flex items-center justify-center transition-colors"
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 7h16" />
+              <path d="M9 7V5h6v2" />
+              <path d="M6 7l1 13h10l1-13" />
+              <path d="M10 11v6M14 11v6" />
+            </svg>
+          </button>
+        )
+      })()}
+
+      {(() => {
+        // Group delete affordance — deletes every selected object at once.
+        // Anchored to the union bounding box of the multi-selection.
+        if (draggingId || editingId || !isMulti) return null
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+        for (const a of selectedOnPage) {
+          const b = getAnnotationBBox(a)
+          if (b.x < minX) minX = b.x
+          if (b.y < minY) minY = b.y
+          if (b.x + b.width > maxX) maxX = b.x + b.width
+          if (b.y + b.height > maxY) maxY = b.y + b.height
+        }
+        if (!isFinite(minX)) return null
+        return (
+          <button
+            type="button"
+            title={`Delete ${selectedOnPage.length} objects`}
+            aria-label={`Delete ${selectedOnPage.length} selected objects`}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); removeMany(selectedIds) }}
+            style={{
+              position: 'absolute',
+              left: maxX * scale + 8,
+              top: minY * scale - 8,
               zIndex: 21
             }}
             className="w-8 h-8 rounded-full bg-white shadow-lg border border-slate-300 text-red-600 hover:bg-red-600 hover:text-white hover:border-red-600 flex items-center justify-center transition-colors"
