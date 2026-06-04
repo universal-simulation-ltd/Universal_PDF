@@ -3,6 +3,7 @@ import { useAnnotationStore } from '../../stores/annotationStore'
 import { usePdfStore } from '../../stores/pdfStore'
 import SignatureMenu from '../Signature/SignatureMenu'
 import ExportModal from '../Export/ExportModal'
+import SaveToAccount from '../SaveToAccount'
 import type { Annotation, FontFamily, Tool } from '../../types/annotations'
 
 const FONT_OPTIONS: { id: FontFamily; label: string; preview: string; css: string }[] = [
@@ -64,7 +65,8 @@ const HIGHLIGHT_GREEN = '#16a34a'
 const DRAW_SHAPES: { id: Tool; icon: string; label: string }[] = [
   { id: 'tick', icon: '✓', label: 'Tick' },
   { id: 'cross', icon: '✗', label: 'Cross' },
-  { id: 'rect', icon: '▭', label: 'Box' }
+  { id: 'rect', icon: '▭', label: 'Box' },
+  { id: 'ellipse', icon: '◯', label: 'Circle' }
 ]
 
 type Panel = 'select' | 'text' | 'draw' | 'color' | null
@@ -154,7 +156,7 @@ export function useToolbarKeyboardShortcuts(enabled: boolean) {
   }, [enabled, selectedId, remove, undo, redo, add])
 }
 
-const isDrawShape = (t: Tool) => t === 'tick' || t === 'cross' || t === 'rect' || t === 'highlight'
+const isDrawShape = (t: Tool) => t === 'tick' || t === 'cross' || t === 'rect' || t === 'ellipse' || t === 'highlight'
 
 // --- DESKTOP TOOLS (left, inline in header) -------------------------------
 export function ToolbarDesktopTools() {
@@ -497,6 +499,9 @@ export function ToolbarDesktopActions() {
     <>
       <div className="hidden md:flex items-center gap-2 shrink-0 [&>*]:shrink-0">
         <SignatureMenu />
+        {/* Discreet — renders only for signed-in Universal ID users (returns
+            null otherwise), keeping the core app free + local for everyone. */}
+        <SaveToAccount />
         <button
           onClick={() => setExportOpen(true)}
           disabled={!sourceBytes}

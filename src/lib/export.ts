@@ -266,6 +266,33 @@ export async function buildAnnotatedPdfBytes(
           }
           break
         }
+        case 'ellipse': {
+          const rot = a.rotation ?? 0
+          // pdf-lib drawEllipse is centre-anchored. Konva stores a top-left
+          // bbox; the centre in Konva space is (x + w/2, y + h/2). Rotation in
+          // the app pivots around the bbox top-left, so rotate that centre
+          // about the top-left to get the centre in the rotated frame.
+          const rad = (rot * Math.PI) / 180
+          const [cxr, cyr] = rotatePoint(a.x + a.width / 2, a.y + a.height / 2, a.x, a.y, rad)
+          const common = {
+            x: sx(cxr),
+            y: toY(cyr),
+            xScale: sw(a.width / 2),
+            yScale: sw(a.height / 2),
+            rotate: rot ? degrees(-rot) : undefined
+          }
+          if (a.filled) {
+            page.drawEllipse({ ...common, color: hexToPdfRgb(a.color) })
+          } else {
+            page.drawEllipse({
+              ...common,
+              borderColor: hexToPdfRgb(a.color),
+              borderWidth: sw(2),
+              opacity: 0
+            })
+          }
+          break
+        }
         case 'draw': {
           const pts = smoothPolyline(a.points, 0.4, 12)
           for (let i = 0; i < pts.length - 2; i += 2) {

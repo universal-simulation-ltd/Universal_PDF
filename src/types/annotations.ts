@@ -5,6 +5,7 @@ export type Tool =
   | 'draw'
   | 'highlight'
   | 'rect'
+  | 'ellipse'
   | 'redact'
   | 'tick'
   | 'cross'
@@ -49,6 +50,21 @@ export type RectAnnotation = Base & {
   filled?: boolean
 }
 
+// Stored as a top-left bounding box (same convention as RectAnnotation) so the
+// drag / transform / bbox / export plumbing can be shared. The ellipse is
+// inscribed in that box: centre = (x + width/2, y + height/2), radii = half the
+// box. A square box gives a circle.
+export type EllipseAnnotation = Base & {
+  type: 'ellipse'
+  x: number
+  y: number
+  width: number
+  height: number
+  color: string
+  rotation?: number
+  filled?: boolean
+}
+
 export type RedactAnnotation = Base & {
   type: 'redact'
   x: number
@@ -80,6 +96,7 @@ export type Annotation =
   | TextAnnotation
   | DrawAnnotation
   | RectAnnotation
+  | EllipseAnnotation
   | RedactAnnotation
   | MarkAnnotation
   | ImageAnnotation

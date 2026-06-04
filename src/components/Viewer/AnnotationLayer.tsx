@@ -4,6 +4,7 @@ import {
   Layer,
   Line,
   Rect,
+  Ellipse,
   Text,
   Group,
   Image as KonvaImage,
@@ -53,6 +54,7 @@ function getAnnotationBBox(a: Annotation): { x: number; y: number; width: number
       return { x: a.x - 2, y: a.y - 2, width: w + 4, height: a.fontSize * 1.25 + 4 }
     }
     case 'rect':
+    case 'ellipse':
     case 'redact':
       return { x: a.x - 2, y: a.y - 2, width: a.width + 4, height: a.height + 4 }
     case 'tick':
@@ -83,7 +85,7 @@ interface Props {
 }
 
 function isResizable(a: Annotation): boolean {
-  return a.type === 'image' || a.type === 'rect' || a.type === 'redact'
+  return a.type === 'image' || a.type === 'rect' || a.type === 'ellipse' || a.type === 'redact'
 }
 
 function isTransformable(a: Annotation): boolean {
@@ -194,6 +196,20 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // Pointer position used to render the ghost-signature preview that
   // follows the cursor while the signature tool is armed.
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null)
+  // Coarse pointer (touch) needs bigger Transformer anchors + a longer rotate
+  // arm to be grabbable with a finger — the 9px desktop anchors are fiddly on
+  // mobile. The handles themselves render on every device (the Transformer is
+  // not viewport-gated); this only makes them finger-sized on touch.
+  const [coarsePointer, setCoarsePointer] = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const mq = window.matchMedia('(pointer: coarse)')
+    setCoarsePointer(mq.matches)
+    const handler = (e: MediaQueryListEvent) => setCoarsePointer(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
   const editingAnnotation = annotations.find(
     (a) => a.id === editingId && a.type === 'text'
   ) as TextAnnotation | undefined
@@ -281,7 +297,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         size: tickSize,
         color
       })
-    } else if (tool === 'rect' || tool === 'redact') {
+    } else if (tool === 'rect' || tool === 'ellipse' || tool === 'redact') {
       drawingRef.current = true
       setCurrentLine([pos.x, pos.y, pos.x, pos.y])
     } else if (tool === 'signature') {
@@ -336,7 +352,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     if (!drawingRef.current) return
     setCurrentLine((prev) => {
       if (!prev) return null
-      if (tool === 'rect' || tool === 'redact') return [prev[0], prev[1], pos.x, pos.y]
+      if (tool === 'rect' || tool === 'ellipse' || tool === 'redact') return [prev[0], prev[1], pos.x, pos.y]
       return [...prev, pos.x, pos.y]
     })
   }
@@ -380,6 +396,24 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             id: crypto.randomUUID(),
             pageIndex,
             type: 'rect',
+            x,
+            y,
+            width: w,
+            height: h,
+            color
+          })
+        }
+      } else if (tool === 'ellipse') {
+        const [x1, y1, x2, y2] = currentLine
+        const x = Math.min(x1, x2)
+        const y = Math.min(y1, y2)
+        const w = Math.abs(x2 - x1)
+        const h = Math.abs(y2 - y1)
+        if (w > 4 && h > 4) {
+          add({
+            id: crypto.randomUUID(),
+            pageIndex,
+            type: 'ellipse',
             x,
             y,
             width: w,
@@ -441,6 +475,12 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       const next = a.points.map((v, i) => (i % 2 === 0 ? v + dx : v + dy))
       node.position({ x: 0, y: 0 })
       update(a.id, { points: next })
+    } else if (a.type === 'ellipse') {
+      // Konva Ellipse position is its centre; we store the top-left bbox.
+      update(a.id, {
+        x: node.x() - a.width / 2,
+        y: node.y() - a.height / 2
+      } as Partial<Annotation>)
     } else {
       update(a.id, { x: node.x(), y: node.y() } as Partial<Annotation>)
     }
@@ -457,6 +497,20 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       update(a.id, {
         x: node.x(),
         y: node.y(),
+        width: newWidth,
+        height: newHeight,
+        rotation
+      } as Partial<Annotation>)
+    } else if (a.type === 'ellipse') {
+      // Konva Ellipse.width()/height() are 2× the radii, and its x/y is the
+      // centre — convert back to the stored top-left bbox.
+      const newWidth = Math.max(8, node.width() * node.scaleX())
+      const newHeight = Math.max(8, node.height() * node.scaleY())
+      node.scaleX(1)
+      node.scaleY(1)
+      update(a.id, {
+        x: node.x() - newWidth / 2,
+        y: node.y() - newHeight / 2,
         width: newWidth,
         height: newHeight,
         rotation
@@ -577,6 +631,22 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                     strokeWidth={a.filled ? 0 : 2}
                   />
                 )
+              case 'ellipse':
+                // Konva Ellipse is centre-anchored; we store a top-left bbox.
+                return (
+                  <Ellipse
+                    key={a.id}
+                    {...common}
+                    x={a.x + a.width / 2}
+                    y={a.y + a.height / 2}
+                    rotation={a.rotation ?? 0}
+                    radiusX={a.width / 2}
+                    radiusY={a.height / 2}
+                    fill={a.filled ? a.color : undefined}
+                    stroke={a.color}
+                    strokeWidth={a.filled ? 0 : 2}
+                  />
+                )
               case 'redact':
                 return (
                   <Rect
@@ -682,6 +752,23 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               />
             )
           })()}
+          {currentLine && tool === 'ellipse' && (() => {
+            const [x1, y1, x2, y2] = currentLine
+            const w = Math.abs(x2 - x1)
+            const h = Math.abs(y2 - y1)
+            return (
+              <Ellipse
+                listening={false}
+                x={Math.min(x1, x2) + w / 2}
+                y={Math.min(y1, y2) + h / 2}
+                radiusX={w / 2}
+                radiusY={h / 2}
+                stroke={color}
+                strokeWidth={2}
+                dash={[6, 4]}
+              />
+            )
+          })()}
           {currentLine && tool === 'redact' && (() => {
             const [x1, y1, x2, y2] = currentLine
             return (
@@ -720,14 +807,16 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 rotateEnabled={rotatable}
                 resizeEnabled={resizable}
                 keepRatio={selected?.type === 'image'}
-                rotateAnchorOffset={28}
+                // Bigger rotate arm + anchors on touch so they clear the finger
+                // and are easy to grab; desktop keeps the compact sizing.
+                rotateAnchorOffset={coarsePointer ? 40 : 28}
                 enabledAnchors={resizable ? ['top-left', 'top-right', 'bottom-left', 'bottom-right'] : []}
                 borderStroke="#ea580c"
                 borderStrokeWidth={1.5}
                 borderDash={[6, 4]}
                 anchorStroke="#ea580c"
                 anchorFill="#ffffff"
-                anchorSize={9}
+                anchorSize={coarsePointer ? 18 : 9}
                 anchorCornerRadius={2}
                 boundBoxFunc={(_oldBox, newBox) => {
                   if (newBox.width < 12 || newBox.height < 12) return _oldBox
@@ -813,7 +902,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         if (tool !== 'select') return null
         if (draggingId) return null
         const selected = annotations.find((a) => a.id === selectedId)
-        if (!selected || selected.type !== 'rect') return null
+        if (!selected || (selected.type !== 'rect' && selected.type !== 'ellipse')) return null
         const filled = !!selected.filled
         const bbox = getAnnotationBBox(selected)
         return (
