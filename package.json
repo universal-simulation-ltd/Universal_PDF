@@ -15,7 +15,10 @@
     "typecheck": "tsc -b --noEmit",
     "electron": "electron .",
     "dist": "npm run build:desktop && electron-builder",
-    "dist:win": "npm run build:desktop && electron-builder --win"
+    "dist:win": "npm run build:desktop && electron-builder --win",
+    "cap:sync": "npm run build && npx cap sync",
+    "cap:open:ios": "npx cap open ios",
+    "cap:open:android": "npx cap open android"
   },
   "dependencies": {
     "@unisim/sdk": "^0.25.1",
