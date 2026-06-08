@@ -1209,8 +1209,12 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       })()}
 
       {(() => {
-        if (tool !== 'select') return null
-        if (draggingId) return null
+        // Fill toggle follows the same visibility as the Delete affordance: any
+        // single rect/ellipse selection (not while dragging or editing text),
+        // regardless of the active tool. A box is auto-selected the moment it's
+        // drawn while the 'rect' tool is still active, so gating on
+        // tool==='select' hid the Fill button until the user re-clicked it.
+        if (draggingId || editingId) return null
         const selected = annotations.find((a) => a.id === selectedId)
         if (!selected || (selected.type !== 'rect' && selected.type !== 'ellipse')) return null
         const filled = !!selected.filled
