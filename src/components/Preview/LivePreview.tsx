@@ -4,7 +4,8 @@ import { useAnnotationStore } from '../../stores/annotationStore'
 import { buildAnnotatedPdfBytes, downloadPdfBytes } from '../../lib/export'
 import { pdfjsLib, type PDFDocumentProxy } from '../../lib/pdfjs'
 
-const EXPORT_SCALE = 1.4
+// 1:1 with the editor's PDF-point coordinate space — see ExportModal.tsx.
+const EXPORT_SCALE = 1.0
 const PREVIEW_SCALE = 1.2
 
 export default function LivePreview() {

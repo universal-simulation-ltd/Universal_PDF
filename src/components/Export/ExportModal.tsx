@@ -4,7 +4,12 @@ import { useAnnotationStore } from '../../stores/annotationStore'
 import { useFormStore } from '../../stores/formStore'
 import { buildAnnotatedPdfBytes, compressPdf, downloadPdfBytes } from '../../lib/export'
 
-const EXPORT_SCALE = 1.4
+// Annotations are stored in PDF-point space (the editor divides the on-screen
+// pointer position by the render scale before saving), so the export maps them
+// 1:1 into the page — no extra scaling. A value other than 1 shifts and
+// shrinks every annotation toward the page's bottom-left corner. (The redaction
+// rasteriser's DPI is a separate `renderScale` inside export.ts.)
+const EXPORT_SCALE = 1.0
 
 type Variant = 'original' | 'compressed'
 
