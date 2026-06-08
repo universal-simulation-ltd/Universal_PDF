@@ -391,7 +391,7 @@ export async function exportPdfWithAnnotations(
   formValues?: FormFieldValue[]
 ) {
   const bytes = await buildAnnotatedPdfBytes(sourceBytes, annotations, scale, formValues)
-  const outName = fileName.replace(/\.pdf$/i, '') + '-pdf.pdf'
+  const outName = fileName.replace(/\.pdf$/i, '') + '-v2.pdf'
   downloadPdfBytes(bytes, outName)
 }
 

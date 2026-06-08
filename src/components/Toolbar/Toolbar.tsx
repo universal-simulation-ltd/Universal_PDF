@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { usePdfStore } from '../../stores/pdfStore'
 import SignatureMenu from '../Signature/SignatureMenu'
@@ -70,6 +71,49 @@ const DRAW_SHAPES: { id: Tool; icon: string; label: string }[] = [
 ]
 
 type Panel = 'select' | 'text' | 'draw' | 'color' | null
+
+// Renders a toolbar dropdown into a body-level portal, fixed-positioned under
+// its anchor. The desktop toolbar sits inside an `overflow-x-auto` container
+// (so it can scroll horizontally on narrow viewports); per the CSS overflow
+// spec that container also clips vertically, which turned the dropdowns into an
+// inner scrollbar instead of letting them overlay the PDF. Portaling escapes
+// the clip. `panelRef` is shared with the outside-click handler so clicks
+// inside the floated panel don't close it.
+function FloatingPanel({
+  anchorRef,
+  panelRef,
+  children
+}: {
+  anchorRef: React.RefObject<HTMLDivElement>
+  panelRef: React.RefObject<HTMLDivElement>
+  children: React.ReactNode
+}) {
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
+  useLayoutEffect(() => {
+    function place() {
+      const el = anchorRef.current
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      setPos({ left: r.left, top: r.bottom + 4 })
+    }
+    place()
+    window.addEventListener('resize', place)
+    // Capture phase so the toolbar's own horizontal scroll (and any ancestor
+    // scroll) keeps the panel pinned to its anchor.
+    window.addEventListener('scroll', place, true)
+    return () => {
+      window.removeEventListener('resize', place)
+      window.removeEventListener('scroll', place, true)
+    }
+  }, [anchorRef])
+  if (!pos) return null
+  return createPortal(
+    <div ref={panelRef} style={{ position: 'fixed', left: pos.left, top: pos.top, zIndex: 60 }}>
+      {children}
+    </div>,
+    document.body
+  )
+}
 
 const SELECT_OPTIONS: { id: Tool; icon: string; label: string; help: string }[] = [
   { id: 'select', icon: '↖', label: 'Select', help: 'Click to move, resize or edit. On desktop, drag empty space to select many' },
@@ -195,6 +239,9 @@ export function ToolbarDesktopTools() {
   const selectGroupRef = useRef<HTMLDivElement>(null)
   const textGroupRef = useRef<HTMLDivElement>(null)
   const drawGroupRef = useRef<HTMLDivElement>(null)
+  // The open panel is portaled out of the toolbar, so it's no longer a DOM
+  // descendant of the group refs — track it separately for outside-click.
+  const panelContentRef = useRef<HTMLDivElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
 
   const pressTimer = useRef<number | null>(null)
@@ -207,7 +254,7 @@ export function ToolbarDesktopTools() {
   useEffect(() => {
     if (!openPanel) return
     function onDoc(e: MouseEvent) {
-      const refs = [selectGroupRef, textGroupRef, drawGroupRef]
+      const refs = [selectGroupRef, textGroupRef, drawGroupRef, panelContentRef]
       const inside = refs.some((r) => r.current?.contains(e.target as Node))
       if (!inside) setOpenPanel(null)
     }
@@ -348,7 +395,8 @@ export function ToolbarDesktopTools() {
         )}
         <PlusBox panel="select" />
         {openPanel === 'select' && (
-          <div className="absolute top-full left-0 mt-1 z-50 bg-slate-800 border border-slate-600 rounded-lg shadow-xl py-1 whitespace-nowrap min-w-56">
+          <FloatingPanel anchorRef={selectGroupRef} panelRef={panelContentRef}>
+          <div className="bg-slate-800 border border-slate-600 rounded-lg shadow-xl py-1 whitespace-nowrap min-w-56">
             {SELECT_OPTIONS.map((opt) => (
               <button
                 key={opt.id}
@@ -365,6 +413,7 @@ export function ToolbarDesktopTools() {
               </button>
             ))}
           </div>
+          </FloatingPanel>
         )}
       </div>
 
@@ -375,7 +424,8 @@ export function ToolbarDesktopTools() {
         {toolBtn('text', 'T', 'Add text', 'text')}
         <PlusBox panel="text" />
         {openPanel === 'text' && (
-          <div className="absolute top-full left-0 mt-1 z-50 bg-slate-800 border border-slate-600 rounded-lg shadow-xl px-3 py-2 flex items-center gap-3 whitespace-nowrap">
+          <FloatingPanel anchorRef={textGroupRef} panelRef={panelContentRef}>
+          <div className="bg-slate-800 border border-slate-600 rounded-lg shadow-xl px-3 py-2 flex items-center gap-3 whitespace-nowrap">
             <span className="text-xs text-slate-400">Size</span>
             <input
               type="range"
@@ -403,6 +453,7 @@ export function ToolbarDesktopTools() {
               </button>
             ))}
           </div>
+          </FloatingPanel>
         )}
       </div>
 
@@ -439,7 +490,8 @@ export function ToolbarDesktopTools() {
         </div>
         <PlusBox panel="draw" />
         {openPanel === 'draw' && (
-          <div className="absolute top-full left-0 mt-1 z-50 bg-slate-800 border border-slate-600 rounded-lg shadow-xl px-3 py-2 flex items-center gap-2 whitespace-nowrap">
+          <FloatingPanel anchorRef={drawGroupRef} panelRef={panelContentRef}>
+          <div className="bg-slate-800 border border-slate-600 rounded-lg shadow-xl px-3 py-2 flex items-center gap-2 whitespace-nowrap">
             {DRAW_SHAPES.map((s) => (
               <button
                 key={s.id}
@@ -469,6 +521,7 @@ export function ToolbarDesktopTools() {
             {COLORS.map((c) => colorSwatch(c.hex, c.name))}
             <ColorPickerTrigger />
           </div>
+          </FloatingPanel>
         )}
       </div>
 
