@@ -113,7 +113,6 @@ export default function App() {
           <UniversalAppsNavBar
             product="pdf"
             productLogo={<ProductLogo />}
-            productHomeHref={import.meta.env.BASE_URL}
             suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
           />
         </div>
@@ -123,7 +122,6 @@ export default function App() {
           <UniversalAppsNavBar
             product="pdf"
             productLogo={<ProductLogo />}
-            productHomeHref={import.meta.env.BASE_URL}
             // Actions menu lives in the universal navbar (matches QR's pattern);
             // the dark toolbar below is just drawing-tools + export controls.
             fileMenu={<FileMenu variant="header" />}

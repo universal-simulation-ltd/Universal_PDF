@@ -149,14 +149,28 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     const newBytes = await applyPageOrderToPdf(bytes, newOrder)
     const indexMap = buildPageIndexMap(newOrder)
 
-    // Remap annotations/form values BEFORE the new doc renders so they
-    // land on the right pages instead of flashing in stale slots.
+    // Build the new doc FIRST, before touching any state. Previously the
+    // annotation/form remap and the old doc's destroy() ran ahead of this
+    // getDocument call, so a transient first-attempt failure left annotations
+    // remapped and the old doc destroyed — a half-applied state that a second
+    // "delete" appeared to fix. Doing all the destructive work only after the
+    // new doc is in hand makes the operation atomic: it either fully succeeds
+    // or leaves everything untouched. One retry covers a flaky worker init.
+    let doc: Awaited<ReturnType<typeof pdfjsLib.getDocument>['promise']> | null = null
+    for (let attempt = 0; attempt < 2 && !doc; attempt++) {
+      try {
+        doc = await pdfjsLib.getDocument({ data: newBytes.slice(0) }).promise
+      } catch (err) {
+        if (attempt === 1) throw err
+      }
+    }
+    if (!doc) return
+
+    // Now commit, in order: remap annotations/forms (before React renders the
+    // new doc so they land on the right pages), swap out the old doc, set state.
     useAnnotationStore.getState().remapPages(indexMap)
     useFormStore.getState().remapPages(indexMap)
-
     get().doc?.destroy()
-    const renderCopy = newBytes.slice(0)
-    const doc = await pdfjsLib.getDocument({ data: renderCopy }).promise
     set({ doc, numPages: doc.numPages, sourceBytes: newBytes })
 
     saveRecent(fileName, newBytes)

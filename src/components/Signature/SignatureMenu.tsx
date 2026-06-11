@@ -74,10 +74,14 @@ export default function SignatureMenu({ openUpward = false, compact = false }: S
       )}
 
       {open && (
+        // z-index note: the PDF page's annotation layer renders at z-20/21 and the
+        // toolbar's floating panels at z-60. This dropdown must sit above BOTH, so
+        // keep it at z-[60] (compact uses z-50 over the mobile bar). Anything lower
+        // (e.g. z-40) lets the dropdown fall behind the PDF — regression seen twice.
         <div className={`bg-white text-slate-900 rounded-lg shadow-xl border border-slate-200 overflow-hidden ${
           compact
             ? 'fixed bottom-[4.5rem] left-1/2 -translate-x-1/2 w-80 max-w-[calc(100vw-1rem)] z-50'
-            : `absolute right-0 w-80 z-40 ${openUpward ? 'bottom-full mb-2' : 'top-full mt-1'}`
+            : `absolute right-0 w-80 z-[60] ${openUpward ? 'bottom-full mb-2' : 'top-full mt-1'}`
         }`}>
           {/* Tab bar */}
           <div className="flex border-b border-slate-100">

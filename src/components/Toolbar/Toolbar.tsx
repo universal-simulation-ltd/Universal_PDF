@@ -4,7 +4,6 @@ import { useAnnotationStore } from '../../stores/annotationStore'
 import { usePdfStore } from '../../stores/pdfStore'
 import SignatureMenu from '../Signature/SignatureMenu'
 import ExportModal from '../Export/ExportModal'
-import SaveToAccount from '../SaveToAccount'
 import type { Annotation, FontFamily, Tool } from '../../types/annotations'
 
 const FONT_OPTIONS: { id: FontFamily; label: string; preview: string; css: string }[] = [
@@ -497,7 +496,7 @@ export function ToolbarDesktopTools() {
                 key={s.id}
                 onClick={() => setTool(s.id)}
                 title={s.label}
-                className={`w-9 h-9 rounded flex items-center justify-center text-lg font-semibold transition-colors ${
+                className={`w-9 h-9 rounded flex items-center justify-center text-lg font-semibold text-white transition-colors ${
                   tool === s.id ? 'bg-orange-600' : 'hover:bg-slate-700'
                 }`}
               >
@@ -567,9 +566,6 @@ export function ToolbarDesktopActions() {
     <>
       <div className="hidden md:flex items-center gap-2 shrink-0 [&>*]:shrink-0">
         <SignatureMenu />
-        {/* Discreet — renders only for signed-in Universal ID users (returns
-            null otherwise), keeping the core app free + local for everyone. */}
-        <SaveToAccount />
         <button
           onClick={() => setExportOpen(true)}
           disabled={!sourceBytes}
