@@ -17,6 +17,7 @@
 
 # Static files referenced from index.html / the SDK navbar.
 /pdf/favicon.svg          /favicon.svg          200
+/pdf/og-image.png         /og-image.png         200
 /pdf/unisim-icon.png      /unisim-icon.png      200
 
 # Bare /pdf (no trailing slash) — redirect to canonical /pdf/ so the SPA loads.
