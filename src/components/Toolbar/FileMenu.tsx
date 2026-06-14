@@ -19,9 +19,11 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
 
   const doc = usePdfStore((s) => s.doc)
   const fileName = usePdfStore((s) => s.fileName)
+  const numPages = usePdfStore((s) => s.numPages)
   const loadFile = usePdfStore((s) => s.loadFile)
   const renameFile = usePdfStore((s) => s.renameFile)
   const reset = usePdfStore((s) => s.reset)
+  const setPageNavOpen = usePdfStore((s) => s.setPageNavOpen)
 
   const canClear = annotations.length > 0
   const canRename = !!doc && !!fileName
@@ -284,6 +286,19 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                 </button>
               </div>
             </div>
+          )}
+
+          {/* Pages lives in the desktop viewer bar; mobile has no such bar, so
+              surface it here in the Actions menu instead. */}
+          {variant === 'toolbar' && doc && numPages > 1 && (
+            <button
+              onClick={() => { setPageNavOpen(true); setOpen(false) }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
+            >
+              <span aria-hidden="true">☰</span>
+              <span className="flex-1 text-left">Pages</span>
+              <span className="text-[11px] text-slate-400 tabular-nums">{numPages}</span>
+            </button>
           )}
 
           {doc && (

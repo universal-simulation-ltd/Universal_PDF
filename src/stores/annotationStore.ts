@@ -5,6 +5,9 @@ interface AnnotationState {
   tool: Tool
   color: string
   strokeWidth: number
+  // When true the line tool draws "rigid" strokes that snap to the nearest
+  // horizontal, vertical or 45° diagonal. Free-form lines when false.
+  lineSnap: boolean
   fontSize: number
   fontFamily: FontFamily
   annotations: Annotation[]
@@ -20,6 +23,7 @@ interface AnnotationState {
   setTool: (t: Tool) => void
   setColor: (c: string) => void
   setStrokeWidth: (w: number) => void
+  setLineSnap: (v: boolean) => void
   setFontSize: (s: number) => void
   setFontFamily: (f: FontFamily) => void
   setSelected: (id: string | null) => void
@@ -49,6 +53,7 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
   tool: 'select',
   color: '#000000',
   strokeWidth: 2.5,
+  lineSnap: false,
   fontSize: 18,
   fontFamily: 'sans',
   annotations: [],
@@ -89,6 +94,7 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
       }
       return { strokeWidth }
     }),
+  setLineSnap: (lineSnap) => set({ lineSnap }),
   setFontSize: (fontSize) =>
     set((s) => {
       const sel = s.annotations.find((a) => a.id === s.selectedId)
