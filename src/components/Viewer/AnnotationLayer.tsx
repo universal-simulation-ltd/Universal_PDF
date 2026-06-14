@@ -14,6 +14,7 @@ import type Konva from 'konva'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { useSignatureStore } from '../../stores/signatureStore'
 import { useImage } from '../../lib/useImage'
+import { SIGNATURE_INK, formatSigningDate } from '../../lib/signature'
 import type { Annotation, FontFamily, ImageAnnotation, TextAnnotation } from '../../types/annotations'
 
 const FONT_STACK: Record<FontFamily, string> = {
@@ -212,6 +213,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     const id = s.activeId
     return id ? s.signatures.find((x) => x.id === id) ?? null : null
   })
+  // Name/date pieces awaiting click-placement after a "separate" signature.
+  const pendingExtras = useSignatureStore((s) => s.pendingExtras)
 
   const annotations = allAnnotations.filter((a) => a.pageIndex === pageIndex)
 
@@ -249,6 +252,14 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
   }, [])
+
+  // Abandon a half-finished separate-signature placement if the user switches
+  // away from the signature tool before dropping every name/date piece.
+  useEffect(() => {
+    if (tool !== 'signature' && pendingExtras.length > 0) {
+      useSignatureStore.getState().setPendingExtras([])
+    }
+  }, [tool, pendingExtras.length])
 
   const editingAnnotation = annotations.find(
     (a) => a.id === editingId && a.type === 'text'
@@ -306,6 +317,27 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     // don't deselect the annotation and tear down the Transformer before
     // the resize / rotate gesture can begin.
     if (isTransformerTarget(e.target)) return
+    // Mid-sequence placement: dropping the name/date for a "separate" signature.
+    // Each click drops the next text piece exactly where clicked (hit-testing
+    // skipped, so the user can target a form field directly).
+    if (tool === 'signature' && pendingExtras.length > 0) {
+      const p = getPos(e)
+      const item = pendingExtras[0]
+      add({
+        id: crypto.randomUUID(),
+        pageIndex,
+        type: 'text',
+        x: p.x,
+        y: p.y,
+        text: item.text,
+        color: item.color,
+        fontSize: fontSize / scale,
+        fontFamily
+      })
+      useSignatureStore.getState().consumePendingExtra()
+      if (pendingExtras.length <= 1) useAnnotationStore.getState().setTool('select')
+      return
+    }
     const stage = e.target.getStage()
     // If the click landed on an existing annotation, select it instead of
     // adding a new one — even when an annotation tool (tick/cross/etc.) is
@@ -376,7 +408,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         size: tickSize,
         color
       })
-    } else if (tool === 'rect' || tool === 'ellipse' || tool === 'redact') {
+    } else if (tool === 'rect' || tool === 'ellipse' || tool === 'redact' || tool === 'line') {
       drawingRef.current = true
       setCurrentLine([pos.x, pos.y, pos.x, pos.y])
     } else if (tool === 'signature') {
@@ -395,7 +427,18 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           height: targetW * ratio,
           src: active.dataUrl,
         })
-        useAnnotationStore.getState().setTool('select')
+        // If this signature carries separate name/date pieces, arm them for
+        // click-placement instead of dropping straight into Select.
+        const extras = active.extras
+        const inkColor = extras?.color ?? SIGNATURE_INK
+        const queue: { kind: 'name' | 'date'; text: string; color: string }[] = []
+        if (extras?.name) queue.push({ kind: 'name', text: extras.name, color: inkColor })
+        if (extras?.date) queue.push({ kind: 'date', text: formatSigningDate(), color: inkColor })
+        if (queue.length > 0) {
+          sigState.setPendingExtras(queue)
+        } else {
+          useAnnotationStore.getState().setTool('select')
+        }
       }
     } else if (tool === 'image') {
       const src = useAnnotationStore.getState().uploadedImageSrc
@@ -439,7 +482,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     if (!drawingRef.current) return
     setCurrentLine((prev) => {
       if (!prev) return null
-      if (tool === 'rect' || tool === 'ellipse' || tool === 'redact') return [prev[0], prev[1], pos.x, pos.y]
+      if (tool === 'rect' || tool === 'ellipse' || tool === 'redact' || tool === 'line') return [prev[0], prev[1], pos.x, pos.y]
       return [...prev, pos.x, pos.y]
     })
   }
@@ -497,6 +540,20 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           strokeWidth: HIGHLIGHT_STROKE_WIDTH / scale,
           opacity: HIGHLIGHT_OPACITY
         })
+      } else if (tool === 'line') {
+        // A straight line is stored as a two-point free-draw stroke, so it
+        // reuses all of draw's rendering, selection, move and PDF-export paths.
+        const [x1, y1, x2, y2] = currentLine
+        if (Math.hypot(x2 - x1, y2 - y1) > 4) {
+          add({
+            id: crypto.randomUUID(),
+            pageIndex,
+            type: 'draw',
+            points: [x1, y1, x2, y2],
+            color,
+            strokeWidth: strokeWidth / scale
+          })
+        }
       } else if (tool === 'rect') {
         const [x1, y1, x2, y2] = currentLine
         const x = Math.min(x1, x2)
@@ -983,6 +1040,16 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               tension={0.4}
             />
           )}
+          {currentLine && tool === 'line' && (
+            <Line
+              listening={false}
+              points={currentLine}
+              stroke={color}
+              strokeWidth={strokeWidth}
+              lineCap="round"
+              lineJoin="round"
+            />
+          )}
           {currentLine && tool === 'rect' && (() => {
             const [x1, y1, x2, y2] = currentLine
             return (
@@ -1030,13 +1097,28 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             )
           })()}
 
-          {tool === 'signature' && activeSignature && hoverPos && (
+          {tool === 'signature' && activeSignature && hoverPos && pendingExtras.length === 0 && (
             <SignatureGhost
               src={activeSignature.dataUrl}
               x={hoverPos.x - ghostSigWidth / 2}
               y={hoverPos.y - ghostSigHeight / 2}
               width={ghostSigWidth}
               height={ghostSigHeight}
+            />
+          )}
+
+          {/* While placing separate name/date pieces, preview the next piece's
+              text at the cursor so the user knows what they're dropping. */}
+          {tool === 'signature' && pendingExtras.length > 0 && hoverPos && (
+            <Text
+              listening={false}
+              x={hoverPos.x}
+              y={hoverPos.y}
+              text={pendingExtras[0].text}
+              fontSize={fontSize / scale}
+              fontFamily={FONT_STACK.sans}
+              fill={pendingExtras[0].color}
+              opacity={0.65}
             />
           )}
 

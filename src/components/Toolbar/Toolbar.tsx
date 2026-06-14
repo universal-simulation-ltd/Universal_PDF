@@ -65,6 +65,7 @@ const HIGHLIGHT_GREEN = '#16a34a'
 const DRAW_SHAPES: { id: Tool; icon: string; label: string }[] = [
   { id: 'tick', icon: '✓', label: 'Tick' },
   { id: 'cross', icon: '✗', label: 'Cross' },
+  { id: 'line', icon: '╱', label: 'Line' },
   { id: 'rect', icon: '▭', label: 'Box' },
   { id: 'ellipse', icon: '◯', label: 'Circle' }
 ]
@@ -214,7 +215,7 @@ export function useToolbarKeyboardShortcuts(enabled: boolean) {
   }, [enabled, selectedId, selectedIds, remove, removeMany, undo, redo, add])
 }
 
-const isDrawShape = (t: Tool) => t === 'tick' || t === 'cross' || t === 'rect' || t === 'ellipse' || t === 'highlight'
+const isDrawShape = (t: Tool) => t === 'tick' || t === 'cross' || t === 'line' || t === 'rect' || t === 'ellipse' || t === 'highlight'
 
 // --- DESKTOP TOOLS (left, inline in header) -------------------------------
 export function ToolbarDesktopTools() {

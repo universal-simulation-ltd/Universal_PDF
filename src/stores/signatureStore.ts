@@ -1,6 +1,15 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+// Name/date the user chose to place as SEPARATE text (next to the signature)
+// rather than baking into the image. Absent when everything is baked in.
+export interface SignatureExtras {
+  name?: string
+  date?: boolean
+  // Colour for separately-placed name/date text, so it matches the signature.
+  color?: string
+}
+
 export interface Signature {
   id: string
   name: string
@@ -8,6 +17,15 @@ export interface Signature {
   width: number
   height: number
   createdAt: number
+  extras?: SignatureExtras
+}
+
+// Queue of extra text pieces awaiting placement after a "separate" signature is
+// dropped — each consumed by one click on the page.
+export interface PendingExtra {
+  kind: 'name' | 'date'
+  text: string
+  color: string
 }
 
 export type ImportTarget = 'signature' | 'stamp'
@@ -15,6 +33,9 @@ export type ImportTarget = 'signature' | 'stamp'
 interface SignatureState {
   signatures: Signature[]
   activeId: string | null
+  // Text pieces (name/date) waiting to be click-placed after a separate
+  // signature is dropped. Transient — not persisted.
+  pendingExtras: PendingExtra[]
   padOpen: boolean
   importOpen: boolean
   importTarget: ImportTarget
@@ -22,6 +43,8 @@ interface SignatureState {
   add: (sig: Omit<Signature, 'id' | 'createdAt'>) => string
   remove: (id: string) => void
   setActive: (id: string | null) => void
+  setPendingExtras: (items: PendingExtra[]) => void
+  consumePendingExtra: () => void
   rename: (id: string, name: string) => void
   openPad: () => void
   closePad: () => void
@@ -36,6 +59,7 @@ export const useSignatureStore = create<SignatureState>()(
     (set) => ({
       signatures: [],
       activeId: null,
+      pendingExtras: [],
       padOpen: false,
       importOpen: false,
       importTarget: 'signature',
@@ -53,7 +77,11 @@ export const useSignatureStore = create<SignatureState>()(
           signatures: s.signatures.filter((x) => x.id !== id),
           activeId: s.activeId === id ? null : s.activeId
         })),
-      setActive: (activeId) => set({ activeId }),
+      // Switching the active signature abandons any half-finished placement.
+      setActive: (activeId) => set({ activeId, pendingExtras: [] }),
+      setPendingExtras: (pendingExtras) => set({ pendingExtras }),
+      consumePendingExtra: () =>
+        set((s) => ({ pendingExtras: s.pendingExtras.slice(1) })),
       rename: (id, name) =>
         set((s) => ({
           signatures: s.signatures.map((x) => (x.id === id ? { ...x, name } : x))

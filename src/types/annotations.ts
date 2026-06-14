@@ -10,6 +10,7 @@ export type Tool =
   | 'redact'
   | 'tick'
   | 'cross'
+  | 'line'
   | 'image'
   | 'signature'
   | 'form'
