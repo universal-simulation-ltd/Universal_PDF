@@ -16,7 +16,7 @@ import { useAnnotationStore } from '../../stores/annotationStore'
 import { useSignatureStore } from '../../stores/signatureStore'
 import { useImage } from '../../lib/useImage'
 import { SIGNATURE_INK, formatSigningDate } from '../../lib/signature'
-import type { Annotation, FontFamily, ImageAnnotation, TextAnnotation } from '../../types/annotations'
+import type { Annotation, DrawAnnotation, FontFamily, ImageAnnotation, TextAnnotation } from '../../types/annotations'
 
 const FONT_STACK: Record<FontFamily, string> = {
   sans: 'Helvetica, Arial, sans-serif',
@@ -103,6 +103,26 @@ function getAnnotationBBox(a: Annotation): { x: number; y: number; width: number
 // multi-select — the user can still grab them individually.
 function isHighlighter(a: Annotation): boolean {
   return a.type === 'draw' && a.opacity !== undefined
+}
+
+// A straight line drawn with the line tool: a two-point free-draw stroke tagged
+// with shape === 'line'. These get endpoint grabbers + a contextual panel. Kept
+// as a plain boolean (not a type predicate) so negating it doesn't narrow a
+// DrawAnnotation down to `never` at the call sites.
+function isLine(a: Annotation): boolean {
+  return a.type === 'draw' && a.shape === 'line' && a.points.length >= 4
+}
+
+// True if the click landed on one of our line endpoint grabbers, so the Stage
+// pointerdown handler can leave the grabber's own drag gesture alone (same idea
+// as isTransformerTarget).
+function isLineAnchorTarget(target: Konva.Node | null): boolean {
+  let node: Konva.Node | null = target
+  while (node) {
+    if (node.name() === 'lineAnchor') return true
+    node = node.getParent()
+  }
+  return false
 }
 
 // Constrain a line's end point to the nearest 45° axis (horizontal, vertical
@@ -242,6 +262,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const setSelectedIds = useAnnotationStore((s) => s.setSelectedIds)
   const toggleSelected = useAnnotationStore((s) => s.toggleSelected)
   const setTool = useAnnotationStore((s) => s.setTool)
+  const setLineSnap = useAnnotationStore((s) => s.setLineSnap)
+  const setStrokeWidth = useAnnotationStore((s) => s.setStrokeWidth)
 
   const activeSignature = useSignatureStore((s) => {
     const id = s.activeId
@@ -257,6 +279,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const [currentLine, setCurrentLine] = useState<number[] | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
+  // Live override for the endpoint currently being dragged by a line grabber, so
+  // the line follows the handle without committing a history step every frame.
+  const [lineDrag, setLineDrag] = useState<{ id: string; index: 0 | 1; x: number; y: number } | null>(null)
   // Id of the rect/ellipse awaiting confirmation before it gets filled — drives
   // the "text is still readable, redact instead?" warning dialog.
   const [fillWarnId, setFillWarnId] = useState<string | null>(null)
@@ -355,6 +380,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     // don't deselect the annotation and tear down the Transformer before
     // the resize / rotate gesture can begin.
     if (isTransformerTarget(e.target)) return
+    // Likewise, let a line endpoint grabber run its own drag without the Stage
+    // deselecting the line or starting a marquee underneath it.
+    if (isLineAnchorTarget(e.target)) return
     // Mid-sequence placement: dropping the name/date for a "separate" signature.
     // Each click drops the next text piece exactly where clicked (hit-testing
     // skipped, so the user can target a form field directly).
@@ -596,6 +624,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             id: crypto.randomUUID(),
             pageIndex,
             type: 'draw',
+            shape: 'line',
             points: [x1, y1, x2, y2],
             color,
             strokeWidth: strokeWidth / scale
@@ -729,6 +758,43 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       return { x: node.x() - a.width / 2, y: node.y() - a.height / 2 } as Partial<Annotation>
     }
     return { x: node.x(), y: node.y() } as Partial<Annotation>
+  }
+
+  // Resolve a line endpoint grabber's live position, applying 45° snapping
+  // (relative to the fixed end) when rigid mode is on or Shift is held. Keeps
+  // the dragged handle glued to the snapped point so it never drifts off the line.
+  function resolveLineAnchor(
+    a: DrawAnnotation,
+    index: 0 | 1,
+    e: Konva.KonvaEventObject<DragEvent>
+  ): { x: number; y: number } {
+    const node = e.target
+    const otherIdx = index === 0 ? 1 : 0
+    const ox = a.points[otherIdx * 2]
+    const oy = a.points[otherIdx * 2 + 1]
+    let x = node.x()
+    let y = node.y()
+    if (lineSnap || e.evt.shiftKey) {
+      const snapped = snapLineEnd(ox, oy, x, y)
+      x = snapped.x
+      y = snapped.y
+      node.position({ x, y })
+    }
+    return { x, y }
+  }
+
+  function onLineAnchorDragMove(a: DrawAnnotation, index: 0 | 1, e: Konva.KonvaEventObject<DragEvent>) {
+    const { x, y } = resolveLineAnchor(a, index, e)
+    setLineDrag({ id: a.id, index, x, y })
+  }
+
+  function onLineAnchorDragEnd(a: DrawAnnotation, index: 0 | 1, e: Konva.KonvaEventObject<DragEvent>) {
+    const { x, y } = resolveLineAnchor(a, index, e)
+    const points = [...a.points]
+    points[index * 2] = x
+    points[index * 2 + 1] = y
+    setLineDrag(null)
+    update(a.id, { points } as Partial<Annotation>)
   }
 
   function onShapeDragEnd(a: Annotation, e: Konva.KonvaEventObject<DragEvent>) {
@@ -931,14 +997,26 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             }
 
             switch (a.type) {
-              case 'draw':
+              case 'draw': {
+                // Mid-drag, render the line through the grabber's live endpoint
+                // so it tracks the handle before the move is committed.
+                const points =
+                  lineDrag && lineDrag.id === a.id
+                    ? a.points.map((v, i) =>
+                        i === lineDrag.index * 2
+                          ? lineDrag.x
+                          : i === lineDrag.index * 2 + 1
+                            ? lineDrag.y
+                            : v
+                      )
+                    : a.points
                 return (
                   <Line
                     key={a.id}
                     {...common}
                     x={0}
                     y={0}
-                    points={a.points}
+                    points={points}
                     stroke={a.color}
                     strokeWidth={a.strokeWidth}
                     opacity={a.opacity ?? 1}
@@ -948,6 +1026,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                     hitStrokeWidth={Math.max(20, a.strokeWidth + 14)}
                   />
                 )
+              }
               case 'text':
                 return (
                   <Text
@@ -1230,9 +1309,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           {(() => {
             const selected = annotations.find((a) => a.id === selectedId)
             // Only draw annotations still rely on the custom dashed halo
-            // (Konva's Transformer covers every other type). Skip while the
-            // user is moving the shape so the box doesn't lag behind.
-            if (!selected || selected.type !== 'draw' || editingId) return null
+            // (Konva's Transformer covers every other type). Lines use endpoint
+            // grabbers instead, so they skip the halo. Skip while the user is
+            // moving the shape so the box doesn't lag behind.
+            if (!selected || selected.type !== 'draw' || isLine(selected) || editingId) return null
             if (draggingId === selected.id) return null
             const bbox = getAnnotationBBox(selected)
             return (
@@ -1247,6 +1327,52 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 dash={[6, 4]}
                 cornerRadius={4}
               />
+            )
+          })()}
+
+          {(() => {
+            // Endpoint grabbers for a selected line — the same white-square
+            // anchors Konva's Transformer puts on a box, but one per line end so
+            // each can be repositioned independently. Sizes are divided by scale
+            // to stay a constant on-screen size at any zoom.
+            const selected = annotations.find((a) => a.id === selectedId)
+            if (!selected || selected.type !== 'draw' || !isLine(selected) || editingId) return null
+            if (draggingId === selected.id) return null
+            const live =
+              lineDrag && lineDrag.id === selected.id
+                ? selected.points.map((v, i) =>
+                    i === lineDrag.index * 2
+                      ? lineDrag.x
+                      : i === lineDrag.index * 2 + 1
+                        ? lineDrag.y
+                        : v
+                  )
+                : selected.points
+            const size = (coarsePointer ? 18 : 11) / scale
+            const indices: (0 | 1)[] = [0, 1]
+            return (
+              <>
+                {indices.map((index) => (
+                  <Rect
+                    key={index}
+                    name="lineAnchor"
+                    x={live[index * 2]}
+                    y={live[index * 2 + 1]}
+                    offsetX={size / 2}
+                    offsetY={size / 2}
+                    width={size}
+                    height={size}
+                    cornerRadius={2 / scale}
+                    fill="#ffffff"
+                    stroke="#ea580c"
+                    strokeWidth={1.5 / scale}
+                    draggable
+                    hitStrokeWidth={(coarsePointer ? 12 : 8) / scale}
+                    onDragMove={(e) => onLineAnchorDragMove(selected, index, e)}
+                    onDragEnd={(e) => onLineAnchorDragEnd(selected, index, e)}
+                  />
+                ))}
+              </>
             )
           })()}
         </Layer>
@@ -1296,6 +1422,61 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               <path d="M10 11v6M14 11v6" />
             </svg>
           </button>
+        )
+      })()}
+
+      {(() => {
+        // Contextual stroke + snap controls for a selected line, floated next to
+        // the line itself rather than buried in the toolbar menu. Stroke reuses
+        // the store action (updates this line + the default for the next one);
+        // toggling Snap on also re-snaps this line's far end to the nearest 45°.
+        if (draggingId || editingId) return null
+        const selected = annotations.find((a) => a.id === selectedId)
+        if (!selected || selected.type !== 'draw' || !isLine(selected)) return null
+        const bbox = getAnnotationBBox(selected)
+        const toggleSnap = () => {
+          const next = !lineSnap
+          setLineSnap(next)
+          if (next) {
+            const [x1, y1, x2, y2] = selected.points
+            const s = snapLineEnd(x1, y1, x2, y2)
+            update(selected.id, { points: [x1, y1, s.x, s.y] } as Partial<Annotation>)
+          }
+        }
+        return (
+          <div
+            onMouseDown={(e) => e.stopPropagation()}
+            style={{
+              position: 'absolute',
+              left: bbox.x * scale,
+              top: (bbox.y + bbox.height) * scale + 10,
+              zIndex: 21
+            }}
+            className="inline-flex items-center gap-2 bg-white rounded-full shadow-lg border border-slate-300 px-3 py-1.5 whitespace-nowrap"
+          >
+            <span className="text-xs text-slate-500 font-medium">Stroke</span>
+            <input
+              type="range"
+              min={1}
+              max={10}
+              step={0.5}
+              value={strokeWidth}
+              onChange={(e) => setStrokeWidth(parseFloat(e.target.value))}
+              className="w-20"
+            />
+            <span className="text-xs text-slate-600 tabular-nums w-10 text-right">{strokeWidth.toFixed(1)}px</span>
+            <span className="w-px h-5 bg-slate-200" />
+            <button
+              type="button"
+              onClick={toggleSnap}
+              title="Rigid line — snap to horizontal, vertical or diagonal (hold Shift while dragging an end for a one-off snap)"
+              className={`px-2.5 h-7 rounded-full text-xs font-medium transition-colors ${
+                lineSnap ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              Snap {lineSnap ? 'On' : 'Off'}
+            </button>
+          </div>
         )
       })()}
 
