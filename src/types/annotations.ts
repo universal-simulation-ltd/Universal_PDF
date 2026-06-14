@@ -38,6 +38,10 @@ export type DrawAnnotation = Base & {
   // Set for highlighter strokes so they render with a translucent fill.
   // Pencil strokes leave this undefined and render fully opaque.
   opacity?: number
+  // Set for straight lines drawn with the line tool (a two-point stroke). Lets
+  // the editor offer endpoint grabbers + a contextual stroke/snap panel without
+  // confusing them with free-draw scribbles that happen to be short.
+  shape?: 'line'
 }
 
 export type RectAnnotation = Base & {
