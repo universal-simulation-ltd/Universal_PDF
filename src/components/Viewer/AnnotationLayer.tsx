@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Stage,
   Layer,
@@ -25,6 +26,25 @@ const FONT_STACK: Record<FontFamily, string> = {
 
 const HIGHLIGHT_STROKE_WIDTH = 16
 const HIGHLIGHT_OPACITY = 0.4
+
+// Remembers the user's "don't show again" choice for the fill-vs-redact
+// warning. A filled box/circle only paints over content — the text beneath
+// stays selectable/extractable — so we nudge the user toward redaction once.
+const FILL_WARNING_KEY = 'updf:fillWarningDismissed'
+function fillWarningDismissed(): boolean {
+  try {
+    return localStorage.getItem(FILL_WARNING_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+function dismissFillWarning() {
+  try {
+    localStorage.setItem(FILL_WARNING_KEY, '1')
+  } catch {
+    // Ignore storage failures (private mode etc.) — we just keep warning.
+  }
+}
 
 function getAnnotationIdFromTarget(target: Konva.Node | null): string | null {
   let node: Konva.Node | null = target
@@ -83,6 +103,19 @@ function getAnnotationBBox(a: Annotation): { x: number; y: number; width: number
 // multi-select — the user can still grab them individually.
 function isHighlighter(a: Annotation): boolean {
   return a.type === 'draw' && a.opacity !== undefined
+}
+
+// Constrain a line's end point to the nearest 45° axis (horizontal, vertical
+// or diagonal) while keeping its length. Used to draw "rigid" lines when the
+// line-snap option is on or Shift is held.
+function snapLineEnd(x1: number, y1: number, x2: number, y2: number) {
+  const dx = x2 - x1
+  const dy = y2 - y1
+  const dist = Math.hypot(dx, dy)
+  if (dist === 0) return { x: x2, y: y2 }
+  const step = Math.PI / 4
+  const angle = Math.round(Math.atan2(dy, dx) / step) * step
+  return { x: x1 + Math.cos(angle) * dist, y: y1 + Math.sin(angle) * dist }
 }
 
 function rectsIntersect(
@@ -194,6 +227,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const tool = useAnnotationStore((s) => s.tool)
   const color = useAnnotationStore((s) => s.color)
   const strokeWidth = useAnnotationStore((s) => s.strokeWidth)
+  const lineSnap = useAnnotationStore((s) => s.lineSnap)
   const fontSize = useAnnotationStore((s) => s.fontSize)
   const fontFamily = useAnnotationStore((s) => s.fontFamily)
   const allAnnotations = useAnnotationStore((s) => s.annotations)
@@ -223,6 +257,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const [currentLine, setCurrentLine] = useState<number[] | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
+  // Id of the rect/ellipse awaiting confirmation before it gets filled — drives
+  // the "text is still readable, redact instead?" warning dialog.
+  const [fillWarnId, setFillWarnId] = useState<string | null>(null)
+  const [fillWarnDontShow, setFillWarnDontShow] = useState(false)
   // Rubber-band selection rectangle (mouse/pen only — see onPointerDown). Held
   // in unscaled page coordinates and rendered as a dashed box while dragging.
   const marqueeRef = useRef<{
@@ -482,7 +520,16 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     if (!drawingRef.current) return
     setCurrentLine((prev) => {
       if (!prev) return null
-      if (tool === 'rect' || tool === 'ellipse' || tool === 'redact' || tool === 'line') return [prev[0], prev[1], pos.x, pos.y]
+      if (tool === 'line') {
+        // Snap to horizontal / vertical / diagonal when rigid mode is on, or
+        // while Shift is held as a one-off constraint.
+        if (lineSnap || e.evt.shiftKey) {
+          const { x, y } = snapLineEnd(prev[0], prev[1], pos.x, pos.y)
+          return [prev[0], prev[1], x, y]
+        }
+        return [prev[0], prev[1], pos.x, pos.y]
+      }
+      if (tool === 'rect' || tool === 'ellipse' || tool === 'redact') return [prev[0], prev[1], pos.x, pos.y]
       return [...prev, pos.x, pos.y]
     })
   }
@@ -1309,7 +1356,15 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation()
-              update(selected.id, { filled: !filled } as Partial<Annotation>)
+              // Clearing a fill is harmless. Turning one on hides content only
+              // visually, so warn (once) that the text is still machine-readable
+              // and offer a real redaction instead.
+              if (filled || fillWarningDismissed()) {
+                update(selected.id, { filled: !filled } as Partial<Annotation>)
+              } else {
+                setFillWarnDontShow(false)
+                setFillWarnId(selected.id)
+              }
             }}
             style={{
               position: 'absolute',
@@ -1321,6 +1376,90 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           >
             <span aria-hidden="true">{filled ? '⌫' : '🪣'}</span>
           </button>
+        )
+      })()}
+
+      {fillWarnId && (() => {
+        const target = annotations.find((a) => a.id === fillWarnId)
+        if (!target || (target.type !== 'rect' && target.type !== 'ellipse')) {
+          // Selection changed out from under us — drop the prompt.
+          return null
+        }
+        const close = () => setFillWarnId(null)
+        const applyDontShow = () => {
+          if (fillWarnDontShow) dismissFillWarning()
+        }
+        const fillAnyway = () => {
+          applyDontShow()
+          update(target.id, { filled: true } as Partial<Annotation>)
+          close()
+        }
+        const redactInstead = () => {
+          applyDontShow()
+          // Swap the shape for a true redaction over the same box: on export the
+          // page is rasterised so the underlying text is permanently removed.
+          remove(target.id)
+          add({
+            id: crypto.randomUUID(),
+            pageIndex: target.pageIndex,
+            type: 'redact',
+            x: target.x,
+            y: target.y,
+            width: target.width,
+            height: target.height
+          })
+          close()
+        }
+        return createPortal(
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+            onMouseDown={close}
+          >
+            <div
+              className="w-full max-w-sm rounded-xl bg-white shadow-2xl overflow-hidden"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <div className="px-5 pt-5 pb-3">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl leading-none" aria-hidden="true">⚠️</span>
+                  <div>
+                    <h2 className="text-base font-semibold text-slate-900">Filling won't hide the text</h2>
+                    <p className="mt-1.5 text-sm text-slate-600">
+                      A filled box only paints over the page. The text underneath
+                      stays selectable and readable by a computer. To remove it
+                      for good, redact instead.
+                    </p>
+                  </div>
+                </div>
+                <label className="mt-4 flex items-center gap-2 text-xs text-slate-500 select-none cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={fillWarnDontShow}
+                    onChange={(e) => setFillWarnDontShow(e.target.checked)}
+                    className="rounded border-slate-300 text-orange-600 focus:ring-orange-500"
+                  />
+                  Don't show this again
+                </label>
+              </div>
+              <div className="flex items-center justify-end gap-2 border-t border-slate-100 bg-slate-50 px-5 py-3">
+                <button
+                  type="button"
+                  onClick={fillAnyway}
+                  className="px-3 h-9 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-200"
+                >
+                  Fill anyway
+                </button>
+                <button
+                  type="button"
+                  onClick={redactInstead}
+                  className="px-3 h-9 rounded-md text-sm font-medium text-white bg-orange-600 hover:bg-orange-500"
+                >
+                  Redact instead
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
         )
       })()}
     </>

@@ -222,10 +222,12 @@ export function ToolbarDesktopTools() {
   const tool = useAnnotationStore((s) => s.tool)
   const color = useAnnotationStore((s) => s.color)
   const strokeWidth = useAnnotationStore((s) => s.strokeWidth)
+  const lineSnap = useAnnotationStore((s) => s.lineSnap)
   const selectedId = useAnnotationStore((s) => s.selectedId)
   const setTool = useAnnotationStore((s) => s.setTool)
   const setColor = useAnnotationStore((s) => s.setColor)
   const setStrokeWidth = useAnnotationStore((s) => s.setStrokeWidth)
+  const setLineSnap = useAnnotationStore((s) => s.setLineSnap)
   const setSelected = useAnnotationStore((s) => s.setSelected)
   const remove = useAnnotationStore((s) => s.remove)
   const fontSize = useAnnotationStore((s) => s.fontSize)
@@ -516,6 +518,20 @@ export function ToolbarDesktopTools() {
               className="w-20"
             />
             <span className="text-xs text-slate-300 w-12 tabular-nums text-right">{strokeWidth.toFixed(1)}px</span>
+            {tool === 'line' && (
+              <>
+                <div className="w-px h-6 bg-slate-600 mx-1" />
+                <button
+                  onClick={() => setLineSnap(!lineSnap)}
+                  title="Rigid line — snap to horizontal, vertical or diagonal (hold Shift for a one-off snap)"
+                  className={`px-2 h-8 rounded text-xs font-medium transition-colors ${
+                    lineSnap ? 'bg-orange-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-100'
+                  }`}
+                >
+                  Snap {lineSnap ? 'On' : 'Off'}
+                </button>
+              </>
+            )}
             <div className="w-px h-6 bg-slate-600 mx-1" />
             <span className="text-xs text-slate-400">Colour</span>
             {COLORS.map((c) => colorSwatch(c.hex, c.name))}
@@ -585,11 +601,13 @@ export function ToolbarMobile() {
   const tool = useAnnotationStore((s) => s.tool)
   const color = useAnnotationStore((s) => s.color)
   const strokeWidth = useAnnotationStore((s) => s.strokeWidth)
+  const lineSnap = useAnnotationStore((s) => s.lineSnap)
   const annotations = useAnnotationStore((s) => s.annotations)
   const selectedId = useAnnotationStore((s) => s.selectedId)
   const setTool = useAnnotationStore((s) => s.setTool)
   const setColor = useAnnotationStore((s) => s.setColor)
   const setStrokeWidth = useAnnotationStore((s) => s.setStrokeWidth)
+  const setLineSnap = useAnnotationStore((s) => s.setLineSnap)
   const setSelected = useAnnotationStore((s) => s.setSelected)
   const undo = useAnnotationStore((s) => s.undo)
   const canUndo = useAnnotationStore((s) => s.past.length > 0)
@@ -750,6 +768,20 @@ export function ToolbarMobile() {
             className="w-20"
           />
           <span className="text-xs text-slate-700 tabular-nums w-10 text-right">{strokeWidth.toFixed(1)}px</span>
+          {tool === 'line' && (
+            <>
+              <div className="w-px h-7 bg-slate-200 mx-1" />
+              <button
+                onClick={() => setLineSnap(!lineSnap)}
+                title="Rigid line — snap to horizontal, vertical or diagonal"
+                className={`px-3 h-8 rounded-lg text-xs font-medium transition-colors ${
+                  lineSnap ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                Snap {lineSnap ? 'On' : 'Off'}
+              </button>
+            </>
+          )}
           <div className="w-px h-7 bg-slate-200 mx-1" />
           {COLORS.map((c) => (
             <button
