@@ -262,6 +262,15 @@ export function ToolbarDesktopTools() {
     return () => document.removeEventListener('mousedown', onDoc)
   }, [openPanel])
 
+  // Drawing a line auto-selects it and pops a contextual stroke/snap panel next
+  // to the line. Collapse the draw-options dropdown so that panel isn't hidden
+  // behind it.
+  useEffect(() => {
+    if (!selectedId) return
+    const sel = useAnnotationStore.getState().annotations.find((a) => a.id === selectedId)
+    if (sel && sel.type === 'draw' && sel.shape === 'line') setOpenPanel(null)
+  }, [selectedId])
+
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -623,6 +632,15 @@ export function ToolbarMobile() {
     document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
   }, [openPanel])
+
+  // Drawing a line auto-selects it and pops a contextual stroke/snap panel next
+  // to the line. Collapse the big draw-options panel so that toolbar isn't
+  // hidden behind it.
+  useEffect(() => {
+    if (!selectedId) return
+    const sel = useAnnotationStore.getState().annotations.find((a) => a.id === selectedId)
+    if (sel && sel.type === 'draw' && sel.shape === 'line') setOpenPanel(null)
+  }, [selectedId])
 
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
