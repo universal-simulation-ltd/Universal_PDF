@@ -602,7 +602,6 @@ export function ToolbarMobile() {
   const setSelected = useAnnotationStore((s) => s.setSelected)
   const undo = useAnnotationStore((s) => s.undo)
   const canUndo = useAnnotationStore((s) => s.past.length > 0)
-  const remove = useAnnotationStore((s) => s.remove)
   const fontSize = useAnnotationStore((s) => s.fontSize)
   const setFontSize = useAnnotationStore((s) => s.setFontSize)
   const setUploadedImageSrc = useAnnotationStore((s) => s.setUploadedImageSrc)
@@ -833,36 +832,29 @@ export function ToolbarMobile() {
 
   return (
     <div className="md:hidden">
-      {/* Selection action bar */}
-      {selectedId && openPanel === null && (
+      {/* Selection action bar — text size controls only. Deletion is handled by
+          the floating bin icon next to the selected object (no duplicate pill). */}
+      {textSelected && openPanel === null && (
         <div className="fixed bottom-[68px] left-0 right-0 z-30 flex items-center justify-center gap-2 px-3 pb-2 pointer-events-none">
-          {textSelected && (
-            <div className="pointer-events-auto inline-flex items-center gap-1 bg-white rounded-full shadow-lg px-1 py-1">
-              <button
-                onClick={() => setFontSize(Math.max(10, fontSize - 2))}
-                className="w-8 h-8 rounded-full hover:bg-slate-100 text-lg font-semibold text-slate-700"
-                aria-label="Decrease text size"
-              >
-                −
-              </button>
-              <span className="text-xs font-medium w-10 text-center tabular-nums text-slate-700">
-                {fontSize}px
-              </span>
-              <button
-                onClick={() => setFontSize(Math.min(48, fontSize + 2))}
-                className="w-8 h-8 rounded-full hover:bg-slate-100 text-lg font-semibold text-slate-700"
-                aria-label="Increase text size"
-              >
-                +
-              </button>
-            </div>
-          )}
-          <button
-            onClick={() => remove(selectedId)}
-            className="pointer-events-auto px-4 py-2 rounded-full bg-red-600 text-white text-sm font-medium shadow-lg"
-          >
-            Delete
-          </button>
+          <div className="pointer-events-auto inline-flex items-center gap-1 bg-white rounded-full shadow-lg px-1 py-1">
+            <button
+              onClick={() => setFontSize(Math.max(10, fontSize - 2))}
+              className="w-8 h-8 rounded-full hover:bg-slate-100 text-lg font-semibold text-slate-700"
+              aria-label="Decrease text size"
+            >
+              −
+            </button>
+            <span className="text-xs font-medium w-10 text-center tabular-nums text-slate-700">
+              {fontSize}px
+            </span>
+            <button
+              onClick={() => setFontSize(Math.min(48, fontSize + 2))}
+              className="w-8 h-8 rounded-full hover:bg-slate-100 text-lg font-semibold text-slate-700"
+              aria-label="Increase text size"
+            >
+              +
+            </button>
+          </div>
         </div>
       )}
 
