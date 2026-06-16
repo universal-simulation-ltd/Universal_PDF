@@ -12,6 +12,7 @@ import StampPicker from './components/Signature/StampPicker'
 import SignatureImport from './components/Signature/SignatureImport'
 import LandingPage from './components/Landing/LandingPage'
 import LivePreview from './components/Preview/LivePreview'
+import PresentMode from './components/Present/PresentMode'
 import ProductLogo from './components/Header/ProductLogo'
 import FileMenu from './components/Toolbar/FileMenu'
 import MobileWelcomeToast from './components/Onboarding/MobileWelcomeToast'
@@ -253,6 +254,7 @@ export default function App() {
       <SignatureImport />
       {stampPickerOpen && <StampPicker />}
       <LivePreview />
+      <PresentMode />
     </div>
   )
 }

@@ -24,6 +24,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const renameFile = usePdfStore((s) => s.renameFile)
   const reset = usePdfStore((s) => s.reset)
   const setPageNavOpen = usePdfStore((s) => s.setPageNavOpen)
+  const setPresentOpen = usePdfStore((s) => s.setPresentOpen)
 
   const canClear = annotations.length > 0
   const canRename = !!doc && !!fileName
@@ -298,6 +299,18 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
               <span aria-hidden="true">☰</span>
               <span className="flex-1 text-left">Pages</span>
               <span className="text-[11px] text-slate-400 tabular-nums">{numPages}</span>
+            </button>
+          )}
+
+          {/* Present lives next to Export on desktop; surface it in the Actions
+              menu on mobile, where the bottom toolbar has no room. */}
+          {variant === 'toolbar' && doc && (
+            <button
+              onClick={() => { setPresentOpen(true); setOpen(false) }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
+            >
+              <span aria-hidden="true">▶</span>
+              <span className="flex-1 text-left">Present</span>
             </button>
           )}
 
