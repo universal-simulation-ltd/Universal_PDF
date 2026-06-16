@@ -199,6 +199,16 @@ export function useToolbarKeyboardShortcuts(enabled: boolean) {
         e.preventDefault()
         return
       }
+      if (!mod && key === 'f') {
+        // Enter presentation. Guarded by isEditable above so it won't fire
+        // while typing into a text annotation / rename field.
+        const pdf = usePdfStore.getState()
+        if (pdf.sourceBytes && !pdf.presentOpen) {
+          e.preventDefault()
+          pdf.setPresentOpen(true)
+        }
+        return
+      }
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (selectedIds.length > 1) {
           e.preventDefault()
@@ -570,12 +580,22 @@ export function ToolbarDesktopTools() {
 // --- DESKTOP ACTIONS (right, inline in header) ----------------------------
 export function ToolbarDesktopActions() {
   const sourceBytes = usePdfStore((s) => s.sourceBytes)
+  const setPresentOpen = usePdfStore((s) => s.setPresentOpen)
   const [exportOpen, setExportOpen] = useState(false)
 
   return (
     <>
       <div className="hidden md:flex items-center gap-2 shrink-0 [&>*]:shrink-0">
         <SignatureMenu />
+        <button
+          onClick={() => setPresentOpen(true)}
+          disabled={!sourceBytes}
+          title="Present full screen (F)"
+          className="px-3 h-9 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-1.5"
+        >
+          <span aria-hidden="true">▶</span>
+          Present
+        </button>
         <button
           onClick={() => setExportOpen(true)}
           disabled={!sourceBytes}
