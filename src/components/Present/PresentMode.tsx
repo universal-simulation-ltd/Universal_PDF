@@ -81,6 +81,18 @@ export default function PresentMode() {
     setPageIndex((i) => Math.max(0, i - 1))
   }, [])
 
+  // Tap the left third of the slide to go back, the rest to advance. The
+  // back zone is kept narrow so it isn't hit by accident when clicking through.
+  const onStageClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      if (x < rect.width / 3) prev()
+      else next()
+    },
+    [prev, next]
+  )
+
   // Enter native fullscreen on open (best-effort — unsupported on iOS Safari,
   // where the fixed overlay alone already fills the screen). Leave fullscreen
   // when the overlay closes, and close the overlay if the user exits fullscreen
@@ -187,9 +199,9 @@ export default function PresentMode() {
         </button>
       </div>
 
-      {/* Slide stage — click anywhere to advance. */}
+      {/* Slide stage — tap the left third to go back, elsewhere to advance. */}
       <div
-        onClick={next}
+        onClick={onStageClick}
         className="flex-1 min-h-0 flex items-center justify-center overflow-hidden"
       >
         {error ? (
