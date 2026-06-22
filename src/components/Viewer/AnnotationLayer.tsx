@@ -15,6 +15,7 @@ import type Konva from 'konva'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { useSignatureStore } from '../../stores/signatureStore'
 import { useImage } from '../../lib/useImage'
+import { RedactIcon } from '../icons/RedactIcon'
 import { SIGNATURE_INK, formatSigningDate } from '../../lib/signature'
 import type { Annotation, DrawAnnotation, FontFamily, ImageAnnotation, TextAnnotation } from '../../types/annotations'
 
@@ -1556,6 +1557,52 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             className="w-8 h-8 rounded-full bg-white shadow-lg border border-slate-300 hover:border-orange-500 hover:bg-orange-50 flex items-center justify-center text-base leading-none"
           >
             <span aria-hidden="true">{filled ? '⌫' : '🪣'}</span>
+          </button>
+        )
+      })()}
+
+      {(() => {
+        // Redact toggle — sits directly under the Fill pill on a selected
+        // box/ellipse. Where Fill only paints over the page, this swaps the
+        // shape for a true redaction: a black box whose underlying text is
+        // permanently removed when the document is exported. Nothing is
+        // destroyed yet (the swap is undoable) — export is the point of no
+        // return — so this button stays frictionless and the confirmation
+        // lives in the export dialog instead.
+        if (draggingId || editingId) return null
+        const selected = annotations.find((a) => a.id === selectedId)
+        if (!selected || (selected.type !== 'rect' && selected.type !== 'ellipse')) return null
+        const bbox = getAnnotationBBox(selected)
+        return (
+          <button
+            type="button"
+            title="Redact — blacks out the area and permanently removes the text on export"
+            aria-label="Redact this area"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              const id = crypto.randomUUID()
+              remove(selected.id)
+              add({
+                id,
+                pageIndex: selected.pageIndex,
+                type: 'redact',
+                x: selected.x,
+                y: selected.y,
+                width: selected.width,
+                height: selected.height
+              })
+              setSelected(id)
+            }}
+            style={{
+              position: 'absolute',
+              left: (bbox.x + bbox.width) * scale + 8,
+              top: bbox.y * scale - 8 + 72,
+              zIndex: 20
+            }}
+            className="w-8 h-8 rounded-full bg-white shadow-lg border border-slate-300 text-slate-700 hover:bg-slate-900 hover:text-white hover:border-slate-900 flex items-center justify-center transition-colors"
+          >
+            <RedactIcon size={16} />
           </button>
         )
       })()}

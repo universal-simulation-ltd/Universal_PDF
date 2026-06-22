@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { pdfjsLib, type PDFDocumentProxy } from '../lib/pdfjs'
+import { loadPdf, type PDFDocumentProxy } from '../lib/pdfjs'
 import { listRecents, saveRecent, getRecent, getRecentBySlug, deleteRecent, renameRecent, type RecentMeta } from '../lib/recents'
 import { applyPageOrderToPdf, buildPageIndexMap } from '../lib/pdfPages'
 import { useAnnotationStore } from './annotationStore'
@@ -26,6 +26,9 @@ interface PdfState {
   numPages: number
   fileName: string | null
   sourceBytes: ArrayBuffer | null
+  // True for Adobe LiveCycle/Designer XFA forms — the viewer renders these via
+  // the XFA HTML layer (XfaPage) and saves filled values with saveDocument().
+  isXfa: boolean
   loading: boolean
   pageNavOpen: boolean
   previewOpen: boolean
@@ -53,6 +56,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   numPages: 0,
   fileName: null,
   sourceBytes: null,
+  isXfa: false,
   loading: false,
   pageNavOpen: false,
   previewOpen: false,
@@ -68,12 +72,13 @@ export const usePdfStore = create<PdfState>((set, get) => ({
       get().doc?.destroy()
       const buf = await file.arrayBuffer()
       const renderCopy = buf.slice(0)
-      const doc = await pdfjsLib.getDocument({ data: renderCopy }).promise
+      const doc = await loadPdf(renderCopy).promise
       set({
         doc,
         numPages: doc.numPages,
         fileName: file.name,
         sourceBytes: buf,
+        isXfa: doc.isPureXfa,
         loading: false
       })
       // Persist to recents in the background — never blocks loading.
@@ -109,7 +114,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   },
   reset: () => {
     get().doc?.destroy()
-    set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, previewOpen: false, presentOpen: false })
+    set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, previewOpen: false, presentOpen: false })
     setHashSlug(null)
   },
   refreshRecents: async () => {
@@ -160,10 +165,10 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     // "delete" appeared to fix. Doing all the destructive work only after the
     // new doc is in hand makes the operation atomic: it either fully succeeds
     // or leaves everything untouched. One retry covers a flaky worker init.
-    let doc: Awaited<ReturnType<typeof pdfjsLib.getDocument>['promise']> | null = null
+    let doc: Awaited<ReturnType<typeof loadPdf>['promise']> | null = null
     for (let attempt = 0; attempt < 2 && !doc; attempt++) {
       try {
-        doc = await pdfjsLib.getDocument({ data: newBytes.slice(0) }).promise
+        doc = await loadPdf(newBytes.slice(0)).promise
       } catch (err) {
         if (attempt === 1) throw err
       }
@@ -175,7 +180,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     useAnnotationStore.getState().remapPages(indexMap)
     useFormStore.getState().remapPages(indexMap)
     get().doc?.destroy()
-    set({ doc, numPages: doc.numPages, sourceBytes: newBytes })
+    set({ doc, numPages: doc.numPages, sourceBytes: newBytes, isXfa: doc.isPureXfa })
 
     saveRecent(fileName, newBytes)
       .then((slug) => {
