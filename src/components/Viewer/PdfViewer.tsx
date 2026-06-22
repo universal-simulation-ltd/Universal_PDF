@@ -17,6 +17,7 @@ const ZOOM_PRESETS = [50, 75, 125, 150]
 export default function PdfViewer() {
   const doc = usePdfStore((s) => s.doc)
   const numPages = usePdfStore((s) => s.numPages)
+  const isXfa = usePdfStore((s) => s.isXfa)
   const pageNavOpen = usePdfStore((s) => s.pageNavOpen)
   const togglePageNav = usePdfStore((s) => s.togglePageNav)
   const tool = useAnnotationStore((s) => s.tool)
@@ -346,6 +347,13 @@ export default function PdfViewer() {
         </div>
         </div>
       </div>
+      {isXfa && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-800 text-center">
+          This is an Adobe XFA form. You can view and fill it; downloading saves your
+          entries. Annotation and redaction tools don't apply, and complex dynamic
+          forms may render only partially.
+        </div>
+      )}
       <div
         ref={scrollRef}
         className="flex-1 overflow-auto bg-slate-200"
@@ -353,7 +361,7 @@ export default function PdfViewer() {
       >
         <div className="flex flex-col items-center gap-6 py-6 px-4">
           {Array.from({ length: numPages }, (_, i) => (
-            <PdfPage key={i} doc={doc} pageIndex={i} scale={scale} />
+            <PdfPage key={i} doc={doc} pageIndex={i} scale={scale} isXfa={isXfa} />
           ))}
         </div>
       </div>

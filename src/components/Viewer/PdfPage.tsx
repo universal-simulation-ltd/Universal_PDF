@@ -2,14 +2,19 @@ import { useEffect, useRef, useState } from 'react'
 import type { PDFDocumentProxy, PDFPageProxy } from '../../lib/pdfjs'
 import AnnotationLayer from './AnnotationLayer'
 import FormFieldLayer from './FormFieldLayer'
+import XfaPage from './XfaPage'
 
 interface Props {
   doc: PDFDocumentProxy
   pageIndex: number
   scale: number
+  // True for Adobe XFA forms: render the interactive XFA HTML layer instead of
+  // rasterizing the page to canvas (whose only content is the "upgrade your PDF
+  // viewer" placeholder Adobe bakes into the static stream).
+  isXfa: boolean
 }
 
-export default function PdfPage({ doc, pageIndex, scale }: Props) {
+export default function PdfPage({ doc, pageIndex, scale, isXfa }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [size, setSize] = useState<{ width: number; height: number } | null>(null)
   const [page, setPage] = useState<PDFPageProxy | null>(null)
@@ -22,6 +27,15 @@ export default function PdfPage({ doc, pageIndex, scale }: Props) {
       const p = await doc.getPage(pageIndex + 1)
       if (cancelled) return
       setPage(p)
+      const cssViewport = p.getViewport({ scale })
+
+      // XFA pages render their content through XfaPage (HTML), so we only need
+      // the logical size here — no canvas rasterization.
+      if (isXfa) {
+        setSize({ width: cssViewport.width, height: cssViewport.height })
+        return
+      }
+
       // Use the logical viewport for sizing (CSS pixels) and a separate
       // physical viewport for the canvas backing store so the bitmap stays
       // crisp on high-DPI screens.
@@ -30,7 +44,6 @@ export default function PdfPage({ doc, pageIndex, scale }: Props) {
       // and further clamp so the canvas never exceeds ~16 M pixels (iOS Safari's
       // hard limit; crossing it causes the tab to crash and reload).
       const rawDpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
-      const cssViewport = p.getViewport({ scale })
       const MAX_CANVAS_PIXELS = 16_000_000
       const effectiveDpr = Math.min(
         rawDpr,
@@ -62,7 +75,7 @@ export default function PdfPage({ doc, pageIndex, scale }: Props) {
       cancelled = true
       renderTask?.cancel()
     }
-  }, [doc, pageIndex, scale])
+  }, [doc, pageIndex, scale, isXfa])
 
   return (
     <div
@@ -70,15 +83,29 @@ export default function PdfPage({ doc, pageIndex, scale }: Props) {
       className="relative shadow-lg mx-auto bg-white scroll-mt-4"
       style={size ? { width: size.width, height: size.height } : undefined}
     >
-      <canvas ref={canvasRef} className="block" />
-      {size && <AnnotationLayer pageIndex={pageIndex} width={size.width} height={size.height} scale={scale} />}
-      {size && page && (
-        <FormFieldLayer
-          page={page}
-          pageIndex={pageIndex}
-          scale={scale}
-          pageHeight={size.height}
-        />
+      {isXfa ? (
+        // XFA forms are view + fill only: the interactive HTML layer owns the
+        // page, and annotation/redaction tools don't apply (export goes through
+        // saveDocument, which can't bake drawn annotations).
+        size &&
+        page && (
+          <XfaPage doc={doc} page={page} scale={scale} width={size.width} height={size.height} />
+        )
+      ) : (
+        <>
+          <canvas ref={canvasRef} className="block" />
+          {size && (
+            <AnnotationLayer pageIndex={pageIndex} width={size.width} height={size.height} scale={scale} />
+          )}
+          {size && page && (
+            <FormFieldLayer
+              page={page}
+              pageIndex={pageIndex}
+              scale={scale}
+              pageHeight={size.height}
+            />
+          )}
+        </>
       )}
     </div>
   )

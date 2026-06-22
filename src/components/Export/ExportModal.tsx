@@ -56,6 +56,8 @@ interface Props {
 export default function ExportModal({ open, onClose }: Props) {
   const sourceBytes = usePdfStore((s) => s.sourceBytes)
   const fileName = usePdfStore((s) => s.fileName)
+  const doc = usePdfStore((s) => s.doc)
+  const isXfa = usePdfStore((s) => s.isXfa)
   const setPreviewOpen = usePdfStore((s) => s.setPreviewOpen)
   const annotations = useAnnotationStore((s) => s.annotations)
   const formValues = useFormStore((s) => s.values)
@@ -81,6 +83,18 @@ export default function ExportModal({ open, onClose }: Props) {
     setBuilding(true)
     ;(async () => {
       try {
+        // XFA forms: the pdf-lib annotate/rasterize pipeline can't see XFA field
+        // values (they live in the XFA datasets, not AcroForm widgets). PDF.js's
+        // saveDocument() serializes the values the user typed into the live form
+        // (held in doc.annotationStorage) back into the PDF. No compressed
+        // variant — the rasterizer would only capture Adobe's placeholder page.
+        if (isXfa && doc) {
+          const saved = await doc.saveDocument()
+          if (myId !== buildIdRef.current) return
+          setAnnotated(saved)
+          setCompressed(null)
+          return
+        }
         const copy = sourceBytes.slice(0)
         const annot = await buildAnnotatedPdfBytes(copy, annotations, EXPORT_SCALE, formValues)
         if (myId !== buildIdRef.current) return
@@ -96,7 +110,7 @@ export default function ExportModal({ open, onClose }: Props) {
         if (myId === buildIdRef.current) setBuilding(false)
       }
     })()
-  }, [open, sourceBytes, annotations, formValues, fileName])
+  }, [open, sourceBytes, annotations, formValues, fileName, isXfa, doc])
 
   useEffect(() => {
     if (!open) return
@@ -162,6 +176,41 @@ export default function ExportModal({ open, onClose }: Props) {
 
         {error ? (
           <div className="text-sm text-red-600">Export failed: {error}</div>
+        ) : isXfa ? (
+          <>
+            <div className="rounded-lg border border-slate-200 p-4">
+              <div className="text-sm font-medium text-slate-900">Filled XFA form</div>
+              <p className="mt-1 text-xs text-slate-500">
+                Your entries are saved into the form. Compression and baked-in
+                annotations aren't available for XFA documents.
+              </p>
+              <div className="mt-3 text-2xl font-semibold text-slate-900 tabular-nums">
+                {annotated ? formatSize(annotated.byteLength) : 'Building…'}
+              </div>
+            </div>
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
+              <button
+                onClick={() => {
+                  if (!annotated) return
+                  downloadPdfBytes(annotated.slice(), `${outNameBase}-filled.pdf`)
+                  onClose()
+                }}
+                disabled={!annotated}
+                className="px-4 py-2.5 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
+              >
+                <span aria-hidden="true">⬇</span>
+                Download filled form
+              </button>
+              <button
+                onClick={doPrint}
+                disabled={!annotated}
+                className="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-slate-700 flex items-center justify-center gap-1.5"
+              >
+                <span aria-hidden="true">🖨</span>
+                Print
+              </button>
+            </div>
+          </>
         ) : (
           <>
             <div className="rounded-lg border border-slate-200 overflow-hidden">
