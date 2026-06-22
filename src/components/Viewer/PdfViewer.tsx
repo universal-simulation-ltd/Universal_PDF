@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
+import { useSearchStore } from '../../stores/searchStore'
 import FileNameEditor from '../Header/FileNameEditor'
+import FindBar from './FindBar'
 import PdfPage from './PdfPage'
 
 // "100% zoom" in standard PDF viewers means physical paper size on screen.
@@ -21,6 +23,9 @@ export default function PdfViewer() {
   const pageNavOpen = usePdfStore((s) => s.pageNavOpen)
   const togglePageNav = usePdfStore((s) => s.togglePageNav)
   const tool = useAnnotationStore((s) => s.tool)
+  const searchOpen = useSearchStore((s) => s.open)
+  const setSearchOpen = useSearchStore((s) => s.setOpen)
+  const resetSearch = useSearchStore((s) => s.reset)
   const [zoom, setZoom] = useState(1)
   const scale = zoom * BASE_SCALE
   const [zoomMenuOpen, setZoomMenuOpen] = useState(false)
@@ -264,6 +269,24 @@ export default function PdfViewer() {
     }
   }, [doc, scale])
 
+  // Ctrl/Cmd+F opens the find bar (and re-focuses it if already open),
+  // overriding the browser's own find. Find reads the text layer, which XFA
+  // forms don't have, so it's disabled there.
+  useEffect(() => {
+    if (isXfa) return
+    function onKey(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
+        e.preventDefault()
+        setSearchOpen(true)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isXfa, setSearchOpen])
+
+  // Drop any find state when the document changes or unmounts.
+  useEffect(() => resetSearch, [doc, resetSearch])
+
   if (!doc) return null
 
   const handCursor = tool === 'hand' ? 'grab' : undefined
@@ -354,16 +377,19 @@ export default function PdfViewer() {
           forms may render only partially.
         </div>
       )}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-auto bg-slate-200"
-        style={{ cursor: handCursor }}
-      >
-        <div className="flex flex-col items-center gap-6 py-6 px-4">
-          {Array.from({ length: numPages }, (_, i) => (
-            <PdfPage key={i} doc={doc} pageIndex={i} scale={scale} isXfa={isXfa} />
-          ))}
+      <div className="relative flex-1 min-h-0">
+        <div
+          ref={scrollRef}
+          className="absolute inset-0 overflow-auto bg-slate-200"
+          style={{ cursor: handCursor }}
+        >
+          <div className="flex flex-col items-center gap-6 py-6 px-4">
+            {Array.from({ length: numPages }, (_, i) => (
+              <PdfPage key={i} doc={doc} pageIndex={i} scale={scale} isXfa={isXfa} />
+            ))}
+          </div>
         </div>
+        {searchOpen && <FindBar />}
       </div>
     </div>
   )

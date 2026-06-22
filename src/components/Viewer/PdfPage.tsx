@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { PDFDocumentProxy, PDFPageProxy } from '../../lib/pdfjs'
 import AnnotationLayer from './AnnotationLayer'
 import FormFieldLayer from './FormFieldLayer'
+import SearchHighlightLayer from './SearchHighlightLayer'
 import XfaPage from './XfaPage'
 
 interface Props {
@@ -94,6 +95,7 @@ export default function PdfPage({ doc, pageIndex, scale, isXfa }: Props) {
       ) : (
         <>
           <canvas ref={canvasRef} className="block" />
+          {size && <SearchHighlightLayer pageIndex={pageIndex} scale={scale} />}
           {size && (
             <AnnotationLayer pageIndex={pageIndex} width={size.width} height={size.height} scale={scale} />
           )}

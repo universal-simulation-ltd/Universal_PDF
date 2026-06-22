@@ -31,6 +31,7 @@ interface AnnotationState {
   toggleSelected: (id: string) => void
   setUploadedImageSrc: (src: string | null) => void
   add: (a: Annotation) => void
+  addMany: (items: Annotation[]) => void
   update: (id: string, patch: Partial<Annotation>) => void
   updateMany: (patches: { id: string; patch: Partial<Annotation> }[]) => void
   remove: (id: string) => void
@@ -144,6 +145,19 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
       past: pushPast(s.past, s.annotations),
       future: []
     })),
+  // Add several annotations as one history step (e.g. "Redact all matches"),
+  // so the whole batch is a single undo and ends up selected together.
+  addMany: (items) =>
+    set((s) => {
+      if (items.length === 0) return {}
+      return {
+        annotations: [...s.annotations, ...items],
+        selectedId: items.length === 1 ? items[0].id : null,
+        selectedIds: items.map((i) => i.id),
+        past: pushPast(s.past, s.annotations),
+        future: []
+      }
+    }),
   update: (id, patch) =>
     set((s) => ({
       annotations: s.annotations.map((a) =>

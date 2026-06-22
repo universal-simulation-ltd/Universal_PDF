@@ -3,6 +3,7 @@ import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { useFormStore } from '../../stores/formStore'
 import { buildAnnotatedPdfBytes, compressPdf, downloadPdfBytes } from '../../lib/export'
+import { RedactIcon } from '../icons/RedactIcon'
 
 // Annotations are stored in PDF-point space (the editor divides the on-screen
 // pointer position by the render scale before saving), so the export maps them
@@ -69,9 +70,19 @@ export default function ExportModal({ open, onClose }: Props) {
   const [tab, setTab] = useState<Variant>('compressed')
   const buildIdRef = useRef(0)
 
+  // Export is the point of no return for redactions: until now they're just
+  // movable black-box markup, but the rasterise-and-rebuild pass below removes
+  // the underlying text for good. Gate the destructive actions behind a typed
+  // "REDACT" confirmation when the document has any.
+  const redactCount = annotations.filter((a) => a.type === 'redact').length
+  const needsRedactConfirm = !isXfa && redactCount > 0
+  const [redactConfirm, setRedactConfirm] = useState('')
+  const redactConfirmed = !needsRedactConfirm || redactConfirm.trim().toLowerCase() === 'redact'
+
   useEffect(() => {
     if (!open) return
     setTab('compressed')
+    setRedactConfirm('')
   }, [open])
 
   useEffect(() => {
@@ -288,10 +299,38 @@ export default function ExportModal({ open, onClose }: Props) {
               </div>
             </div>
 
+            {needsRedactConfirm && (
+              <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3.5">
+                <div className="flex items-start gap-2.5">
+                  <span className="text-red-600 mt-0.5 shrink-0">
+                    <RedactIcon size={18} />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-red-900">
+                      Permanent redaction
+                    </div>
+                    <p className="mt-1 text-xs text-red-700">
+                      Exporting flattens {redactCount} redaction box{redactCount === 1 ? '' : 'es'} and
+                      removes the text underneath for good. This can't be undone.
+                    </p>
+                    <input
+                      value={redactConfirm}
+                      onChange={(e) => setRedactConfirm(e.target.value)}
+                      placeholder="Type REDACT to confirm"
+                      aria-label="Type REDACT to confirm"
+                      autoCapitalize="characters"
+                      spellCheck={false}
+                      className="mt-2.5 w-full rounded-md border border-red-300 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 placeholder:text-red-300"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2">
               <button
                 onClick={() => download(effectiveTab)}
-                disabled={!ready}
+                disabled={!ready || !redactConfirmed}
                 className="px-4 py-2.5 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
               >
                 <span aria-hidden="true">⬇</span>
@@ -299,7 +338,7 @@ export default function ExportModal({ open, onClose }: Props) {
               </button>
               <button
                 onClick={openPrintPreview}
-                disabled={!ready}
+                disabled={!ready || !redactConfirmed}
                 className="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-slate-700 flex items-center justify-center gap-1.5"
               >
                 <span aria-hidden="true">◎</span>
@@ -307,7 +346,7 @@ export default function ExportModal({ open, onClose }: Props) {
               </button>
               <button
                 onClick={doPrint}
-                disabled={!ready}
+                disabled={!ready || !redactConfirmed}
                 className="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-slate-700 flex items-center justify-center gap-1.5"
               >
                 <span aria-hidden="true">🖨</span>

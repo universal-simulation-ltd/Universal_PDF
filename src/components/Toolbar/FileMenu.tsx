@@ -2,7 +2,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { usePdfStore } from '../../stores/pdfStore'
+import { useSearchStore } from '../../stores/searchStore'
 import { LANGS, persistLang, readSavedLang, type LangCode } from '../../lib/lang'
+import { RedactIcon } from '../icons/RedactIcon'
 
 interface Props {
   variant?: 'header' | 'toolbar'
@@ -25,6 +27,8 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const reset = usePdfStore((s) => s.reset)
   const setPageNavOpen = usePdfStore((s) => s.setPageNavOpen)
   const setPresentOpen = usePdfStore((s) => s.setPresentOpen)
+  const isXfa = usePdfStore((s) => s.isXfa)
+  const setSearchOpen = useSearchStore((s) => s.setOpen)
 
   const canClear = annotations.length > 0
   const canRename = !!doc && !!fileName
@@ -314,12 +318,23 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
             </button>
           )}
 
+          {doc && !isXfa && (
+            <button
+              onClick={() => { setSearchOpen(true); setOpen(false) }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
+            >
+              <span aria-hidden="true">🔍</span>
+              <span className="flex-1 text-left">Find</span>
+              <span className="text-[11px] text-slate-400 tracking-wide">Ctrl+F</span>
+            </button>
+          )}
+
           {doc && (
             <button
               onClick={() => { setTool('redact'); setOpen(false) }}
               className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
             >
-              <span aria-hidden="true">▮</span>
+              <RedactIcon size={16} className="text-slate-700" />
               <span className="flex-1 text-left">Redact Text</span>
             </button>
           )}
