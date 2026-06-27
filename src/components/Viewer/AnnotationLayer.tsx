@@ -247,6 +247,7 @@ function SignatureImage({
 export default function AnnotationLayer({ pageIndex, width, height, scale }: Props) {
   const tool = useAnnotationStore((s) => s.tool)
   const color = useAnnotationStore((s) => s.color)
+  const redactFill = useAnnotationStore((s) => s.redactFill)
   const strokeWidth = useAnnotationStore((s) => s.strokeWidth)
   const lineSnap = useAnnotationStore((s) => s.lineSnap)
   const fontSize = useAnnotationStore((s) => s.fontSize)
@@ -681,7 +682,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             x,
             y,
             width: w,
-            height: h
+            height: h,
+            fill: redactFill
           })
         }
       }
@@ -1085,7 +1087,12 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                     y={a.y}
                     width={a.width}
                     height={a.height}
-                    fill="#000000"
+                    fill={a.fill === 'white' ? '#ffffff' : '#000000'}
+                    // A white redaction blanks a white page, so without a hint it
+                    // would be invisible in the editor — outline it (the border is
+                    // editor-only; export bakes a clean fill).
+                    stroke={a.fill === 'white' ? '#94a3b8' : undefined}
+                    strokeWidth={a.fill === 'white' ? 1 : 0}
                   />
                 )
               case 'tick': {
@@ -1218,7 +1225,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 y={Math.min(y1, y2)}
                 width={Math.abs(x2 - x1)}
                 height={Math.abs(y2 - y1)}
-                fill="#000000"
+                fill={redactFill === 'white' ? '#ffffff' : '#000000'}
+                stroke={redactFill === 'white' ? '#94a3b8' : undefined}
+                strokeWidth={redactFill === 'white' ? 1 : 0}
                 opacity={0.7}
               />
             )

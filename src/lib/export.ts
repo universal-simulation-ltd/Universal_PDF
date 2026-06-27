@@ -96,8 +96,8 @@ async function rasterizePageWithRedacts(
   await page.render({ canvasContext: ctx, viewport }).promise
 
   const k = renderScale / annotationScale
-  ctx.fillStyle = '#000000'
   for (const r of redacts) {
+    ctx.fillStyle = r.fill === 'white' ? '#ffffff' : '#000000'
     ctx.fillRect(r.x * k, r.y * k, r.width * k, r.height * k)
   }
 

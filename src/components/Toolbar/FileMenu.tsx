@@ -18,6 +18,8 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const canRedo = useAnnotationStore((s) => s.future.length > 0)
   const clearAll = useAnnotationStore((s) => s.clearAll)
   const setTool = useAnnotationStore((s) => s.setTool)
+  const redactFill = useAnnotationStore((s) => s.redactFill)
+  const setRedactFill = useAnnotationStore((s) => s.setRedactFill)
 
   const doc = usePdfStore((s) => s.doc)
   const fileName = usePdfStore((s) => s.fileName)
@@ -29,12 +31,14 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const setPresentOpen = usePdfStore((s) => s.setPresentOpen)
   const isXfa = usePdfStore((s) => s.isXfa)
   const setSearchOpen = useSearchStore((s) => s.setOpen)
+  const openForRedact = useSearchStore((s) => s.openForRedact)
 
   const canClear = annotations.length > 0
   const canRename = !!doc && !!fileName
 
   const [open, setOpen] = useState(false)
   const [langSubOpen, setLangSubOpen] = useState(false)
+  const [redactSubOpen, setRedactSubOpen] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
   const [renameDraft, setRenameDraft] = useState('')
   const [currentLang, setCurrentLang] = useState<LangCode>(readSavedLang())
@@ -95,6 +99,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
       }
       setOpen(false)
       setLangSubOpen(false)
+      setRedactSubOpen(false)
       setRenameOpen(false)
       setShowOtherHint(false)
     }
@@ -330,13 +335,66 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
           )}
 
           {doc && (
-            <button
-              onClick={() => { setTool('redact'); setOpen(false) }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
-            >
-              <RedactIcon size={16} className="text-slate-700" />
-              <span className="flex-1 text-left">Redact Text</span>
-            </button>
+            <>
+              <button
+                onClick={() => { setRedactSubOpen((v) => !v) }}
+                className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
+                aria-haspopup="true"
+                aria-expanded={redactSubOpen}
+              >
+                <RedactIcon size={16} className="text-slate-700" />
+                <span className="flex-1 text-left">Redact</span>
+                <svg viewBox="0 0 12 12" className={`w-3 h-3 transition-transform ${redactSubOpen ? '-rotate-90' : ''}`} aria-hidden="true">
+                  <path d="M4 2 L8 6 L4 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+
+              {redactSubOpen && (
+                <div className="border-t border-slate-100 bg-slate-50/60">
+                  {!isXfa && (
+                    <button
+                      type="button"
+                      onClick={() => { openForRedact(); setOpen(false) }}
+                      className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
+                    >
+                      <span aria-hidden="true">🔍</span>
+                      <span className="flex-1 text-left">
+                        <span className="block font-medium leading-tight">Find and redact</span>
+                        <span className="block text-[11px] text-slate-500 leading-tight">Search the text and black out every match</span>
+                      </span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => { setTool('redact'); setOpen(false) }}
+                    className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors border-t border-slate-100"
+                  >
+                    <span aria-hidden="true">✏️</span>
+                    <span className="flex-1 text-left">
+                      <span className="block font-medium leading-tight">Free draw</span>
+                      <span className="block text-[11px] text-slate-500 leading-tight">Drag a box over anything to redact it by hand</span>
+                    </span>
+                  </button>
+
+                  {/* Fill colour for new redactions (black is the privacy default; white blanks a white page) */}
+                  <div className="flex items-center gap-2 pl-8 pr-3 py-2.5 border-t border-slate-100">
+                    <span className="text-[11px] font-medium text-slate-500">Fill</span>
+                    {(['black', 'white'] as const).map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        onClick={() => setRedactFill(f)}
+                        title={f === 'black' ? 'Black redaction' : 'White redaction'}
+                        aria-pressed={redactFill === f}
+                        className={`w-6 h-6 rounded-full border-2 transition-transform ${
+                          redactFill === f ? 'border-orange-500 scale-110' : 'border-slate-300 hover:scale-105'
+                        } ${f === 'white' ? 'bg-white' : 'bg-black'}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           <button

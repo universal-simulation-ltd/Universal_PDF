@@ -16,7 +16,7 @@ import PresentMode from './components/Present/PresentMode'
 import ProductLogo from './components/Header/ProductLogo'
 import FileMenu from './components/Toolbar/FileMenu'
 import MobileWelcomeToast from './components/Onboarding/MobileWelcomeToast'
-import { UniversalAppsNavBar, SuiteSwitcher, ChangelogMenu } from '@unisim/sdk'
+import { UniversalAppsNavBar, SuiteSwitcher, ChangelogMenu, DEFAULT_UNIVERSAL_APPS_PRODUCTS, DEFAULT_APP_GROUPS } from '@unisim/sdk'
 
 // Apply the saved language to <html lang> on first mount.
 import { persistLang, readSavedLang } from './lib/lang'
@@ -140,6 +140,14 @@ export default function App() {
               <div className="md:hidden">
                 <SuiteSwitcher
                   current="pdf"
+                  // Without an explicit catalogue the switcher falls back to the
+                  // Assess suite — which is why the mobile logo menu was showing
+                  // Assess apps instead of the Everyday apps. Pass the Universal
+                  // Apps catalogue (PDF is `everyday`, so the main list filters to
+                  // the everyday apps) + the Business Startup group, mirroring the
+                  // desktop UniversalAppsNavBar.
+                  products={DEFAULT_UNIVERSAL_APPS_PRODUCTS}
+                  appGroups={DEFAULT_APP_GROUPS.filter((g) => g.label !== 'Everyday Apps')}
                   align="left"
                   portalHref="https://opensource.unisim.co.uk"
                   portalLabel={{ eyebrow: 'Universal Simulation', title: 'Universal Apps' }}

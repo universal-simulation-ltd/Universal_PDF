@@ -77,6 +77,9 @@ export type RedactAnnotation = Base & {
   y: number
   width: number
   height: number
+  // Fill colour the box is baked with on export. Defaults to black when
+  // undefined (back-compat with boxes drawn before white-fill existed).
+  fill?: 'black' | 'white'
 }
 
 export type MarkAnnotation = Base & {

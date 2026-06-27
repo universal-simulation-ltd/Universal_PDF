@@ -20,11 +20,16 @@ export default function FindBar() {
   const next = useSearchStore((s) => s.next)
   const prev = useSearchStore((s) => s.prev)
   const setOpen = useSearchStore((s) => s.setOpen)
+  const redactIntent = useSearchStore((s) => s.redactIntent)
   const addMany = useAnnotationStore((s) => s.addMany)
   const clearSelection = useAnnotationStore((s) => s.setSelectedIds)
+  const redactFill = useAnnotationStore((s) => s.redactFill)
+  const setRedactFill = useAnnotationStore((s) => s.setRedactFill)
 
   const inputRef = useRef<HTMLInputElement>(null)
-  const [expanded, setExpanded] = useState(false)
+  // Open with the redact panel already showing when the bar was launched from
+  // the Redact → "Find and redact" menu.
+  const [expanded, setExpanded] = useState(redactIntent)
   const [indexing, setIndexing] = useState(false)
 
   // Cache the extracted page text for the current doc. Re-extracted whenever the
@@ -100,7 +105,8 @@ export default function FindBar() {
           x: r.x - REDACT_PAD,
           y: r.y - REDACT_PAD,
           width: r.w + REDACT_PAD * 2,
-          height: r.h + REDACT_PAD * 2
+          height: r.h + REDACT_PAD * 2,
+          fill: redactFill
         })
       }
     }
@@ -181,6 +187,23 @@ export default function FindBar() {
 
       {expanded && (
         <div className="border-t border-slate-100 bg-slate-50 px-2.5 py-2.5">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[11px] font-medium text-slate-500">Fill</span>
+            <div className="flex items-center gap-1.5">
+              {(['black', 'white'] as const).map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setRedactFill(f)}
+                  title={f === 'black' ? 'Black redaction' : 'White redaction'}
+                  aria-pressed={redactFill === f}
+                  className={`w-6 h-6 rounded-full border-2 transition-transform ${
+                    redactFill === f ? 'border-orange-500 scale-110' : 'border-slate-300 hover:scale-105'
+                  } ${f === 'white' ? 'bg-white' : 'bg-black'}`}
+                />
+              ))}
+            </div>
+          </div>
           <button
             type="button"
             onClick={redactAll}
@@ -193,7 +216,7 @@ export default function FindBar() {
                 Redact all {count > 0 ? count : ''} match{count === 1 ? '' : 'es'}
               </span>
               <span className="block text-[11px] text-slate-500 group-hover:text-slate-300 leading-tight mt-0.5">
-                Blacks out every match — text is removed on export
+                {redactFill === 'white' ? 'Whites' : 'Blacks'} out every match — text is removed on export
               </span>
             </span>
           </button>

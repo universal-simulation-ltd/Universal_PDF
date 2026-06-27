@@ -11,6 +11,11 @@ interface SearchState {
   // Index into `matches` of the currently-focused result, or -1 when there are
   // none. Drives "3 / 12" and which highlight is emphasised / scrolled to.
   activeIndex: number
+  // Set when the find bar is opened specifically to redact matches (via the
+  // Redact → "Find and redact" menu) so the bar opens with the redact panel
+  // already expanded.
+  redactIntent: boolean
+  openForRedact: () => void
   setOpen: (open: boolean) => void
   setQuery: (query: string) => void
   setMatches: (matches: SearchMatch[]) => void
@@ -25,7 +30,10 @@ export const useSearchStore = create<SearchState>((set) => ({
   query: '',
   matches: [],
   activeIndex: -1,
-  setOpen: (open) => set(open ? { open } : { open: false, matches: [], activeIndex: -1 }),
+  redactIntent: false,
+  openForRedact: () => set({ open: true, redactIntent: true }),
+  setOpen: (open) =>
+    set(open ? { open, redactIntent: false } : { open: false, matches: [], activeIndex: -1, redactIntent: false }),
   setQuery: (query) => set({ query }),
   setMatches: (matches) => set({ matches, activeIndex: matches.length ? 0 : -1 }),
   setActiveIndex: (activeIndex) => set({ activeIndex }),
@@ -37,5 +45,5 @@ export const useSearchStore = create<SearchState>((set) => ({
         ? { activeIndex: (s.activeIndex - 1 + s.matches.length) % s.matches.length }
         : {}
     ),
-  reset: () => set({ open: false, query: '', matches: [], activeIndex: -1 })
+  reset: () => set({ open: false, query: '', matches: [], activeIndex: -1, redactIntent: false })
 }))
