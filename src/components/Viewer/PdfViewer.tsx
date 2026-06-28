@@ -22,6 +22,7 @@ export default function PdfViewer() {
   const isXfa = usePdfStore((s) => s.isXfa)
   const pageNavOpen = usePdfStore((s) => s.pageNavOpen)
   const togglePageNav = usePdfStore((s) => s.togglePageNav)
+  const setPresentOpen = usePdfStore((s) => s.setPresentOpen)
   const tool = useAnnotationStore((s) => s.tool)
   const searchOpen = useSearchStore((s) => s.open)
   const setSearchOpen = useSearchStore((s) => s.setOpen)
@@ -295,7 +296,9 @@ export default function PdfViewer() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="hidden md:block bg-slate-100 border-b border-slate-200">
+      {/* Page / zoom / Present bar — pinned to the BOTTOM via order-last (the
+          flex column otherwise keeps it in source order at the top). */}
+      <div className="hidden md:block bg-slate-100 border-t border-slate-200 order-last">
         <div style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}>
         <div
           className="mx-auto w-full grid grid-cols-[auto_1fr_auto] items-center gap-2 py-1.5 text-sm text-slate-600"
@@ -325,6 +328,15 @@ export default function PdfViewer() {
           </div>
           <div className="flex items-center gap-2 justify-end">
             <button
+              onClick={() => setPresentOpen(true)}
+              title="Present full screen (F)"
+              className="px-2.5 h-7 rounded border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium flex items-center gap-1.5"
+            >
+              <span aria-hidden="true">▶</span>
+              Present
+            </button>
+            <span className="w-px h-5 bg-slate-200" aria-hidden="true" />
+            <button
               onClick={() => setZoom((z) => Math.max(MIN_ZOOM, +(z - ZOOM_STEP).toFixed(2)))}
               disabled={zoomDisabled}
               className={`w-7 h-7 rounded border ${zoomDisabled ? 'border-slate-200 text-slate-300 cursor-not-allowed bg-white' : 'bg-white border-slate-300 hover:bg-slate-50'}`}
@@ -344,7 +356,7 @@ export default function PdfViewer() {
                 {Math.round(zoom * 100)}%
               </button>
               {zoomMenuOpen && atHundred && (
-                <div role="menu" className="absolute top-full right-0 mt-1 w-20 bg-white border border-slate-200 rounded-lg shadow-xl py-1 z-50">
+                <div role="menu" className="absolute bottom-full right-0 mb-1 w-20 bg-white border border-slate-200 rounded-lg shadow-xl py-1 z-50">
                   {ZOOM_PRESETS.map((p) => (
                     <button
                       key={p}

@@ -580,22 +580,13 @@ export function ToolbarDesktopTools() {
 // --- DESKTOP ACTIONS (right, inline in header) ----------------------------
 export function ToolbarDesktopActions() {
   const sourceBytes = usePdfStore((s) => s.sourceBytes)
-  const setPresentOpen = usePdfStore((s) => s.setPresentOpen)
   const [exportOpen, setExportOpen] = useState(false)
 
   return (
     <>
       <div className="hidden md:flex items-center gap-2 shrink-0 [&>*]:shrink-0">
         <SignatureMenu />
-        <button
-          onClick={() => setPresentOpen(true)}
-          disabled={!sourceBytes}
-          title="Present full screen (F)"
-          className="px-3 h-9 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-1.5"
-        >
-          <span aria-hidden="true">▶</span>
-          Present
-        </button>
+        {/* Present moved onto the bottom zoom bar (next to − % +). */}
         <button
           onClick={() => setExportOpen(true)}
           disabled={!sourceBytes}
