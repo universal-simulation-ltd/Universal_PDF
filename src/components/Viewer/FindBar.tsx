@@ -31,6 +31,7 @@ export default function FindBar() {
   // the Redact → "Find and redact" menu.
   const [expanded, setExpanded] = useState(redactIntent)
   const [indexing, setIndexing] = useState(false)
+  const [confirmingAll, setConfirmingAll] = useState(false)
 
   // Cache the extracted page text for the current doc. Re-extracted whenever the
   // doc instance changes (new file, page reorder/delete rebuilds it).
@@ -129,8 +130,7 @@ export default function FindBar() {
 
   function redactAll() {
     if (redactMatches(matches) === 0) return
-    // The boxes are in place; close find so they're visible and the highlights
-    // clear. Nothing is destroyed until export.
+    setConfirmingAll(false)
     setOpen(false)
   }
 
@@ -235,22 +235,46 @@ export default function FindBar() {
               </span>
             </button>
             {/* Then: redact every match at once and close. */}
-            <button
-              type="button"
-              onClick={redactAll}
-              disabled={count === 0}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white border border-slate-200 text-left hover:border-slate-900 hover:bg-slate-900 hover:text-white disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-inherit disabled:hover:border-slate-200 transition-colors group"
-            >
-              <RedactIcon size={16} className="shrink-0" />
-              <span className="flex-1 min-w-0">
-                <span className="block text-sm font-medium leading-tight">
-                  Redact all {count > 0 ? count : ''} match{count === 1 ? '' : 'es'}
+            {confirmingAll ? (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 space-y-2">
+                <p className="text-[11px] text-amber-800 leading-snug">
+                  <strong>Double-check before proceeding.</strong> Automatic search may miss some instances — different spellings, formatting, or scanned text won't be caught. Please review the document manually after redacting.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={redactAll}
+                    className="flex-1 px-3 py-1.5 rounded-md bg-slate-900 text-white text-xs font-medium hover:bg-slate-700"
+                  >
+                    Redact all {count > 0 ? count : ''} match{count === 1 ? '' : 'es'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingAll(false)}
+                    className="flex-1 px-3 py-1.5 rounded-md bg-white border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => { if (count > 0) setConfirmingAll(true) }}
+                disabled={count === 0}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white border border-slate-200 text-left hover:border-slate-900 hover:bg-slate-900 hover:text-white disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-inherit disabled:hover:border-slate-200 transition-colors group"
+              >
+                <RedactIcon size={16} className="shrink-0" />
+                <span className="flex-1 min-w-0">
+                  <span className="block text-sm font-medium leading-tight">
+                    Redact all {count > 0 ? count : ''} match{count === 1 ? '' : 'es'}
+                  </span>
+                  <span className="block text-[11px] text-slate-500 group-hover:text-slate-300 leading-tight mt-0.5">
+                    {redactFill === 'white' ? 'Whites' : 'Blacks'} out every match — text is removed on export
+                  </span>
                 </span>
-                <span className="block text-[11px] text-slate-500 group-hover:text-slate-300 leading-tight mt-0.5">
-                  {redactFill === 'white' ? 'Whites' : 'Blacks'} out every match — text is removed on export
-                </span>
-              </span>
-            </button>
+              </button>
+            )}
           </div>
         </div>
       )}
