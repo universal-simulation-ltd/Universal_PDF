@@ -15,6 +15,7 @@ import LivePreview from './components/Preview/LivePreview'
 import PresentMode from './components/Present/PresentMode'
 import ProductLogo from './components/Header/ProductLogo'
 import FileMenu from './components/Toolbar/FileMenu'
+import HostedStoreDialog from './components/HostedStoreDialog'
 import MobileWelcomeToast from './components/Onboarding/MobileWelcomeToast'
 import { UniversalAppsNavBar, SuiteSwitcher, ChangelogMenu, DEFAULT_UNIVERSAL_APPS_PRODUCTS, DEFAULT_APP_GROUPS } from '@unisim/sdk'
 
@@ -263,6 +264,7 @@ export default function App() {
       {stampPickerOpen && <StampPicker />}
       <LivePreview />
       <PresentMode />
+      <HostedStoreDialog />
     </div>
   )
 }

@@ -1,0 +1,193 @@
+import { useState } from 'react'
+import { createPortal } from 'react-dom'
+import { useUniversal, useUser, useCredits, useHostedUploads, type HostedUpload } from '@unisim/sdk'
+import { usePdfStore } from '../stores/pdfStore'
+import { storeCurrentPdf, deleteHostedPdf, openHostedPdf } from '../lib/hostedStore'
+
+const SIGNIN_URL = 'https://app.unisim.co.uk/login'
+const GET_TOKENS_URL = 'https://www.unisim.co.uk/subscription.html'
+
+// "Store this PDF" — the free local option (already automatic via recents) plus
+// the paid "Hosted by UNI·SIM" cloud option (one token per upload, refunded on
+// delete) gated behind a Universal ID. Backend: 0041 + the SDK hosted helpers.
+export default function HostedStoreDialog() {
+  const open = usePdfStore((s) => s.hostedStoreOpen)
+  const setOpen = usePdfStore((s) => s.setHostedStoreOpen)
+  const doc = usePdfStore((s) => s.doc)
+
+  const { supabase, session, activeOrgId } = useUniversal()
+  const { user } = useUser()
+  const { credits, refresh: refreshCredits } = useCredits()
+  const { uploads, loading: listLoading, refresh: refreshList } = useHostedUploads('pdf')
+
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [justStored, setJustStored] = useState(false)
+
+  if (!open) return null
+
+  const signedIn = !!session?.user && session.user.is_anonymous !== true
+  const tokens = credits ?? 0
+
+  function close() {
+    setOpen(false)
+    setError(null)
+    setJustStored(false)
+  }
+
+  async function onStore() {
+    if (!doc || !activeOrgId || busy) return
+    setBusy(true)
+    setError(null)
+    try {
+      const res = await storeCurrentPdf(supabase, activeOrgId)
+      if (!res.ok) {
+        setError(
+          res.error === 'no_credits'
+            ? 'You have no tokens left. Get more to keep storing PDFs online.'
+            : res.error ?? 'Could not store this PDF.',
+        )
+      } else {
+        setJustStored(true)
+        refreshCredits()
+        refreshList()
+        window.setTimeout(() => setJustStored(false), 2200)
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function onOpen(upload: HostedUpload) {
+    if (busy) return
+    setBusy(true)
+    setError(null)
+    try {
+      await openHostedPdf(supabase, upload)
+      close()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function onDelete(upload: HostedUpload) {
+    if (busy) return
+    setBusy(true)
+    setError(null)
+    try {
+      const res = await deleteHostedPdf(supabase, upload)
+      if (!res.ok) setError(res.error ?? 'Could not delete this PDF.')
+      else {
+        refreshCredits()
+        refreshList()
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/50 p-4"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) close() }}
+    >
+      <div className="w-full max-w-lg max-h-[88vh] overflow-y-auto rounded-2xl bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+          <h2 className="text-base font-bold text-slate-900">Store this PDF</h2>
+          <button onClick={close} aria-label="Close" className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+            <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" /></svg>
+          </button>
+        </div>
+
+        <div className="space-y-4 p-5">
+          {/* Free local option — already automatic. */}
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-slate-900">Local storage</span>
+              <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600">Free · temporary</span>
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              This PDF is already kept on this device automatically, so a refresh reopens it. It stays in this browser and never leaves it.
+            </p>
+          </div>
+
+          {/* Paid hosted option. */}
+          <div className="rounded-xl border border-orange-200 bg-white p-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-slate-900">Hosted by UNI SIM</span>
+              <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-orange-700">Universal ID</span>
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              Keep this PDF online against your Universal ID. One token per upload — delete it and your token comes straight back.
+            </p>
+
+            {!signedIn ? (
+              <div className="mt-3 rounded-lg bg-slate-50 p-3">
+                <p className="text-sm text-slate-700">Sign in with your <strong>Universal ID</strong> to store PDFs online.</p>
+                <a href={SIGNIN_URL} className="mt-2 inline-flex rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700">
+                  Create / sign in with Universal ID →
+                </a>
+              </div>
+            ) : (
+              <div className="mt-3">
+                <div className="flex items-center justify-between rounded-lg bg-orange-50/60 px-3 py-2 text-sm">
+                  <span className="text-slate-600">{user?.email}</span>
+                  <span className="font-semibold text-orange-700">{tokens} token{tokens === 1 ? '' : 's'}</span>
+                </div>
+
+                {doc ? (
+                  tokens > 0 ? (
+                    <button
+                      onClick={onStore}
+                      disabled={busy}
+                      className="mt-3 w-full rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50"
+                    >
+                      {busy ? 'Storing…' : justStored ? '✓ Stored online (1 token used)' : 'Store this PDF online (1 token)'}
+                    </button>
+                  ) : (
+                    <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                      <p className="text-sm text-amber-800">You have no tokens left.</p>
+                      <a href={GET_TOKENS_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded-lg bg-orange-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-orange-700">
+                        Get tokens →
+                      </a>
+                    </div>
+                  )
+                ) : (
+                  <p className="mt-3 text-xs text-slate-500">Open a PDF to store it online.</p>
+                )}
+
+                {error && <p className="mt-2 text-sm text-rose-600">{error}</p>}
+
+                {/* The user's hosted PDFs */}
+                <div className="mt-4">
+                  <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">Your hosted PDFs</p>
+                  {listLoading ? (
+                    <p className="text-xs text-slate-400">Loading…</p>
+                  ) : uploads.length === 0 ? (
+                    <p className="text-xs text-slate-400">None yet.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {uploads.map((u) => (
+                        <li key={u.id} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-xs font-medium text-slate-700">{u.file_name || 'document.pdf'}</span>
+                            <span className="block text-[10px] text-slate-400">{new Date(u.created_at).toLocaleDateString()}</span>
+                          </span>
+                          <button onClick={() => onOpen(u)} disabled={busy} className="shrink-0 rounded-md bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-700 disabled:opacity-50">Open</button>
+                          <button onClick={() => onDelete(u)} disabled={busy} className="shrink-0 rounded-md px-2 py-1.5 text-xs font-medium text-slate-400 hover:text-rose-600 disabled:opacity-50" title="Delete and refund the token">Delete</button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  )
+}
