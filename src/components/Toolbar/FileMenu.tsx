@@ -245,13 +245,13 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
             <span className="flex-1 text-left font-medium">{doc ? 'Open another PDF…' : 'Open PDF…'}</span>
           </button>
 
-          {/* Store: free local (automatic) vs paid "Hosted by UNI·SIM" cloud. */}
+          {/* Backup: free local (automatic) vs paid "Hosted by UNI·SIM" cloud. */}
           <button
             onClick={() => { setHostedStoreOpen(true); setOpen(false) }}
             className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
           >
             <span aria-hidden="true">☁</span>
-            <span className="flex-1 text-left">{doc ? 'Store…' : 'Hosted PDFs…'}</span>
+            <span className="flex-1 text-left">{doc ? 'Back up…' : 'Backups…'}</span>
           </button>
 
           {canRename && !renameOpen && (

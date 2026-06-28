@@ -93,9 +93,10 @@ export default function FindBar() {
     }
   }
 
-  function redactAll() {
+  // Turn a set of matches into redaction boxes. Returns how many boxes landed.
+  function redactMatches(list: typeof matches): number {
     const items: Annotation[] = []
-    for (const m of matches) {
+    for (const m of list) {
       for (const r of m.rects) {
         if (r.w <= 0 || r.h <= 0) continue
         items.push({
@@ -110,13 +111,26 @@ export default function FindBar() {
         })
       }
     }
-    if (items.length === 0) return
+    if (items.length === 0) return 0
     addMany(items)
-    // Don't leave all N boxes selected — the group transformer would sprawl
+    // Don't leave the boxes selected — the group transformer would sprawl
     // across the page. They're one undo step regardless.
     clearSelection([])
-    // The boxes are now in place; close find so they're visible and the
-    // highlights clear. Nothing is destroyed until export.
+    return items.length
+  }
+
+  // Redact only the match currently highlighted, then advance so the user can
+  // step through and redact one at a time. The bar stays open.
+  function redactCurrent() {
+    const m = matches[activeIndex]
+    if (!m) return
+    if (redactMatches([m])) next()
+  }
+
+  function redactAll() {
+    if (redactMatches(matches) === 0) return
+    // The boxes are in place; close find so they're visible and the highlights
+    // clear. Nothing is destroyed until export.
     setOpen(false)
   }
 
@@ -204,22 +218,40 @@ export default function FindBar() {
               ))}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={redactAll}
-            disabled={count === 0}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white border border-slate-200 text-left hover:border-slate-900 hover:bg-slate-900 hover:text-white disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-inherit disabled:hover:border-slate-200 transition-colors group"
-          >
-            <RedactIcon size={16} className="shrink-0" />
-            <span className="flex-1 min-w-0">
-              <span className="block text-sm font-medium leading-tight">
-                Redact all {count > 0 ? count : ''} match{count === 1 ? '' : 'es'}
+          <div className="space-y-1.5">
+            {/* First: redact just the highlighted match, then step to the next. */}
+            <button
+              type="button"
+              onClick={redactCurrent}
+              disabled={count === 0 || activeIndex < 0}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white border border-slate-200 text-left hover:border-slate-900 hover:bg-slate-900 hover:text-white disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-inherit disabled:hover:border-slate-200 transition-colors group"
+            >
+              <RedactIcon size={16} className="shrink-0" />
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm font-medium leading-tight">Redact this 1 match</span>
+                <span className="block text-[11px] text-slate-500 group-hover:text-slate-300 leading-tight mt-0.5">
+                  {count > 0 ? `Just match ${activeIndex + 1} of ${count}` : 'The highlighted match'} — then jump to the next
+                </span>
               </span>
-              <span className="block text-[11px] text-slate-500 group-hover:text-slate-300 leading-tight mt-0.5">
-                {redactFill === 'white' ? 'Whites' : 'Blacks'} out every match — text is removed on export
+            </button>
+            {/* Then: redact every match at once and close. */}
+            <button
+              type="button"
+              onClick={redactAll}
+              disabled={count === 0}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white border border-slate-200 text-left hover:border-slate-900 hover:bg-slate-900 hover:text-white disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-inherit disabled:hover:border-slate-200 transition-colors group"
+            >
+              <RedactIcon size={16} className="shrink-0" />
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm font-medium leading-tight">
+                  Redact all {count > 0 ? count : ''} match{count === 1 ? '' : 'es'}
+                </span>
+                <span className="block text-[11px] text-slate-500 group-hover:text-slate-300 leading-tight mt-0.5">
+                  {redactFill === 'white' ? 'Whites' : 'Blacks'} out every match — text is removed on export
+                </span>
               </span>
-            </span>
-          </button>
+            </button>
+          </div>
         </div>
       )}
     </div>
