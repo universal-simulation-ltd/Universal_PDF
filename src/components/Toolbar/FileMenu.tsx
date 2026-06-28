@@ -29,6 +29,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const reset = usePdfStore((s) => s.reset)
   const setPageNavOpen = usePdfStore((s) => s.setPageNavOpen)
   const setPresentOpen = usePdfStore((s) => s.setPresentOpen)
+  const setHostedStoreOpen = usePdfStore((s) => s.setHostedStoreOpen)
   const isXfa = usePdfStore((s) => s.isXfa)
   const setSearchOpen = useSearchStore((s) => s.setOpen)
   const openForRedact = useSearchStore((s) => s.openForRedact)
@@ -242,6 +243,15 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
           >
             <span aria-hidden="true">📄</span>
             <span className="flex-1 text-left font-medium">{doc ? 'Open another PDF…' : 'Open PDF…'}</span>
+          </button>
+
+          {/* Store: free local (automatic) vs paid "Hosted by UNI·SIM" cloud. */}
+          <button
+            onClick={() => { setHostedStoreOpen(true); setOpen(false) }}
+            className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
+          >
+            <span aria-hidden="true">☁</span>
+            <span className="flex-1 text-left">{doc ? 'Store…' : 'Hosted PDFs…'}</span>
           </button>
 
           {canRename && !renameOpen && (
