@@ -8,6 +8,7 @@ import { useAnnotationStore } from './stores/annotationStore'
 import { useSignatureStore } from './stores/signatureStore'
 import './index.css'
 import './styles/xfa.css'
+import './styles/textlayer.css'
 
 if (import.meta.env.DEV) {
   ;(window as unknown as { __stores: unknown }).__stores = {

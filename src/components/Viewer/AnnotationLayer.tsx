@@ -951,13 +951,16 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const cursor =
     tool === 'hand' ? 'grab' :
     tool === 'marquee' ? 'crosshair' :
+    // 'selecttext' is handled by the TextSelectLayer on top (cursor: text); this
+    // is just the fallback for the Stage underneath.
+    tool === 'selecttext' ? 'text' :
     (tool === 'select' || tool === 'form') ? 'default' :
     tool === 'signature' && activeSignature ? 'none' :
     'crosshair'
   // The marquee tool reserves drags for the selection box, so the page must
-  // not scroll under the gesture (touchAction: none). Select/hand/form keep
-  // vertical panning + pinch-zoom available to the browser.
-  const touchAction = (tool === 'select' || tool === 'form' || tool === 'hand') ? 'pan-y pinch-zoom' : 'none'
+  // not scroll under the gesture (touchAction: none). Select/hand/form and the
+  // passive selecttext tool keep vertical panning + pinch-zoom available.
+  const touchAction = (tool === 'select' || tool === 'form' || tool === 'hand' || tool === 'selecttext') ? 'pan-y pinch-zoom' : 'none'
 
   const ghostSigWidth = 160 / scale
   const ghostSigHeight = activeSignature

@@ -18,7 +18,9 @@ export function loadPdf(data: ArrayBuffer | Uint8Array) {
 
 // XfaLayer.render() builds the form's HTML; getXfaPageViewport is unused here
 // (we size from the static page's viewport) but re-exported for completeness.
-export const { XfaLayer, getXfaPageViewport } = pdfjsLib
+// TextLayer builds the selectable transparent text overlay used by the
+// "Select text" tool (see TextSelectLayer).
+export const { XfaLayer, getXfaPageViewport, TextLayer } = pdfjsLib
 
 export { pdfjsLib }
 export type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'

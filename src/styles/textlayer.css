@@ -1,0 +1,96 @@
+/*
+ * Text-selection layer styles for the "Select text" tool.
+ *
+ * The core `.textLayer` rules are lifted from
+ * pdfjs-dist/web/pdf_viewer.css (the `.textLayer` block) — PDF.js's
+ * `TextLayer.render()` positions transparent <span>s with
+ * `calc(var(--scale-factor) * Npx)`, so the container MUST carry a
+ * `--scale-factor` custom property (TextSelectLayer sets it) and these
+ * positioning rules. We copy just the text-layer block rather than import the
+ * whole viewer stylesheet, which carries annotation/toolbar CSS that would
+ * collide with the app's Tailwind styles.
+ *
+ * The `.pdf-text-select` wrapper class adds the app-specific bit: the overlay
+ * only becomes interactive (selectable) while the Select-text tool is active —
+ * otherwise it's pointer-events:none so it never intercepts annotation editing.
+ *
+ * If pdfjs-dist is upgraded and text selection starts misaligning, re-extract
+ * the `.textLayer` block from node_modules/pdfjs-dist/web/pdf_viewer.css.
+ */
+
+.textLayer {
+  position: absolute;
+  text-align: initial;
+  inset: 0;
+  overflow: clip;
+  opacity: 1;
+  line-height: 1;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  caret-color: CanvasText;
+  z-index: 6;
+}
+
+.textLayer :is(span, br) {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+}
+
+.textLayer > :not(.markedContent),
+.textLayer .markedContent span:not(.markedContent) {
+  z-index: 1;
+}
+
+.textLayer span.markedContent {
+  top: 0;
+  height: 0;
+}
+
+.textLayer span[role="img"] {
+  user-select: none;
+  cursor: default;
+}
+
+/* Brand-orange selection so it reads as part of Universal PDF. */
+.textLayer ::selection {
+  background: rgba(234, 88, 12, 0.3);
+}
+
+.textLayer br::selection {
+  background: transparent;
+}
+
+.textLayer .endOfContent {
+  display: block;
+  position: absolute;
+  inset: 100% 0 0;
+  z-index: 0;
+  cursor: default;
+  user-select: none;
+}
+
+.textLayer.selecting .endOfContent {
+  top: 0;
+}
+
+/* ---------- App-specific interactivity gate ---------- */
+
+/* Inert by default: invisible (transparent spans) and click-through, so the
+   Konva annotation Stage underneath keeps receiving edits. */
+.pdf-text-select {
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Active "Select text" tool: lift above the annotation Stage + form fields and
+   let the browser's native text selection (and Ctrl/Cmd+C copy) work. */
+.pdf-text-select.pdf-text-select--active {
+  pointer-events: auto;
+  user-select: text;
+  cursor: text;
+  z-index: 30;
+}

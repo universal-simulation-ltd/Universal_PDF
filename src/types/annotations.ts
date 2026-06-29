@@ -2,6 +2,9 @@ export type Tool =
   | 'select'
   | 'marquee'
   | 'hand'
+  // Select & copy the PDF's own underlying text (pdf.js text-layer overlay),
+  // as opposed to 'select' which selects/moves the annotations drawn on top.
+  | 'selecttext'
   | 'text'
   | 'draw'
   | 'highlight'
