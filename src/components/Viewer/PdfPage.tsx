@@ -3,6 +3,7 @@ import type { PDFDocumentProxy, PDFPageProxy } from '../../lib/pdfjs'
 import AnnotationLayer from './AnnotationLayer'
 import FormFieldLayer from './FormFieldLayer'
 import SearchHighlightLayer from './SearchHighlightLayer'
+import TextSelectLayer from './TextSelectLayer'
 import XfaPage from './XfaPage'
 
 interface Props {
@@ -99,6 +100,10 @@ export default function PdfPage({ doc, pageIndex, scale, isXfa }: Props) {
           {size && (
             <AnnotationLayer pageIndex={pageIndex} width={size.width} height={size.height} scale={scale} />
           )}
+          {/* Selectable text overlay — inert unless the Select-text tool is
+              active (see TextSelectLayer). Rendered after the annotation Stage
+              so it can sit on top while selecting. */}
+          {size && page && <TextSelectLayer page={page} scale={scale} />}
           {size && page && (
             <FormFieldLayer
               page={page}

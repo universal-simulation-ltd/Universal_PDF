@@ -128,6 +128,12 @@ export default function App() {
             // the dark toolbar below is just drawing-tools + export controls.
             fileMenu={<FileMenu variant="header" />}
             suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
+            // Constrain the navbar content to the same document-width box the
+            // toolbar + zoom bar use, with the same scrollbar compensation, so
+            // the suite switcher sits directly above the Select tool and tracks
+            // it left/right as the document re-centres on zoom in/out.
+            contentMaxWidth="clamp(600px, var(--doc-display-width, 80rem), 80rem)"
+            style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}
           />
         </div>
       )}
@@ -137,7 +143,9 @@ export default function App() {
             className="mx-auto w-full min-w-max flex items-center justify-between gap-6 py-2 min-h-[52px]"
             style={{ maxWidth: 'clamp(600px, var(--doc-display-width, 80rem), 80rem)' }}
           >
-            <div className="flex items-center gap-2 shrink-0 [&>*]:shrink-0">
+            {/* md:pl-5 matches the navbar header's 20px left padding so the
+                Select tool below lines up under the suite switcher. */}
+            <div className="flex items-center gap-2 shrink-0 [&>*]:shrink-0 md:pl-5">
               <div className="md:hidden">
                 <SuiteSwitcher
                   current="pdf"

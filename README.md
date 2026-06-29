@@ -11,6 +11,7 @@ A clean Progressive Web App for viewing, annotating, and signing PDFs — works 
 ## Features
 
 - **View** multi-page PDFs with zoom (50%–300%), pinch-to-zoom on touch, and a thumbnail navigator
+- **Select text** — the *Select text* tool (in the Select ▾ menu) lets you drag over the PDF's own text and copy it (Ctrl/⌘C)
 - **Annotate** with free draw, text, rectangles, ticks, and crosses, in any of six colours
 - **Sign** by drawing on a pad; signatures are auto-cropped, saved to your device, and re-usable across PDFs
 - **Edit** placed annotations — drag to move, resize handles on shapes and signatures, double-click text to retype, change colour and size of selected text on the fly
@@ -31,7 +32,7 @@ Open the [app URL](https://pdf.unisim.co.uk/), then:
 1. **Open a PDF** — click *Open PDF* or drag-and-drop a file anywhere on the page
 2. **Pick a tool** from the toolbar (Text, Draw, Tick, Cross, Rectangle, or Sign)
 3. **Click / tap on the page** to place the annotation
-4. **Switch to *Select*** to drag, resize, recolour, or delete existing annotations
+4. **Switch to *Select*** to drag, resize, recolour, or delete existing annotations — or *Select text* (same menu) to drag over and copy the PDF's own text
 5. **Save** to download the annotated PDF
 
 Signatures: tap *Sign → Draw new signature*, sign with mouse or finger, save. Pick it from the menu, then tap on the PDF to place. Drag the corners to resize, drag the body to reposition.

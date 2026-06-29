@@ -291,7 +291,7 @@ export default function PdfViewer() {
   if (!doc) return null
 
   const handCursor = tool === 'hand' ? 'grab' : undefined
-  const zoomDisabled = !['select', 'hand', 'form', 'marquee'].includes(tool)
+  const zoomDisabled = !['select', 'hand', 'form', 'marquee', 'selecttext'].includes(tool)
   const atHundred = Math.round(zoom * 100) === 100
 
   return (

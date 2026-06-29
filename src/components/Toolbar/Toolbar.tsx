@@ -118,6 +118,7 @@ function FloatingPanel({
 const SELECT_OPTIONS: { id: Tool; icon: string; label: string; help: string }[] = [
   { id: 'select', icon: '↖', label: 'Select', help: 'Click to move, resize or edit. On desktop, drag empty space to select many' },
   { id: 'marquee', icon: '⛶', label: 'Select area', help: 'Drag a box to select many edits, then move/resize/rotate them together' },
+  { id: 'selecttext', icon: '⌶', label: 'Select text', help: "Drag over the PDF's own text to select it, then copy (Ctrl/⌘C)" },
   { id: 'hand', icon: '✋', label: 'Hand', help: 'Drag to pan around the PDF without selecting' }
 ]
 
@@ -125,7 +126,14 @@ const SELECT_OPTIONS: { id: Tool; icon: string; label: string; help: string }[] 
 const SELECT_GROUP_ICON: Partial<Record<Tool, string>> = {
   select: '↖',
   marquee: '⛶',
+  selecttext: '⌶',
   hand: '✋'
+}
+
+// Which group tool is "active" for the main Select-group button (drives its
+// icon + whether a re-tap toggles the options panel).
+function selectGroupTool(tool: Tool): Tool {
+  return tool === 'hand' || tool === 'marquee' || tool === 'selecttext' ? tool : 'select'
 }
 
 // Module-level in-app clipboard for annotations (Ctrl+C/X/V)
@@ -407,9 +415,15 @@ export function ToolbarDesktopTools() {
       {/* Select / Hand with options panel */}
       <div ref={selectGroupRef} className="relative flex items-start">
         {toolBtn(
-          tool === 'hand' ? 'hand' : tool === 'marquee' ? 'marquee' : 'select',
+          selectGroupTool(tool),
           SELECT_GROUP_ICON[tool] ?? '↖',
-          tool === 'hand' ? 'Hand — drag to pan' : tool === 'marquee' ? 'Select area — drag a box' : 'Select / move',
+          tool === 'hand'
+            ? 'Hand — drag to pan'
+            : tool === 'marquee'
+              ? 'Select area — drag a box'
+              : tool === 'selecttext'
+                ? 'Select text — drag to copy the PDF text'
+                : 'Select / move',
           'select'
         )}
         <PlusBox panel="select" />
@@ -419,7 +433,7 @@ export function ToolbarDesktopTools() {
             {SELECT_OPTIONS.map((opt) => (
               <button
                 key={opt.id}
-                onClick={() => { setTool(opt.id); setOpenPanel(null) }}
+                onClick={() => { if (opt.id === 'selecttext') setSelected(null); setTool(opt.id); setOpenPanel(null) }}
                 className={`w-full flex items-center gap-3 px-3 py-2 text-left text-sm transition-colors ${
                   tool === opt.id ? 'bg-orange-600 text-white' : 'hover:bg-slate-700 text-slate-100'
                 }`}
@@ -883,11 +897,11 @@ export function ToolbarMobile() {
         className="fixed bottom-0 left-0 right-0 z-40 h-16 bg-slate-900 border-t border-slate-700 flex items-stretch px-1"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        {/* Select / Select area / Hand with + */}
+        {/* Select / Select area / Select text / Hand with + */}
         {mobileBtnWithPlus(
-          tool === 'hand' ? 'hand' : tool === 'marquee' ? 'marquee' : 'select',
+          selectGroupTool(tool),
           SELECT_GROUP_ICON[tool] ?? '↖',
-          tool === 'hand' ? 'Hand' : tool === 'marquee' ? 'Area' : 'Select',
+          tool === 'hand' ? 'Hand' : tool === 'marquee' ? 'Area' : tool === 'selecttext' ? 'Text' : 'Select',
           'select'
         )}
 
