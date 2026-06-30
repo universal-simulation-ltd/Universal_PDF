@@ -250,7 +250,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
             onClick={() => { setHostedStoreOpen(true); setOpen(false) }}
             className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
           >
-            <span aria-hidden="true">☁</span>
+            <span aria-hidden="true">💾</span>
             <span className="flex-1 text-left">{doc ? 'Back up…' : 'Backups…'}</span>
           </button>
 
