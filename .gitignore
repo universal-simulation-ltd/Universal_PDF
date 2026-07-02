@@ -19,3 +19,6 @@ release
 
 # Local test fixture, not part of the app
 public/sample.pdf
+
+# Internal project notes — not published (matches the other Universal Apps repos)
+CLAUDE.md
