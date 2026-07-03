@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useUniversal, useUser, useCredits, useHostedUploads, type HostedUpload } from '@unisim/sdk'
+import { useUniversal, useUser, useCredits, useHostedUploads, useAppFreeToken, type HostedUpload } from '@unisim/sdk'
 import { usePdfStore } from '../stores/pdfStore'
 import { storeCurrentPdf, deleteHostedPdf, openHostedPdf } from '../lib/hostedStore'
 import { downloadBackup, importBackup } from '../lib/pdfBackup'
@@ -19,6 +19,9 @@ export default function HostedStoreDialog() {
   const { supabase, session, activeOrgId } = useUniversal()
   const { user } = useUser()
   const { credits, refresh: refreshCredits } = useCredits()
+  // Every org gets one free returnable PDF token (migration 0045) — the RPC
+  // spends it before the purchased wallet, so the button gates on either.
+  const { status: freeToken, refresh: refreshFreeToken } = useAppFreeToken('pdf')
   const { uploads, loading: listLoading, refresh: refreshList } = useHostedUploads('pdf')
 
   const [busy, setBusy] = useState(false)
@@ -32,6 +35,7 @@ export default function HostedStoreDialog() {
 
   const signedIn = !!session?.user && session.user.is_anonymous !== true
   const tokens = credits ?? 0
+  const canStore = freeToken === 'available' || tokens > 0
 
   function close() {
     setOpen(false)
@@ -76,6 +80,7 @@ export default function HostedStoreDialog() {
       } else {
         setJustStored(true)
         refreshCredits()
+        refreshFreeToken()
         refreshList()
         window.setTimeout(() => setJustStored(false), 2200)
       }
@@ -107,6 +112,7 @@ export default function HostedStoreDialog() {
       if (!res.ok) setError(res.error ?? 'Could not delete this PDF.')
       else {
         refreshCredits()
+        refreshFreeToken()
         refreshList()
       }
     } finally {
@@ -205,11 +211,15 @@ export default function HostedStoreDialog() {
               <div className="mt-3">
                 <div className="flex items-center justify-between rounded-lg bg-orange-50/60 px-3 py-2 text-sm">
                   <span className="text-slate-600">{user?.email}</span>
-                  <span className="font-semibold text-orange-700">{tokens} token{tokens === 1 ? '' : 's'}</span>
+                  <span className="font-semibold text-orange-700">
+                    {freeToken === 'available'
+                      ? `Free token${tokens > 0 ? ` + ${tokens} purchased` : ' available'}`
+                      : `${tokens} token${tokens === 1 ? '' : 's'}`}
+                  </span>
                 </div>
 
                 {doc ? (
-                  tokens > 0 ? (
+                  canStore ? (
                     <button
                       onClick={onStore}
                       disabled={busy}
@@ -217,9 +227,13 @@ export default function HostedStoreDialog() {
                     >
                       {busy ? 'Backing up…' : justStored ? '✓ Backed up (1 token used)' : 'Back up this PDF online (1 token)'}
                     </button>
-                  ) : (
+                  ) : freeToken === null ? null : (
                     <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                      <p className="text-sm text-amber-800">You have no tokens left.</p>
+                      <p className="text-sm text-amber-800">
+                        {freeToken === 'held'
+                          ? 'Your free PDF token is in use — delete the stored PDF below to get it back, or add tokens.'
+                          : 'You have no tokens left.'}
+                      </p>
                       <a href={GET_TOKENS_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded-lg bg-orange-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-orange-700">
                         Get tokens →
                       </a>
