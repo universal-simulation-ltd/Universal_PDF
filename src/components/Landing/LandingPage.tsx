@@ -1,11 +1,17 @@
 import { useRef, useState } from 'react'
 import { usePdfStore } from '../../stores/pdfStore'
 import { createExamplePdfFile } from '../../lib/examplePdf'
-import { compressPdf, type CompressResult } from '../../lib/export'
+import { compressPdf, type CompressQuality, type CompressResult } from '../../lib/export'
 import CompressResultModal from '../Compress/CompressResultModal'
+import BatchCompressModal, { type BatchSource } from '../Compress/BatchCompressModal'
 import RecentFilesList from '../RecentFiles/RecentFilesList'
 import TransformPanel from '../Transform/TransformPanel'
 import PdfIllustration from './PdfIllustration'
+
+// Balanced is the default when compressing — 'light' is lossless but usually
+// barely shrinks, so people expect the "1 Click Compress" default to actually
+// make the file smaller. Stronger/lighter are still one tap away in the modal.
+const DEFAULT_COMPRESS_QUALITY: CompressQuality = 'balanced'
 
 export default function LandingPage() {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -14,30 +20,54 @@ export default function LandingPage() {
   const hasRecents = usePdfStore((s) => s.recents.length > 0)
   const [opening, setOpening] = useState(false)
   const [compressing, setCompressing] = useState(false)
+  const [compressProgress, setCompressProgress] = useState('')
   const [compressJob, setCompressJob] = useState<{
     sourceBytes: ArrayBuffer
     fileName: string
     result: CompressResult
   } | null>(null)
+  const [batchJob, setBatchJob] = useState<{
+    files: BatchSource[]
+    results: CompressResult[]
+  } | null>(null)
   const [dragOverCompress, setDragOverCompress] = useState(false)
   const [transformOpen, setTransformOpen] = useState(false)
 
-  async function runCompress(file: File) {
-    if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
-      alert('Please choose a PDF file.')
+  async function runCompress(fileList: File[] | FileList) {
+    const files = Array.from(fileList).filter(
+      (f) => f.type === 'application/pdf' || /\.pdf$/i.test(f.name)
+    )
+    if (files.length === 0) {
+      alert('Please choose one or more PDF files.')
       return
     }
     setCompressing(true)
+    setCompressProgress('')
     try {
-      const buf = await file.arrayBuffer()
-      // Slice so the kept-around source survives pdfjs detaching its copy.
-      const result = await compressPdf(buf.slice(0), file.name)
-      setCompressJob({ sourceBytes: buf, fileName: file.name, result })
+      if (files.length === 1) {
+        const buf = await files[0].arrayBuffer()
+        // Slice so the kept-around source survives pdfjs detaching its copy.
+        const result = await compressPdf(buf.slice(0), files[0].name, DEFAULT_COMPRESS_QUALITY)
+        setCompressJob({ sourceBytes: buf, fileName: files[0].name, result })
+        return
+      }
+      // Batch: compress each at the default quality (re-tunable in the modal).
+      const sources: BatchSource[] = []
+      const results: CompressResult[] = []
+      for (let i = 0; i < files.length; i++) {
+        setCompressProgress(`Compressing ${i + 1}/${files.length}…`)
+        const buf = await files[i].arrayBuffer()
+        const result = await compressPdf(buf.slice(0), files[i].name, DEFAULT_COMPRESS_QUALITY)
+        sources.push({ sourceBytes: buf, fileName: files[i].name })
+        results.push(result)
+      }
+      setBatchJob({ files: sources, results })
     } catch (err) {
       console.error(err)
       alert('Compression failed: ' + (err as Error).message)
     } finally {
       setCompressing(false)
+      setCompressProgress('')
     }
   }
 
@@ -69,9 +99,9 @@ export default function LandingPage() {
   }
 
   async function onCompressFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
+    const files = e.target.files
     e.target.value = ''
-    if (file) await runCompress(file)
+    if (files && files.length > 0) await runCompress(files)
   }
 
   const exampleButton = (
@@ -194,8 +224,8 @@ export default function LandingPage() {
                   e.preventDefault()
                   e.stopPropagation()
                   setDragOverCompress(false)
-                  const file = e.dataTransfer.files?.[0]
-                  if (file) runCompress(file)
+                  const files = e.dataTransfer.files
+                  if (files && files.length > 0) runCompress(files)
                 }}
                 className={[
                   'group w-full flex items-center gap-4 p-4 border rounded-xl text-left transition-colors disabled:opacity-60 disabled:cursor-wait',
@@ -209,10 +239,14 @@ export default function LandingPage() {
                 </div>
                 <div className="min-w-0">
                   <div className="font-semibold text-slate-900">
-                    {compressing ? 'Compressing…' : dragOverCompress ? 'Drop to compress' : '1 Click Compress'}
+                    {compressing
+                      ? compressProgress || 'Compressing…'
+                      : dragOverCompress
+                        ? 'Drop to compress'
+                        : '1 Click Compress'}
                   </div>
                   <div className="text-sm text-slate-500">
-                    Drop a file or click — see original vs compressed
+                    Drop one or more files — batch them into a ZIP
                   </div>
                 </div>
                 <span className="ml-auto text-slate-400 group-hover:text-amber-700 transition-colors" aria-hidden="true">
@@ -223,6 +257,7 @@ export default function LandingPage() {
                 ref={compressInputRef}
                 type="file"
                 accept="application/pdf"
+                multiple
                 hidden
                 onChange={onCompressFile}
               />
@@ -270,6 +305,15 @@ export default function LandingPage() {
           initialResult={compressJob.result}
           onClose={() => setCompressJob(null)}
           discardLabel="Discard"
+        />
+      )}
+
+      {batchJob && (
+        <BatchCompressModal
+          files={batchJob.files}
+          initialResults={batchJob.results}
+          initialQuality={DEFAULT_COMPRESS_QUALITY}
+          onClose={() => setBatchJob(null)}
         />
       )}
 
