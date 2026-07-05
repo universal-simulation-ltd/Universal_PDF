@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => {
       // `file://` origin it cannot register and is unnecessary, so skip it.
       ...(isDesktop ? [] : [VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.svg'],
+        includeAssets: ['favicon.svg', 'icon-180.png', 'icon-192.png', 'icon-512.png'],
         manifest: {
           name: 'Universal PDF',
           short_name: 'UniPDF',
@@ -35,7 +35,10 @@ export default defineConfig(({ mode }) => {
           start_url: BASE_PATH,
           scope: BASE_PATH,
           icons: [
-            { src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }
+            { src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+            { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+            { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+            { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
           ]
         },
         workbox: {
