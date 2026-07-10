@@ -42,6 +42,11 @@ interface AnnotationState {
   removeMany: (ids: string[]) => void
   clearPage: (pageIndex: number) => void
   clearAll: () => void
+  // Hard reset for loading a different PDF: drops every annotation AND the
+  // undo/redo history, so nothing from the previous document can be undone
+  // back onto the new one. (clearAll deliberately keeps history so the user can
+  // undo the clear; that would be wrong across documents.)
+  resetDocument: () => void
   remapPages: (indexMap: Map<number, number>) => void
   undo: () => void
   redo: () => void
@@ -234,6 +239,15 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
       past: pushPast(s.past, s.annotations),
       future: []
     })),
+  resetDocument: () =>
+    set({
+      annotations: [],
+      selectedId: null,
+      selectedIds: [],
+      uploadedImageSrc: null,
+      past: [],
+      future: []
+    }),
   remapPages: (indexMap) =>
     set((s) => ({
       annotations: s.annotations

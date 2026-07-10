@@ -4,6 +4,21 @@ import { listRecents, saveRecent, getRecent, getRecentBySlug, deleteRecent, rena
 import { applyPageOrderToPdf, buildPageIndexMap } from '../lib/pdfPages'
 import { useAnnotationStore } from './annotationStore'
 import { useFormStore } from './formStore'
+import { useSearchStore } from './searchStore'
+import { useSignatureStore } from './signatureStore'
+
+// Wipe every piece of per-document editing state so nothing from the PDF being
+// closed (annotations, drawings, signatures, highlights, form values, find
+// results, in-progress signature placement) leaks onto the next one. Called
+// when a different PDF is opened and when the document is closed/reset. The
+// saved signature *library* is intentionally left alone — it is a reusable,
+// cross-document collection.
+function clearDocumentState() {
+  useAnnotationStore.getState().resetDocument()
+  useFormStore.getState().clearAll()
+  useSearchStore.getState().reset()
+  useSignatureStore.getState().setPendingExtras([])
+}
 
 function setHashSlug(slug: string | null) {
   if (typeof window === 'undefined') return
@@ -77,6 +92,9 @@ export const usePdfStore = create<PdfState>((set, get) => ({
       const buf = await file.arrayBuffer()
       const renderCopy = buf.slice(0)
       const doc = await loadPdf(renderCopy).promise
+      // A different document is now in hand — drop the outgoing PDF's
+      // annotations/drawings/signatures/form/find state before showing it.
+      clearDocumentState()
       set({
         doc,
         numPages: doc.numPages,
@@ -118,6 +136,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   },
   reset: () => {
     get().doc?.destroy()
+    clearDocumentState()
     set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, previewOpen: false, presentOpen: false })
     setHashSlug(null)
   },
