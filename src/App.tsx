@@ -160,6 +160,44 @@ export default function App() {
       )}
       {doc && (
         <div className="bg-slate-900 text-white relative z-[45] overflow-x-auto" style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}>
+          {/* Home + hamburger, pinned to the far left of the bar — out in the
+              margin to the left of the centred tool cluster, so they read as
+              window chrome rather than editing tools. md+ only: that margin
+              only exists on wider screens, and the hamburger's navbar is md+.
+              Mobile keeps a home button inside the cluster below. */}
+          <div className="hidden md:flex absolute inset-y-0 left-0 z-10 items-center gap-1 pl-3">
+            <button
+              type="button"
+              onClick={reset}
+              title="Back to home"
+              aria-label="Back to home"
+              className="p-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800 active:bg-slate-700"
+            >
+              <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M3 10.5 12 3l9 7.5" />
+                <path d="M5.5 9.5V21h13V9.5" />
+                <path d="M10 21v-6h4v6" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => setNavOpen((o) => !o)}
+              title={navOpen ? 'Hide top bar' : 'Show top bar'}
+              aria-label={navOpen ? 'Hide top bar' : 'Show top bar'}
+              aria-pressed={navOpen}
+              className={`p-1.5 rounded-md ${navOpen ? 'bg-slate-700 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-800'} active:bg-slate-600`}
+            >
+              <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                <line x1="4" y1="6" x2="20" y2="6" />
+                <line x1="4" y1="12" x2="20" y2="12" />
+                <line x1="4" y1="18" x2="20" y2="18" />
+              </svg>
+            </button>
+            {/* When the top bar is hidden, Actions lives here on the far left
+                alongside home/hamburger (rather than back in the tool cluster)
+                so it stays grouped with the window chrome. */}
+            {!navOpen && <FileMenu variant="toolbar" />}
+          </div>
           <div
             className="mx-auto w-full min-w-max flex items-center justify-between gap-6 py-2 min-h-[52px]"
             style={{ maxWidth: 'clamp(600px, var(--doc-display-width, 80rem), 80rem)' }}
@@ -167,34 +205,18 @@ export default function App() {
             {/* md:pl-5 matches the navbar header's 20px left padding so the
                 Select tool below lines up under the suite switcher. */}
             <div className="flex items-center gap-2 shrink-0 [&>*]:shrink-0 md:pl-5">
-              {/* Home — back to the landing page (same as Actions → Close PDF). */}
+              {/* Mobile-only home — desktop pins it to the far left above. */}
               <button
                 type="button"
                 onClick={reset}
                 title="Back to home"
                 aria-label="Back to home"
-                className="p-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800 active:bg-slate-700"
+                className="md:hidden p-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800 active:bg-slate-700"
               >
                 <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M3 10.5 12 3l9 7.5" />
                   <path d="M5.5 9.5V21h13V9.5" />
                   <path d="M10 21v-6h4v6" />
-                </svg>
-              </button>
-              {/* Hamburger — show/hide the universal navbar above. The navbar
-                  only exists on md+ while a doc is open, so the toggle does too. */}
-              <button
-                type="button"
-                onClick={() => setNavOpen((o) => !o)}
-                title={navOpen ? 'Hide top bar' : 'Show top bar'}
-                aria-label={navOpen ? 'Hide top bar' : 'Show top bar'}
-                aria-pressed={navOpen}
-                className={`hidden md:inline-flex p-1.5 rounded-md ${navOpen ? 'bg-slate-700 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-800'} active:bg-slate-600`}
-              >
-                <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                  <line x1="4" y1="6" x2="20" y2="6" />
-                  <line x1="4" y1="12" x2="20" y2="12" />
-                  <line x1="4" y1="18" x2="20" y2="18" />
                 </svg>
               </button>
               <div className="md:hidden">
@@ -224,10 +246,9 @@ export default function App() {
                   </div>
                 </SuiteSwitcher>
               </div>
-              {/* Mobile always renders Actions here; desktop normally gets it
-                  inside the universal navbar — but when that bar is collapsed
-                  via the hamburger, surface Actions here so it stays reachable. */}
-              <div className={navOpen ? 'md:hidden' : ''}>
+              {/* Mobile-only Actions. On md+ it lives in the universal navbar,
+                  or — when that bar is hidden — in the far-left chrome group. */}
+              <div className="md:hidden">
                 <FileMenu variant="toolbar" />
               </div>
               <ToolbarDesktopTools />
