@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell } = require('electron')
+const { app, BrowserWindow, screen, shell } = require('electron')
 const path = require('node:path')
 
 // Set by `npm run electron:dev` to load the live Vite dev server. When unset
@@ -6,9 +6,16 @@ const path = require('node:path')
 const DEV_SERVER_URL = process.env.ELECTRON_START_URL
 
 function createWindow() {
+  // Fill the display's full working height (screen minus taskbar) on launch —
+  // PDFs are portrait documents, so vertical space is what matters. Width
+  // stays at the comfortable 1280 default (clamped to the work area on small
+  // screens). y pins the window to the top of the work area so the full
+  // height is actually visible.
+  const { workArea } = screen.getPrimaryDisplay()
   const win = new BrowserWindow({
-    width: 1280,
-    height: 860,
+    width: Math.min(1280, workArea.width),
+    height: workArea.height,
+    y: workArea.y,
     minWidth: 640,
     minHeight: 480,
     backgroundColor: '#f8fafc',
