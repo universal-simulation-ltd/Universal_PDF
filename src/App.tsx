@@ -42,6 +42,12 @@ export default function App() {
   const loading = usePdfStore((s) => s.loading)
   const refreshRecents = usePdfStore((s) => s.refreshRecents)
   const loadFromCurrentUrl = usePdfStore((s) => s.loadFromCurrentUrl)
+  const reset = usePdfStore((s) => s.reset)
+
+  // Whether the universal navbar is shown above the dark toolbar while a doc
+  // is open — toggled by the hamburger in the dark toolbar. Starts open so
+  // the default layout is unchanged; collapsing it reclaims vertical space.
+  const [navOpen, setNavOpen] = useState(true)
 
   const stampPickerOpen = useSignatureStore((s) => s.stampPickerOpen)
 
@@ -134,7 +140,7 @@ export default function App() {
           />
         </div>
       )}
-      {doc && (
+      {doc && navOpen && (
         <div className="hidden md:block relative z-50">
           <UniversalAppsNavBar
             product="pdf"
@@ -161,6 +167,36 @@ export default function App() {
             {/* md:pl-5 matches the navbar header's 20px left padding so the
                 Select tool below lines up under the suite switcher. */}
             <div className="flex items-center gap-2 shrink-0 [&>*]:shrink-0 md:pl-5">
+              {/* Home — back to the landing page (same as Actions → Close PDF). */}
+              <button
+                type="button"
+                onClick={reset}
+                title="Back to home"
+                aria-label="Back to home"
+                className="p-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800 active:bg-slate-700"
+              >
+                <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M3 10.5 12 3l9 7.5" />
+                  <path d="M5.5 9.5V21h13V9.5" />
+                  <path d="M10 21v-6h4v6" />
+                </svg>
+              </button>
+              {/* Hamburger — show/hide the universal navbar above. The navbar
+                  only exists on md+ while a doc is open, so the toggle does too. */}
+              <button
+                type="button"
+                onClick={() => setNavOpen((o) => !o)}
+                title={navOpen ? 'Hide top bar' : 'Show top bar'}
+                aria-label={navOpen ? 'Hide top bar' : 'Show top bar'}
+                aria-pressed={navOpen}
+                className={`hidden md:inline-flex p-1.5 rounded-md ${navOpen ? 'bg-slate-700 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-800'} active:bg-slate-600`}
+              >
+                <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                  <line x1="4" y1="6" x2="20" y2="6" />
+                  <line x1="4" y1="12" x2="20" y2="12" />
+                  <line x1="4" y1="18" x2="20" y2="18" />
+                </svg>
+              </button>
               <div className="md:hidden">
                 <SuiteSwitcher
                   current="pdf"
@@ -188,9 +224,10 @@ export default function App() {
                   </div>
                 </SuiteSwitcher>
               </div>
-              {/* Mobile-only — desktop renders Actions inside the universal
-                  navbar instead, so this stays hidden from md upward. */}
-              <div className="md:hidden">
+              {/* Mobile always renders Actions here; desktop normally gets it
+                  inside the universal navbar — but when that bar is collapsed
+                  via the hamburger, surface Actions here so it stays reachable. */}
+              <div className={navOpen ? 'md:hidden' : ''}>
                 <FileMenu variant="toolbar" />
               </div>
               <ToolbarDesktopTools />
