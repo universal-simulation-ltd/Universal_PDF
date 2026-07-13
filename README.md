@@ -14,6 +14,7 @@ A clean Progressive Web App for viewing, annotating, and signing PDFs — works 
 - **Select text** — the *Select text* tool (in the Select ▾ menu) lets you drag over the PDF's own text and copy it (Ctrl/⌘C)
 - **Annotate** with free draw, text, rectangles, ticks, and crosses, in any of six colours
 - **Sign** by drawing on a pad; signatures are auto-cropped, saved to your device, and re-usable across PDFs
+- **Sign on your phone** — the pad can show a UNI·SIM QR + PIN; scan it, draw on your phone, enter the PIN, and the signature lands on the desktop ready to place (works from the desktop app too)
 - **Edit** placed annotations — drag to move, resize handles on shapes and signatures, double-click text to retype, change colour and size of selected text on the fly
 - **Export** the annotated PDF; all annotations and signatures are baked into the saved file
 - **Recents** are remembered locally so you can reopen a PDF with one tap, even offline

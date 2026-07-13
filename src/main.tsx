@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { UniversalProvider } from '@unisim/sdk'
 import App from './App'
+import SignMobilePage from './components/Signature/SignMobilePage'
 import UsageTracker from './UsageTracker'
 import ErrorBoundary from './components/ErrorBoundary'
 import { usePdfStore } from './stores/pdfStore'
@@ -32,12 +33,16 @@ const universalConfig = {
   cookieDomain: !isDesktop && import.meta.env.PROD ? '.unisim.co.uk' : undefined,
 }
 
+// `?sign=<token>` is the phone-side of the sign-on-mobile handoff (opened by
+// scanning the QR in the signature pad) — render just the signing page.
+const signToken = new URLSearchParams(window.location.search).get('sign')
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
       <UniversalProvider config={universalConfig}>
         <UsageTracker />
-        <App />
+        {signToken ? <SignMobilePage token={signToken} /> : <App />}
       </UniversalProvider>
     </ErrorBoundary>
   </React.StrictMode>
