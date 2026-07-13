@@ -13,6 +13,9 @@ const BASE_SCALE = 96 / 72
 const MIN_ZOOM = 0.25
 const MAX_ZOOM = 4
 const ZOOM_STEP = 0.1
+// Fit-to-height on open never zooms out past this — below 75% body text gets
+// too small to read, so very tall pages start partially off-screen instead.
+const FIT_HEIGHT_MIN_ZOOM = 0.75
 // Quick presets offered when you click the % label while at 100%.
 const ZOOM_PRESETS = [50, 75, 125, 150]
 
@@ -204,8 +207,13 @@ export default function PdfViewer() {
     }
   }, [tool])
 
-  // On initial load, zoom out if the page is wider than the scroll container
-  // (typical on mobile). Caps at 1 so desktop zoom is never increased.
+  // On initial load, pick a zoom that shows the whole first page:
+  // • fit-to-height so a full page is visible without scrolling, floored at
+  //   FIT_HEIGHT_MIN_ZOOM (75%) so text never starts unreadably small;
+  // • still capped by fit-to-width when the page is wider than the scroll
+  //   container (typical on mobile) — that cap keeps the original MIN_ZOOM
+  //   floor so narrow phone screens can shrink below 75%.
+  // Caps at 1 so desktop zoom is never increased.
   useEffect(() => {
     if (!doc) return
     const el = scrollRef.current
@@ -213,11 +221,13 @@ export default function PdfViewer() {
     let cancelled = false
     doc.getPage(1).then((page) => {
       if (cancelled) return
-      const pageWidth = page.getViewport({ scale: BASE_SCALE }).width
-      const available = el.clientWidth - 32 // px-4 padding × 2
-      if (available > 0) {
-        setZoom(Math.max(MIN_ZOOM, Math.min(1, available / pageWidth)))
-      }
+      const { width: pageWidth, height: pageHeight } = page.getViewport({ scale: BASE_SCALE })
+      const availableW = el.clientWidth - 32 // px-4 padding × 2
+      const availableH = el.clientHeight - 48 // py-6 padding × 2
+      if (availableW <= 0 || availableH <= 0) return
+      const widthFit = Math.max(MIN_ZOOM, Math.min(1, availableW / pageWidth))
+      const heightFit = Math.max(FIT_HEIGHT_MIN_ZOOM, Math.min(1, availableH / pageHeight))
+      setZoom(Math.min(widthFit, heightFit))
     }).catch(() => {})
     return () => { cancelled = true }
   }, [doc])
