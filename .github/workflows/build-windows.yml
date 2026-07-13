@@ -25,7 +25,11 @@ jobs:
         run: npm ci
 
       - name: Build Windows installer
-        run: npm run dist:win
+        # --publish never: electron-builder otherwise auto-publishes when it
+        # sees a tag ref and fails on the missing GH_TOKEN, killing the job
+        # before the steps below run. The "Attach installer to GitHub Release"
+        # step owns publishing.
+        run: npm run dist:win -- --publish never
         env:
           # The platform Supabase URL + anon key are required to construct
           # the SDK's Supabase client at boot; without them the renderer
