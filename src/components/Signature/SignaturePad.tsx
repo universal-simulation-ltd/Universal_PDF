@@ -232,11 +232,13 @@ export default function SignaturePad() {
   const [lines, setLines] = useState<number[][]>([])
   const drawingRef = useRef(false)
   const [name, setName] = useState('')
-  // Advanced options: which extras to attach, and how they're placed.
-  const [includeName, setIncludeName] = useState(true)
+  // Advanced options: which extras to attach, and how they're placed. All of
+  // them start OFF — a fresh pad produces exactly what the user drew, and the
+  // extras are opt-in under "Advanced options".
+  const [includeName, setIncludeName] = useState(false)
   const [includeDate, setIncludeDate] = useState(false)
   // Realistic ink (blue, blemishes, variable width) vs a clean plain-black line.
-  const [realistic, setRealistic] = useState(true)
+  const [realistic, setRealistic] = useState(false)
   // false → bake name/date into the signature image (one click places all).
   // true  → keep the image ink-only and drop name/date as separate text the
   //         user positions with extra clicks (e.g. into a form's name field).
@@ -297,10 +299,10 @@ export default function SignaturePad() {
   function resetForm() {
     setLines([])
     setName('')
-    setIncludeName(true)
+    setIncludeName(false)
     setIncludeDate(false)
     setSeparatePlacement(false)
-    setRealistic(true)
+    setRealistic(false)
     setAdvancedOpen(false)
   }
 
