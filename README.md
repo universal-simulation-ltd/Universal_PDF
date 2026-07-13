@@ -66,6 +66,12 @@ npm run electron        # run the packaged-style app against that build
 npm run dist:win        # build + produce a Windows installer in release/
 ```
 
+The installer registers Universal PDF as a `.pdf` file handler, so it appears
+in Windows' right-click *Open with* menu (and can be made the default PDF
+app). Files opened that way — or double-clicked while it's the default — load
+straight into the editor, skipping the landing page; opening another PDF while
+the app is running reuses the existing window.
+
 `npm run dist:win` emits an NSIS `.exe` installer under `release/`. **It must
 run on Windows** (or Linux/macOS with Wine) because electron-builder packages a
 platform-native binary; cross-building from a plain Linux host won't produce a

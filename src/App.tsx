@@ -60,6 +60,21 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [refreshRecents, loadFromCurrentUrl])
 
+  // Desktop (Electron) only — PDFs opened via the OS ("Open with → Universal
+  // PDF" / double-click) arrive from the main process as bytes. Load them
+  // straight away so the app opens onto the document, not the landing page.
+  useEffect(() => {
+    const desktop = window.desktop
+    if (!desktop) return
+    return desktop.onOpenPdf(({ name, bytes }) => {
+      const file = new File([bytes], name, { type: 'application/pdf' })
+      loadFile(file).catch((err) => {
+        console.error(err)
+        alert('Failed to load PDF')
+      })
+    })
+  }, [loadFile])
+
   const [dragOver, setDragOver] = useState(false)
   const dragCounter = useRef(0)
 

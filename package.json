@@ -52,6 +52,14 @@
       "dist/**/*",
       "electron/**/*"
     ],
+    "fileAssociations": [
+      {
+        "ext": "pdf",
+        "name": "PDF Document",
+        "description": "PDF Document",
+        "role": "Viewer"
+      }
+    ],
     "win": {
       "target": [
         "nsis"
