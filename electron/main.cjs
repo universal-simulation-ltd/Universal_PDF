@@ -36,6 +36,19 @@ function createWindow() {
     }
     return { action: 'allow' }
   })
+
+  // setWindowOpenHandler only covers window.open/target=_blank. Plain <a href>
+  // clicks (e.g. the suite-switcher rows) navigate the window itself, which
+  // would replace the app with the remote site — send those to the system
+  // browser too. The packaged app is a local file:// bundle, so any http(s)
+  // navigation is external — except the dev server's own origin in dev mode.
+  win.webContents.on('will-navigate', (event, url) => {
+    if (DEV_SERVER_URL && url.startsWith(DEV_SERVER_URL)) return
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      event.preventDefault()
+      shell.openExternal(url)
+    }
+  })
 }
 
 app.whenReady().then(() => {
