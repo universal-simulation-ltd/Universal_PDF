@@ -1,9 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import { Stage, Layer, Line } from 'react-konva'
 import type Konva from 'konva'
+import { useUniversal } from '@unisim/sdk'
 import { useSignatureStore, type SignatureExtras } from '../../stores/signatureStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { SIGNATURE_INK, formatSigningDate } from '../../lib/signature'
+import { brandedQrPngDataUrl } from '../../lib/brandedQr'
+import { importImageAsSignature } from '../../lib/imageSignature'
+import {
+  mobileSignChannel,
+  mobileSignUrl,
+  randomPin,
+  randomToken,
+  type MobileSignPayload
+} from '../../lib/mobileSign'
 
 const PAD_W = 600
 const PAD_H = 240
@@ -225,6 +235,7 @@ export default function SignaturePad() {
   const open = useSignatureStore((s) => s.padOpen)
   const closePad = useSignatureStore((s) => s.closePad)
   const add = useSignatureStore((s) => s.add)
+  const { supabase } = useUniversal()
 
   const stageRef = useRef<Konva.Stage>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -245,6 +256,56 @@ export default function SignaturePad() {
   const [separatePlacement, setSeparatePlacement] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
 
+  // ── Sign-on-phone handoff (mirrors Ergo Assess) ───────────────────────────
+  const [mode, setMode] = useState<'draw' | 'phone'>('draw')
+  const [token, setToken] = useState(randomToken)
+  const [pin, setPin] = useState(randomPin)
+  const [qrUrl, setQrUrl] = useState<string | null>(null)
+  const [phoneStatus, setPhoneStatus] = useState<'waiting' | 'received'>('waiting')
+
+  // Fresh token + PIN every time the pad opens, so a QR from an earlier
+  // session can't feed a signature into this one.
+  useEffect(() => {
+    if (!open) return
+    setMode('draw')
+    setToken(randomToken())
+    setPin(randomPin())
+    setQrUrl(null)
+    setPhoneStatus('waiting')
+  }, [open])
+
+  // While in phone mode: render the QR and listen for the phone's signature.
+  useEffect(() => {
+    if (!open || mode !== 'phone') return
+    brandedQrPngDataUrl(mobileSignUrl(token), 240).then(setQrUrl).catch(() => setQrUrl(null))
+
+    const channel = supabase.channel(mobileSignChannel(token))
+    channel
+      .on('broadcast', { event: 'signature' }, (msg) => {
+        const payload = msg.payload as MobileSignPayload
+        if (payload?.pin !== pin || !payload.signature) return
+        setPhoneStatus('received')
+        // The phone canvas has a white background — run it through the same
+        // clean-up as imported signature images (crop + background removal)
+        // so it places like an ink signature.
+        const bytes = Uint8Array.from(atob(payload.signature), (c) => c.charCodeAt(0))
+        const file = new File([bytes], 'phone-signature.png', { type: 'image/png' })
+        importImageAsSignature(file, { removeBg: true })
+          .then((res) => {
+            const count = useSignatureStore.getState().signatures.length
+            add({ name: `Signature ${count + 1}`, dataUrl: res.dataUrl, width: res.width, height: res.height })
+            setTimeout(() => {
+              closePad()
+              // Arm the signature tool so the user can immediately place it.
+              useAnnotationStore.getState().setTool('signature')
+            }, 700)
+          })
+          .catch(() => setPhoneStatus('waiting'))
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [open, mode, token, pin, supabase, add, closePad])
+
   useEffect(() => {
     if (!open) return
     const el = containerRef.current
@@ -257,7 +318,9 @@ export default function SignaturePad() {
     const ro = new ResizeObserver(measure)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [open])
+    // `mode` is a dep so the draw container is re-measured when switching
+    // back from the phone view (it remounts fresh).
+  }, [open, mode])
 
   const padH = Math.round((padW / PAD_W) * PAD_H)
   // Whether there's anything to place separately (gates the placement control).
@@ -353,15 +416,60 @@ export default function SignaturePad() {
       onClick={(e) => { if (e.target === e.currentTarget) cancel() }}
     >
       <div className="bg-white rounded-lg shadow-2xl p-5 max-w-full">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold text-slate-900">Draw signature</h2>
-          <button
-            onClick={cancel}
-            className="text-slate-400 hover:text-slate-700 text-2xl leading-none w-8 h-8 flex items-center justify-center"
-          >
-            ×
-          </button>
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <h2 className="text-lg font-semibold text-slate-900">
+            {mode === 'phone' ? 'Sign on your phone' : 'Draw signature'}
+          </h2>
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-lg bg-slate-100 p-0.5 text-xs">
+              <button
+                type="button"
+                onClick={() => setMode('draw')}
+                className={`rounded-md px-2.5 py-1 transition ${mode === 'draw' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                Draw
+              </button>
+              {/* Orange + phone icon so the "sign on your phone" option is easy
+                  to spot — signing with a mouse on desktop is fiddly. */}
+              <button
+                type="button"
+                onClick={() => setMode('phone')}
+                className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition ${mode === 'phone' ? 'bg-orange-600 text-white' : 'text-orange-600 hover:bg-orange-600/10 hover:text-orange-700'}`}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="7" y="2" width="10" height="20" rx="2.5" /><line x1="11" y1="18" x2="13" y2="18" />
+                </svg>
+                Sign on phone
+              </button>
+            </div>
+            <button
+              onClick={cancel}
+              className="text-slate-400 hover:text-slate-700 text-2xl leading-none w-8 h-8 flex items-center justify-center"
+            >
+              ×
+            </button>
+          </div>
         </div>
+        {mode === 'phone' ? (
+          <div className="flex flex-col items-center gap-3 py-2 text-center" style={{ width: padW }}>
+            {qrUrl
+              ? <img src={qrUrl} alt="Scan to sign on your phone" className="h-48 w-48 rounded-lg" />
+              : <div className="h-48 w-48 animate-pulse rounded-lg bg-slate-200" />}
+            <p className="text-sm text-slate-600">Scan with your phone, then enter this PIN:</p>
+            <p className="text-2xl font-bold tracking-[0.3em] text-slate-900">{pin}</p>
+            <p className={`text-xs ${phoneStatus === 'received' ? 'text-green-600' : 'text-slate-400'}`}>
+              {phoneStatus === 'received' ? 'Signature received ✓' : 'Waiting for your phone…'}
+            </p>
+            <button
+              type="button"
+              onClick={cancel}
+              className="mt-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+        <>
         <div ref={containerRef} className="border-2 border-dashed border-slate-300 rounded bg-slate-50 w-full">
           <Stage
             ref={stageRef}
@@ -461,6 +569,8 @@ export default function SignaturePad() {
             )}
           </div>
         </div>
+        </>
+        )}
       </div>
     </div>
   )
