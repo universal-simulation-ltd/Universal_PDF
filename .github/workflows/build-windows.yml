@@ -37,8 +37,8 @@ jobs:
           # public (anon key is designed for client exposure), but we route
           # them via secrets to match how Cloudflare Pages injects them for
           # the web build rather than committing them.
-          VITE_PLATFORM_SUPABASE_URL: ${{ secrets.VITE_PLATFORM_SUPABASE_URL }}
-          VITE_PLATFORM_SUPABASE_ANON_KEY: ${{ secrets.VITE_PLATFORM_SUPABASE_ANON_KEY }}
+          VITE_PLATFORM_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_PLATFORM_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           # No code-signing cert configured. CSC_IDENTITY_AUTO_DISCOVERY=false
           # stops electron-builder from probing the keychain on hosted runners.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
