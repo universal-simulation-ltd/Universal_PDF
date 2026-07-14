@@ -45,13 +45,22 @@ export default function App() {
   const reset = usePdfStore((s) => s.reset)
 
   // Whether the universal navbar is shown above the dark toolbar while a doc
-  // is open — toggled by the hamburger in the dark toolbar. Starts open so
-  // the default layout is unchanged; collapsing it reclaims vertical space.
-  const [navOpen, setNavOpen] = useState(true)
+  // is open — toggled by the hamburger in the dark toolbar. Starts closed so
+  // opening a PDF drops straight onto the document with maximum vertical space;
+  // the hamburger reveals the bar again on demand.
+  const [navOpen, setNavOpen] = useState(false)
 
   const stampPickerOpen = useSignatureStore((s) => s.stampPickerOpen)
 
   useToolbarKeyboardShortcuts(!!doc)
+
+  // Auto-hide the top navbar each time a document opens, so opening a PDF
+  // always lands on the document with the bar collapsed regardless of whether
+  // it was revealed for a previously-open file.
+  const hasDoc = !!doc
+  useEffect(() => {
+    if (hasDoc) setNavOpen(false)
+  }, [hasDoc])
 
 
   useEffect(() => {
@@ -159,7 +168,24 @@ export default function App() {
         </div>
       )}
       {doc && (
-        <div className="bg-slate-900 text-white relative z-[45] overflow-x-auto" style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}>
+        <div className="group bg-slate-900 text-white relative z-[45] overflow-x-auto" style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}>
+          {/* Hover affordance: a small chevron centred at the top edge that
+              appears while the pointer is over the tools bar and toggles the
+              top navbar — same action as the hamburger, for people who don't
+              spot the hamburger out in the far-left margin. md+ only, matching
+              the hamburger/navbar. */}
+          <button
+            type="button"
+            onClick={() => setNavOpen((o) => !o)}
+            title={navOpen ? 'Hide top bar' : 'Show top bar'}
+            aria-label={navOpen ? 'Hide top bar' : 'Show top bar'}
+            aria-pressed={navOpen}
+            className="hidden md:flex absolute top-0 left-1/2 -translate-x-1/2 z-20 items-center justify-center px-2 py-0.5 rounded-b-md text-slate-400 hover:text-white hover:bg-slate-800 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+          >
+            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              {navOpen ? <polyline points="6 15 12 9 18 15" /> : <polyline points="6 9 12 15 18 9" />}
+            </svg>
+          </button>
           {/* Home + hamburger, pinned to the far left of the bar — out in the
               margin to the left of the centred tool cluster, so they read as
               window chrome rather than editing tools. md+ only: that margin
@@ -171,7 +197,7 @@ export default function App() {
               onClick={reset}
               title="Back to home"
               aria-label="Back to home"
-              className="p-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800 active:bg-slate-700"
+              className="p-1.5 rounded-md text-[#ea580c] hover:text-orange-400 hover:bg-slate-800 active:bg-slate-700"
             >
               <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M3 10.5 12 3l9 7.5" />
@@ -211,7 +237,7 @@ export default function App() {
                 onClick={reset}
                 title="Back to home"
                 aria-label="Back to home"
-                className="md:hidden p-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800 active:bg-slate-700"
+                className="md:hidden p-1.5 rounded-md text-[#ea580c] hover:text-orange-400 hover:bg-slate-800 active:bg-slate-700"
               >
                 <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M3 10.5 12 3l9 7.5" />
