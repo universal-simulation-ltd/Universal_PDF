@@ -14,10 +14,11 @@ import LandingPage from './components/Landing/LandingPage'
 import LivePreview from './components/Preview/LivePreview'
 import PresentMode from './components/Present/PresentMode'
 import ProductLogo from './components/Header/ProductLogo'
+import ToolbarUserProfile from './components/Header/ToolbarUserProfile'
 import FileMenu from './components/Toolbar/FileMenu'
 import HostedStoreDialog from './components/HostedStoreDialog'
 import MobileWelcomeToast from './components/Onboarding/MobileWelcomeToast'
-import { UniversalAppsNavBar, SuiteSwitcher, ChangelogMenu, DEFAULT_UNIVERSAL_APPS_PRODUCTS, DEFAULT_APP_GROUPS } from '@unisim/sdk'
+import { UniversalAppsNavBar, UniversalBar, SuiteSwitcher, ChangelogMenu, DEFAULT_UNIVERSAL_APPS_PRODUCTS, DEFAULT_APP_GROUPS } from '@unisim/sdk'
 
 // Apply the saved language to <html lang> on first mount.
 import { persistLang, readSavedLang } from './lib/lang'
@@ -44,24 +45,9 @@ export default function App() {
   const loadFromCurrentUrl = usePdfStore((s) => s.loadFromCurrentUrl)
   const reset = usePdfStore((s) => s.reset)
 
-  // Whether the universal navbar is shown above the dark toolbar while a doc
-  // is open — toggled by the hamburger in the dark toolbar. Starts closed so
-  // opening a PDF drops straight onto the document with maximum vertical space;
-  // the hamburger reveals the bar again on demand.
-  const [navOpen, setNavOpen] = useState(false)
-
   const stampPickerOpen = useSignatureStore((s) => s.stampPickerOpen)
 
   useToolbarKeyboardShortcuts(!!doc)
-
-  // Auto-hide the top navbar each time a document opens, so opening a PDF
-  // always lands on the document with the bar collapsed regardless of whether
-  // it was revealed for a previously-open file.
-  const hasDoc = !!doc
-  useEffect(() => {
-    if (hasDoc) setNavOpen(false)
-  }, [hasDoc])
-
 
   useEffect(() => {
     refreshRecents()
@@ -149,47 +135,17 @@ export default function App() {
           />
         </div>
       )}
-      {doc && navOpen && (
-        <div className="hidden md:block relative z-50">
-          <UniversalAppsNavBar
-            product="pdf"
-            productLogo={<ProductLogo />}
-            // Actions menu lives in the universal navbar (matches QR's pattern);
-            // the dark toolbar below is just drawing-tools + export controls.
-            fileMenu={<FileMenu variant="header" />}
-            suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
-            // Constrain the navbar content to the same document-width box the
-            // toolbar + zoom bar use, with the same scrollbar compensation, so
-            // the suite switcher sits directly above the Select tool and tracks
-            // it left/right as the document re-centres on zoom in/out.
-            contentMaxWidth="clamp(600px, var(--doc-display-width, 80rem), 80rem)"
-            style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}
-          />
-        </div>
-      )}
+      {/* The full navbar is landing-page only. While a doc is open we keep just
+          the suite brand strip up top for cross-app visual continuity; profile
+          + changelog move down into the dark tools bar below. */}
+      {doc && <UniversalBar />}
       {doc && (
-        <div className="group bg-slate-900 text-white relative z-[45] overflow-x-auto" style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}>
-          {/* Hover affordance: a small chevron centred at the top edge that
-              appears while the pointer is over the tools bar and toggles the
-              top navbar — same action as the hamburger, for people who don't
-              spot the hamburger out in the far-left margin. md+ only, matching
-              the hamburger/navbar. */}
-          <button
-            type="button"
-            onClick={() => setNavOpen((o) => !o)}
-            title={navOpen ? 'Hide top bar' : 'Show top bar'}
-            aria-label={navOpen ? 'Hide top bar' : 'Show top bar'}
-            aria-pressed={navOpen}
-            className="hidden md:flex absolute top-0 left-1/2 -translate-x-1/2 z-20 items-center justify-center px-2 py-0.5 rounded-b-md text-slate-400 hover:text-white hover:bg-slate-800 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
-          >
-            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              {navOpen ? <polyline points="6 15 12 9 18 15" /> : <polyline points="6 9 12 15 18 9" />}
-            </svg>
-          </button>
-          {/* Home + hamburger, pinned to the far left of the bar — out in the
+        <div className="bg-slate-900 text-white relative z-[45] overflow-x-auto" style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}>
+          {/* Home + Actions, pinned to the far left of the bar — out in the
               margin to the left of the centred tool cluster, so they read as
-              window chrome rather than editing tools. md+ only: that margin
-              only exists on wider screens, and the hamburger's navbar is md+.
+              window chrome rather than editing tools. The universal navbar is
+              landing-page only; while a doc is open the dark toolbar is the
+              whole chrome. md+ only: that margin only exists on wider screens.
               Mobile keeps a home button inside the cluster below. */}
           <div className="hidden md:flex absolute inset-y-0 left-0 z-10 items-center gap-1 pl-3">
             <button
@@ -205,24 +161,7 @@ export default function App() {
                 <path d="M10 21v-6h4v6" />
               </svg>
             </button>
-            <button
-              type="button"
-              onClick={() => setNavOpen((o) => !o)}
-              title={navOpen ? 'Hide top bar' : 'Show top bar'}
-              aria-label={navOpen ? 'Hide top bar' : 'Show top bar'}
-              aria-pressed={navOpen}
-              className={`p-1.5 rounded-md ${navOpen ? 'bg-slate-700 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-800'} active:bg-slate-600`}
-            >
-              <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                <line x1="4" y1="6" x2="20" y2="6" />
-                <line x1="4" y1="12" x2="20" y2="12" />
-                <line x1="4" y1="18" x2="20" y2="18" />
-              </svg>
-            </button>
-            {/* When the top bar is hidden, Actions lives here on the far left
-                alongside home/hamburger (rather than back in the tool cluster)
-                so it stays grouped with the window chrome. */}
-            {!navOpen && <FileMenu variant="toolbar" />}
+            <FileMenu variant="toolbar" />
           </div>
           <div
             className="mx-auto w-full min-w-max flex items-center justify-between gap-6 py-2 min-h-[52px]"
@@ -280,13 +219,15 @@ export default function App() {
               <ToolbarDesktopTools />
             </div>
             <div className="flex items-center gap-2 justify-end shrink-0 [&>*]:shrink-0">
-              <div className="md:hidden">
-                <ChangelogMenu
-                  iconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
-                  productFilter="pdf"
-                />
-              </div>
               <ToolbarDesktopActions />
+              {/* Profile + changelog previously lived in the top navbar; with
+                  that bar gone while viewing, they move here so sign-on and the
+                  changelog stay reachable. */}
+              <ChangelogMenu
+                iconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
+                productFilter="pdf"
+              />
+              <ToolbarUserProfile />
             </div>
           </div>
         </div>
