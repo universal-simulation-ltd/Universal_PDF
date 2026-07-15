@@ -7,6 +7,7 @@ import BatchCompressModal, { type BatchSource } from '../Compress/BatchCompressM
 import RecentFilesList from '../RecentFiles/RecentFilesList'
 import TransformPanel from '../Transform/TransformPanel'
 import PdfIllustration from './PdfIllustration'
+import { CONTAINER } from '../../lib/layout'
 
 // Balanced is the default when compressing — 'light' is lossless but usually
 // barely shrinks, so people expect the "1 Click Compress" default to actually
@@ -130,7 +131,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-full flex items-center">
-      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8 lg:py-14">
+      <div className={`${CONTAINER} py-8 lg:py-14`}>
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           {/* Left: animated PDF illustration */}
           <div className="flex flex-col items-center lg:items-start gap-4 order-2 lg:order-1">

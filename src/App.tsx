@@ -30,6 +30,7 @@ if (typeof document !== 'undefined') {
 }
 import { usePdfStore } from './stores/pdfStore'
 import { useSignatureStore } from './stores/signatureStore'
+import { CONTAINER } from './lib/layout'
 
 const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_PDF'
 
@@ -132,6 +133,7 @@ export default function App() {
             product="pdf"
             productLogo={<ProductLogo />}
             suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
+            contentClassName={CONTAINER}
           />
         </div>
       )}
@@ -254,7 +256,7 @@ export default function App() {
 
       {!doc && !loading && (
         <footer className="mt-auto border-t border-slate-200 bg-white">
-          <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex flex-row items-center gap-3 sm:gap-4 text-xs text-slate-500">
+          <div className={`${CONTAINER} py-4 flex flex-row items-center gap-3 sm:gap-4 text-xs text-slate-500`}>
             <div className="flex items-center gap-2">
               <span>
                 100% Open source and free. Hosted by{' '}
