@@ -143,8 +143,8 @@ export default function ExportModal({ open, onClose }: Props) {
   const effectiveTab: Variant = ready && tab === 'compressed' && !didShrink ? 'original' : tab
 
   const outNameBase = (fileName ?? 'document.pdf').replace(/\.pdf$/i, '')
-  const originalName = `${outNameBase}-annotated.pdf`
-  const compressedName = `${outNameBase}-annotated-compressed.pdf`
+  const originalName = `${outNameBase}-updated.pdf`
+  const compressedName = `${outNameBase}-updated-compressed.pdf`
 
   function download(which: 'original' | 'compressed') {
     if (!annotated || !compressed) return
