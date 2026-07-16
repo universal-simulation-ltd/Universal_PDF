@@ -222,15 +222,33 @@ export default function App() {
             </div>
             <div className="flex items-center gap-2 justify-end shrink-0 [&>*]:shrink-0">
               <ToolbarDesktopActions />
-              {/* Profile + changelog previously lived in the top navbar; with
-                  that bar gone while viewing, they move here so sign-on and the
-                  changelog stay reachable. */}
-              <ChangelogMenu
-                iconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
-                productFilter="pdf"
-              />
-              <ToolbarUserProfile />
+              {/* Mobile-only profile + changelog — on md+ they're pinned to the
+                  far right of the bar below, mirroring the Home/Actions chrome
+                  on the far left. */}
+              <div className="md:hidden flex items-center gap-2 [&>*]:shrink-0">
+                <ToolbarUserProfile />
+                <ChangelogMenu
+                  iconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
+                  productFilter="pdf"
+                />
+              </div>
             </div>
+          </div>
+          {/* Profile + changelog previously lived in the top navbar; with that
+              bar gone while viewing, they're pinned to the far right of the
+              bar — mirroring the Home/Actions chrome pinned to the far left.
+              The right offset tracks the viewer scrollbar width (like the
+              bar's own padding-right) so the cluster lines up with the
+              document's right edge. */}
+          <div
+            className="hidden md:flex absolute inset-y-0 z-10 items-center gap-2 pr-3"
+            style={{ right: 'var(--doc-scrollbar-width, 0px)' }}
+          >
+            <ToolbarUserProfile />
+            <ChangelogMenu
+              iconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
+              productFilter="pdf"
+            />
           </div>
         </div>
       )}
