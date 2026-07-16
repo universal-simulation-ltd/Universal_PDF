@@ -40,12 +40,24 @@ interface SignatureState {
   importOpen: boolean
   importTarget: ImportTarget
   stampPickerOpen: boolean
+  // "Request signature" options — chosen before the box is drawn. Whether the
+  // next signature-request box should also ask for a name and/or a date line.
+  requestName: boolean
+  requestDate: boolean
+  // Id of the signature-request field currently being signed. When set, the
+  // pad fills that field on save instead of adding a reusable library
+  // signature. Transient — not persisted.
+  signingFieldId: string | null
   add: (sig: Omit<Signature, 'id' | 'createdAt'>) => string
   remove: (id: string) => void
   setActive: (id: string | null) => void
   setPendingExtras: (items: PendingExtra[]) => void
   consumePendingExtra: () => void
   rename: (id: string, name: string) => void
+  setRequestName: (v: boolean) => void
+  setRequestDate: (v: boolean) => void
+  // Open the pad to sign a specific request field (or re-sign an existing one).
+  startSigningField: (id: string) => void
   openPad: () => void
   closePad: () => void
   openImport: (target?: ImportTarget) => void
@@ -64,6 +76,9 @@ export const useSignatureStore = create<SignatureState>()(
       importOpen: false,
       importTarget: 'signature',
       stampPickerOpen: false,
+      requestName: false,
+      requestDate: false,
+      signingFieldId: null,
       add: (sig) => {
         const id = crypto.randomUUID()
         set((s) => ({
@@ -86,8 +101,12 @@ export const useSignatureStore = create<SignatureState>()(
         set((s) => ({
           signatures: s.signatures.map((x) => (x.id === id ? { ...x, name } : x))
         })),
+      setRequestName: (requestName) => set({ requestName }),
+      setRequestDate: (requestDate) => set({ requestDate }),
+      startSigningField: (id) => set({ signingFieldId: id, padOpen: true }),
       openPad: () => set({ padOpen: true }),
-      closePad: () => set({ padOpen: false }),
+      // Closing the pad always abandons any in-progress field signing.
+      closePad: () => set({ padOpen: false, signingFieldId: null }),
       openImport: (target = 'signature') => set({ importOpen: true, importTarget: target }),
       closeImport: () => set({ importOpen: false }),
       openStampPicker: () => set({ stampPickerOpen: true }),

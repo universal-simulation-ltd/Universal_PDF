@@ -292,6 +292,13 @@ export default function SignaturePad() {
         const file = new File([bytes], 'phone-signature.png', { type: 'image/png' })
         importImageAsSignature(file, { removeBg: true })
           .then((res) => {
+            // Signing a specific request box: drop the phone signature straight
+            // into it after a beat, so the "received ✓" tick is visible.
+            const fieldId = useSignatureStore.getState().signingFieldId
+            if (fieldId) {
+              setTimeout(() => { fillField(fieldId, res, name.trim()) }, 700)
+              return
+            }
             const count = useSignatureStore.getState().signatures.length
             add({ name: `Signature ${count + 1}`, dataUrl: res.dataUrl, width: res.width, height: res.height })
             setTimeout(() => {
@@ -374,12 +381,54 @@ export default function SignaturePad() {
     closePad()
   }
 
+  // Bake the ink (plus the field's requested name/date labels) into a single
+  // PNG and drop it into the signature-request box the user clicked, then
+  // return to the editor. Used when the pad was opened by clicking a field.
+  async function fillField(
+    fieldId: string,
+    sig: { dataUrl: string; width: number; height: number },
+    trimmedName: string
+  ) {
+    const ann = useAnnotationStore.getState().annotations.find((a) => a.id === fieldId)
+    if (!ann || ann.type !== 'sigfield') {
+      resetForm()
+      closePad()
+      return
+    }
+    const labels: { text: string; scale: number }[] = []
+    if (ann.requireName && trimmedName) labels.push({ text: trimmedName, scale: 1 })
+    if (ann.requireDate) labels.push({ text: formatSigningDate(), scale: 0.8 })
+
+    let src = sig.dataUrl
+    let w = sig.width
+    let h = sig.height
+    if (labels.length > 0) {
+      const composed = await composeSignatureWithLabels(sig.dataUrl, sig.width, sig.height, labels, inkColor)
+      src = composed.dataUrl
+      w = composed.width
+      h = composed.height
+    }
+    useAnnotationStore.getState().update(fieldId, { signed: { src, width: w, height: h } })
+    resetForm()
+    closePad()
+    useAnnotationStore.getState().setTool('select')
+  }
+
   async function save() {
     if (lines.length === 0) return
     const ink = renderInkSignature(lines, inkColor, realistic)
     if (!ink) return
 
     const trimmed = name.trim()
+
+    // If the pad was opened by clicking a signature-request box, fill that box
+    // instead of adding a reusable library signature.
+    const fieldId = useSignatureStore.getState().signingFieldId
+    if (fieldId) {
+      await fillField(fieldId, ink, trimmed)
+      return
+    }
+
     const sigName = trimmed || `Signature ${useSignatureStore.getState().signatures.length + 1}`
     const wantName = includeName && !!trimmed
     const wantDate = includeDate

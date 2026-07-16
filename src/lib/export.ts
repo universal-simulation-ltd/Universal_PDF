@@ -364,6 +364,68 @@ export async function buildAnnotatedPdfBytes(
           })
           break
         }
+        case 'sigfield': {
+          if (a.signed) {
+            // Bake the signature image, contained inside the box (matches the
+            // on-screen fit). Baseline of the box's bottom edge is a.y + height.
+            const img = a.signed.src.startsWith('data:image/png')
+              ? await pdf.embedPng(a.signed.src)
+              : await pdf.embedJpg(a.signed.src)
+            const margin = 0.08
+            const availW = a.width * (1 - margin * 2)
+            const availH = a.height * (1 - margin * 2)
+            const ratio = a.signed.width > 0 && a.signed.height > 0
+              ? a.signed.width / a.signed.height
+              : 1
+            let fw = availW
+            let fh = fw / ratio
+            if (fh > availH) {
+              fh = availH
+              fw = fh * ratio
+            }
+            const fx = a.x + (a.width - fw) / 2
+            const fy = a.y + (a.height - fh) / 2
+            page.drawImage(img, {
+              x: sx(fx),
+              y: toY(fy + fh),
+              width: sw(fw),
+              height: sw(fh)
+            })
+          } else {
+            // Unsigned request box: outline it and label it "Sign here" so a
+            // printed / shared copy still shows where a signature belongs.
+            const orange = hexToPdfRgb('#ea580c')
+            page.drawRectangle({
+              x: sx(a.x),
+              y: toY(a.y + a.height),
+              width: sw(a.width),
+              height: sw(a.height),
+              borderColor: orange,
+              borderWidth: sw(1.5),
+              opacity: 0
+            })
+            const parts: string[] = []
+            if (a.requireName) parts.push('Name')
+            if (a.requireDate) parts.push('Date')
+            const label = sanitizeForWinAnsi(
+              'Sign here' + (parts.length ? '  (' + parts.join(' · ') + ')' : '')
+            )
+            const size = sw(Math.min(a.height * 0.28, 18))
+            // `size` and `textW` are in PDF units; the box is in canvas units
+            // (canvas = pdf * scale). Centre in canvas space, then map to PDF.
+            const textW = fontSans.widthOfTextAtSize(label, size)
+            const cxCanvas = a.x + a.width / 2 - (textW * scale) / 2
+            const baselineCanvasY = a.y + a.height / 2 + (size * scale) * 0.35
+            page.drawText(label, {
+              x: sx(cxCanvas),
+              y: toY(baselineCanvasY),
+              size,
+              font: fontSans,
+              color: hexToPdfRgb('#c2410c')
+            })
+          }
+          break
+        }
       }
     }
   }

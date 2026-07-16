@@ -16,6 +16,10 @@ export type Tool =
   | 'line'
   | 'image'
   | 'signature'
+  // Place a "sign here" request box. Optionally asks for a name and/or date
+  // line too. Clicking one of these boxes (with the Select tool) opens the
+  // signature pad and drops the resulting signature straight into the box.
+  | 'sigfield'
   | 'form'
 
 type Base = { id: string; pageIndex: number }
@@ -104,6 +108,30 @@ export type ImageAnnotation = Base & {
   rotation?: number
 }
 
+// A "Request signature" placeholder box. Until it is signed it renders as a
+// dashed "Sign here" box (plus optional Name / Date lines). When the user
+// clicks it and signs, `signed` is filled with a single baked PNG (the ink
+// plus any requested name/date beneath it), which then renders — and exports —
+// contained inside the box.
+export type SignatureFieldAnnotation = Base & {
+  type: 'sigfield'
+  x: number
+  y: number
+  width: number
+  height: number
+  // Which extra lines the box asks for, chosen before it was drawn.
+  requireName?: boolean
+  requireDate?: boolean
+  // Populated once signed. `src` is a PNG data URL already composited with the
+  // name/date labels; width/height are its logical (unscaled) pixel size, used
+  // to preserve aspect when fitting it inside the box.
+  signed?: {
+    src: string
+    width: number
+    height: number
+  }
+}
+
 export type Annotation =
   | TextAnnotation
   | DrawAnnotation
@@ -112,3 +140,4 @@ export type Annotation =
   | RedactAnnotation
   | MarkAnnotation
   | ImageAnnotation
+  | SignatureFieldAnnotation
