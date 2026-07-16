@@ -17,7 +17,7 @@ import { useSignatureStore } from '../../stores/signatureStore'
 import { useImage } from '../../lib/useImage'
 import { RedactIcon } from '../icons/RedactIcon'
 import { SIGNATURE_INK, formatSigningDate } from '../../lib/signature'
-import type { Annotation, DrawAnnotation, FontFamily, ImageAnnotation, TextAnnotation } from '../../types/annotations'
+import type { Annotation, DrawAnnotation, FontFamily, ImageAnnotation, SignatureFieldAnnotation, TextAnnotation } from '../../types/annotations'
 
 const FONT_STACK: Record<FontFamily, string> = {
   sans: 'Helvetica, Arial, sans-serif',
@@ -78,6 +78,7 @@ function getAnnotationBBox(a: Annotation): { x: number; y: number; width: number
     case 'rect':
     case 'ellipse':
     case 'redact':
+    case 'sigfield':
       return { x: a.x - 2, y: a.y - 2, width: a.width + 4, height: a.height + 4 }
     case 'tick':
     case 'cross':
@@ -159,7 +160,7 @@ interface Props {
 }
 
 function isResizable(a: Annotation): boolean {
-  return a.type === 'image' || a.type === 'rect' || a.type === 'ellipse' || a.type === 'redact'
+  return a.type === 'image' || a.type === 'rect' || a.type === 'ellipse' || a.type === 'redact' || a.type === 'sigfield'
 }
 
 function isTransformable(a: Annotation): boolean {
@@ -241,6 +242,95 @@ function SignatureImage({
       onDragEnd={onDragEnd}
       onTransformEnd={onTransformEnd}
     />
+  )
+}
+
+// Contain a source image (natural size srcW×srcH) inside a box, leaving a small
+// margin, and return the offset + size of the fitted image within the box.
+function containRect(
+  boxW: number,
+  boxH: number,
+  srcW: number,
+  srcH: number,
+  marginFrac = 0.08
+): { x: number; y: number; width: number; height: number } {
+  const availW = Math.max(1, boxW * (1 - marginFrac * 2))
+  const availH = Math.max(1, boxH * (1 - marginFrac * 2))
+  const ratio = srcW > 0 && srcH > 0 ? srcW / srcH : 1
+  let w = availW
+  let h = w / ratio
+  if (h > availH) {
+    h = availH
+    w = h * ratio
+  }
+  return { x: (boxW - w) / 2, y: (boxH - h) / 2, width: w, height: h }
+}
+
+// A "Request signature" box. Unsigned it's a dashed placeholder with a
+// "Sign here" caption (and the requested Name / Date lines); signed it shows the
+// baked signature image contained inside the box. The whole box is clickable —
+// the click handler on the group opens the pad to sign it.
+function SigField({
+  a,
+  scale,
+  common
+}: {
+  a: SignatureFieldAnnotation
+  scale: number
+  // The shared shape props (id, draggable, event handlers, ref) spread onto the
+  // group so it selects / drags / transforms like every other annotation.
+  common: React.ComponentProps<typeof Group>
+}) {
+  const img = useImage(a.signed?.src ?? '')
+  const stroke = 1.5 / scale
+  const radius = 4 / scale
+  const parts: string[] = []
+  if (a.requireName) parts.push('Name')
+  if (a.requireDate) parts.push('Date')
+  const caption = 'Sign here' + (parts.length ? '\n' + parts.join('  ·  ') : '')
+  const fs = Math.min(a.height * 0.26, 16 / scale)
+  const fit = a.signed ? containRect(a.width, a.height, a.signed.width, a.signed.height) : null
+  return (
+    <Group {...common} x={a.x} y={a.y}>
+      {/* Backing rect — carries the border and the pointer hit area. A faint
+          fill keeps the whole box clickable even once the image sits on top. */}
+      <Rect
+        width={a.width}
+        height={a.height}
+        cornerRadius={radius}
+        fill={a.signed ? 'rgba(255,255,255,0.01)' : 'rgba(234,88,12,0.06)'}
+        stroke="#ea580c"
+        strokeWidth={stroke}
+        dash={a.signed ? undefined : [6 / scale, 4 / scale]}
+        opacity={a.signed ? 0.5 : 1}
+      />
+      {a.signed && img && fit ? (
+        <KonvaImage
+          listening={false}
+          image={img}
+          x={fit.x}
+          y={fit.y}
+          width={fit.width}
+          height={fit.height}
+        />
+      ) : (
+        <Text
+          listening={false}
+          x={0}
+          y={0}
+          width={a.width}
+          height={a.height}
+          text={caption}
+          align="center"
+          verticalAlign="middle"
+          fontStyle="bold"
+          fontSize={fs}
+          lineHeight={1.3}
+          fill="#c2410c"
+          fontFamily={FONT_STACK.sans}
+        />
+      )}
+    </Group>
   )
 }
 
@@ -476,7 +566,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         size: tickSize,
         color
       })
-    } else if (tool === 'rect' || tool === 'ellipse' || tool === 'redact' || tool === 'line') {
+    } else if (tool === 'rect' || tool === 'ellipse' || tool === 'redact' || tool === 'line' || tool === 'sigfield') {
       drawingRef.current = true
       setCurrentLine([pos.x, pos.y, pos.x, pos.y])
     } else if (tool === 'signature') {
@@ -559,7 +649,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         }
         return [prev[0], prev[1], pos.x, pos.y]
       }
-      if (tool === 'rect' || tool === 'ellipse' || tool === 'redact') return [prev[0], prev[1], pos.x, pos.y]
+      if (tool === 'rect' || tool === 'ellipse' || tool === 'redact' || tool === 'sigfield') return [prev[0], prev[1], pos.x, pos.y]
       return [...prev, pos.x, pos.y]
     })
   }
@@ -686,6 +776,29 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             fill: redactFill
           })
         }
+      } else if (tool === 'sigfield') {
+        const [x1, y1, x2, y2] = currentLine
+        // Give a stray tap a sensible default-sized box so the field still
+        // lands somewhere usable; a real drag uses the swept rectangle.
+        const dragged = Math.abs(x2 - x1) > 8 && Math.abs(y2 - y1) > 8
+        const w = dragged ? Math.abs(x2 - x1) : 200 / scale
+        const h = dragged ? Math.abs(y2 - y1) : 70 / scale
+        const x = dragged ? Math.min(x1, x2) : x1 - w / 2
+        const y = dragged ? Math.min(y1, y2) : y1 - h / 2
+        const sig = useSignatureStore.getState()
+        add({
+          id: crypto.randomUUID(),
+          pageIndex,
+          type: 'sigfield',
+          x,
+          y,
+          width: w,
+          height: h,
+          requireName: sig.requestName,
+          requireDate: sig.requestDate
+        })
+        // One box per arming — drop back to Select so it can be signed / moved.
+        useAnnotationStore.getState().setTool('select')
       }
     }
     drawingRef.current = false
@@ -705,6 +818,13 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     // click collapse the selection back to a single item.
     if (e?.evt && 'shiftKey' in e.evt && e.evt.shiftKey) return
     setSelected(id)
+    // Clicking a signature-request box opens the pad to sign it (or re-sign an
+    // already-signed one). Select first so the delete/resize handles stay
+    // available once the pad is cancelled.
+    const ann = useAnnotationStore.getState().annotations.find((a) => a.id === id)
+    if (ann?.type === 'sigfield') {
+      useSignatureStore.getState().startSigningField(id)
+    }
   }
 
   function onTextDblClick(a: TextAnnotation) {
@@ -833,6 +953,15 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       node.scaleY(1)
       return { x: node.x(), y: node.y(), width, height, rotation } as Partial<Annotation>
     }
+    if (a.type === 'sigfield') {
+      // Rendered as a Konva Group (no intrinsic width/height), so derive the new
+      // size from the stored box times the live scale.
+      const width = Math.max(24, a.width * sx)
+      const height = Math.max(16, a.height * sy)
+      node.scaleX(1)
+      node.scaleY(1)
+      return { x: node.x(), y: node.y(), width, height } as Partial<Annotation>
+    }
     if (a.type === 'ellipse') {
       const width = Math.max(8, node.width() * sx)
       const height = Math.max(8, node.height() * sy)
@@ -901,7 +1030,19 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     if (useAnnotationStore.getState().selectedIds.length > 1) return
     const node = e.target
     const rotation = node.rotation()
-    if (a.type === 'image' || a.type === 'rect' || a.type === 'redact') {
+    if (a.type === 'sigfield') {
+      // Group node — size comes from the stored box scaled by the transform.
+      const newWidth = Math.max(24, a.width * node.scaleX())
+      const newHeight = Math.max(16, a.height * node.scaleY())
+      node.scaleX(1)
+      node.scaleY(1)
+      update(a.id, {
+        x: node.x(),
+        y: node.y(),
+        width: newWidth,
+        height: newHeight
+      } as Partial<Annotation>)
+    } else if (a.type === 'image' || a.type === 'rect' || a.type === 'redact') {
       const newWidth = Math.max(8, node.width() * node.scaleX())
       const newHeight = Math.max(8, node.height() * node.scaleY())
       node.scaleX(1)
@@ -1149,6 +1290,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                     onTransformEnd={(e) => onShapeTransformEnd(a, e)}
                   />
                 )
+              case 'sigfield':
+                return <SigField key={a.id} a={a} scale={scale} common={common} />
               default:
                 return null
             }
@@ -1236,6 +1379,23 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             )
           })()}
 
+          {currentLine && tool === 'sigfield' && (() => {
+            const [x1, y1, x2, y2] = currentLine
+            return (
+              <Rect
+                listening={false}
+                x={Math.min(x1, x2)}
+                y={Math.min(y1, y2)}
+                width={Math.abs(x2 - x1)}
+                height={Math.abs(y2 - y1)}
+                fill="rgba(234,88,12,0.06)"
+                stroke="#ea580c"
+                strokeWidth={1.5}
+                dash={[6, 4]}
+              />
+            )
+          })()}
+
           {tool === 'signature' && activeSignature && hoverPos && pendingExtras.length === 0 && (
             <SignatureGhost
               src={activeSignature.dataUrl}
@@ -1288,10 +1448,13 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             // Redactions are baked as axis-aligned black boxes (the export
             // rasteriser ignores rotation), so don't offer a rotate handle
             // that would silently do nothing.
+            // Redactions and signature-request boxes are baked axis-aligned on
+            // export, so a rotate handle would silently do nothing.
+            const nonRotatable = (a: Annotation) => a.type === 'redact' || a.type === 'sigfield'
             const rotatable = isMulti
-              ? !selectedOnPage.some((a) => a.type === 'redact')
+              ? !selectedOnPage.some(nonRotatable)
               : single
-                ? single.type !== 'redact'
+                ? !nonRotatable(single)
                 : true
             return (
               <Transformer
