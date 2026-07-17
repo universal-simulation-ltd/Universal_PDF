@@ -125,10 +125,19 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
     set((s) => {
       const sel = s.annotations.find((a) => a.id === s.selectedId)
       if (sel && sel.type === 'text') {
+        // The pill shows a size in display pixels, but a text annotation stores
+        // its size in PDF points (created as display ÷ scale — see
+        // AnnotationLayer). Writing the raw pill value straight into the
+        // annotation mixed the two spaces, so a single +/- step snapped the
+        // on-screen text by the zoom factor. Instead nudge the annotation's
+        // point size by the same ratio the pill moved, keeping display and
+        // model in lock-step whatever the current zoom.
+        const prev = s.fontSize || fontSize
+        const nextFontSize = Math.max(1, sel.fontSize * (prev > 0 ? fontSize / prev : 1))
         return {
           fontSize,
           annotations: s.annotations.map((a) =>
-            a.id === sel.id ? ({ ...a, fontSize } as Annotation) : a
+            a.id === sel.id ? ({ ...a, fontSize: nextFontSize } as Annotation) : a
           ),
           past: pushPast(s.past, s.annotations),
           future: []
