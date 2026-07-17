@@ -1,3 +1,6 @@
+import type { Annotation } from '../types/annotations'
+import type { FormFieldValue } from '../stores/formStore'
+
 const DB_NAME = 'universal-pdf'
 const STORE = 'recents'
 const VERSION = 1
@@ -5,7 +8,15 @@ const MAX_RECENTS = 8
 const SLUG_LEN = 8
 const SLUG_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789'
 
-export interface RecentFile {
+// The editing state persisted alongside a recent PDF so reopening it (from the
+// recents list or a page refresh) restores the user's work — including
+// signature-request boxes — editable and signable.
+export interface RecentEdits {
+  annotations?: Annotation[]
+  formValues?: FormFieldValue[]
+}
+
+export interface RecentFile extends RecentEdits {
   id: string
   name: string
   size: number
@@ -72,7 +83,9 @@ export async function listRecents(): Promise<RecentMeta[]> {
   }
 }
 
-export async function getRecentBySlug(slug: string): Promise<{ meta: RecentMeta; bytes: ArrayBuffer } | null> {
+export async function getRecentBySlug(
+  slug: string
+): Promise<{ meta: RecentMeta; bytes: ArrayBuffer; edits: RecentEdits } | null> {
   try {
     const db = await openDB()
     return await new Promise((resolve, reject) => {
@@ -83,7 +96,8 @@ export async function getRecentBySlug(slug: string): Promise<{ meta: RecentMeta;
         if (!match) return resolve(null)
         resolve({
           meta: { id: match.id, name: match.name, size: match.size, lastOpened: match.lastOpened, slug: match.slug },
-          bytes: match.bytes
+          bytes: match.bytes,
+          edits: { annotations: match.annotations, formValues: match.formValues }
         })
       }
       req.onerror = () => reject(req.error)
@@ -91,6 +105,58 @@ export async function getRecentBySlug(slug: string): Promise<{ meta: RecentMeta;
   } catch (e) {
     console.warn('recents.getRecentBySlug failed:', e)
     return null
+  }
+}
+
+// Read a recent's stored edits (annotations + form values) by its id. Returns
+// an empty object when the entry has none.
+export async function getRecentEdits(id: string): Promise<RecentEdits> {
+  try {
+    const db = await openDB()
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readonly')
+      const req = tx.objectStore(STORE).get(id)
+      req.onsuccess = () => {
+        const entry = req.result as RecentFile | undefined
+        resolve({ annotations: entry?.annotations, formValues: entry?.formValues })
+      }
+      req.onerror = () => reject(req.error)
+    })
+  } catch (e) {
+    console.warn('recents.getRecentEdits failed:', e)
+    return {}
+  }
+}
+
+// Persist the user's live edits onto the recent entry for `name` (the same key
+// saveRecent dedupes by). Called on a debounce as the document is edited, so
+// closing and reopening the file restores the work.
+export async function updateRecentEdits(
+  name: string,
+  edits: RecentEdits
+): Promise<void> {
+  if (!name) return
+  try {
+    const db = await openDB()
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite')
+      const store = tx.objectStore(STORE)
+      const allReq = store.getAll()
+      allReq.onsuccess = () => {
+        const all = allReq.result as RecentFile[]
+        const entry = all.find((f) => f.name === name)
+        // Only update an existing entry — saveRecent creates the row on open,
+        // so there is always one to attach edits to for the open document.
+        if (entry) {
+          store.put({ ...entry, annotations: edits.annotations, formValues: edits.formValues })
+        }
+      }
+      allReq.onerror = () => reject(allReq.error)
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => reject(tx.error)
+    })
+  } catch (e) {
+    console.warn('recents.updateRecentEdits failed:', e)
   }
 }
 
@@ -119,7 +185,12 @@ export async function saveRecent(name: string, bytes: ArrayBuffer): Promise<stri
           size: bytes.byteLength,
           lastOpened: Date.now(),
           bytes,
-          slug: entrySlug
+          slug: entrySlug,
+          // Preserve any edits already stored for this file — saveRecent is
+          // called on every open (including reopens), and must not wipe the
+          // annotations that updateRecentEdits has persisted.
+          annotations: existing?.annotations,
+          formValues: existing?.formValues
         }
         store.put(entry)
         // Evict oldest if over the cap

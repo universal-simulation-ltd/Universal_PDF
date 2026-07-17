@@ -1,8 +1,23 @@
-import { PDFDocument, StandardFonts, LineCapStyle, degrees } from 'pdf-lib'
-import type { Annotation, RedactAnnotation } from '../types/annotations'
+import { PDFDocument, StandardFonts, LineCapStyle, degrees, PDFName, PDFHexString } from 'pdf-lib'
+import type { Annotation, RedactAnnotation, SignatureFieldAnnotation } from '../types/annotations'
 import type { FormFieldValue } from '../stores/formStore'
 import { hexToPdfRgb } from './colors'
 import { pdfjsLib, type PDFDocumentProxy } from './pdfjs'
+
+// Custom PDF catalog key carrying the unsigned signature-request boxes, so a
+// reopened or shared file's boxes stay interactive (movable / click-to-sign) in
+// Universal PDF. Signed fields are baked into the page (visible in any viewer)
+// and are deliberately NOT embedded — re-editing a finished signature isn't the
+// goal, and embedding would double it against the baked copy.
+const SIG_FIELDS_KEY = 'UPDFSigFields'
+
+// The minimal, scale-independent shape stored per embedded field. Coordinates
+// are PDF points (the annotation store's native space — see EXPORT_SCALE = 1),
+// so they map straight back onto the same page at any zoom on reopen.
+type EmbeddedSigField = Pick<
+  SignatureFieldAnnotation,
+  'id' | 'pageIndex' | 'x' | 'y' | 'width' | 'height' | 'requireName' | 'requireDate'
+>
 
 // Rotate (x, y) around (cx, cy) by `rad` radians.
 function rotatePoint(x: number, y: number, cx: number, cy: number, rad: number): [number, number] {
@@ -391,44 +406,93 @@ export async function buildAnnotatedPdfBytes(
               width: sw(fw),
               height: sw(fh)
             })
-          } else {
-            // Unsigned request box: outline it and label it "Sign here" so a
-            // printed / shared copy still shows where a signature belongs.
-            const orange = hexToPdfRgb('#ea580c')
-            page.drawRectangle({
-              x: sx(a.x),
-              y: toY(a.y + a.height),
-              width: sw(a.width),
-              height: sw(a.height),
-              borderColor: orange,
-              borderWidth: sw(1.5),
-              opacity: 0
-            })
-            const parts: string[] = []
-            if (a.requireName) parts.push('Name')
-            if (a.requireDate) parts.push('Date')
-            const label = sanitizeForWinAnsi(['Sign here', ...parts].join(' • '))
-            const size = sw(Math.min(a.height * 0.28, 18))
-            // Inset from the box's top-left corner. The box is in canvas units
-            // (canvas = pdf * scale); `size` is PDF units, so scale it back up to
-            // canvas space when positioning the baseline.
-            const padCanvas = Math.min(8, a.height * 0.12, a.width * 0.06)
-            const baselineCanvasY = a.y + padCanvas + size * scale * 0.85
-            page.drawText(label, {
-              x: sx(a.x + padCanvas),
-              y: toY(baselineCanvasY),
-              size,
-              font: fontSans,
-              color: hexToPdfRgb('#c2410c')
-            })
           }
+          // Unsigned request boxes are NOT baked into the page — they're
+          // embedded in the catalog below so they reopen as interactive,
+          // movable "click to sign" boxes. Baking an outline would leave a
+          // ghost behind once the reopened box is moved.
           break
         }
       }
     }
   }
 
+  // Embed unsigned signature-request boxes into the document catalog so they
+  // round-trip as interactive fields when the file is reopened / shared. Signed
+  // fields are already baked into the page above and are not embedded.
+  const unsignedFields: EmbeddedSigField[] = annotations
+    .filter((a): a is SignatureFieldAnnotation => a.type === 'sigfield' && !a.signed)
+    .map((a) => ({
+      id: a.id,
+      pageIndex: a.pageIndex,
+      x: a.x,
+      y: a.y,
+      width: a.width,
+      height: a.height,
+      requireName: a.requireName,
+      requireDate: a.requireDate
+    }))
+  try {
+    const key = PDFName.of(SIG_FIELDS_KEY)
+    if (unsignedFields.length > 0) {
+      pdf.catalog.set(key, PDFHexString.fromText(JSON.stringify(unsignedFields)))
+    } else {
+      pdf.catalog.delete(key)
+    }
+  } catch {
+    // Best-effort — a failure here just means the boxes won't round-trip, not
+    // that the export fails.
+  }
+
   return pdf.save()
+}
+
+// Read back the unsigned signature-request boxes embedded by a prior export, so
+// a reopened / shared PDF's boxes become interactive again. Returns [] for any
+// file without them (or that can't be parsed). Coordinates are already in the
+// annotation store's PDF-point space, so the fields drop straight back in.
+export async function readEmbeddedSigFields(
+  bytes: ArrayBuffer
+): Promise<SignatureFieldAnnotation[]> {
+  try {
+    const pdf = await PDFDocument.load(bytes, { updateMetadata: false })
+    const raw = pdf.catalog.get(PDFName.of(SIG_FIELDS_KEY)) as unknown
+    const decodable = raw as { decodeText?: () => string } | undefined
+    const text =
+      decodable && typeof decodable.decodeText === 'function'
+        ? decodable.decodeText()
+        : null
+    if (!text) return []
+    const parsed: unknown = JSON.parse(text)
+    if (!Array.isArray(parsed)) return []
+    const out: SignatureFieldAnnotation[] = []
+    for (const v of parsed as Partial<EmbeddedSigField>[]) {
+      if (
+        v &&
+        typeof v.id === 'string' &&
+        typeof v.pageIndex === 'number' &&
+        typeof v.x === 'number' &&
+        typeof v.y === 'number' &&
+        typeof v.width === 'number' &&
+        typeof v.height === 'number'
+      ) {
+        out.push({
+          type: 'sigfield',
+          id: v.id,
+          pageIndex: v.pageIndex,
+          x: v.x,
+          y: v.y,
+          width: v.width,
+          height: v.height,
+          requireName: !!v.requireName,
+          requireDate: !!v.requireDate
+        })
+      }
+    }
+    return out
+  } catch {
+    return []
+  }
 }
 
 export function downloadPdfBytes(bytes: Uint8Array, fileName: string) {
