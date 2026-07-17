@@ -1,11 +1,35 @@
 import { create } from 'zustand'
 import { loadPdf, type PDFDocumentProxy } from '../lib/pdfjs'
-import { listRecents, saveRecent, getRecent, getRecentBySlug, deleteRecent, renameRecent, type RecentMeta } from '../lib/recents'
+import { listRecents, saveRecent, getRecent, getRecentBySlug, getRecentEdits, updateRecentEdits, deleteRecent, renameRecent, type RecentMeta, type RecentEdits } from '../lib/recents'
+import { readEmbeddedSigFields } from '../lib/export'
 import { applyPageOrderToPdf, buildPageIndexMap } from '../lib/pdfPages'
 import { useAnnotationStore } from './annotationStore'
 import { useFormStore } from './formStore'
 import { useSearchStore } from './searchStore'
 import { useSignatureStore } from './signatureStore'
+
+// Restore a recent's saved edits into the live stores. Applies whenever the
+// stored arrays EXIST (even when empty) so a deliberately-cleared document
+// stays cleared on reopen — `undefined` means "never persisted", in which case
+// we leave whatever loadFile hydrated from the PDF (e.g. embedded sig fields).
+// Returns true if annotations were applied.
+function applyRecentEdits(edits: RecentEdits): boolean {
+  let applied = false
+  if (edits.annotations) {
+    useAnnotationStore.setState({
+      annotations: edits.annotations,
+      selectedId: null,
+      selectedIds: [],
+      past: [],
+      future: []
+    })
+    applied = true
+  }
+  if (edits.formValues) {
+    useFormStore.setState({ values: edits.formValues })
+  }
+  return applied
+}
 
 // Wipe every piece of per-document editing state so nothing from the PDF being
 // closed (annotations, drawings, signatures, highlights, form values, find
@@ -103,6 +127,19 @@ export const usePdfStore = create<PdfState>((set, get) => ({
         isXfa: doc.isPureXfa,
         loading: false
       })
+      // Re-hydrate any signature-request boxes embedded in the PDF (from a prior
+      // export) so a reopened / shared file's boxes are interactive again. The
+      // doc is already on screen; this just drops the boxes in a beat later.
+      // Callers that restore saved edits (openRecent / loadFromSlug / backup)
+      // replace these afterwards, so there's no duplication.
+      try {
+        const fields = await readEmbeddedSigFields(buf.slice(0))
+        if (fields.length > 0) {
+          useAnnotationStore.setState((s) => ({ annotations: [...s.annotations, ...fields] }))
+        }
+      } catch {
+        // Best-effort — a parse failure just means no boxes are recovered.
+      }
       // Persist to recents in the background — never blocks loading.
       // The returned slug becomes the URL hash so a refresh reloads the
       // same PDF straight from IndexedDB.
@@ -122,6 +159,9 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     if (!hit) return false
     const file = new File([hit.bytes], hit.meta.name, { type: 'application/pdf' })
     await get().loadFile(file)
+    // Restore the edits saved for this document (supersedes anything loadFile
+    // hydrated from the PDF), so a refresh brings back the user's work.
+    applyRecentEdits(hit.edits)
     return true
   },
   loadFromCurrentUrl: async () => {
@@ -151,6 +191,8 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     if (!meta) return
     const file = new File([bytes], meta.name, { type: 'application/pdf' })
     await get().loadFile(file)
+    // Restore the edits saved for this document (see loadFromSlug).
+    applyRecentEdits(await getRecentEdits(id))
   },
   removeRecent: async (id) => {
     // Optimistic update, then drop from IndexedDB.
@@ -232,3 +274,38 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     await get().applyPageOrder(order)
   }
 }))
+
+// ── Edit auto-save ─────────────────────────────────────────────────────────
+// Persist the open document's annotations + form values to its recents entry,
+// debounced, whenever they change — so closing and reopening the file (from the
+// recents list or a refresh) restores the work, signature-request boxes and
+// all. Selection / tool changes don't touch the annotation array reference, so
+// they're skipped here.
+if (typeof window !== 'undefined') {
+  let timer: number | null = null
+  let lastAnns: unknown = null
+  let lastForms: unknown = null
+
+  const schedule = () => {
+    const anns = useAnnotationStore.getState().annotations
+    const forms = useFormStore.getState().values
+    if (anns === lastAnns && forms === lastForms) return
+    lastAnns = anns
+    lastForms = forms
+    const { doc, fileName } = usePdfStore.getState()
+    if (!doc || !fileName) return
+    if (timer !== null) clearTimeout(timer)
+    timer = window.setTimeout(() => {
+      timer = null
+      const name = usePdfStore.getState().fileName
+      if (!name) return
+      void updateRecentEdits(name, {
+        annotations: useAnnotationStore.getState().annotations,
+        formValues: useFormStore.getState().values
+      })
+    }, 600)
+  }
+
+  useAnnotationStore.subscribe(schedule)
+  useFormStore.subscribe(schedule)
+}

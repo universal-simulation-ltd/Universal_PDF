@@ -160,7 +160,10 @@ interface Props {
 }
 
 function isResizable(a: Annotation): boolean {
-  return a.type === 'image' || a.type === 'rect' || a.type === 'ellipse' || a.type === 'redact' || a.type === 'sigfield'
+  // Locked signature-request boxes (re-detected from an exported PDF) can't be
+  // resized — their outline is baked into the page.
+  if (a.type === 'sigfield') return !a.locked
+  return a.type === 'image' || a.type === 'rect' || a.type === 'ellipse' || a.type === 'redact'
 }
 
 function isTransformable(a: Annotation): boolean {
@@ -287,22 +290,29 @@ function SigField({
   const parts: string[] = []
   if (a.requireName) parts.push('Name')
   if (a.requireDate) parts.push('Date')
-  const caption = 'Sign here' + (parts.length ? '\n' + parts.join('  ·  ') : '')
+  const caption = ['Sign here', ...parts].join(' • ')
   const fs = Math.min(a.height * 0.26, 16 / scale)
+  // Inset the caption from the box's top-left corner.
+  const pad = Math.min(8 / scale, a.height * 0.12, a.width * 0.06)
   const fit = a.signed ? containRect(a.width, a.height, a.signed.width, a.signed.height) : null
+  // Locked boxes come from an exported PDF whose outline is already baked into
+  // the page, so the overlay is just an invisible click-to-sign hit area — no
+  // border/caption to avoid doubling up on the baked one. Unlocked boxes are
+  // live editing overlays and draw the dashed box + caption themselves.
+  const locked = !!a.locked
+  const decorated = !a.signed && !locked
   return (
-    <Group {...common} x={a.x} y={a.y}>
-      {/* Backing rect — carries the border and the pointer hit area. A faint
-          fill keeps the whole box clickable even once the image sits on top. */}
+    <Group {...common} x={a.x} y={a.y} draggable={!!common.draggable && !locked}>
+      {/* Backing rect — the pointer hit area. A faint fill keeps the whole box
+          clickable; the border/caption only render for live (unlocked) boxes. */}
       <Rect
         width={a.width}
         height={a.height}
         cornerRadius={radius}
-        fill={a.signed ? 'rgba(255,255,255,0.01)' : 'rgba(234,88,12,0.06)'}
-        stroke="#ea580c"
-        strokeWidth={stroke}
-        dash={a.signed ? undefined : [6 / scale, 4 / scale]}
-        opacity={a.signed ? 0.5 : 1}
+        fill={decorated ? 'rgba(234,88,12,0.06)' : 'rgba(255,255,255,0.01)'}
+        stroke={decorated ? '#ea580c' : undefined}
+        strokeWidth={decorated ? stroke : 0}
+        dash={decorated ? [6 / scale, 4 / scale] : undefined}
       />
       {a.signed && img && fit ? (
         <KonvaImage
@@ -313,23 +323,21 @@ function SigField({
           width={fit.width}
           height={fit.height}
         />
-      ) : (
+      ) : decorated ? (
         <Text
           listening={false}
-          x={0}
-          y={0}
-          width={a.width}
-          height={a.height}
+          x={pad}
+          y={pad}
           text={caption}
-          align="center"
-          verticalAlign="middle"
+          align="left"
+          verticalAlign="top"
+          wrap="none"
           fontStyle="bold"
           fontSize={fs}
-          lineHeight={1.3}
           fill="#c2410c"
           fontFamily={FONT_STACK.sans}
         />
-      )}
+      ) : null}
     </Group>
   )
 }
@@ -503,6 +511,15 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     if (e.target !== stage) {
       const hitId = getAnnotationIdFromTarget(e.target)
       if (hitId) {
+        // A locked signature box (baked into an exported page) is click-to-sign
+        // only: open the pad and don't select it, so no move/resize/delete
+        // affordances appear and it can't be dragged off its baked outline.
+        const hit = useAnnotationStore.getState().annotations.find((a) => a.id === hitId)
+        if (hit?.type === 'sigfield' && hit.locked) {
+          setSelected(null)
+          useSignatureStore.getState().startSigningField(hitId)
+          return
+        }
         // Shift-click adds / removes a single item from the selection.
         if (e.evt.shiftKey && (tool === 'select' || tool === 'marquee')) {
           toggleSelected(hitId)
@@ -677,7 +694,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       const rh = Math.abs(m.curY - m.startY)
       const box = { x: rx, y: ry, width: rw, height: rh }
       const hits = annotations.filter(
-        (a) => !isHighlighter(a) && rectsIntersect(getAnnotationBBox(a), box)
+        (a) =>
+          !isHighlighter(a) &&
+          !(a.type === 'sigfield' && a.locked) &&
+          rectsIntersect(getAnnotationBBox(a), box)
       )
       setSelectedIds(hits.map((a) => a.id))
       // The marquee tool is a one-shot "draw the box" mode — once it has caught
@@ -817,11 +837,17 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     // Shift-clicks are handled on pointerdown (toggle); don't let the trailing
     // click collapse the selection back to a single item.
     if (e?.evt && 'shiftKey' in e.evt && e.evt.shiftKey) return
+    const ann = useAnnotationStore.getState().annotations.find((a) => a.id === id)
+    // A locked box (baked into an exported page) is click-to-sign only — don't
+    // select it, so no move/resize/delete affordances appear; just open the pad.
+    if (ann?.type === 'sigfield' && ann.locked) {
+      useSignatureStore.getState().startSigningField(id)
+      return
+    }
     setSelected(id)
     // Clicking a signature-request box opens the pad to sign it (or re-sign an
     // already-signed one). Select first so the delete/resize handles stay
     // available once the pad is cancelled.
-    const ann = useAnnotationStore.getState().annotations.find((a) => a.id === id)
     if (ann?.type === 'sigfield') {
       useSignatureStore.getState().startSigningField(id)
     }
@@ -1575,6 +1601,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         if (draggingId || editingId) return null
         const selected = annotations.find((a) => a.id === selectedId)
         if (!selected) return null
+        // Locked (baked) request boxes can't be deleted — their outline lives in
+        // the page. They shouldn't get selected anyway, but guard here too.
+        if (selected.type === 'sigfield' && selected.locked) return null
         const bbox = getAnnotationBBox(selected)
         return (
           <button

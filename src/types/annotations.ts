@@ -122,6 +122,12 @@ export type SignatureFieldAnnotation = Base & {
   // Which extra lines the box asks for, chosen before it was drawn.
   requireName?: boolean
   requireDate?: boolean
+  // True for boxes re-detected from a flattened/exported PDF, where the outline
+  // is already baked into the page. Locked boxes stay put (non-movable /
+  // resizable / deletable) so moving them can't leave a baked "ghost" behind —
+  // they're still click-to-sign. A `.unipdf` backup restores the original
+  // editable (unlocked) annotations instead, keeping them movable.
+  locked?: boolean
   // Populated once signed. `src` is a PNG data URL already composited with the
   // name/date labels; width/height are its logical (unscaled) pixel size, used
   // to preserve aspect when fitting it inside the box.
