@@ -18,7 +18,7 @@ import ToolbarUserProfile from './components/Header/ToolbarUserProfile'
 import FileMenu from './components/Toolbar/FileMenu'
 import HostedStoreDialog from './components/HostedStoreDialog'
 import MobileWelcomeToast from './components/Onboarding/MobileWelcomeToast'
-import { UniversalAppsNavBar, UniversalBar, SuiteSwitcher, ChangelogMenu, DEFAULT_UNIVERSAL_APPS_PRODUCTS, DEFAULT_APP_GROUPS } from '@unisim/sdk'
+import { UniversalAppsNavBar, UniversalBar, ChangelogMenu } from '@unisim/sdk'
 
 // Apply the saved language to <html lang> on first mount.
 import { persistLang, readSavedLang } from './lib/lang'
@@ -186,33 +186,6 @@ export default function App() {
                   <path d="M10 21v-6h4v6" />
                 </svg>
               </button>
-              <div className="md:hidden">
-                <SuiteSwitcher
-                  current="pdf"
-                  // Without an explicit catalogue the switcher falls back to the
-                  // Assess suite — which is why the mobile logo menu was showing
-                  // Assess apps instead of the Everyday apps. Pass the Universal
-                  // Apps catalogue (PDF is `everyday`, so the main list filters to
-                  // the everyday apps) + the Business Startup group, mirroring the
-                  // desktop UniversalAppsNavBar.
-                  products={DEFAULT_UNIVERSAL_APPS_PRODUCTS}
-                  appGroups={DEFAULT_APP_GROUPS.filter((g) => g.label !== 'Everyday Apps')}
-                  align="left"
-                  portalHref="https://opensource.unisim.co.uk"
-                  portalLabel={{ eyebrow: 'Universal Simulation', title: 'Universal Apps' }}
-                  githubHref="https://github.com/universal-simulation-ltd"
-                >
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-slate-800 active:bg-slate-700 cursor-pointer select-none">
-                    <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" aria-hidden="true">
-                      <rect width="24" height="24" rx="5" fill="#ea580c" />
-                      <polygon points="4,2.5 14.5,2.5 14.5,8 20,8 20,21.5 4,21.5" fill="white" />
-                      <polygon points="14.5,2.5 20,8 14.5,8" fill="#fdba74" />
-                      <text x="12" y="18" textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize="6" fontWeight="900" fill="#ea580c" letterSpacing="0.4">PDF</text>
-                    </svg>
-                    <span className="font-semibold text-sm text-white whitespace-nowrap">Universal PDF</span>
-                  </div>
-                </SuiteSwitcher>
-              </div>
               {/* Mobile-only Actions. On md+ it lives in the universal navbar,
                   or — when that bar is hidden — in the far-left chrome group. */}
               <div className="md:hidden">
