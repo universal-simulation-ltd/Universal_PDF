@@ -290,6 +290,7 @@ function SigField({
 }) {
   const img = useImage(a.signed?.src ?? '')
   const captionRef = useRef<Konva.Text>(null)
+  const hintRef = useRef<Konva.Group>(null)
   const stroke = 1.5 / scale
   const radius = 4 / scale
   const parts: string[] = []
@@ -311,20 +312,25 @@ function SigField({
   const decorated = !a.signed && !locked
 
   // The Transformer scales the whole group live while resizing, which would
-  // stretch/blur the caption. Counter-scale the caption each frame so it holds a
-  // constant on-screen size; onTransformEnd resets the group scale to 1 and we
-  // clear the caption's inverse here so the committed text is crisp.
+  // stretch/blur the caption AND the "Click again to sign" hint. Counter-scale
+  // both each frame so they hold a constant on-screen size; onTransformEnd
+  // resets the group scale to 1 and clears these inverses so the committed
+  // render is crisp. The caption is anchored top-left, the hint at the box
+  // centre — both counter-scale around their own origin, so a centre-anchored
+  // hint stays pinned to the (live-scaling) box centre.
   function onTransform(e: Konva.KonvaEventObject<Event>) {
     const node = e.target
-    const cap = captionRef.current
-    if (!cap) return
     const sx = node.scaleX() || 1
     const sy = node.scaleY() || 1
-    cap.scale({ x: 1 / sx, y: 1 / sy })
-    cap.getLayer()?.batchDraw()
+    const inv = { x: 1 / sx, y: 1 / sy }
+    captionRef.current?.scale(inv)
+    hintRef.current?.scale(inv)
+    node.getLayer()?.batchDraw()
   }
 
   // "Click again to sign" hint pill, centred in the box (screen-constant size).
+  // The Group sits at the box centre and its children are offset around (0,0),
+  // so counter-scaling it during a resize keeps the pill centred and unstretched.
   const hintFs = 12 / scale
   const hintText = 'Click again to sign'
   const hintW = hintText.length * hintFs * 0.52
@@ -340,6 +346,7 @@ function SigField({
       onTransform={onTransform}
       onTransformEnd={(e) => {
         captionRef.current?.scale({ x: 1, y: 1 })
+        hintRef.current?.scale({ x: 1, y: 1 })
         common.onTransformEnd?.(e)
       }}
     >
@@ -380,10 +387,10 @@ function SigField({
         />
       ) : null}
       {armed && !a.signed && (
-        <Group listening={false}>
+        <Group ref={hintRef} listening={false} x={a.width / 2} y={a.height / 2}>
           <Rect
-            x={a.width / 2 - hintW / 2 - hintPad}
-            y={a.height / 2 - hintH / 2 - hintPad / 2}
+            x={-hintW / 2 - hintPad}
+            y={-hintH / 2 - hintPad / 2}
             width={hintW + hintPad * 2}
             height={hintH + hintPad}
             cornerRadius={(hintH + hintPad) / 2}
@@ -394,8 +401,8 @@ function SigField({
             shadowOffsetY={1 / scale}
           />
           <Text
-            x={a.width / 2 - hintW / 2}
-            y={a.height / 2 - hintH / 2}
+            x={-hintW / 2}
+            y={-hintH / 2}
             width={hintW}
             height={hintH}
             text={hintText}
