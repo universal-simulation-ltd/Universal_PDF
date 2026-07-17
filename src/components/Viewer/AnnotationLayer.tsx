@@ -276,22 +276,30 @@ function containRect(
 function SigField({
   a,
   scale,
-  common
+  common,
+  armed
 }: {
   a: SignatureFieldAnnotation
   scale: number
   // The shared shape props (id, draggable, event handlers, ref) spread onto the
   // group so it selects / drags / transforms like every other annotation.
   common: React.ComponentProps<typeof Group>
+  // Selected but not yet "armed to sign" — show the "Click again to sign" hint
+  // (the first click selects so the box can be dragged/placed; the second signs).
+  armed: boolean
 }) {
   const img = useImage(a.signed?.src ?? '')
+  const captionRef = useRef<Konva.Text>(null)
   const stroke = 1.5 / scale
   const radius = 4 / scale
   const parts: string[] = []
   if (a.requireName) parts.push('Name')
   if (a.requireDate) parts.push('Date')
   const caption = ['Sign here', ...parts].join(' • ')
-  const fs = Math.min(a.height * 0.26, 16 / scale)
+  // Fixed, small caption size — deliberately NOT derived from the box height, so
+  // resizing the box never rescales (and blurs) the text. Clamped down only so
+  // it can't dwarf a very small box.
+  const fs = Math.min(12 / scale, a.height * 0.5, a.width * 0.14)
   // Inset the caption from the box's top-left corner.
   const pad = Math.min(8 / scale, a.height * 0.12, a.width * 0.06)
   const fit = a.signed ? containRect(a.width, a.height, a.signed.width, a.signed.height) : null
@@ -301,8 +309,40 @@ function SigField({
   // live editing overlays and draw the dashed box + caption themselves.
   const locked = !!a.locked
   const decorated = !a.signed && !locked
+
+  // The Transformer scales the whole group live while resizing, which would
+  // stretch/blur the caption. Counter-scale the caption each frame so it holds a
+  // constant on-screen size; onTransformEnd resets the group scale to 1 and we
+  // clear the caption's inverse here so the committed text is crisp.
+  function onTransform(e: Konva.KonvaEventObject<Event>) {
+    const node = e.target
+    const cap = captionRef.current
+    if (!cap) return
+    const sx = node.scaleX() || 1
+    const sy = node.scaleY() || 1
+    cap.scale({ x: 1 / sx, y: 1 / sy })
+    cap.getLayer()?.batchDraw()
+  }
+
+  // "Click again to sign" hint pill, centred in the box (screen-constant size).
+  const hintFs = 12 / scale
+  const hintText = 'Click again to sign'
+  const hintW = hintText.length * hintFs * 0.52
+  const hintH = hintFs * 1.7
+  const hintPad = 7 / scale
+
   return (
-    <Group {...common} x={a.x} y={a.y} draggable={!!common.draggable && !locked}>
+    <Group
+      {...common}
+      x={a.x}
+      y={a.y}
+      draggable={!!common.draggable && !locked}
+      onTransform={onTransform}
+      onTransformEnd={(e) => {
+        captionRef.current?.scale({ x: 1, y: 1 })
+        common.onTransformEnd?.(e)
+      }}
+    >
       {/* Backing rect — the pointer hit area. A faint fill keeps the whole box
           clickable; the border/caption only render for live (unlocked) boxes. */}
       <Rect
@@ -325,6 +365,7 @@ function SigField({
         />
       ) : decorated ? (
         <Text
+          ref={captionRef}
           listening={false}
           x={pad}
           y={pad}
@@ -338,6 +379,36 @@ function SigField({
           fontFamily={FONT_STACK.sans}
         />
       ) : null}
+      {armed && !a.signed && (
+        <Group listening={false}>
+          <Rect
+            x={a.width / 2 - hintW / 2 - hintPad}
+            y={a.height / 2 - hintH / 2 - hintPad / 2}
+            width={hintW + hintPad * 2}
+            height={hintH + hintPad}
+            cornerRadius={(hintH + hintPad) / 2}
+            fill="#ea580c"
+            shadowColor="#000000"
+            shadowOpacity={0.25}
+            shadowBlur={6 / scale}
+            shadowOffsetY={1 / scale}
+          />
+          <Text
+            x={a.width / 2 - hintW / 2}
+            y={a.height / 2 - hintH / 2}
+            width={hintW}
+            height={hintH}
+            text={hintText}
+            align="center"
+            verticalAlign="middle"
+            wrap="none"
+            fontStyle="bold"
+            fontSize={hintFs}
+            fill="#ffffff"
+            fontFamily={FONT_STACK.sans}
+          />
+        </Group>
+      )}
     </Group>
   )
 }
@@ -379,6 +450,24 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const [currentLine, setCurrentLine] = useState<number[] | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
+  // A signature-request box that's been selected (first click) and is now
+  // "armed" — a second click on it opens the signing pad. The ref is the
+  // synchronous source of truth for the click handler; the state drives the
+  // "Click again to sign" overlay. Cleared whenever the selection moves away.
+  const armedSigfieldRef = useRef<string | null>(null)
+  const [armedSigfieldId, setArmedSigfieldId] = useState<string | null>(null)
+  const armSigfield = (id: string | null) => {
+    armedSigfieldRef.current = id
+    setArmedSigfieldId(id)
+  }
+  // Disarm as soon as the selection leaves the armed box (clicked elsewhere,
+  // deselected, or another shape selected) so the "Click again to sign" hint
+  // never lingers on a box the user has moved on from.
+  useEffect(() => {
+    if (armedSigfieldRef.current && selectedId !== armedSigfieldRef.current) {
+      armSigfield(null)
+    }
+  }, [selectedId])
   // Live override for the endpoint currently being dragged by a line grabber, so
   // the line follows the handle without committing a history step every frame.
   const [lineDrag, setLineDrag] = useState<{ id: string; index: 0 | 1; x: number; y: number } | null>(null)
@@ -845,11 +934,16 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       return
     }
     setSelected(id)
-    // Clicking a signature-request box opens the pad to sign it (or re-sign an
-    // already-signed one). Select first so the delete/resize handles stay
-    // available once the pad is cancelled.
+    // A signature-request box takes two clicks: the first selects it (so it can
+    // be dragged into place and shows the "Click again to sign" hint), the
+    // second opens the pad. Re-signing an already-signed box works the same way.
     if (ann?.type === 'sigfield') {
-      useSignatureStore.getState().startSigningField(id)
+      if (armedSigfieldRef.current === id) {
+        armSigfield(null)
+        useSignatureStore.getState().startSigningField(id)
+      } else {
+        armSigfield(id)
+      }
     }
   }
 
@@ -1317,7 +1411,15 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                   />
                 )
               case 'sigfield':
-                return <SigField key={a.id} a={a} scale={scale} common={common} />
+                return (
+                  <SigField
+                    key={a.id}
+                    a={a}
+                    scale={scale}
+                    common={common}
+                    armed={armedSigfieldId === a.id}
+                  />
+                )
               default:
                 return null
             }
