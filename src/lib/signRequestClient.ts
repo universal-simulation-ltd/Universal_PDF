@@ -12,10 +12,15 @@ import { useUniversal } from '@unisim/sdk'
 
 type Supabase = ReturnType<typeof useUniversal>['supabase']
 
-/** Build the recipient's link for a sign-request token. BASE_URL keeps it
- *  correct under the /pdf/ portal prefix and in local dev alike. */
+/** Build a party's signing link for a sign-request party token. BASE_URL keeps
+ *  it correct under the /pdf/ portal prefix and in local dev alike. */
 export function signRequestLink(token: string): string {
   return `${window.location.origin}${import.meta.env.BASE_URL}?signdoc=${token}`
+}
+
+/** Public certificate-page link for a request's cert_id. */
+export function certLink(certId: string): string {
+  return `${window.location.origin}${import.meta.env.BASE_URL}?cert=${certId}`
 }
 
 function base64FromBytes(bytes: Uint8Array): string {
@@ -32,9 +37,11 @@ function base64FromBytes(bytes: Uint8Array): string {
 export interface LoadSignRequestResult {
   ok: boolean
   error?: string
-  code?: 'invalid_token' | 'expired' | 'already_signed' | 'deleted' | (string & {})
+  code?: 'invalid_token' | 'expired' | 'already_signed' | 'deleted' | 'completed' | (string & {})
   docName?: string
   signedUrl?: string
+  party?: { role: 'requester' | 'recipient'; status: 'pending' | 'signed' }
+  alreadySigned?: boolean
 }
 
 /** Recipient: validate the token and get the document (name + signed URL). */
@@ -55,22 +62,48 @@ export interface SubmitSignedResult {
   error?: string
   code?: string
   notified?: boolean
+  completed?: boolean
+  status?: 'partially_signed' | 'completed'
+  cert_id?: string
 }
 
-/** Recipient: file the signed PDF back to the sender. */
+/** Recipient/party: file the signed PDF back, along with the structured
+ *  annotation set so the server can classify what was added (signature vs
+ *  other edits) into the provenance log. */
 export async function submitSignedPdf(
   supabase: Supabase,
   token: string,
   bytes: Uint8Array,
+  annotations: Array<{ type?: string; opacity?: number; pageIndex?: number }>,
 ): Promise<SubmitSignedResult> {
   const { data, error } = await supabase.functions.invoke('pdf-sign-request', {
-    body: { action: 'submit', token, pdfBase64: base64FromBytes(bytes) },
+    body: { action: 'submit', token, pdfBase64: base64FromBytes(bytes), annotations },
   })
   if (error) {
     const body = await parseFunctionError(error)
     return { ok: false, error: body.error ?? error.message, code: body.code }
   }
   return (data ?? { ok: false, error: 'No response' }) as SubmitSignedResult
+}
+
+export interface CertDownloadResult {
+  ok: boolean
+  error?: string
+  code?: 'not_found' | 'deleted' | (string & {})
+  docName?: string
+  signedUrl?: string
+}
+
+/** Certificate page: get a signed URL for the final signed PDF (by cert_id). */
+export async function certificateDownload(supabase: Supabase, certId: string): Promise<CertDownloadResult> {
+  const { data, error } = await supabase.functions.invoke('pdf-sign-request', {
+    body: { action: 'download', cert_id: certId },
+  })
+  if (error) {
+    const body = await parseFunctionError(error)
+    return { ok: false, error: body.error ?? error.message, code: body.code }
+  }
+  return (data ?? { ok: false, error: 'No response' }) as CertDownloadResult
 }
 
 export interface SendSignEmailResult {

@@ -4,6 +4,7 @@ import { UniversalProvider } from '@unisim/sdk'
 import App from './App'
 import SignMobilePage from './components/Signature/SignMobilePage'
 import SignRequestPage from './components/Signature/SignRequestPage'
+import SignCertificatePage from './components/Signature/SignCertificatePage'
 import UsageTracker from './UsageTracker'
 import ErrorBoundary from './components/ErrorBoundary'
 import { usePdfStore } from './stores/pdfStore'
@@ -38,9 +39,12 @@ const universalConfig = {
 // scanning the QR in the signature pad) — render just the signing page.
 // `?signdoc=<token>` is a "Send to sign" recipient link — the full editor with
 // the sender's stored PDF loaded and a sign-and-return banner.
+// `?cert=<cert_id>` is the public tamper-evident certificate page for a signed
+// document (preview + download + timestamped provenance log).
 const params = new URLSearchParams(window.location.search)
 const signToken = params.get('sign')
 const signDocToken = params.get('signdoc')
+const certId = params.get('cert')
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -49,6 +53,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <UsageTracker />
         {signToken ? <SignMobilePage token={signToken} />
           : signDocToken ? <SignRequestPage token={signDocToken} />
+          : certId ? <SignCertificatePage certId={certId} />
           : <App />}
       </UniversalProvider>
     </ErrorBoundary>

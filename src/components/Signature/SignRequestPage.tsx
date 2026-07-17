@@ -5,7 +5,7 @@ import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { currentPdfBytes } from '../../lib/hostedStore'
 import { downloadPdfBytes } from '../../lib/export'
-import { loadSignRequest, submitSignedPdf } from '../../lib/signRequestClient'
+import { loadSignRequest, submitSignedPdf, certLink } from '../../lib/signRequestClient'
 
 /**
  * Recipient side of "Send to sign" (opened via `?signdoc=<token>` from the
@@ -25,6 +25,7 @@ export default function SignRequestPage({ token }: { token: string }) {
   const [docName, setDocName] = useState<string>('document.pdf')
   const [banner, setBanner] = useState(true)
   const [signedCopy, setSignedCopy] = useState<Uint8Array | null>(null)
+  const [outcome, setOutcome] = useState<{ completed: boolean; certId: string | null }>({ completed: false, certId: null })
   const startedRef = useRef(false)
 
   useEffect(() => {
@@ -35,7 +36,8 @@ export default function SignRequestPage({ token }: { token: string }) {
       if (!res.ok || !res.signedUrl) {
         setError(
           res.code === 'expired' ? 'This signing link has expired. Ask the sender for a fresh one.'
-          : res.code === 'already_signed' ? 'This document has already been signed and returned — nothing left to do.'
+          : res.code === 'already_signed' ? 'You have already signed this document — nothing left to do.'
+          : res.code === 'completed' ? 'This document is now fully signed by everyone — nothing left to do.'
           : res.code === 'deleted' ? 'The sender has removed this document, so it can no longer be signed.'
           : res.error ?? 'This signing link is invalid.',
         )
@@ -70,15 +72,20 @@ export default function SignRequestPage({ token }: { token: string }) {
     setError(null)
     try {
       const { bytes } = await currentPdfBytes()
-      const res = await submitSignedPdf(supabase, token, bytes)
+      // Send the structured annotation set too, so the server can classify what
+      // was added (signature vs other edits) into the provenance log.
+      const res = await submitSignedPdf(supabase, token, bytes, anns)
       if (!res.ok) {
         setError(res.code === 'already_signed'
-          ? 'This document has already been signed and returned.'
-          : res.error ?? 'Could not send the signed document back.')
+          ? 'You have already signed this document.'
+          : res.code === 'completed'
+            ? 'This document is already fully signed by everyone.'
+            : res.error ?? 'Could not send the signed document back.')
         setPhase('ready')
         return
       }
       setSignedCopy(bytes)
+      setOutcome({ completed: !!res.completed, certId: res.cert_id ?? null })
       setPhase('done')
     } catch (e) {
       setError((e as Error).message)
@@ -109,9 +116,13 @@ export default function SignRequestPage({ token }: { token: string }) {
     return (
       <main className="flex min-h-svh flex-col items-center justify-center gap-3 bg-slate-900 p-6 text-center text-white">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-600/20 text-3xl">✓</div>
-        <h1 className="text-lg font-semibold">Signed and sent back</h1>
+        <h1 className="text-lg font-semibold">{outcome.completed ? 'Fully signed' : 'Your signature is in'}</h1>
         <p className="max-w-sm text-sm text-slate-400">
-          Your signed copy of <strong className="text-slate-200">{docName}</strong> has been returned to the sender — they've been notified.
+          {outcome.completed ? (
+            <>Every party has now signed <strong className="text-slate-200">{docName}</strong> — everyone's been notified.</>
+          ) : (
+            <>Your signature on <strong className="text-slate-200">{docName}</strong> is recorded. It now goes to the other party to counter-sign; everyone's notified once it's complete.</>
+          )}
         </p>
         <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
           <button
@@ -121,9 +132,11 @@ export default function SignRequestPage({ token }: { token: string }) {
           >
             Download your copy
           </button>
-          <a href={import.meta.env.BASE_URL} className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800">
-            Try Universal PDF — it's free
-          </a>
+          {outcome.certId && (
+            <a href={certLink(outcome.certId)} className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800">
+              View the certificate
+            </a>
+          )}
         </div>
       </main>
     )

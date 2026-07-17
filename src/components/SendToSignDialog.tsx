@@ -13,12 +13,21 @@ import {
   type SignRequest,
 } from '@unisim/sdk'
 import { usePdfStore } from '../stores/pdfStore'
-import { storeCurrentPdf, currentPdfBytes, openSignedCopy } from '../lib/hostedStore'
+import { storeCurrentPdf, currentPdfBytes } from '../lib/hostedStore'
 import {
   signRequestLink,
+  certLink,
   sendSignRequestEmail,
   signRequestMailto,
 } from '../lib/signRequestClient'
+
+// Human labels for a request's signing state (either-order two-party flow).
+const STATUS_UI: Record<string, { label: string; cls: string }> = {
+  pending: { label: 'Awaiting signatures', cls: 'bg-slate-200 text-slate-600' },
+  partially_signed: { label: 'Partly signed', cls: 'bg-amber-100 text-amber-700' },
+  signed: { label: 'Completed', cls: 'bg-emerald-100 text-emerald-700' },
+  completed: { label: 'Completed', cls: 'bg-emerald-100 text-emerald-700' },
+}
 
 const HUB_LOGIN_URL = 'https://app.unisim.co.uk/login'
 const GET_TOKENS_URL = 'https://www.unisim.co.uk/subscription.html'
@@ -46,8 +55,12 @@ export default function SendToSignDialog() {
   const [error, setError] = useState<string | null>(null)
   const [signInOpen, setSignInOpen] = useState(false)
   const [verifyInfo, setVerifyInfo] = useState<string | null>(null)
-  // The request minted in this dialog session — the link + email step target it.
-  const [minted, setMinted] = useState<{ id: string; link: string; docName: string } | null>(null)
+  // The request minted in this dialog session. Two parties: the recipient link
+  // is copied/emailed out; the requester link is the sender's own "Sign your
+  // part" (either-order counter-signing). certId → the public certificate page.
+  const [minted, setMinted] = useState<{
+    id: string; certId: string | null; recipientLink: string; requesterLink: string | null; docName: string
+  } | null>(null)
   const [copied, setCopied] = useState(false)
   const [email, setEmail] = useState('')
   const [emailState, setEmailState] = useState<'idle' | 'sending' | 'sent' | 'mailto'>('idle')
@@ -120,13 +133,22 @@ export default function SendToSignDialog() {
         orgId: activeOrgId,
         uploadId: stored.uploadId,
         docName: stored.fileName ?? fileName ?? 'document.pdf',
-        senderEmail: user?.email ?? undefined,
+        requesterEmail: user?.email ?? '',
+        recipientEmail: email.trim() || undefined,
       })
-      if (!req.ok || !req.id) {
+      if (!req.ok || !req.requestId) {
         setError(req.error ?? 'Could not create the signing link.')
         return
       }
-      setMinted({ id: req.id, link: signRequestLink(req.id), docName: stored.fileName ?? 'document.pdf' })
+      const recipient = req.parties?.find((p) => p.role === 'recipient')
+      const requester = req.parties?.find((p) => p.role === 'requester')
+      setMinted({
+        id: req.requestId,
+        certId: req.certId ?? null,
+        recipientLink: signRequestLink(recipient?.token ?? ''),
+        requesterLink: requester ? signRequestLink(requester.token) : null,
+        docName: stored.fileName ?? 'document.pdf',
+      })
       refreshCredits()
       refreshFreeToken()
       refreshList()
@@ -138,7 +160,7 @@ export default function SendToSignDialog() {
   async function onCopyLink() {
     if (!minted) return
     try {
-      await navigator.clipboard.writeText(minted.link)
+      await navigator.clipboard.writeText(minted.recipientLink)
       setCopied(true)
       window.setTimeout(() => setCopied(false), 1800)
     } catch {
@@ -168,7 +190,7 @@ export default function SendToSignDialog() {
       }
       const res = await sendSignRequestEmail(supabase, {
         to,
-        link: minted.link,
+        link: minted.recipientLink,
         docName: minted.docName,
         senderName: user?.email ?? undefined,
         bytes,
@@ -178,26 +200,12 @@ export default function SendToSignDialog() {
         refreshList()
       } else if (res.code === 'not_configured') {
         // No email provider on the server — open a prefilled draft instead.
-        window.location.href = signRequestMailto({ to, docName: minted.docName, link: minted.link })
+        window.location.href = signRequestMailto({ to, docName: minted.docName, link: minted.recipientLink })
         setEmailState('mailto')
       } else {
         setEmailState('idle')
         setError(res.error ?? 'Could not send the email.')
       }
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function onOpenSigned(req: SignRequest) {
-    if (busy || !req.signed_storage_path) return
-    setBusy(true)
-    setError(null)
-    try {
-      await openSignedCopy(supabase, req.signed_storage_path, req.doc_name)
-      close()
-    } catch (e) {
-      setError((e as Error).message)
     } finally {
       setBusy(false)
     }
@@ -235,7 +243,8 @@ export default function SendToSignDialog() {
         <div className="space-y-4 p-5">
           <p className="text-xs text-slate-500">
             Store this PDF online and get a link that opens it ready to sign — no account needed on their side.
-            The stored copy uses your free PDF token (or one purchased token) and the token comes back when you delete it.
+            Both you and your recipient sign (in any order); every action is logged to a tamper-evident
+            certificate. The stored copy uses your free PDF token (or one purchased token), returned when you delete it.
           </p>
 
           {!signedIn ? (
@@ -304,7 +313,7 @@ export default function SendToSignDialog() {
                     <div className="mt-2 flex items-center gap-2">
                       <input
                         readOnly
-                        value={minted.link}
+                        value={minted.recipientLink}
                         onFocus={(e) => e.currentTarget.select()}
                         className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-2 text-xs text-slate-700"
                       />
@@ -315,6 +324,28 @@ export default function SendToSignDialog() {
                       >
                         {copied ? '✓ Copied' : 'Copy link'}
                       </button>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-3">
+                      {minted.requesterLink && (
+                        <a
+                          href={minted.requesterLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-orange-700 hover:text-orange-800"
+                        >
+                          ✍ Sign your part →
+                        </a>
+                      )}
+                      {minted.certId && (
+                        <a
+                          href={certLink(minted.certId)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-700"
+                        >
+                          🔏 View certificate
+                        </a>
+                      )}
                     </div>
                   </div>
                 ) : canStore ? (
@@ -387,40 +418,42 @@ export default function SendToSignDialog() {
                   <p className="text-xs text-slate-400">None yet.</p>
                 ) : (
                   <ul className="space-y-2">
-                    {requests.map((r) => (
-                      <li key={r.id} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-xs font-medium text-slate-700">{r.doc_name || 'document.pdf'}</span>
-                          <span className="block text-[10px] text-slate-400">
-                            {r.recipient_email ? `to ${r.recipient_email} · ` : ''}{new Date(r.created_at).toLocaleDateString()}
+                    {requests.map((r) => {
+                      const ui = STATUS_UI[r.status] ?? STATUS_UI.pending
+                      const done = r.status === 'completed' || r.status === 'signed'
+                      return (
+                        <li key={r.id} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-xs font-medium text-slate-700">{r.doc_name || 'document.pdf'}</span>
+                            <span className="block text-[10px] text-slate-400">
+                              {r.recipient_email ? `to ${r.recipient_email} · ` : ''}{new Date(r.created_at).toLocaleDateString()}
+                            </span>
                           </span>
-                        </span>
-                        {r.status === 'signed' ? (
-                          <>
-                            <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">Signed</span>
-                            <button
-                              onClick={() => onOpenSigned(r)}
-                              disabled={busy}
-                              className="shrink-0 rounded-md bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-700 disabled:opacity-50"
+                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${ui.cls}`}>{ui.label}</span>
+                          {r.cert_id && (
+                            <a
+                              href={certLink(r.cert_id)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="shrink-0 rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-black"
+                              title="Open the tamper-evident certificate"
                             >
-                              Open
+                              Certificate
+                            </a>
+                          )}
+                          {!done && (
+                            <button
+                              onClick={() => onRevoke(r)}
+                              disabled={busy}
+                              className="shrink-0 rounded-md px-2 py-1.5 text-xs font-medium text-slate-400 hover:text-rose-600 disabled:opacity-50"
+                              title="Revoke this signing request"
+                            >
+                              Revoke
                             </button>
-                          </>
-                        ) : (
-                          <span className="shrink-0 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600">Pending</span>
-                        )}
-                        {r.status === 'pending' && (
-                          <button
-                            onClick={() => onRevoke(r)}
-                            disabled={busy}
-                            className="shrink-0 rounded-md px-2 py-1.5 text-xs font-medium text-slate-400 hover:text-rose-600 disabled:opacity-50"
-                            title="Revoke this signing link"
-                          >
-                            Revoke
-                          </button>
-                        )}
-                      </li>
-                    ))}
+                          )}
+                        </li>
+                      )
+                    })}
                   </ul>
                 )}
               </div>
