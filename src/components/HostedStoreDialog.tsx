@@ -225,7 +225,7 @@ export default function HostedStoreDialog() {
                       disabled={busy}
                       className="mt-3 w-full rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50"
                     >
-                      {busy ? 'Backing up…' : justStored ? '✓ Backed up (1 token used)' : 'Back up this PDF online (1 token)'}
+                      {busy ? 'Backing up…' : justStored ? '✓ Backed up' : `Back up this PDF online${freeToken === 'available' ? '' : ' (1 token)'}`}
                     </button>
                   ) : freeToken === null ? null : (
                     <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">

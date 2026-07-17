@@ -381,6 +381,19 @@ export async function buildAnnotatedPdfBytes(
         }
         case 'sigfield': {
           if (a.signed) {
+            // A signed box that came from a flattened/exported PDF (locked) has
+            // the "Sign here • Name • Date" caption already baked into the page —
+            // paint the box white first so the signature replaces it, not sits
+            // on top of it.
+            if (a.locked) {
+              page.drawRectangle({
+                x: sx(a.x),
+                y: toY(a.y + a.height),
+                width: sw(a.width),
+                height: sw(a.height),
+                color: hexToPdfRgb('#ffffff')
+              })
+            }
             // Bake the signature image, contained inside the box (matches the
             // on-screen fit). Baseline of the box's bottom edge is a.y + height.
             const img = a.signed.src.startsWith('data:image/png')

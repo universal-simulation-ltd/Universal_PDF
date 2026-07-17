@@ -13,6 +13,7 @@ import {
   type SignRequest,
 } from '@unisim/sdk'
 import { usePdfStore } from '../stores/pdfStore'
+import { useAnnotationStore } from '../stores/annotationStore'
 import { storeCurrentPdf, currentPdfBytes } from '../lib/hostedStore'
 import {
   signRequestLink,
@@ -44,6 +45,9 @@ export default function SendToSignDialog() {
   const setOpen = usePdfStore((s) => s.setSendToSignOpen)
   const doc = usePdfStore((s) => s.doc)
   const fileName = usePdfStore((s) => s.fileName)
+  // A sign request must have at least one "Sign here" box so the signer knows
+  // where to sign — gate the store step on it.
+  const hasSignHereBox = useAnnotationStore((s) => s.annotations.some((a) => a.type === 'sigfield'))
 
   const { supabase, session, activeOrgId } = useUniversal()
   const { user } = useUser()
@@ -310,6 +314,15 @@ export default function SendToSignDialog() {
 
                 {!doc ? (
                   <p className="mt-2 text-xs text-slate-500">Open a PDF first.</p>
+                ) : !minted && !hasSignHereBox ? (
+                  <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                    <p className="text-sm font-medium text-amber-900">Add a “Sign here” box first</p>
+                    <p className="mt-1 text-xs text-amber-800">
+                      Every sign request needs at least one signature box so the signer knows where to sign.
+                      Open the <strong>Sign ▾</strong> menu → <strong>Place signature box</strong> and drop one where each
+                      person should sign, then come back here.
+                    </p>
+                  </div>
                 ) : minted ? (
                   <div className="mt-3">
                     <p className="text-xs text-slate-500">Anyone with this link can open and sign <strong>{minted.docName}</strong> (expires in 30 days, or when you delete the stored copy):</p>
@@ -358,7 +371,7 @@ export default function SendToSignDialog() {
                     disabled={busy}
                     className="mt-3 w-full rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50"
                   >
-                    {busy ? 'Storing…' : 'Store online & create sign link (1 token)'}
+                    {busy ? 'Storing…' : `Store online & create sign link${freeToken === 'available' ? '' : ' (1 token)'}`}
                   </button>
                 ) : freeToken === null ? null : (
                   <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">

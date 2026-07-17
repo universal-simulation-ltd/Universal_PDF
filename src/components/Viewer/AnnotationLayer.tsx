@@ -356,7 +356,10 @@ function SigField({
         width={a.width}
         height={a.height}
         cornerRadius={radius}
-        fill={decorated ? 'rgba(234,88,12,0.06)' : 'rgba(255,255,255,0.01)'}
+        // A signed box that came from a flattened/exported PDF (locked) has the
+        // "Sign here • Name • Date" caption baked into the page beneath it —
+        // paint the box opaque white so the signature replaces it cleanly.
+        fill={decorated ? 'rgba(234,88,12,0.06)' : (a.signed && locked ? '#ffffff' : 'rgba(255,255,255,0.01)')}
         stroke={decorated ? '#ea580c' : undefined}
         strokeWidth={decorated ? stroke : 0}
         dash={decorated ? [6 / scale, 4 / scale] : undefined}

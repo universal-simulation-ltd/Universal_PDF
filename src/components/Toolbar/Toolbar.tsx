@@ -411,7 +411,7 @@ export function ToolbarDesktopTools() {
   }
 
   return (
-    <div className="hidden md:flex items-center gap-1 text-white shrink-0 [&>*]:shrink-0">
+    <div className="hidden lg:flex items-center gap-1 text-white shrink-0 [&>*]:shrink-0">
       {/* Select / Hand with options panel */}
       <div ref={selectGroupRef} className="relative flex items-start">
         {toolBtn(
@@ -598,7 +598,7 @@ export function ToolbarDesktopActions() {
 
   return (
     <>
-      <div className="hidden md:flex items-center gap-2 shrink-0 [&>*]:shrink-0">
+      <div className="hidden lg:flex items-center gap-2 shrink-0 [&>*]:shrink-0">
         <SignatureMenu />
         {/* Present moved onto the bottom zoom bar (next to − % +). */}
         <button
@@ -856,7 +856,7 @@ export function ToolbarMobile() {
   }
 
   return (
-    <div className="md:hidden">
+    <div className="lg:hidden">
       {/* Selection action bar — text size controls only. Deletion is handled by
           the floating bin icon next to the selected object (no duplicate pill). */}
       {textSelected && openPanel === null && (
@@ -958,7 +958,7 @@ export function ToolbarMobile() {
 export default function Toolbar() {
   return (
     <>
-      <div className="hidden md:block bg-slate-800 text-white border-b border-slate-700">
+      <div className="hidden lg:block bg-slate-800 text-white border-b border-slate-700">
         <div className="mx-auto w-full max-w-7xl flex flex-wrap items-center gap-1 px-4 py-2">
           <ToolbarDesktopTools />
           <div className="ml-auto flex items-center gap-2">
