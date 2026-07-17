@@ -246,6 +246,9 @@ export default function SendToSignDialog() {
             Both you and your recipient sign (in any order); every action is logged to a tamper-evident
             certificate. The stored copy uses your free PDF token (or one purchased token), returned when you delete it.
           </p>
+          <p className="text-[11px] text-slate-400">
+            Signatures are legally binding to the extent your jurisdiction and local laws allow.
+          </p>
 
           {!signedIn ? (
             /* ── Step 0: create / sign in with a Universal ID ── */

@@ -174,7 +174,8 @@ export default function SignCertificatePage({ certId }: { certId: string }) {
         </div>
 
         <p className="px-1 text-center text-[11px] text-slate-400">
-          Universal PDF · Universal Simulation. This certificate is a tamper-evident record of a simple electronic signature; it is not legal advice.
+          Universal PDF · Universal Simulation. A tamper-evident record of an electronic signature — legally
+          binding to the extent your jurisdiction and local laws allow. This is not legal advice.
         </p>
       </div>
     </main>
