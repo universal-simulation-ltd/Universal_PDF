@@ -287,8 +287,10 @@ function SigField({
   const parts: string[] = []
   if (a.requireName) parts.push('Name')
   if (a.requireDate) parts.push('Date')
-  const caption = 'Sign here' + (parts.length ? '\n' + parts.join('  ·  ') : '')
+  const caption = ['Sign here', ...parts].join(' • ')
   const fs = Math.min(a.height * 0.26, 16 / scale)
+  // Inset the caption from the box's top-left corner.
+  const pad = Math.min(8 / scale, a.height * 0.12, a.width * 0.06)
   const fit = a.signed ? containRect(a.width, a.height, a.signed.width, a.signed.height) : null
   return (
     <Group {...common} x={a.x} y={a.y}>
@@ -316,16 +318,14 @@ function SigField({
       ) : (
         <Text
           listening={false}
-          x={0}
-          y={0}
-          width={a.width}
-          height={a.height}
+          x={pad}
+          y={pad}
           text={caption}
-          align="center"
-          verticalAlign="middle"
+          align="left"
+          verticalAlign="top"
+          wrap="none"
           fontStyle="bold"
           fontSize={fs}
-          lineHeight={1.3}
           fill="#c2410c"
           fontFamily={FONT_STACK.sans}
         />

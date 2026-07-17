@@ -407,17 +407,15 @@ export async function buildAnnotatedPdfBytes(
             const parts: string[] = []
             if (a.requireName) parts.push('Name')
             if (a.requireDate) parts.push('Date')
-            const label = sanitizeForWinAnsi(
-              'Sign here' + (parts.length ? '  (' + parts.join(' · ') + ')' : '')
-            )
+            const label = sanitizeForWinAnsi(['Sign here', ...parts].join(' • '))
             const size = sw(Math.min(a.height * 0.28, 18))
-            // `size` and `textW` are in PDF units; the box is in canvas units
-            // (canvas = pdf * scale). Centre in canvas space, then map to PDF.
-            const textW = fontSans.widthOfTextAtSize(label, size)
-            const cxCanvas = a.x + a.width / 2 - (textW * scale) / 2
-            const baselineCanvasY = a.y + a.height / 2 + (size * scale) * 0.35
+            // Inset from the box's top-left corner. The box is in canvas units
+            // (canvas = pdf * scale); `size` is PDF units, so scale it back up to
+            // canvas space when positioning the baseline.
+            const padCanvas = Math.min(8, a.height * 0.12, a.width * 0.06)
+            const baselineCanvasY = a.y + padCanvas + size * scale * 0.85
             page.drawText(label, {
-              x: sx(cxCanvas),
+              x: sx(a.x + padCanvas),
               y: toY(baselineCanvasY),
               size,
               font: fontSans,
