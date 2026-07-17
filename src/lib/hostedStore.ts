@@ -26,8 +26,10 @@ function safeStem(name: string | null): string {
   return slug || 'document'
 }
 
-/** Build the current PDF (annotations + form values baked in) as bytes. */
-async function currentPdfBytes(): Promise<{ bytes: Uint8Array; fileName: string }> {
+/** Build the current PDF (annotations + form values baked in) as bytes — the
+ *  same flattened output the user would download. Exported so "Send to sign"
+ *  can attach the identical bytes to its email. */
+export async function currentPdfBytes(): Promise<{ bytes: Uint8Array; fileName: string }> {
   const { sourceBytes, fileName } = usePdfStore.getState()
   if (!sourceBytes) throw new Error('No PDF is open.')
   const annotations = useAnnotationStore.getState().annotations
@@ -40,6 +42,11 @@ export interface StoreResult {
   ok: boolean
   error?: string
   creditsRemaining?: number
+  /** The hosted_uploads ledger id — "Send to sign" mints its request against
+   *  this. Present on a successful store. */
+  uploadId?: string
+  storagePath?: string
+  fileName?: string
 }
 
 /** Spend one token and store the current PDF in the cloud. Reserves the token
@@ -78,7 +85,13 @@ export async function storeCurrentPdf(supabase: Supabase, orgId: string): Promis
   // 3) Point the ledger row at the real object path.
   await supabase.from('hosted_uploads').update({ storage_path: path }).eq('id', consumed.upload_id)
 
-  return { ok: true, creditsRemaining: consumed.credits }
+  return {
+    ok: true,
+    creditsRemaining: consumed.credits,
+    uploadId: consumed.upload_id,
+    storagePath: path,
+    fileName,
+  }
 }
 
 /** Delete a hosted PDF (storage object first, then the ledger row + token
@@ -90,6 +103,22 @@ export async function deleteHostedPdf(supabase: Supabase, upload: HostedUpload):
   const res = await refundHostedUpload(supabase, upload.id)
   if (!res.ok) return { ok: false, error: res.error ?? 'Could not refund the token.' }
   return { ok: true, creditsRemaining: res.credits }
+}
+
+/** Open a signed copy filed by a sign-request recipient (it lives under
+ *  …/pdf/signed/… with no hosted_uploads ledger row — it rides on the original
+ *  upload's token). The sender is an org member, so the bucket's member-read
+ *  policy allows the download. */
+export async function openSignedCopy(
+  supabase: Supabase,
+  storagePath: string,
+  docName?: string | null,
+): Promise<void> {
+  const { data, error } = await supabase.storage.from(HOSTED_BUCKET).download(storagePath)
+  if (error || !data) throw new Error(error?.message ?? 'Could not download the signed PDF.')
+  const base = (docName ?? 'document.pdf').replace(/\.pdf$/i, '')
+  const file = new File([data], `${base}-signed.pdf`, { type: 'application/pdf' })
+  await usePdfStore.getState().loadFile(file)
 }
 
 /** Open a hosted PDF back into the editor (download → loadFile). */

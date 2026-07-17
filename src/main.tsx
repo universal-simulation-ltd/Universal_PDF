@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { UniversalProvider } from '@unisim/sdk'
 import App from './App'
 import SignMobilePage from './components/Signature/SignMobilePage'
+import SignRequestPage from './components/Signature/SignRequestPage'
 import UsageTracker from './UsageTracker'
 import ErrorBoundary from './components/ErrorBoundary'
 import { usePdfStore } from './stores/pdfStore'
@@ -35,14 +36,20 @@ const universalConfig = {
 
 // `?sign=<token>` is the phone-side of the sign-on-mobile handoff (opened by
 // scanning the QR in the signature pad) — render just the signing page.
-const signToken = new URLSearchParams(window.location.search).get('sign')
+// `?signdoc=<token>` is a "Send to sign" recipient link — the full editor with
+// the sender's stored PDF loaded and a sign-and-return banner.
+const params = new URLSearchParams(window.location.search)
+const signToken = params.get('sign')
+const signDocToken = params.get('signdoc')
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
       <UniversalProvider config={universalConfig}>
         <UsageTracker />
-        {signToken ? <SignMobilePage token={signToken} /> : <App />}
+        {signToken ? <SignMobilePage token={signToken} />
+          : signDocToken ? <SignRequestPage token={signDocToken} />
+          : <App />}
       </UniversalProvider>
     </ErrorBoundary>
   </React.StrictMode>

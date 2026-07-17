@@ -60,6 +60,7 @@ export default function ExportModal({ open, onClose }: Props) {
   const doc = usePdfStore((s) => s.doc)
   const isXfa = usePdfStore((s) => s.isXfa)
   const setPreviewOpen = usePdfStore((s) => s.setPreviewOpen)
+  const setSendToSignOpen = usePdfStore((s) => s.setSendToSignOpen)
   const annotations = useAnnotationStore((s) => s.annotations)
   const formValues = useFormStore((s) => s.values)
 
@@ -158,6 +159,11 @@ export default function ExportModal({ open, onClose }: Props) {
 
   function openPrintPreview() {
     setPreviewOpen(true)
+    onClose()
+  }
+
+  function openSendToSign() {
+    setSendToSignOpen(true)
     onClose()
   }
 
@@ -353,6 +359,22 @@ export default function ExportModal({ open, onClose }: Props) {
                 Print
               </button>
             </div>
+
+            {/* Hand the document to someone else to sign — stores it online
+                against a Universal ID and mints a signing link (its own
+                dialog). Redactions must be confirmed first: the stored copy is
+                the same flattened bytes as the download. */}
+            <button
+              onClick={openSendToSign}
+              disabled={!ready || !redactConfirmed}
+              className="mt-2 w-full px-4 py-2.5 border border-orange-300 bg-orange-50 hover:bg-orange-100 disabled:opacity-50 disabled:cursor-not-allowed text-orange-800 rounded-lg text-sm font-medium flex items-center justify-center gap-2"
+            >
+              <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M3 10.5c3-4.5 5-4.5 6 0s3 4.5 5-1.5" />
+                <path d="M13 4l3 3-6.5 6.5L6 14l.5-3.5L13 4z" />
+              </svg>
+              Send to sign — get a signing link or email it
+            </button>
           </>
         )}
 

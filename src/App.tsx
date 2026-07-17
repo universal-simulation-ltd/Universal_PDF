@@ -17,6 +17,7 @@ import ProductLogo from './components/Header/ProductLogo'
 import ToolbarUserProfile from './components/Header/ToolbarUserProfile'
 import FileMenu from './components/Toolbar/FileMenu'
 import HostedStoreDialog from './components/HostedStoreDialog'
+import SendToSignDialog from './components/SendToSignDialog'
 import MobileWelcomeToast from './components/Onboarding/MobileWelcomeToast'
 import { UniversalAppsNavBar, UniversalBar, ChangelogMenu } from '@unisim/sdk'
 
@@ -306,6 +307,7 @@ export default function App() {
       <LivePreview />
       <PresentMode />
       <HostedStoreDialog />
+      <SendToSignDialog />
     </div>
   )
 }
