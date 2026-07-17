@@ -406,11 +406,40 @@ export async function buildAnnotatedPdfBytes(
               width: sw(fw),
               height: sw(fh)
             })
+          } else {
+            // Unsigned request box: bake a visible outline + caption so it's
+            // shown in any viewer (Acrobat, browsers, print). It's ALSO embedded
+            // in the catalog below, so Universal PDF re-detects it as a
+            // click-to-sign box — locked in place (non-movable) so it can't drift
+            // off the baked outline.
+            const orange = hexToPdfRgb('#ea580c')
+            page.drawRectangle({
+              x: sx(a.x),
+              y: toY(a.y + a.height),
+              width: sw(a.width),
+              height: sw(a.height),
+              borderColor: orange,
+              borderWidth: sw(1.5),
+              opacity: 0
+            })
+            const parts: string[] = []
+            if (a.requireName) parts.push('Name')
+            if (a.requireDate) parts.push('Date')
+            const label = sanitizeForWinAnsi(['Sign here', ...parts].join(' • '))
+            const size = sw(Math.min(a.height * 0.28, 18))
+            // Inset from the box's top-left corner. The box is in canvas units
+            // (canvas = pdf * scale); `size` is PDF units, so scale it back up to
+            // canvas space when positioning the baseline.
+            const padCanvas = Math.min(8, a.height * 0.12, a.width * 0.06)
+            const baselineCanvasY = a.y + padCanvas + size * scale * 0.85
+            page.drawText(label, {
+              x: sx(a.x + padCanvas),
+              y: toY(baselineCanvasY),
+              size,
+              font: fontSans,
+              color: hexToPdfRgb('#c2410c')
+            })
           }
-          // Unsigned request boxes are NOT baked into the page — they're
-          // embedded in the catalog below so they reopen as interactive,
-          // movable "click to sign" boxes. Baking an outline would leave a
-          // ghost behind once the reopened box is moved.
           break
         }
       }
@@ -485,7 +514,11 @@ export async function readEmbeddedSigFields(
           width: v.width,
           height: v.height,
           requireName: !!v.requireName,
-          requireDate: !!v.requireDate
+          requireDate: !!v.requireDate,
+          // The outline is baked into this exported page, so the re-detected box
+          // is locked in place — click-to-sign only. Editing/moving comes from a
+          // `.unipdf` backup, which restores the original unlocked annotation.
+          locked: true
         })
       }
     }
