@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { usePdfStore } from '../../stores/pdfStore'
+import { useCoarsePointer } from '../../hooks/useCoarsePointer'
 import SignatureMenu from '../Signature/SignatureMenu'
 import ExportModal from '../Export/ExportModal'
 import type { Annotation, FontFamily, Tool } from '../../types/annotations'
@@ -635,6 +636,11 @@ export function ToolbarMobile() {
 
   const selectedAnnotation = annotations.find((a) => a.id === selectedId)
   const textSelected = selectedAnnotation?.type === 'text'
+  // On touch, the selected-text size stepper floats next to the text itself
+  // (rendered by AnnotationLayer), so the bottom pill would be a duplicate.
+  // Keep the pill only for narrow non-touch layouts (e.g. a small mouse window
+  // that still uses this mobile toolbar).
+  const coarsePointer = useCoarsePointer()
 
   const [openPanel, setOpenPanel] = useState<Panel>(null)
   const [exportOpen, setExportOpen] = useState(false)
@@ -859,7 +865,7 @@ export function ToolbarMobile() {
     <div className="lg:hidden">
       {/* Selection action bar — text size controls only. Deletion is handled by
           the floating bin icon next to the selected object (no duplicate pill). */}
-      {textSelected && openPanel === null && (
+      {textSelected && openPanel === null && !coarsePointer && (
         <div className="fixed bottom-[68px] left-0 right-0 z-30 flex items-center justify-center gap-2 px-3 pb-2 pointer-events-none">
           <div className="pointer-events-auto inline-flex items-center gap-1 bg-white rounded-full shadow-lg px-1 py-1">
             <button

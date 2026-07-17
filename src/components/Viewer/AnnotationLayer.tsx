@@ -14,6 +14,7 @@ import {
 import type Konva from 'konva'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { useSignatureStore } from '../../stores/signatureStore'
+import { useCoarsePointer } from '../../hooks/useCoarsePointer'
 import { useImage } from '../../lib/useImage'
 import { RedactIcon } from '../icons/RedactIcon'
 import { SIGNATURE_INK, formatSigningDate } from '../../lib/signature'
@@ -445,6 +446,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const setTool = useAnnotationStore((s) => s.setTool)
   const setLineSnap = useAnnotationStore((s) => s.setLineSnap)
   const setStrokeWidth = useAnnotationStore((s) => s.setStrokeWidth)
+  const setFontSize = useAnnotationStore((s) => s.setFontSize)
 
   const activeSignature = useSignatureStore((s) => {
     const id = s.activeId
@@ -505,15 +507,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // arm to be grabbable with a finger — the 9px desktop anchors are fiddly on
   // mobile. The handles themselves render on every device (the Transformer is
   // not viewport-gated); this only makes them finger-sized on touch.
-  const [coarsePointer, setCoarsePointer] = useState(false)
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return
-    const mq = window.matchMedia('(pointer: coarse)')
-    setCoarsePointer(mq.matches)
-    const handler = (e: MediaQueryListEvent) => setCoarsePointer(e.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [])
+  const coarsePointer = useCoarsePointer()
 
   // Abandon a half-finished separate-signature placement if the user switches
   // away from the signature tool before dropping every name/date piece.
@@ -1739,6 +1733,68 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               <path d="M10 11v6M14 11v6" />
             </svg>
           </button>
+        )
+      })()}
+
+      {(() => {
+        // Touch: float the text-size stepper right beside the selected text
+        // rather than pinning it to the bottom of the screen, so the control
+        // sits where the user is already looking. Placement prefers just below
+        // the text, flips above when there's no room (text near the page
+        // bottom), and clamps horizontally so it never runs off the page — and
+        // "below" keeps it clear of the delete affordance at the top-right
+        // corner. Desktop keeps its toolbar control; the mobile Toolbar hides
+        // its bottom pill on coarse pointers so the two never both appear.
+        if (!coarsePointer || draggingId || editingId) return null
+        const selected = annotations.find((a) => a.id === selectedId)
+        if (!selected || selected.type !== 'text') return null
+        const bbox = getAnnotationBBox(selected)
+        const bx = bbox.x * scale
+        const by = bbox.y * scale
+        const bw = bbox.width * scale
+        const bh = bbox.height * scale
+        const CHIP_W = 132
+        const CHIP_H = 40
+        const GAP = 10
+        const left = Math.min(
+          Math.max(bx + bw / 2 - CHIP_W / 2, GAP),
+          Math.max(GAP, width - CHIP_W - GAP)
+        )
+        let top: number
+        if (by + bh + GAP + CHIP_H <= height) {
+          top = by + bh + GAP // below (preferred)
+        } else if (by - CHIP_H - GAP >= 0) {
+          top = by - CHIP_H - GAP // above (text near the page bottom)
+        } else {
+          top = Math.min(Math.max(by + bh + GAP, GAP), Math.max(GAP, height - CHIP_H - GAP))
+        }
+        return (
+          <div
+            onMouseDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            style={{ position: 'absolute', left, top, zIndex: 21 }}
+            className="inline-flex items-center gap-1 bg-white rounded-full shadow-lg border border-slate-300 px-1 py-1"
+          >
+            <button
+              type="button"
+              aria-label="Decrease text size"
+              onClick={(e) => { e.stopPropagation(); setFontSize(Math.max(10, fontSize - 2)) }}
+              className="w-8 h-8 rounded-full hover:bg-slate-100 text-lg font-semibold text-slate-700 leading-none"
+            >
+              −
+            </button>
+            <span className="text-xs font-medium w-10 text-center tabular-nums text-slate-700">
+              {fontSize}px
+            </span>
+            <button
+              type="button"
+              aria-label="Increase text size"
+              onClick={(e) => { e.stopPropagation(); setFontSize(Math.min(48, fontSize + 2)) }}
+              className="w-8 h-8 rounded-full hover:bg-slate-100 text-lg font-semibold text-slate-700 leading-none"
+            >
+              +
+            </button>
+          </div>
         )
       })()}
 
