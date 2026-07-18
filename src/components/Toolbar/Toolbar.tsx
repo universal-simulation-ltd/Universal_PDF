@@ -866,7 +866,7 @@ export function ToolbarMobile() {
       {/* Selection action bar — text size controls only. Deletion is handled by
           the floating bin icon next to the selected object (no duplicate pill). */}
       {textSelected && openPanel === null && !coarsePointer && (
-        <div className="fixed bottom-[68px] left-0 right-0 z-30 flex items-center justify-center gap-2 px-3 pb-2 pointer-events-none">
+        <div className="fixed bottom-[calc(68px_+_env(safe-area-inset-bottom))] left-0 right-0 z-30 flex items-center justify-center gap-2 px-3 pb-2 pointer-events-none">
           <div className="pointer-events-auto inline-flex items-center gap-1 bg-white rounded-full shadow-lg px-1 py-1">
             <button
               onClick={() => setFontSize(Math.max(10, fontSize - 2))}
@@ -893,15 +893,21 @@ export function ToolbarMobile() {
       {openPanel !== null && mobilePanelContent && (
         <div
           ref={mobilePanelRef}
-          className="fixed bottom-[68px] left-1/2 -translate-x-1/2 z-40 bg-white rounded-2xl shadow-xl px-4 py-3 flex items-center gap-2 whitespace-nowrap max-w-[96vw] overflow-x-auto"
+          className="fixed bottom-[calc(68px_+_env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-40 bg-white rounded-2xl shadow-xl px-4 py-3 flex items-center gap-2 whitespace-nowrap max-w-[96vw] overflow-x-auto"
         >
           {mobilePanelContent}
         </div>
       )}
 
       <nav
-        className="fixed bottom-0 left-0 right-0 z-40 h-16 bg-slate-900 border-t border-slate-700 flex items-stretch px-1"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900 border-t border-slate-700 flex items-stretch px-1"
+        style={{
+          // 4rem of button content, with the home-indicator safe-area inset
+          // added *below* it. Setting a fixed h-16 here would make box-sizing
+          // subtract the inset from the content, squishing the buttons.
+          height: 'calc(4rem + env(safe-area-inset-bottom))',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
       >
         {/* Select / Select area / Select text / Hand with + */}
         {mobileBtnWithPlus(
