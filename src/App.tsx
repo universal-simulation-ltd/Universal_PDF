@@ -236,7 +236,7 @@ export default function App() {
           its positioned layers (Konva canvas, annotation/form overlays, the
           zoom menu) stay below the navbar — otherwise they bubble up to the
           root context and can paint over the navbar's open dropdowns. */}
-      <main className={`flex-1 min-h-0 md:pb-0 ${doc ? 'pb-16 relative z-0 isolate' : 'overflow-auto'}`}>
+      <main className={`flex-1 min-h-0 md:pb-0 ${doc ? 'pb-[calc(4rem_+_env(safe-area-inset-bottom))] relative z-0 isolate' : 'overflow-auto'}`}>
         {loading ? (
           <div className="h-full flex items-center justify-center text-slate-500">
             Loading PDF…
