@@ -24,7 +24,19 @@ export type Tool =
 
 type Base = { id: string; pageIndex: number }
 
-export type FontFamily = 'sans' | 'serif' | 'mono'
+export type FontFamily = 'sans' | 'serif' | 'mono' | 'georgia' | 'verdana' | 'comic' | 'impact'
+
+// A styled span within a text annotation. Only the inline style toggles vary
+// per run — colour, size and family stay whole-annotation. An empty/whitespace
+// run is allowed (it carries spaces between styled words).
+export type TextRun = {
+  text: string
+  bold?: boolean
+  italic?: boolean
+  underline?: boolean
+  // A clickable hyperlink covering just this run.
+  link?: string
+}
 
 export type TextAnnotation = Base & {
   type: 'text'
@@ -35,6 +47,21 @@ export type TextAnnotation = Base & {
   fontSize: number
   fontFamily?: FontFamily
   rotation?: number
+  // Whole-annotation style fallback, used when `runs` is absent (legacy text,
+  // or text with a single uniform style). The pill toggles these when the box
+  // is selected but not being edited.
+  bold?: boolean
+  italic?: boolean
+  underline?: boolean
+  // A clickable hyperlink for the whole annotation (fallback, as above). When
+  // set the text is underlined on-screen and a real URI link annotation is
+  // baked over it on export. The font colour is left unchanged.
+  link?: string
+  // When present (and non-empty) this is the styled source of truth: the text
+  // is split into runs each carrying their own bold/italic/underline/link, so
+  // formatting can apply to part of the text. `text` mirrors the concatenation
+  // for search / export fallback / back-compat.
+  runs?: TextRun[]
 }
 
 export type DrawAnnotation = Base & {
