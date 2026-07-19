@@ -2,16 +2,14 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { usePdfStore } from '../../stores/pdfStore'
-import { useCoarsePointer } from '../../hooks/useCoarsePointer'
 import SignatureMenu from '../Signature/SignatureMenu'
 import ExportModal from '../Export/ExportModal'
-import type { Annotation, FontFamily, Tool } from '../../types/annotations'
+import { FONT_DEFS } from '../../lib/fonts'
+import type { Annotation, Tool } from '../../types/annotations'
 
-const FONT_OPTIONS: { id: FontFamily; label: string; preview: string; css: string }[] = [
-  { id: 'sans', label: 'Sans', preview: 'Aa', css: 'Helvetica, Arial, sans-serif' },
-  { id: 'serif', label: 'Serif', preview: 'Aa', css: '"Times New Roman", Times, serif' },
-  { id: 'mono', label: 'Mono', preview: 'Aa', css: '"Courier New", Courier, monospace' }
-]
+// The always-visible core fonts; the rest (FONT_DEFS) are revealed by the "+"
+// more-fonts button in the text options.
+const FONT_OPTIONS = FONT_DEFS.filter((f) => !f.extended)
 
 const LONG_PRESS_MS = 450
 
@@ -254,6 +252,8 @@ export function ToolbarDesktopTools() {
   const setUploadedImageSrc = useAnnotationStore((s) => s.setUploadedImageSrc)
 
   const [openPanel, setOpenPanel] = useState<Panel>(null)
+  // Reveals the extra built-in fonts (Georgia, Verdana, …) in the text panel.
+  const [moreFonts, setMoreFonts] = useState(false)
 
   const selectGroupRef = useRef<HTMLDivElement>(null)
   const textGroupRef = useRef<HTMLDivElement>(null)
@@ -473,7 +473,7 @@ export function ToolbarDesktopTools() {
             <span className="text-xs text-slate-300 w-9 tabular-nums text-right">{fontSize}px</span>
             <div className="w-px h-6 bg-slate-600 mx-1" />
             <span className="text-xs text-slate-400">Font</span>
-            {FONT_OPTIONS.map((f) => (
+            {(moreFonts ? FONT_DEFS : FONT_OPTIONS).map((f) => (
               <button
                 key={f.id}
                 onClick={() => setFontFamily(f.id)}
@@ -486,6 +486,17 @@ export function ToolbarDesktopTools() {
                 {f.preview}
               </button>
             ))}
+            <button
+              onClick={() => setMoreFonts((v) => !v)}
+              title={moreFonts ? 'Fewer fonts' : 'More fonts'}
+              aria-label={moreFonts ? 'Show fewer fonts' : 'Show more fonts'}
+              aria-expanded={moreFonts}
+              className={`w-8 h-8 rounded text-lg leading-none transition-colors ${
+                moreFonts ? 'bg-orange-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-100'
+              }`}
+            >
+              {moreFonts ? '−' : '+'}
+            </button>
           </div>
           </FloatingPanel>
         )}
@@ -620,7 +631,6 @@ export function ToolbarMobile() {
   const tool = useAnnotationStore((s) => s.tool)
   const color = useAnnotationStore((s) => s.color)
   const strokeWidth = useAnnotationStore((s) => s.strokeWidth)
-  const annotations = useAnnotationStore((s) => s.annotations)
   const selectedId = useAnnotationStore((s) => s.selectedId)
   const setTool = useAnnotationStore((s) => s.setTool)
   const setColor = useAnnotationStore((s) => s.setColor)
@@ -630,20 +640,16 @@ export function ToolbarMobile() {
   const canUndo = useAnnotationStore((s) => s.past.length > 0)
   const fontSize = useAnnotationStore((s) => s.fontSize)
   const setFontSize = useAnnotationStore((s) => s.setFontSize)
+  const fontFamily = useAnnotationStore((s) => s.fontFamily)
+  const setFontFamily = useAnnotationStore((s) => s.setFontFamily)
   const setUploadedImageSrc = useAnnotationStore((s) => s.setUploadedImageSrc)
 
   const sourceBytes = usePdfStore((s) => s.sourceBytes)
 
-  const selectedAnnotation = annotations.find((a) => a.id === selectedId)
-  const textSelected = selectedAnnotation?.type === 'text'
-  // On touch, the selected-text size stepper floats next to the text itself
-  // (rendered by AnnotationLayer), so the bottom pill would be a duplicate.
-  // Keep the pill only for narrow non-touch layouts (e.g. a small mouse window
-  // that still uses this mobile toolbar).
-  const coarsePointer = useCoarsePointer()
-
   const [openPanel, setOpenPanel] = useState<Panel>(null)
   const [exportOpen, setExportOpen] = useState(false)
+  // Reveals the extra built-in fonts (Georgia, Verdana, …) in the text panel.
+  const [moreFonts, setMoreFonts] = useState(false)
 
   const mobilePanelRef = useRef<HTMLDivElement>(null)
 
@@ -737,7 +743,7 @@ export function ToolbarMobile() {
     }
     if (openPanel === 'text') {
       return (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <span className="text-xs text-slate-500 font-medium">Size</span>
           <button
             onClick={() => setFontSize(Math.max(10, fontSize - 2))}
@@ -753,6 +759,32 @@ export function ToolbarMobile() {
             className="w-8 h-8 rounded-full hover:bg-slate-100 text-lg font-semibold text-slate-700"
           >
             +
+          </button>
+          <div className="w-px h-7 bg-slate-200 mx-1" />
+          <span className="text-xs text-slate-500 font-medium">Font</span>
+          {(moreFonts ? FONT_DEFS : FONT_OPTIONS).map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setFontFamily(f.id)}
+              title={f.label}
+              style={{ fontFamily: f.css }}
+              className={`px-2.5 h-9 rounded-lg text-sm transition-colors ${
+                fontFamily === f.id ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              {f.preview}
+            </button>
+          ))}
+          <button
+            onClick={() => setMoreFonts((v) => !v)}
+            title={moreFonts ? 'Fewer fonts' : 'More fonts'}
+            aria-label={moreFonts ? 'Show fewer fonts' : 'Show more fonts'}
+            aria-expanded={moreFonts}
+            className={`w-9 h-9 rounded-lg text-lg leading-none transition-colors ${
+              moreFonts ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            {moreFonts ? '−' : '+'}
           </button>
         </div>
       )
@@ -863,31 +895,10 @@ export function ToolbarMobile() {
 
   return (
     <div className="lg:hidden">
-      {/* Selection action bar — text size controls only. Deletion is handled by
-          the floating bin icon next to the selected object (no duplicate pill). */}
-      {textSelected && openPanel === null && !coarsePointer && (
-        <div className="fixed bottom-[calc(68px_+_env(safe-area-inset-bottom))] left-0 right-0 z-30 flex items-center justify-center gap-2 px-3 pb-2 pointer-events-none">
-          <div className="pointer-events-auto inline-flex items-center gap-1 bg-white rounded-full shadow-lg px-1 py-1">
-            <button
-              onClick={() => setFontSize(Math.max(10, fontSize - 2))}
-              className="w-8 h-8 rounded-full hover:bg-slate-100 text-lg font-semibold text-slate-700"
-              aria-label="Decrease text size"
-            >
-              −
-            </button>
-            <span className="text-xs font-medium w-10 text-center tabular-nums text-slate-700">
-              {fontSize}px
-            </span>
-            <button
-              onClick={() => setFontSize(Math.min(48, fontSize + 2))}
-              className="w-8 h-8 rounded-full hover:bg-slate-100 text-lg font-semibold text-slate-700"
-              aria-label="Increase text size"
-            >
-              +
-            </button>
-          </div>
-        </div>
-      )}
+      {/* The selected-text controls (size + bold/italic/underline/link) float
+          next to the text itself, drawn by AnnotationLayer — so there's no
+          bottom size-pill here. Deletion is the floating bin icon by the
+          object. */}
 
       {/* Expandable panel above toolbar */}
       {openPanel !== null && mobilePanelContent && (

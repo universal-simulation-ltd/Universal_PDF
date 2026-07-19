@@ -1,7 +1,9 @@
-import { PDFDocument, StandardFonts, LineCapStyle, degrees, PDFName, PDFHexString } from 'pdf-lib'
+import { PDFDocument, StandardFonts, LineCapStyle, degrees, PDFName, PDFHexString, PDFString, PDFArray, type PDFFont } from 'pdf-lib'
 import type { Annotation, RedactAnnotation, SignatureFieldAnnotation } from '../types/annotations'
 import type { FormFieldValue } from '../stores/formStore'
 import { hexToPdfRgb } from './colors'
+import { fontBase, type PdfBaseFont } from './fonts'
+import { effectiveRuns } from './textRuns'
 import { pdfjsLib, type PDFDocumentProxy } from './pdfjs'
 
 // Custom PDF catalog key carrying the unsigned signature-request boxes, so a
@@ -197,11 +199,26 @@ export async function buildAnnotatedPdfBytes(
     pdf = sourcePdf
   }
 
-  const fontSans = await pdf.embedFont(StandardFonts.Helvetica)
-  const fontSerif = await pdf.embedFont(StandardFonts.TimesRoman)
-  const fontMono = await pdf.embedFont(StandardFonts.Courier)
-  const pickFont = (fam?: 'sans' | 'serif' | 'mono') =>
-    fam === 'serif' ? fontSerif : fam === 'mono' ? fontMono : fontSans
+  // Standard-14 variants for each base family, indexed [normal, bold, italic,
+  // boldItalic]. Text annotations map to their nearest base (see fonts.ts) and
+  // then to the bold/italic variant for the on-screen toggles. Embedded lazily
+  // and cached — the standard fonts carry no glyph data so this is cheap.
+  const STD_VARIANTS: Record<PdfBaseFont, [StandardFonts, StandardFonts, StandardFonts, StandardFonts]> = {
+    helvetica: [StandardFonts.Helvetica, StandardFonts.HelveticaBold, StandardFonts.HelveticaOblique, StandardFonts.HelveticaBoldOblique],
+    times: [StandardFonts.TimesRoman, StandardFonts.TimesRomanBold, StandardFonts.TimesRomanItalic, StandardFonts.TimesRomanBoldItalic],
+    courier: [StandardFonts.Courier, StandardFonts.CourierBold, StandardFonts.CourierOblique, StandardFonts.CourierBoldOblique]
+  }
+  const fontCache = new Map<StandardFonts, PDFFont>()
+  const pickFont = async (base: PdfBaseFont, bold?: boolean, italic?: boolean): Promise<PDFFont> => {
+    const idx = bold && italic ? 3 : bold ? 1 : italic ? 2 : 0
+    const std = STD_VARIANTS[base][idx]
+    let f = fontCache.get(std)
+    if (!f) {
+      f = await pdf.embedFont(std)
+      fontCache.set(std, f)
+    }
+    return f
+  }
   const pages = pdf.getPages()
 
   const byPage = new Map<number, Annotation[]>()
@@ -236,19 +253,66 @@ export async function buildAnnotatedPdfBytes(
         case 'text': {
           const rot = a.rotation ?? 0
           const rad = (rot * Math.PI) / 180
-          const body = sanitizeForWinAnsi(a.text)
-          if (body) {
-            const blKx = a.x
-            const blKy = a.y + a.fontSize * 0.8
-            const [bx, by] = rotatePoint(blKx, blKy, a.x, a.y, rad)
-            page.drawText(body, {
-              x: sx(bx),
-              y: toY(by),
-              size: sw(a.fontSize),
-              font: pickFont(a.fontFamily),
-              color: hexToPdfRgb(a.color),
-              rotate: rot ? degrees(-rot) : undefined
-            })
+          // Draw each styled run in sequence, advancing x by the run's own
+          // (variant-specific) width so mixed bold/italic/underline/link within
+          // one text box bake correctly.
+          let offset = 0 // canvas-space advance from a.x
+          for (const run of effectiveRuns(a)) {
+            const body = sanitizeForWinAnsi(run.text)
+            const font = await pickFont(fontBase(a.fontFamily), run.bold, run.italic)
+            const runW = body ? font.widthOfTextAtSize(body, a.fontSize) : 0
+            if (body) {
+              const rx = a.x + offset
+              const blKy = a.y + a.fontSize * 0.8
+              const [bx, by] = rotatePoint(rx, blKy, a.x, a.y, rad)
+              page.drawText(body, {
+                x: sx(bx),
+                y: toY(by),
+                size: sw(a.fontSize),
+                font,
+                color: hexToPdfRgb(a.color),
+                rotate: rot ? degrees(-rot) : undefined
+              })
+              // pdf-lib has no underline; a link also shows as an underline (its
+              // colour is deliberately left as the text colour). Draw the rule
+              // just below the baseline, rotated with the text.
+              if (run.underline || run.link) {
+                const uy = a.y + a.fontSize * 0.98
+                const [ux1, uy1] = rotatePoint(rx, uy, a.x, a.y, rad)
+                const [ux2, uy2] = rotatePoint(rx + runW, uy, a.x, a.y, rad)
+                page.drawLine({
+                  start: { x: sx(ux1), y: toY(uy1) },
+                  end: { x: sx(ux2), y: toY(uy2) },
+                  thickness: sw(Math.max(0.75, a.fontSize * 0.06)),
+                  color: hexToPdfRgb(a.color)
+                })
+              }
+              // Bake a clickable URI link annotation over just this run's box.
+              // The rect is axis-aligned (run rotation of the hit area is
+              // dropped — acceptable for a link target).
+              if (run.link) {
+                const lx1 = sx(rx)
+                const lx2 = sx(rx + runW)
+                const ly1 = toY(a.y + a.fontSize * 1.2)
+                const ly2 = toY(a.y)
+                const linkAnnot = pdf.context.obj({
+                  Type: 'Annot',
+                  Subtype: 'Link',
+                  Rect: [lx1, ly1, lx2, ly2],
+                  Border: [0, 0, 0],
+                  A: pdf.context.obj({
+                    Type: 'Action',
+                    S: 'URI',
+                    URI: PDFString.of(run.link)
+                  })
+                })
+                const ref = pdf.context.register(linkAnnot)
+                const existing = page.node.lookup(PDFName.of('Annots'), PDFArray)
+                if (existing) existing.push(ref)
+                else page.node.set(PDFName.of('Annots'), pdf.context.obj([ref]))
+              }
+            }
+            offset += runW
           }
           break
         }
@@ -449,7 +513,7 @@ export async function buildAnnotatedPdfBytes(
               x: sx(a.x + padCanvas),
               y: toY(baselineCanvasY),
               size,
-              font: fontSans,
+              font: await pickFont('helvetica'),
               color: hexToPdfRgb('#c2410c')
             })
           }

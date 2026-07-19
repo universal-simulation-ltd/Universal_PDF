@@ -18,12 +18,30 @@ import { useCoarsePointer } from '../../hooks/useCoarsePointer'
 import { useImage } from '../../lib/useImage'
 import { RedactIcon } from '../icons/RedactIcon'
 import { SIGNATURE_INK, formatSigningDate } from '../../lib/signature'
-import type { Annotation, DrawAnnotation, FontFamily, ImageAnnotation, SignatureFieldAnnotation, TextAnnotation } from '../../types/annotations'
+import { FONT_CSS } from '../../lib/fonts'
+import { effectiveRuns, runFontStyle, runHasStyle, runsToPlainText, runsToHtml, parseRunsFromDom, mergeRuns } from '../../lib/textRuns'
+import type { Annotation, DrawAnnotation, ImageAnnotation, SignatureFieldAnnotation, TextAnnotation, TextRun } from '../../types/annotations'
 
-const FONT_STACK: Record<FontFamily, string> = {
-  sans: 'Helvetica, Arial, sans-serif',
-  serif: '"Times New Roman", Times, serif',
-  mono: '"Courier New", Courier, monospace'
+// On-screen font stacks, keyed by family id (shared with the toolbar + export).
+const FONT_STACK = FONT_CSS
+
+// Shared offscreen 2D context for measuring run widths in unscaled model space.
+// Konva itself measures with canvas measureText, so widths derived here match
+// the on-canvas advance, keeping the per-run layout and the editor aligned.
+const _measureCanvas = typeof document !== 'undefined' ? document.createElement('canvas') : null
+const _measureCtx = _measureCanvas?.getContext('2d') ?? null
+
+// Width of one run at the annotation's (unscaled) font size + family.
+function runWidth(run: TextRun, fontSize: number, cssFamily: string): number {
+  if (!_measureCtx) return run.text.length * fontSize * 0.6
+  _measureCtx.font = `${runFontStyle(run)} ${fontSize}px ${cssFamily}`
+  return _measureCtx.measureText(run.text).width
+}
+
+// Total on-screen width (unscaled) of a text annotation across all its runs.
+function textWidth(a: TextAnnotation): number {
+  const cssFamily = FONT_STACK[a.fontFamily ?? 'sans']
+  return effectiveRuns(a).reduce((sum, r) => sum + runWidth(r, a.fontSize, cssFamily), 0)
 }
 
 const HIGHLIGHT_STROKE_WIDTH = 16
@@ -73,7 +91,7 @@ function isTransformerTarget(target: Konva.Node | null): boolean {
 function getAnnotationBBox(a: Annotation): { x: number; y: number; width: number; height: number } {
   switch (a.type) {
     case 'text': {
-      const w = Math.max(80, a.text.length * a.fontSize * 0.6 + 8)
+      const w = Math.max(24, textWidth(a) + 8)
       return { x: a.x - 2, y: a.y - 2, width: w + 4, height: a.fontSize * 1.25 + 4 }
     }
     case 'rect':
@@ -523,6 +541,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
 
   const trRef = useRef<Konva.Transformer>(null)
   const shapeRefs = useRef(new Map<string, Konva.Node>())
+  // Imperative handle the rich-text editor publishes while mounted, so the
+  // contextual pill can apply bold/italic/underline/link to the current text
+  // selection (execCommand) instead of the whole annotation.
+  const editorApiRef = useRef<{ format: (kind: 'bold' | 'italic' | 'underline' | 'link') => void } | null>(null)
 
   // Annotations on this page that are part of the current selection.
   const selectedOnPage = annotations.filter((a) => selectedIds.includes(a.id))
@@ -1201,13 +1223,25 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     }
   }
 
-  function commitEdit(value: string) {
+  function commitEdit(runs: TextRun[]) {
     if (!editingAnnotation) return
-    const trimmed = value
-    if (!trimmed.trim()) {
+    const plain = runsToPlainText(runs)
+    if (!plain.trim()) {
       remove(editingAnnotation.id)
     } else {
-      update(editingAnnotation.id, { text: trimmed })
+      // Uniform, unstyled text collapses back to a plain `text` (no runs) to
+      // keep the model minimal; anything styled stores the runs. Either way the
+      // whole-annotation style flags are cleared — the runs (or their absence)
+      // are now authoritative, so a stale flag can't double-apply.
+      const styled = runs.length > 1 || (runs[0] && runHasStyle(runs[0]))
+      update(editingAnnotation.id, {
+        text: plain,
+        runs: styled ? runs : undefined,
+        bold: undefined,
+        italic: undefined,
+        underline: undefined,
+        link: undefined
+      } as Partial<Annotation>)
     }
     setEditingId(null)
   }
@@ -1298,23 +1332,45 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                   />
                 )
               }
-              case 'text':
+              case 'text': {
+                // Rendered as a Group of per-run Text nodes laid out along one
+                // line (measured widths give each run's x offset), so bold /
+                // italic / underline / link can vary within the text. Events
+                // bubble from the child Texts up to the Group's shared handlers.
+                const cssFamily = FONT_STACK[a.fontFamily ?? 'sans']
+                const runs = effectiveRuns(a)
+                let offset = 0
                 return (
-                  <Text
+                  <Group
                     key={a.id}
                     {...common}
                     x={a.x}
                     y={a.y}
                     rotation={a.rotation ?? 0}
-                    text={a.text}
-                    fill={a.color}
-                    fontSize={a.fontSize}
-                    fontFamily={FONT_STACK[a.fontFamily ?? 'sans']}
                     visible={a.id !== editingId}
                     onDblClick={() => onTextDblClick(a)}
                     onDblTap={() => onTextDblClick(a)}
-                  />
+                  >
+                    {runs.map((run, i) => {
+                      const rx = offset
+                      offset += runWidth(run, a.fontSize, cssFamily)
+                      return (
+                        <Text
+                          key={i}
+                          x={rx}
+                          y={0}
+                          text={run.text}
+                          fill={a.color}
+                          fontSize={a.fontSize}
+                          fontFamily={cssFamily}
+                          fontStyle={runFontStyle(run)}
+                          textDecoration={run.underline || run.link ? 'underline' : ''}
+                        />
+                      )
+                    })}
+                  </Group>
                 )
+              }
               case 'rect':
                 return (
                   <Rect
@@ -1688,8 +1744,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
 
       {editingAnnotation && (
         <TextEditor
+          key={editingAnnotation.id}
           annotation={editingAnnotation}
           scale={scale}
+          apiRef={editorApiRef}
           onCommit={commitEdit}
           onCancel={() => {
             if (!editingAnnotation.text.trim()) {
@@ -1737,24 +1795,26 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       })()}
 
       {(() => {
-        // Touch: float the text-size stepper right beside the selected text
-        // rather than pinning it to the bottom of the screen, so the control
-        // sits where the user is already looking. Placement prefers just below
-        // the text, flips above when there's no room (text near the page
-        // bottom), and clamps horizontally so it never runs off the page — and
-        // "below" keeps it clear of the delete affordance at the top-right
-        // corner. Desktop keeps its toolbar control; the mobile Toolbar hides
-        // its bottom pill on coarse pointers so the two never both appear.
-        if (!coarsePointer || draggingId || editingId) return null
+        // Contextual text pill floated just beneath the selected text box:
+        // size stepper + bold / italic / underline / link. Placement prefers
+        // below the text, flips above when there's no room (text near the page
+        // bottom), and clamps horizontally so it never runs off the page —
+        // "below" also keeps it clear of the delete affordance at the top-right
+        // corner. Shown on every device (touch + mouse); the mobile Toolbar no
+        // longer draws its own bottom size-pill so the two never both appear.
+        // Stays up during editing too, so size / bold / italic / underline /
+        // link can be toggled live while typing.
+        if (draggingId) return null
         const selected = annotations.find((a) => a.id === selectedId)
         if (!selected || selected.type !== 'text') return null
+        const t = selected
         const bbox = getAnnotationBBox(selected)
         const bx = bbox.x * scale
         const by = bbox.y * scale
         const bw = bbox.width * scale
         const bh = bbox.height * scale
-        const CHIP_W = 132
-        const CHIP_H = 40
+        const CHIP_W = 292
+        const CHIP_H = 44
         const GAP = 10
         const left = Math.min(
           Math.max(bx + bw / 2 - CHIP_W / 2, GAP),
@@ -1768,32 +1828,94 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         } else {
           top = Math.min(Math.max(by + bh + GAP, GAP), Math.max(GAP, height - CHIP_H - GAP))
         }
+        const styleBtn = (
+          active: boolean,
+          onClick: () => void,
+          label: string,
+          title: string,
+          extra: string
+        ) => (
+          <button
+            type="button"
+            title={title}
+            aria-label={title}
+            aria-pressed={active}
+            onClick={(e) => { e.stopPropagation(); onClick() }}
+            className={`w-8 h-8 rounded-full leading-none text-base flex items-center justify-center transition-colors ${extra} ${
+              active ? 'bg-orange-600 text-white' : 'hover:bg-slate-100 text-slate-700'
+            }`}
+          >
+            {label}
+          </button>
+        )
+        // Style buttons apply to the highlighted range while editing (via the
+        // editor's execCommand handle) and to the whole text otherwise.
+        const editingThis = editingId === t.id
+        const runs = effectiveRuns(t)
+        const allHave = (k: 'bold' | 'italic' | 'underline') => runs.length > 0 && runs.every((r) => r[k])
+        const anyLink = runs.some((r) => r.link)
+        // Commit a fresh run set to the whole annotation (collapsing to plain
+        // text when nothing is styled), matching commitEdit's normalisation.
+        const writeRuns = (rs: TextRun[]) => {
+          const merged = mergeRuns(rs)
+          const styled = merged.length > 1 || (merged[0] && runHasStyle(merged[0]))
+          update(t.id, {
+            text: runsToPlainText(merged),
+            runs: styled ? merged : undefined,
+            bold: undefined,
+            italic: undefined,
+            underline: undefined,
+            link: undefined
+          } as Partial<Annotation>)
+        }
+        const applyWhole = (kind: 'bold' | 'italic' | 'underline' | 'link') => {
+          if (kind === 'link') {
+            const cur = runs.find((r) => r.link)?.link ?? ''
+            const next = window.prompt('Link URL (leave blank to remove):', cur || 'https://')
+            if (next === null) return
+            const url = next.trim()
+            writeRuns(runs.map((r) => ({ ...r, link: url ? url : undefined })))
+            return
+          }
+          const on = !allHave(kind)
+          writeRuns(runs.map((r) => ({ ...r, [kind]: on })))
+        }
+        const applyStyle = (kind: 'bold' | 'italic' | 'underline' | 'link') => {
+          if (editingThis && editorApiRef.current) editorApiRef.current.format(kind)
+          else applyWhole(kind)
+        }
         return (
           <div
-            onMouseDown={(e) => e.stopPropagation()}
+            // preventDefault keeps focus on the text input while editing, so
+            // tapping a pill button (size / B / I / U / link) styles the text
+            // live instead of blurring and committing the edit.
+            onMouseDown={(e) => { e.stopPropagation(); e.preventDefault() }}
             onPointerDown={(e) => e.stopPropagation()}
             style={{ position: 'absolute', left, top, zIndex: 21 }}
-            className="inline-flex items-center gap-1 bg-white rounded-full shadow-lg border border-slate-300 px-1 py-1"
+            className="inline-flex items-center gap-0.5 bg-white rounded-full shadow-lg border border-slate-300 px-1 py-1"
           >
             <button
               type="button"
               aria-label="Decrease text size"
-              onClick={(e) => { e.stopPropagation(); setFontSize(Math.max(10, fontSize - 2)) }}
+              onClick={(e) => { e.stopPropagation(); setFontSize(Math.max(8, fontSize - 2)) }}
               className="w-8 h-8 rounded-full hover:bg-slate-100 text-lg font-semibold text-slate-700 leading-none"
             >
               −
             </button>
-            <span className="text-xs font-medium w-10 text-center tabular-nums text-slate-700">
-              {fontSize}px
-            </span>
+            <FontSizeField value={fontSize} min={8} max={144} onCommit={setFontSize} />
             <button
               type="button"
               aria-label="Increase text size"
-              onClick={(e) => { e.stopPropagation(); setFontSize(Math.min(48, fontSize + 2)) }}
+              onClick={(e) => { e.stopPropagation(); setFontSize(Math.min(144, fontSize + 2)) }}
               className="w-8 h-8 rounded-full hover:bg-slate-100 text-lg font-semibold text-slate-700 leading-none"
             >
               +
             </button>
+            <span className="w-px h-6 bg-slate-200 mx-0.5" />
+            {styleBtn(allHave('bold'), () => applyStyle('bold'), 'B', 'Bold', 'font-bold')}
+            {styleBtn(allHave('italic'), () => applyStyle('italic'), 'I', 'Italic', 'italic font-semibold')}
+            {styleBtn(allHave('underline'), () => applyStyle('underline'), 'U', 'Underline', 'underline font-semibold')}
+            {styleBtn(anyLink, () => applyStyle('link'), '🔗', editingThis ? 'Link selected text' : (anyLink ? 'Edit link' : 'Add link'), 'text-sm')}
           </div>
         )
       })()}
@@ -2066,80 +2188,202 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   )
 }
 
+// Editable size readout for the text pill: shows the current size and lets the
+// user type an exact value (Enter / blur commits, Escape reverts). Kept as its
+// own component so it can hold the in-progress draft in state — the pill body is
+// rendered inside an IIFE where hooks can't live. `onMouseDown` stops
+// propagation so the pill's focus-preserving preventDefault doesn't block the
+// input from focusing.
+function FontSizeField({
+  value,
+  min,
+  max,
+  onCommit
+}: {
+  value: number
+  min: number
+  max: number
+  onCommit: (n: number) => void
+}) {
+  const [draft, setDraft] = useState(String(value))
+  // Re-sync when the value changes externally (stepper +/−, selecting another
+  // text) — but not while the field is focused, so typing isn't clobbered.
+  const focusedRef = useRef(false)
+  useEffect(() => {
+    if (!focusedRef.current) setDraft(String(value))
+  }, [value])
+  const commit = () => {
+    const n = parseInt(draft, 10)
+    if (Number.isFinite(n)) onCommit(Math.min(max, Math.max(min, n)))
+    else setDraft(String(value))
+  }
+  return (
+    <span className="inline-flex items-baseline">
+      <input
+        type="text"
+        inputMode="numeric"
+        aria-label="Font size in points"
+        value={draft}
+        onMouseDown={(e) => e.stopPropagation()}
+        onFocus={(e) => { focusedRef.current = true; e.currentTarget.select() }}
+        onChange={(e) => setDraft(e.target.value.replace(/[^\d]/g, '').slice(0, 3))}
+        onBlur={() => { focusedRef.current = false; commit() }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') { e.preventDefault(); commit(); e.currentTarget.blur() }
+          else if (e.key === 'Escape') { e.preventDefault(); setDraft(String(value)); e.currentTarget.blur() }
+        }}
+        className="w-6 text-xs font-medium text-right tabular-nums text-slate-700 bg-transparent outline-none rounded focus:bg-slate-100"
+      />
+      <span className="text-xs font-medium text-slate-500 pl-0.5">px</span>
+    </span>
+  )
+}
+
+function selectAllContents(el: HTMLElement) {
+  const range = document.createRange()
+  range.selectNodeContents(el)
+  const sel = window.getSelection()
+  sel?.removeAllRanges()
+  sel?.addRange(range)
+}
+
+// Rich-text editor: a contentEditable seeded from the annotation's runs. The
+// browser handles selection-based styling; the pill drives it through the
+// `format` handle (execCommand), and on commit the DOM is parsed back into runs.
 function TextEditor({
   annotation,
   scale,
+  apiRef,
   onCommit,
   onCancel
 }: {
   annotation: TextAnnotation
   scale: number
-  onCommit: (value: string) => void
+  apiRef: React.MutableRefObject<{ format: (kind: 'bold' | 'italic' | 'underline' | 'link') => void } | null>
+  onCommit: (runs: TextRun[]) => void
   onCancel: () => void
 }) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [value, setValue] = useState(annotation.text)
+  const ref = useRef<HTMLDivElement>(null)
   // Suppress the very first blur so a focus race in Firefox doesn't silently
   // delete the empty annotation before the user gets a chance to type.
   const justMountedRef = useRef(true)
+  // True while a formatting prompt (link URL) has stolen focus, so the ensuing
+  // blur doesn't commit and tear the editor down mid-operation.
+  const formattingRef = useRef(false)
+  const committedRef = useRef(false)
 
-  // Focus synchronously after DOM mutations, then again on the next frame as
-  // a safety net for browsers that drop the first focus call.
+  // Seed the editable HTML from the runs, once, then focus + select all so the
+  // first keystroke replaces the placeholder text (matching the old input).
   useLayoutEffect(() => {
-    inputRef.current?.focus()
-    inputRef.current?.select()
+    const el = ref.current
+    if (!el) return
+    el.innerHTML = runsToHtml(effectiveRuns(annotation))
+    el.focus()
+    selectAllContents(el)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   useEffect(() => {
     const t = requestAnimationFrame(() => {
-      if (document.activeElement !== inputRef.current) {
-        inputRef.current?.focus()
-        inputRef.current?.select()
-      }
+      if (document.activeElement !== ref.current) ref.current?.focus()
       justMountedRef.current = false
     })
     return () => cancelAnimationFrame(t)
   }, [])
 
-  return (
-    <input
-      autoFocus
-      ref={inputRef}
-      type="text"
-      inputMode="text"
-      value={value}
-      onChange={(e) => setValue(e.target.value)}
-      onBlur={() => {
-        // If we blur in the same frame as mount (focus never landed), keep
-        // the editor open instead of silently removing an empty annotation.
-        if (justMountedRef.current) {
-          inputRef.current?.focus()
+  // Publish the imperative format handle for the pill.
+  useEffect(() => {
+    apiRef.current = {
+      format(kind) {
+        const el = ref.current
+        if (!el) return
+        if (kind === 'link') {
+          // A prompt blurs the editor and drops the selection, so save the range
+          // first and restore it before applying the link.
+          const sel = window.getSelection()
+          const saved = sel && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null
+          formattingRef.current = true
+          const url = window.prompt('Link URL for the selected text (blank to remove):', '')
+          el.focus()
+          if (saved) {
+            const s = window.getSelection()
+            s?.removeAllRanges()
+            s?.addRange(saved)
+          }
+          formattingRef.current = false
+          if (url === null) return
+          if (url.trim()) document.execCommand('createLink', false, url.trim())
+          else document.execCommand('unlink')
           return
         }
-        onCommit(value)
+        el.focus()
+        try { document.execCommand('styleWithCSS', false, 'false') } catch { /* ignore */ }
+        document.execCommand(kind)
+      }
+    }
+    return () => {
+      apiRef.current = null
+    }
+  }, [apiRef])
+
+  function commit() {
+    if (committedRef.current) return
+    committedRef.current = true
+    const el = ref.current
+    onCommit(el ? parseRunsFromDom(el) : [])
+  }
+
+  return (
+    <div
+      ref={ref}
+      contentEditable
+      suppressContentEditableWarning
+      onBlur={() => {
+        // If we blur in the same frame as mount (focus never landed), or a link
+        // prompt has focus, keep the editor open.
+        if (justMountedRef.current) {
+          ref.current?.focus()
+          return
+        }
+        if (formattingRef.current) return
+        commit()
       }}
       onKeyDown={(e) => {
         if (e.key === 'Enter') {
           e.preventDefault()
-          onCommit(value)
+          commit()
         } else if (e.key === 'Escape') {
           e.preventDefault()
+          // Block the trailing blur (fired as we unmount) from committing the
+          // discarded edits over the original annotation.
+          committedRef.current = true
           onCancel()
         }
       }}
       style={{
         position: 'absolute',
+        // Pixel-align with the committed Konva <Text> so glyphs don't shift when
+        // the edit ends. Konva draws the top-left at (x, y) with a "middle"
+        // baseline (glyph centre at y + fontSize/2). This box is 1.25×fontSize
+        // tall with its line centred by an equal line-height, so the glyph
+        // centre sits at 0.625×fontSize from the top — nudging the box up by the
+        // extra 0.125×fontSize lines the two centres up. The dashed affordance
+        // uses `outline` (no layout effect) and padding is zero, so the left
+        // edge matches Konva's x exactly.
         left: annotation.x * scale,
-        top: annotation.y * scale,
+        top: annotation.y * scale - annotation.fontSize * scale * 0.125,
         color: annotation.color,
         fontSize: (annotation.fontSize * scale) + 'px',
         fontFamily: FONT_STACK[annotation.fontFamily ?? 'sans'],
-        lineHeight: 1,
+        lineHeight: (annotation.fontSize * 1.25 * scale) + 'px',
+        whiteSpace: 'pre',
         background: 'transparent',
-        border: '1px dashed #ea580c',
-        outline: 'none',
-        padding: '0 2px',
+        border: 'none',
+        outline: '1px dashed #ea580c',
+        outlineOffset: '1px',
+        padding: 0,
+        margin: 0,
+        boxSizing: 'content-box',
         minWidth: '120px',
-        width: Math.max(120, value.length * annotation.fontSize * 0.6 * scale + 24) + 'px',
         height: annotation.fontSize * 1.25 * scale + 'px',
         zIndex: 10
       }}
