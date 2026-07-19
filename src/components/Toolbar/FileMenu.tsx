@@ -37,9 +37,19 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const canClear = annotations.length > 0
   const canRename = !!doc && !!fileName
 
+  // View-submenu items are each conditional; the group only renders if at least
+  // one would show (e.g. a single-page XFA form has none, so no empty "View").
+  const showPages = variant === 'toolbar' && !!doc && numPages > 1
+  const showPresent = variant === 'toolbar' && !!doc
+  const showFind = !!doc && !isXfa
+  const hasViewItems = showPages || showPresent || showFind
+
   const [open, setOpen] = useState(false)
   const [langSubOpen, setLangSubOpen] = useState(false)
   const [redactSubOpen, setRedactSubOpen] = useState(false)
+  const [editSubOpen, setEditSubOpen] = useState(false)
+  const [fileSubOpen, setFileSubOpen] = useState(false)
+  const [viewSubOpen, setViewSubOpen] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
   const [renameDraft, setRenameDraft] = useState('')
   const [currentLang, setCurrentLang] = useState<LangCode>(readSavedLang())
@@ -101,6 +111,9 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
       setOpen(false)
       setLangSubOpen(false)
       setRedactSubOpen(false)
+      setEditSubOpen(false)
+      setFileSubOpen(false)
+      setViewSubOpen(false)
       setRenameOpen(false)
       setShowOtherHint(false)
     }
@@ -245,103 +258,139 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
             <span className="flex-1 text-left font-medium">{doc ? 'Open another PDF…' : 'Open PDF…'}</span>
           </button>
 
-          {/* Backup: free local (automatic) vs paid "Hosted by UNI·SIM" cloud. */}
+          {/* File — backup + rename, grouped into a secondary submenu. */}
           <button
-            onClick={() => { setHostedStoreOpen(true); setOpen(false) }}
+            onClick={() => { setFileSubOpen((v) => !v) }}
             className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
+            aria-haspopup="true"
+            aria-expanded={fileSubOpen}
           >
-            <span aria-hidden="true">💾</span>
-            <span className="flex-1 text-left">{doc ? 'Back up…' : 'Backups…'}</span>
+            <span aria-hidden="true">🗂</span>
+            <span className="flex-1 text-left">File</span>
+            <svg viewBox="0 0 12 12" className={`w-3 h-3 transition-transform ${fileSubOpen ? '-rotate-90' : ''}`} aria-hidden="true">
+              <path d="M4 2 L8 6 L4 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
 
-          {canRename && !renameOpen && (
-            <button
-              onClick={startRename}
-              className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
-            >
-              <span aria-hidden="true">✎</span>
-              <span className="flex-1 text-left truncate">Rename file…</span>
-              <span className="text-[11px] text-slate-400 truncate max-w-[120px]" title={fileName ?? ''}>
-                {fileName}
-              </span>
-            </button>
-          )}
+          {fileSubOpen && (
+            <div className="border-t border-slate-100 bg-slate-50/60 divide-y divide-slate-100">
+              {/* Backup: free local (automatic) vs paid "Hosted by UNI·SIM" cloud. */}
+              <button
+                onClick={() => { setHostedStoreOpen(true); setOpen(false) }}
+                className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
+              >
+                <span aria-hidden="true">💾</span>
+                <span className="flex-1 text-left">{doc ? 'Back up…' : 'Backups…'}</span>
+              </button>
 
-          {canRename && renameOpen && (
-            <div className="px-3 py-2.5 border-t border-slate-100 bg-slate-50/60">
-              <label className="block text-[11px] uppercase tracking-wide text-slate-500 font-medium mb-1">
-                Rename file
-              </label>
-              <input
-                ref={renameInputRef}
-                value={renameDraft}
-                onChange={(e) => setRenameDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    commitRename()
-                  } else if (e.key === 'Escape') {
-                    e.preventDefault()
-                    setRenameOpen(false)
-                  }
-                }}
-                className="w-full px-2 py-1.5 text-sm rounded border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                aria-label="New file name"
-              />
-              <div className="mt-2 flex justify-end gap-2">
+              {canRename && !renameOpen && (
                 <button
-                  type="button"
-                  onClick={() => setRenameOpen(false)}
-                  className="px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-200 rounded"
+                  onClick={startRename}
+                  className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
                 >
-                  Cancel
+                  <span aria-hidden="true">✎</span>
+                  <span className="flex-1 text-left truncate">Rename file…</span>
+                  <span className="text-[11px] text-slate-400 truncate max-w-[120px]" title={fileName ?? ''}>
+                    {fileName}
+                  </span>
                 </button>
-                <button
-                  type="button"
-                  onClick={commitRename}
-                  disabled={!renameDraft.trim() || renameDraft.trim() === fileName}
-                  className="px-3 py-1 text-xs font-medium text-white bg-orange-600 hover:bg-orange-500 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Save
-                </button>
-              </div>
+              )}
+
+              {canRename && renameOpen && (
+                <div className="pl-8 pr-3 py-2.5">
+                  <label className="block text-[11px] uppercase tracking-wide text-slate-500 font-medium mb-1">
+                    Rename file
+                  </label>
+                  <input
+                    ref={renameInputRef}
+                    value={renameDraft}
+                    onChange={(e) => setRenameDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        commitRename()
+                      } else if (e.key === 'Escape') {
+                        e.preventDefault()
+                        setRenameOpen(false)
+                      }
+                    }}
+                    className="w-full px-2 py-1.5 text-sm rounded border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    aria-label="New file name"
+                  />
+                  <div className="mt-2 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setRenameOpen(false)}
+                      className="px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-200 rounded"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={commitRename}
+                      disabled={!renameDraft.trim() || renameDraft.trim() === fileName}
+                      className="px-3 py-1 text-xs font-medium text-white bg-orange-600 hover:bg-orange-500 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Pages lives in the desktop viewer bar; mobile has no such bar, so
-              surface it here in the Actions menu instead. */}
-          {variant === 'toolbar' && doc && numPages > 1 && (
-            <button
-              onClick={() => { setPageNavOpen(true); setOpen(false) }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
-            >
-              <span aria-hidden="true">☰</span>
-              <span className="flex-1 text-left">Pages</span>
-              <span className="text-[11px] text-slate-400 tabular-nums">{numPages}</span>
-            </button>
-          )}
+          {/* View — Pages / Present / Find. Each item is conditional (see the
+              show* flags); Pages & Present live in the desktop viewer bar, so
+              this group mainly serves mobile, where that bar has no room. */}
+          {hasViewItems && (
+            <>
+              <button
+                onClick={() => { setViewSubOpen((v) => !v) }}
+                className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
+                aria-haspopup="true"
+                aria-expanded={viewSubOpen}
+              >
+                <span aria-hidden="true">👁</span>
+                <span className="flex-1 text-left">View</span>
+                <svg viewBox="0 0 12 12" className={`w-3 h-3 transition-transform ${viewSubOpen ? '-rotate-90' : ''}`} aria-hidden="true">
+                  <path d="M4 2 L8 6 L4 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
 
-          {/* Present lives next to Export on desktop; surface it in the Actions
-              menu on mobile, where the bottom toolbar has no room. */}
-          {variant === 'toolbar' && doc && (
-            <button
-              onClick={() => { setPresentOpen(true); setOpen(false) }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
-            >
-              <span aria-hidden="true">▶</span>
-              <span className="flex-1 text-left">Present</span>
-            </button>
-          )}
-
-          {doc && !isXfa && (
-            <button
-              onClick={() => { setSearchOpen(true); setOpen(false) }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
-            >
-              <span aria-hidden="true">🔍</span>
-              <span className="flex-1 text-left">Find</span>
-              <span className="text-[11px] text-slate-400 tracking-wide">Ctrl+F</span>
-            </button>
+              {viewSubOpen && (
+                <div className="border-t border-slate-100 bg-slate-50/60 divide-y divide-slate-100">
+                  {showPages && (
+                    <button
+                      onClick={() => { setPageNavOpen(true); setOpen(false) }}
+                      className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
+                    >
+                      <span aria-hidden="true">☰</span>
+                      <span className="flex-1 text-left">Pages</span>
+                      <span className="text-[11px] text-slate-400 tabular-nums">{numPages}</span>
+                    </button>
+                  )}
+                  {showPresent && (
+                    <button
+                      onClick={() => { setPresentOpen(true); setOpen(false) }}
+                      className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
+                    >
+                      <span aria-hidden="true">▶</span>
+                      <span className="flex-1 text-left">Present</span>
+                    </button>
+                  )}
+                  {showFind && (
+                    <button
+                      onClick={() => { setSearchOpen(true); setOpen(false) }}
+                      className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
+                    >
+                      <span aria-hidden="true">🔍</span>
+                      <span className="flex-1 text-left">Find</span>
+                      <span className="text-[11px] text-slate-400 tracking-wide">Ctrl+F</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </>
           )}
 
           {doc && (
@@ -407,32 +456,56 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
             </>
           )}
 
-          <button
-            onClick={() => { if (canUndo) { undo(); setOpen(false) } }}
-            disabled={!canUndo}
-            className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm disabled:opacity-40 disabled:cursor-not-allowed border-t border-slate-100"
-          >
-            <span aria-hidden="true">↶</span>
-            <span className="flex-1 text-left">Undo</span>
-            <span className="text-[11px] text-slate-400 tracking-wide">Ctrl+Z</span>
-          </button>
-          <button
-            onClick={() => { if (canRedo) { redo(); setOpen(false) } }}
-            disabled={!canRedo}
-            className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm disabled:opacity-40 disabled:cursor-not-allowed border-t border-slate-100"
-          >
-            <span aria-hidden="true">↷</span>
-            <span className="flex-1 text-left">Redo</span>
-            <span className="text-[11px] text-slate-400 tracking-wide">Ctrl+Y</span>
-          </button>
-          <button
-            onClick={() => { if (canClear) { clearAll(); setOpen(false) } }}
-            disabled={!canClear}
-            className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-red-50 hover:text-red-700 text-sm disabled:opacity-40 disabled:cursor-not-allowed border-t border-slate-100"
-          >
-            <span aria-hidden="true">🗑</span>
-            <span className="flex-1 text-left">Clear all annotations</span>
-          </button>
+          {/* Undo / Redo / Clear collapse into one secondary submenu — they're
+              editing conveniences (Ctrl+Z/Y and the mobile bar cover the fast
+              path), so grouping them keeps the top level short. */}
+          {doc && (
+            <>
+              <button
+                onClick={() => { setEditSubOpen((v) => !v) }}
+                className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
+                aria-haspopup="true"
+                aria-expanded={editSubOpen}
+              >
+                <span aria-hidden="true">↶</span>
+                <span className="flex-1 text-left">Undo / Redo</span>
+                <svg viewBox="0 0 12 12" className={`w-3 h-3 transition-transform ${editSubOpen ? '-rotate-90' : ''}`} aria-hidden="true">
+                  <path d="M4 2 L8 6 L4 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+
+              {editSubOpen && (
+                <div className="border-t border-slate-100 bg-slate-50/60">
+                  <button
+                    onClick={() => { if (canUndo) { undo(); setOpen(false) } }}
+                    disabled={!canUndo}
+                    className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <span aria-hidden="true">↶</span>
+                    <span className="flex-1 text-left">Undo</span>
+                    <span className="text-[11px] text-slate-400 tracking-wide">Ctrl+Z</span>
+                  </button>
+                  <button
+                    onClick={() => { if (canRedo) { redo(); setOpen(false) } }}
+                    disabled={!canRedo}
+                    className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed border-t border-slate-100"
+                  >
+                    <span aria-hidden="true">↷</span>
+                    <span className="flex-1 text-left">Redo</span>
+                    <span className="text-[11px] text-slate-400 tracking-wide">Ctrl+Y</span>
+                  </button>
+                  <button
+                    onClick={() => { if (canClear) { clearAll(); setOpen(false) } }}
+                    disabled={!canClear}
+                    className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-red-600 hover:bg-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed border-t border-slate-100"
+                  >
+                    <span aria-hidden="true">🗑</span>
+                    <span className="flex-1 text-left">Clear all annotations</span>
+                  </button>
+                </div>
+              )}
+            </>
+          )}
 
           {/* Language submenu */}
           <button
