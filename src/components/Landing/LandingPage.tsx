@@ -4,6 +4,8 @@ import { createExamplePdfFile } from '../../lib/examplePdf'
 import { compressPdf, type CompressQuality, type CompressResult } from '../../lib/export'
 import CompressResultModal from '../Compress/CompressResultModal'
 import BatchCompressModal, { type BatchSource } from '../Compress/BatchCompressModal'
+import MergeDialog from '../Convert/MergeDialog'
+import ConvertDialog, { type ConvertMode } from '../Convert/ConvertDialog'
 import RecentFilesList from '../RecentFiles/RecentFilesList'
 import TransformPanel from '../Transform/TransformPanel'
 import PdfIllustration from './PdfIllustration'
@@ -33,6 +35,8 @@ export default function LandingPage() {
   } | null>(null)
   const [dragOverCompress, setDragOverCompress] = useState(false)
   const [transformOpen, setTransformOpen] = useState(false)
+  const [mergeOpen, setMergeOpen] = useState(false)
+  const [convertMode, setConvertMode] = useState<ConvertMode | null>(null)
 
   async function runCompress(fileList: File[] | FileList) {
     const files = Array.from(fileList).filter(
@@ -263,10 +267,21 @@ export default function LandingPage() {
                 onChange={onCompressFile}
               />
 
-              {/* For geeks — power-user tools tucked into a collapsible */}
-              <details className="group">
+              {/* Power-user tools tucked into a collapsible. On expand, scroll
+                  the whole panel into view so every revealed option is visible
+                  (it sits near the bottom of the fold on shorter screens). */}
+              <details
+                className="group"
+                onToggle={(e) => {
+                  if (!e.currentTarget.open) return
+                  const el = e.currentTarget
+                  requestAnimationFrame(() =>
+                    el.scrollIntoView({ behavior: 'smooth', block: 'end' })
+                  )
+                }}
+              >
                 <summary className="flex items-center gap-2 cursor-pointer select-none list-none px-1 py-1 text-xs uppercase tracking-wide font-medium text-slate-500 hover:text-slate-700 transition-colors">
-                  <span>For us geeks</span>
+                  <span>More options</span>
                   <span
                     className="ml-auto text-base text-slate-400 transition-transform group-open:rotate-180"
                     aria-hidden="true"
@@ -274,6 +289,47 @@ export default function LandingPage() {
                     ⌄
                   </span>
                 </summary>
+
+                {/* Merge PDFs */}
+                <button
+                  type="button"
+                  onClick={() => setMergeOpen(true)}
+                  className="group/btn mt-3 w-full flex items-center gap-4 p-4 border border-slate-200 rounded-xl text-left hover:border-orange-400 hover:bg-orange-50/50 transition-colors"
+                >
+                  <div className="shrink-0 w-12 h-12 rounded-lg bg-orange-100 text-orange-700 flex items-center justify-center text-2xl">
+                    ⧉
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-semibold text-slate-900">Merge PDFs</div>
+                    <div className="text-sm text-slate-500">
+                      Combine several files into one — reorder before you export
+                    </div>
+                  </div>
+                  <span className="ml-auto text-slate-400 group-hover/btn:text-orange-700 transition-colors" aria-hidden="true">
+                    →
+                  </span>
+                </button>
+
+                {/* Convert PDF ↔ images */}
+                <button
+                  type="button"
+                  onClick={() => setConvertMode('pdf-to-images')}
+                  className="group/btn mt-3 w-full flex items-center gap-4 p-4 border border-slate-200 rounded-xl text-left hover:border-indigo-400 hover:bg-indigo-50/50 transition-colors"
+                >
+                  <div className="shrink-0 w-12 h-12 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center text-2xl">
+                    ⇄
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-semibold text-slate-900">Convert</div>
+                    <div className="text-sm text-slate-500">
+                      PDF → images (PNG/JPG), or images → PDF
+                    </div>
+                  </div>
+                  <span className="ml-auto text-slate-400 group-hover/btn:text-indigo-700 transition-colors" aria-hidden="true">
+                    →
+                  </span>
+                </button>
+
                 {/* Transform text → PDF */}
                 <button
                   type="button"
@@ -319,6 +375,12 @@ export default function LandingPage() {
       )}
 
       <TransformPanel open={transformOpen} onClose={() => setTransformOpen(false)} />
+
+      {mergeOpen && <MergeDialog onClose={() => setMergeOpen(false)} />}
+
+      {convertMode && (
+        <ConvertDialog initialMode={convertMode} onClose={() => setConvertMode(null)} />
+      )}
     </div>
   )
 }
