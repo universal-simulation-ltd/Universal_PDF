@@ -241,24 +241,28 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
       />
       {open && renderMenu(
         <>
-          {doc && (
+          {/* Current file name — a non-interactive header at the very top of the
+              dropdown so the user always knows which PDF the actions apply to. */}
+          {doc && fileName && (
+            <div className="px-3 py-2 border-b border-slate-100 bg-slate-50/60">
+              <div className="text-[10px] uppercase tracking-wide text-slate-400 font-medium">Current file</div>
+              <div className="text-sm font-medium text-slate-800 truncate" title={fileName}>{fileName}</div>
+            </div>
+          )}
+
+          {/* When no PDF is loaded, keep Open as the prominent primary action;
+              once a doc is open, Open/Close live inside the File submenu below. */}
+          {!doc && (
             <button
-              onClick={() => { reset(); setOpen(false) }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-b border-slate-100"
+              onClick={() => { fileInputRef.current?.click(); setOpen(false) }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-orange-50 hover:text-orange-700 text-sm"
             >
-              <span aria-hidden="true">🏠</span>
-              <span className="flex-1 text-left">Close PDF</span>
+              <span aria-hidden="true">📄</span>
+              <span className="flex-1 text-left font-medium">Open PDF…</span>
             </button>
           )}
-          <button
-            onClick={() => { fileInputRef.current?.click(); setOpen(false) }}
-            className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-orange-50 hover:text-orange-700 text-sm"
-          >
-            <span aria-hidden="true">📄</span>
-            <span className="flex-1 text-left font-medium">{doc ? 'Open another PDF…' : 'Open PDF…'}</span>
-          </button>
 
-          {/* File — backup + rename, grouped into a secondary submenu. */}
+          {/* File — open / close / backup / rename, grouped into a secondary submenu. */}
           <button
             onClick={() => { setFileSubOpen((v) => !v) }}
             className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
@@ -274,6 +278,26 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
 
           {fileSubOpen && (
             <div className="border-t border-slate-100 bg-slate-50/60 divide-y divide-slate-100">
+              {doc && (
+                <button
+                  onClick={() => { reset(); setOpen(false) }}
+                  className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
+                >
+                  <span aria-hidden="true">🏠</span>
+                  <span className="flex-1 text-left">Close PDF</span>
+                </button>
+              )}
+
+              {doc && (
+                <button
+                  onClick={() => { fileInputRef.current?.click(); setOpen(false) }}
+                  className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
+                >
+                  <span aria-hidden="true">📄</span>
+                  <span className="flex-1 text-left">Open another PDF…</span>
+                </button>
+              )}
+
               {/* Backup: free local (automatic) vs paid "Hosted by UNI·SIM" cloud. */}
               <button
                 onClick={() => { setHostedStoreOpen(true); setOpen(false) }}
@@ -289,17 +313,14 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                   className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
                 >
                   <span aria-hidden="true">✎</span>
-                  <span className="flex-1 text-left truncate">Rename file…</span>
-                  <span className="text-[11px] text-slate-400 truncate max-w-[120px]" title={fileName ?? ''}>
-                    {fileName}
-                  </span>
+                  <span className="flex-1 text-left">Rename PDF</span>
                 </button>
               )}
 
               {canRename && renameOpen && (
                 <div className="pl-8 pr-3 py-2.5">
                   <label className="block text-[11px] uppercase tracking-wide text-slate-500 font-medium mb-1">
-                    Rename file
+                    Rename PDF
                   </label>
                   <input
                     ref={renameInputRef}
