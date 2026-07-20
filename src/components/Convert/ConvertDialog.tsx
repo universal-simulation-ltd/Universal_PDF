@@ -9,6 +9,9 @@ export type ConvertMode = 'pdf-to-images' | 'images-to-pdf'
 interface Props {
   initialMode: ConvertMode
   onClose: () => void
+  /** Seed the PDF→images side with this file (the currently-open document when
+   *  launched from the viewer's Advanced menu). Omit to start empty. */
+  initialPdf?: File | null
 }
 
 function formatSize(bytes: number): string {
@@ -21,9 +24,9 @@ function formatSize(bytes: number): string {
 // rasterizes each page to a canvas (→ PNG/JPG), and pdf-lib embeds images into a
 // fresh PDF. Multi-page rasterization downloads a ZIP (via the store-mode writer
 // in zip.ts); a single page downloads the bare image.
-export default function ConvertDialog({ initialMode, onClose }: Props) {
+export default function ConvertDialog({ initialMode, onClose, initialPdf }: Props) {
   const [mode, setMode] = useState<ConvertMode>(initialMode)
-  const [pdf, setPdf] = useState<File | null>(null)
+  const [pdf, setPdf] = useState<File | null>(initialPdf ?? null)
   const [images, setImages] = useState<File[]>([])
   const [format, setFormat] = useState<ImageFormat>('png')
   const [busy, setBusy] = useState(false)

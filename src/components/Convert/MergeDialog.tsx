@@ -5,6 +5,9 @@ import { usePdfStore } from '../../stores/pdfStore'
 
 interface Props {
   onClose: () => void
+  /** Seed the merge list with this file (the currently-open document when
+   *  launched from the viewer's Advanced menu). Omit for an empty start. */
+  initialFile?: File | null
 }
 
 interface Item {
@@ -23,11 +26,13 @@ function formatSize(bytes: number): string {
 // reorder (up/down) and prune before merging — output order matches the list.
 // Reorder is buttons rather than drag-drop: accessible, and it verifies in the
 // headless preview where pointer-drag on canvas UI can't.
-export default function MergeDialog({ onClose }: Props) {
-  const [items, setItems] = useState<Item[]>([])
+export default function MergeDialog({ onClose, initialFile }: Props) {
+  const keySeq = useRef(0)
+  const [items, setItems] = useState<Item[]>(() =>
+    initialFile ? [{ file: initialFile, key: `f${keySeq.current++}` }] : [],
+  )
   const [busy, setBusy] = useState(false)
   const [dragOver, setDragOver] = useState(false)
-  const keySeq = useRef(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const loadFile = usePdfStore((s) => s.loadFile)
 
