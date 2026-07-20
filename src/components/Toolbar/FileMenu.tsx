@@ -299,6 +299,22 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                 </button>
               )}
 
+              {/* Make searchable (OCR) — image-only / scanned PDFs get an on-device
+                  text layer so Find, copy and redact-by-search work. Hidden for XFA
+                  forms (dynamic HTML forms, not raster pages). */}
+              {doc && !isXfa && (
+                <button
+                  onClick={() => { setOcrOpen(true); setOpen(false) }}
+                  className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
+                >
+                  <span aria-hidden="true">🔎</span>
+                  <span className="flex-1 text-left">
+                    <span className="block font-medium leading-tight">Make searchable (OCR)</span>
+                    <span className="block text-[11px] text-slate-500 leading-tight">Read a scanned PDF on-device so you can find &amp; select its text</span>
+                  </span>
+                </button>
+              )}
+
               {/* Backup: free local (automatic) vs paid "Hosted by UNI·SIM" cloud. */}
               <button
                 onClick={() => { setHostedStoreOpen(true); setOpen(false) }}
@@ -413,22 +429,6 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                 </div>
               )}
             </>
-          )}
-
-          {/* Make searchable (OCR) — image-only / scanned PDFs get an on-device
-              text layer so Find, copy and redact-by-search work. Hidden for XFA
-              forms (dynamic HTML forms, not raster pages). */}
-          {doc && !isXfa && (
-            <button
-              onClick={() => { setOcrOpen(true); setOpen(false) }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-orange-50 hover:text-orange-700 text-sm border-t border-slate-100"
-            >
-              <span aria-hidden="true">🔎</span>
-              <span className="flex-1 text-left">
-                <span className="block font-medium leading-tight">Make searchable (OCR)</span>
-                <span className="block text-[11px] text-slate-500 leading-tight">Read a scanned PDF on-device so you can find &amp; select its text</span>
-              </span>
-            </button>
           )}
 
           {doc && (
