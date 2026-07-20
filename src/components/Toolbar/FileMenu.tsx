@@ -30,6 +30,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const setPageNavOpen = usePdfStore((s) => s.setPageNavOpen)
   const setPresentOpen = usePdfStore((s) => s.setPresentOpen)
   const setHostedStoreOpen = usePdfStore((s) => s.setHostedStoreOpen)
+  const setOcrOpen = usePdfStore((s) => s.setOcrOpen)
   const isXfa = usePdfStore((s) => s.isXfa)
   const setSearchOpen = useSearchStore((s) => s.setOpen)
   const openForRedact = useSearchStore((s) => s.openForRedact)
@@ -412,6 +413,22 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                 </div>
               )}
             </>
+          )}
+
+          {/* Make searchable (OCR) — image-only / scanned PDFs get an on-device
+              text layer so Find, copy and redact-by-search work. Hidden for XFA
+              forms (dynamic HTML forms, not raster pages). */}
+          {doc && !isXfa && (
+            <button
+              onClick={() => { setOcrOpen(true); setOpen(false) }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-orange-50 hover:text-orange-700 text-sm border-t border-slate-100"
+            >
+              <span aria-hidden="true">🔎</span>
+              <span className="flex-1 text-left">
+                <span className="block font-medium leading-tight">Make searchable (OCR)</span>
+                <span className="block text-[11px] text-slate-500 leading-tight">Read a scanned PDF on-device so you can find &amp; select its text</span>
+              </span>
+            </button>
           )}
 
           {doc && (

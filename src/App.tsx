@@ -18,6 +18,7 @@ import ToolbarUserProfile from './components/Header/ToolbarUserProfile'
 import FileMenu from './components/Toolbar/FileMenu'
 import HostedStoreDialog from './components/HostedStoreDialog'
 import SendToSignDialog from './components/SendToSignDialog'
+import OcrModal from './components/Ocr/OcrModal'
 import MobileWelcomeToast from './components/Onboarding/MobileWelcomeToast'
 import { UniversalAppsNavBar, UniversalBar, ChangelogMenu } from '@unisim/sdk'
 
@@ -46,6 +47,11 @@ export default function App() {
   const refreshRecents = usePdfStore((s) => s.refreshRecents)
   const loadFromCurrentUrl = usePdfStore((s) => s.loadFromCurrentUrl)
   const reset = usePdfStore((s) => s.reset)
+
+  const ocrOpen = usePdfStore((s) => s.ocrOpen)
+  const setOcrOpen = usePdfStore((s) => s.setOcrOpen)
+  const sourceBytes = usePdfStore((s) => s.sourceBytes)
+  const fileName = usePdfStore((s) => s.fileName)
 
   const stampPickerOpen = useSignatureStore((s) => s.stampPickerOpen)
 
@@ -310,6 +316,19 @@ export default function App() {
       <PresentMode />
       <HostedStoreDialog />
       <SendToSignDialog />
+      {ocrOpen && sourceBytes && (
+        <OcrModal
+          sourceBytes={sourceBytes}
+          fileName={fileName ?? 'document.pdf'}
+          onClose={() => setOcrOpen(false)}
+          onOpen={(file) => {
+            loadFile(file).catch((err) => {
+              console.error(err)
+              alert('Failed to load searchable PDF')
+            })
+          }}
+        />
+      )}
     </div>
   )
 }

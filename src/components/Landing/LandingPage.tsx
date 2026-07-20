@@ -7,6 +7,7 @@ import BatchCompressModal, { type BatchSource } from '../Compress/BatchCompressM
 import MergeDialog from '../Convert/MergeDialog'
 import ConvertDialog, { type ConvertMode } from '../Convert/ConvertDialog'
 import RecentFilesList from '../RecentFiles/RecentFilesList'
+import OcrModal from '../Ocr/OcrModal'
 import TransformPanel from '../Transform/TransformPanel'
 import PdfIllustration from './PdfIllustration'
 import { CONTAINER } from '../../lib/layout'
@@ -19,6 +20,7 @@ const DEFAULT_COMPRESS_QUALITY: CompressQuality = 'balanced'
 export default function LandingPage() {
   const inputRef = useRef<HTMLInputElement>(null)
   const compressInputRef = useRef<HTMLInputElement>(null)
+  const ocrInputRef = useRef<HTMLInputElement>(null)
   const loadFile = usePdfStore((s) => s.loadFile)
   const hasRecents = usePdfStore((s) => s.recents.length > 0)
   const [opening, setOpening] = useState(false)
@@ -37,6 +39,7 @@ export default function LandingPage() {
   const [transformOpen, setTransformOpen] = useState(false)
   const [mergeOpen, setMergeOpen] = useState(false)
   const [convertMode, setConvertMode] = useState<ConvertMode | null>(null)
+  const [ocrJob, setOcrJob] = useState<{ bytes: ArrayBuffer; name: string } | null>(null)
 
   async function runCompress(fileList: File[] | FileList) {
     const files = Array.from(fileList).filter(
@@ -107,6 +110,17 @@ export default function LandingPage() {
     const files = e.target.files
     e.target.value = ''
     if (files && files.length > 0) await runCompress(files)
+  }
+
+  async function onOcrFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
+      alert('Please choose a PDF file.')
+      return
+    }
+    setOcrJob({ bytes: await file.arrayBuffer(), name: file.name })
   }
 
   const exampleButton = (
@@ -330,6 +344,33 @@ export default function LandingPage() {
                   </span>
                 </button>
 
+                {/* Make searchable (OCR) — scanned/image-only PDF → text layer */}
+                <button
+                  type="button"
+                  onClick={() => ocrInputRef.current?.click()}
+                  className="group/btn mt-3 w-full flex items-center gap-4 p-4 border border-slate-200 rounded-xl text-left hover:border-emerald-400 hover:bg-emerald-50/50 transition-colors"
+                >
+                  <div className="shrink-0 w-12 h-12 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl">
+                    🔎
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-semibold text-slate-900">Make searchable (OCR)</div>
+                    <div className="text-sm text-slate-500">
+                      Read a scanned PDF on your device — find, select &amp; copy its text
+                    </div>
+                  </div>
+                  <span className="ml-auto text-slate-400 group-hover/btn:text-emerald-700 transition-colors" aria-hidden="true">
+                    →
+                  </span>
+                </button>
+                <input
+                  ref={ocrInputRef}
+                  type="file"
+                  accept="application/pdf"
+                  hidden
+                  onChange={onOcrFile}
+                />
+
                 {/* Transform text → PDF */}
                 <button
                   type="button"
@@ -380,6 +421,20 @@ export default function LandingPage() {
 
       {convertMode && (
         <ConvertDialog initialMode={convertMode} onClose={() => setConvertMode(null)} />
+      )}
+
+      {ocrJob && (
+        <OcrModal
+          sourceBytes={ocrJob.bytes}
+          fileName={ocrJob.name}
+          onClose={() => setOcrJob(null)}
+          onOpen={(file) => {
+            loadFile(file).catch((err) => {
+              console.error(err)
+              alert('Failed to load searchable PDF')
+            })
+          }}
+        />
       )}
     </div>
   )

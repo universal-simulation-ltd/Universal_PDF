@@ -74,6 +74,7 @@ interface PdfState {
   presentOpen: boolean
   hostedStoreOpen: boolean
   sendToSignOpen: boolean
+  ocrOpen: boolean
   recents: RecentMeta[]
   loadFile: (file: File) => Promise<void>
   loadFromSlug: (slug: string) => Promise<boolean>
@@ -85,6 +86,7 @@ interface PdfState {
   setPresentOpen: (open: boolean) => void
   setHostedStoreOpen: (open: boolean) => void
   setSendToSignOpen: (open: boolean) => void
+  setOcrOpen: (open: boolean) => void
   refreshRecents: () => Promise<void>
   openRecent: (id: string) => Promise<void>
   removeRecent: (id: string) => Promise<void>
@@ -106,6 +108,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   presentOpen: false,
   hostedStoreOpen: false,
   sendToSignOpen: false,
+  ocrOpen: false,
   recents: [],
   togglePageNav: () => set((s) => ({ pageNavOpen: !s.pageNavOpen })),
   setPageNavOpen: (pageNavOpen) => set({ pageNavOpen }),
@@ -113,6 +116,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   setPresentOpen: (presentOpen) => set({ presentOpen }),
   setHostedStoreOpen: (hostedStoreOpen) => set({ hostedStoreOpen }),
   setSendToSignOpen: (sendToSignOpen) => set({ sendToSignOpen }),
+  setOcrOpen: (ocrOpen) => set({ ocrOpen }),
   loadFile: async (file) => {
     set({ loading: true })
     try {
@@ -181,7 +185,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   reset: () => {
     get().doc?.destroy()
     clearDocumentState()
-    set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, previewOpen: false, presentOpen: false })
+    set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, previewOpen: false, presentOpen: false, ocrOpen: false })
     setHashSlug(null)
   },
   refreshRecents: async () => {
