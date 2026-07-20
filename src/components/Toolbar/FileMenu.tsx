@@ -31,6 +31,8 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const setPresentOpen = usePdfStore((s) => s.setPresentOpen)
   const setHostedStoreOpen = usePdfStore((s) => s.setHostedStoreOpen)
   const setOcrOpen = usePdfStore((s) => s.setOcrOpen)
+  const setMergeOpen = usePdfStore((s) => s.setMergeOpen)
+  const setConvertOpen = usePdfStore((s) => s.setConvertOpen)
   const isXfa = usePdfStore((s) => s.isXfa)
   const setSearchOpen = useSearchStore((s) => s.setOpen)
   const openForRedact = useSearchStore((s) => s.openForRedact)
@@ -51,6 +53,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const [editSubOpen, setEditSubOpen] = useState(false)
   const [fileSubOpen, setFileSubOpen] = useState(false)
   const [viewSubOpen, setViewSubOpen] = useState(false)
+  const [advancedSubOpen, setAdvancedSubOpen] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
   const [renameDraft, setRenameDraft] = useState('')
   const [currentLang, setCurrentLang] = useState<LangCode>(readSavedLang())
@@ -115,6 +118,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
       setEditSubOpen(false)
       setFileSubOpen(false)
       setViewSubOpen(false)
+      setAdvancedSubOpen(false)
       setRenameOpen(false)
       setShowOtherHint(false)
     }
@@ -299,22 +303,6 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                 </button>
               )}
 
-              {/* Make searchable (OCR) — image-only / scanned PDFs get an on-device
-                  text layer so Find, copy and redact-by-search work. Hidden for XFA
-                  forms (dynamic HTML forms, not raster pages). */}
-              {doc && !isXfa && (
-                <button
-                  onClick={() => { setOcrOpen(true); setOpen(false) }}
-                  className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
-                >
-                  <span aria-hidden="true">🔎</span>
-                  <span className="flex-1 text-left">
-                    <span className="block font-medium leading-tight">Make searchable (OCR)</span>
-                    <span className="block text-[11px] text-slate-500 leading-tight">Read a scanned PDF on-device so you can find &amp; select its text</span>
-                  </span>
-                </button>
-              )}
-
               {/* Backup: free local (automatic) vs paid "Hosted by UNI·SIM" cloud. */}
               <button
                 onClick={() => { setHostedStoreOpen(true); setOpen(false) }}
@@ -426,6 +414,63 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                       <span className="text-[11px] text-slate-400 tracking-wide">Ctrl+F</span>
                     </button>
                   )}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Advanced — power-user actions that transform the whole document:
+              OCR, merge with other PDFs, and convert the pages to images. Grouped
+              into a secondary submenu so the top level stays short. */}
+          {doc && (
+            <>
+              <button
+                onClick={() => { setAdvancedSubOpen((v) => !v) }}
+                className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
+                aria-haspopup="true"
+                aria-expanded={advancedSubOpen}
+              >
+                <span aria-hidden="true">⚙️</span>
+                <span className="flex-1 text-left">Advanced</span>
+                <svg viewBox="0 0 12 12" className={`w-3 h-3 transition-transform ${advancedSubOpen ? '-rotate-90' : ''}`} aria-hidden="true">
+                  <path d="M4 2 L8 6 L4 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+
+              {advancedSubOpen && (
+                <div className="border-t border-slate-100 bg-slate-50/60 divide-y divide-slate-100">
+                  {!isXfa && (
+                    <button
+                      onClick={() => { setOcrOpen(true); setOpen(false) }}
+                      className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
+                    >
+                      <span aria-hidden="true">🔎</span>
+                      <span className="flex-1 text-left">
+                        <span className="block font-medium leading-tight">Make searchable (OCR)</span>
+                        <span className="block text-[11px] text-slate-500 leading-tight">Read a scanned PDF on-device so you can find &amp; select its text</span>
+                      </span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { setMergeOpen(true); setOpen(false) }}
+                    className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
+                  >
+                    <span aria-hidden="true">⧉</span>
+                    <span className="flex-1 text-left">
+                      <span className="block font-medium leading-tight">Merge with another PDF</span>
+                      <span className="block text-[11px] text-slate-500 leading-tight">Combine this file with others — reorder before you export</span>
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => { setConvertOpen(true); setOpen(false) }}
+                    className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
+                  >
+                    <span aria-hidden="true">⇄</span>
+                    <span className="flex-1 text-left">
+                      <span className="block font-medium leading-tight">Convert into images</span>
+                      <span className="block text-[11px] text-slate-500 leading-tight">Render each page to PNG or JPG (a ZIP for multiple pages)</span>
+                    </span>
+                  </button>
                 </div>
               )}
             </>

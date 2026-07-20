@@ -19,6 +19,8 @@ import FileMenu from './components/Toolbar/FileMenu'
 import HostedStoreDialog from './components/HostedStoreDialog'
 import SendToSignDialog from './components/SendToSignDialog'
 import OcrModal from './components/Ocr/OcrModal'
+import MergeDialog from './components/Convert/MergeDialog'
+import ConvertDialog from './components/Convert/ConvertDialog'
 import MobileWelcomeToast from './components/Onboarding/MobileWelcomeToast'
 import { UniversalAppsNavBar, UniversalBar, ChangelogMenu } from '@unisim/sdk'
 
@@ -50,8 +52,18 @@ export default function App() {
 
   const ocrOpen = usePdfStore((s) => s.ocrOpen)
   const setOcrOpen = usePdfStore((s) => s.setOcrOpen)
+  const mergeOpen = usePdfStore((s) => s.mergeOpen)
+  const setMergeOpen = usePdfStore((s) => s.setMergeOpen)
+  const convertOpen = usePdfStore((s) => s.convertOpen)
+  const setConvertOpen = usePdfStore((s) => s.setConvertOpen)
   const sourceBytes = usePdfStore((s) => s.sourceBytes)
   const fileName = usePdfStore((s) => s.fileName)
+
+  // The currently-open document as a File, for the Advanced-menu dialogs that
+  // start from it (Merge with another PDF, Convert into images). A fresh copy of
+  // sourceBytes each time — pdf-lib / pdf.js detach the ArrayBuffer they consume.
+  const currentDocFile =
+    sourceBytes && fileName ? new File([sourceBytes.slice(0)], fileName, { type: 'application/pdf' }) : null
 
   const stampPickerOpen = useSignatureStore((s) => s.stampPickerOpen)
 
@@ -328,6 +340,11 @@ export default function App() {
             })
           }}
         />
+      )}
+      {/* Advanced-menu dialogs, seeded with the open document so they act on it. */}
+      {mergeOpen && <MergeDialog initialFile={currentDocFile} onClose={() => setMergeOpen(false)} />}
+      {convertOpen && (
+        <ConvertDialog initialMode="pdf-to-images" initialPdf={currentDocFile} onClose={() => setConvertOpen(false)} />
       )}
     </div>
   )

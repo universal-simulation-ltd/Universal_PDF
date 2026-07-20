@@ -75,6 +75,9 @@ interface PdfState {
   hostedStoreOpen: boolean
   sendToSignOpen: boolean
   ocrOpen: boolean
+  // Advanced-menu dialogs that act on the currently-open document.
+  mergeOpen: boolean
+  convertOpen: boolean
   recents: RecentMeta[]
   loadFile: (file: File) => Promise<void>
   loadFromSlug: (slug: string) => Promise<boolean>
@@ -87,6 +90,8 @@ interface PdfState {
   setHostedStoreOpen: (open: boolean) => void
   setSendToSignOpen: (open: boolean) => void
   setOcrOpen: (open: boolean) => void
+  setMergeOpen: (open: boolean) => void
+  setConvertOpen: (open: boolean) => void
   refreshRecents: () => Promise<void>
   openRecent: (id: string) => Promise<void>
   removeRecent: (id: string) => Promise<void>
@@ -109,6 +114,8 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   hostedStoreOpen: false,
   sendToSignOpen: false,
   ocrOpen: false,
+  mergeOpen: false,
+  convertOpen: false,
   recents: [],
   togglePageNav: () => set((s) => ({ pageNavOpen: !s.pageNavOpen })),
   setPageNavOpen: (pageNavOpen) => set({ pageNavOpen }),
@@ -117,6 +124,8 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   setHostedStoreOpen: (hostedStoreOpen) => set({ hostedStoreOpen }),
   setSendToSignOpen: (sendToSignOpen) => set({ sendToSignOpen }),
   setOcrOpen: (ocrOpen) => set({ ocrOpen }),
+  setMergeOpen: (mergeOpen) => set({ mergeOpen }),
+  setConvertOpen: (convertOpen) => set({ convertOpen }),
   loadFile: async (file) => {
     set({ loading: true })
     try {
@@ -185,7 +194,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   reset: () => {
     get().doc?.destroy()
     clearDocumentState()
-    set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, previewOpen: false, presentOpen: false, ocrOpen: false })
+    set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, previewOpen: false, presentOpen: false, ocrOpen: false, mergeOpen: false, convertOpen: false })
     setHashSlug(null)
   },
   refreshRecents: async () => {
