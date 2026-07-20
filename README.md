@@ -12,6 +12,7 @@ A clean Progressive Web App for viewing, annotating, and signing PDFs — works 
 
 - **View** multi-page PDFs with zoom (50%–300%), pinch-to-zoom on touch, and a thumbnail navigator
 - **Select text** — the *Select text* tool (in the Select ▾ menu) lets you drag over the PDF's own text and copy it (Ctrl/⌘C)
+- **Make searchable (OCR)** — turn a scanned / image-only PDF into a searchable, selectable one *entirely on your device* (no upload). Find, copy and redact-by-search then work. The OCR engine downloads once on first use, then works offline
 - **Annotate** with free draw, text, rectangles, ticks, and crosses, in any of six colours
 - **Sign** by drawing on a pad; signatures are auto-cropped, saved to your device, and re-usable across PDFs
 - **Sign on your phone** — the pad can show a UNI·SIM QR + PIN; scan it, draw on your phone, enter the PIN, and the signature lands on the desktop ready to place (works from the desktop app too)
@@ -89,6 +90,7 @@ uploaded as a workflow artifact in that case.
 - **Vite 6 + React 18 + TypeScript** — app shell
 - **pdfjs-dist** — PDF rendering (Mozilla)
 - **pdf-lib** — PDF export with annotations baked in
+- **tesseract.js** — on-device OCR (WASM), lazily loaded for the "Make searchable" tool
 - **react-konva** — canvas overlay for shapes, text, freehand, and signatures
 - **Zustand** — state management
 - **IndexedDB** — recent files (binary bytes)

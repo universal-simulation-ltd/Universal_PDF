@@ -44,6 +44,34 @@ export default defineConfig(({ mode }) => {
         workbox: {
           // SPA navigations under the base path fall back to the prefixed shell.
           navigateFallback: `${BASE_PATH}index.html`,
+          // The on-device OCR runtime (Tesseract.js WASM core + English model)
+          // is large (~15 MB) and only fetched from the Tesseract CDN when the
+          // optional "Make searchable (OCR)" tool is used. Keep it OUT of the
+          // install-time precache (it would bloat the PWA install and blow past
+          // workbox's file-size limit — the assets live cross-origin anyway) and
+          // cache it at runtime on first use, so OCR still works offline once the
+          // user has run it once. Same pattern as Universal Images' background
+          // removal. Cross-origin responses are opaque (status 0), so allow that.
+          runtimeCaching: [
+            {
+              urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/npm\/tesseract\.js.*/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'tesseract-runtime',
+                expiration: { maxEntries: 12, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/tessdata\.projectnaptha\.com\/.*/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'tesseract-langdata',
+                expiration: { maxEntries: 8, maxAgeSeconds: 60 * 60 * 24 * 90 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+          ],
         },
         devOptions: { enabled: false }
       })]),
