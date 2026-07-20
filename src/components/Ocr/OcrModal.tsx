@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { makeSearchablePdf, type OcrProgress, type OcrResult } from '../../lib/ocr'
 import { downloadPdfBytes } from '../../lib/export'
 
@@ -26,25 +26,42 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
   })
   const [result, setResult] = useState<OcrResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Which mode the current/last run used. 'auto' skips pages pdf.js can already
+  // read; 'all' forces OCR on every page (the "Run OCR anyway" escape hatch for
+  // scans that carry a thin or junk text layer auto-detection mistakes for real text).
+  const [mode, setMode] = useState<'auto' | 'all'>('auto')
   // Ignore async results if the modal was closed mid-run (BatchCompress pattern).
   const liveRef = useRef(true)
 
+  const run = useCallback(
+    (m: 'auto' | 'all') => {
+      liveRef.current = true
+      setMode(m)
+      setResult(null)
+      setError(null)
+      setProgress({ phase: 'load', fraction: 0, message: 'Preparing OCR engine…' })
+      setPhase('running')
+      // Fresh copy per run — pdf.js detaches the ArrayBuffer it's handed.
+      makeSearchablePdf(sourceBytes.slice(0), fileName, (p) => {
+        if (liveRef.current) setProgress(p)
+      }, { mode: m })
+        .then((r) => {
+          if (!liveRef.current) return
+          setResult(r)
+          setPhase('done')
+        })
+        .catch((err) => {
+          console.error(err)
+          if (!liveRef.current) return
+          setError((err as Error).message || 'OCR failed')
+          setPhase('error')
+        })
+    },
+    [sourceBytes, fileName],
+  )
+
   useEffect(() => {
-    liveRef.current = true
-    makeSearchablePdf(sourceBytes.slice(0), fileName, (p) => {
-      if (liveRef.current) setProgress(p)
-    })
-      .then((r) => {
-        if (!liveRef.current) return
-        setResult(r)
-        setPhase('done')
-      })
-      .catch((err) => {
-        console.error(err)
-        if (!liveRef.current) return
-        setError((err as Error).message || 'OCR failed')
-        setPhase('error')
-      })
+    run('auto')
     return () => {
       liveRef.current = false
     }
@@ -122,10 +139,15 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
               ].join(' ')}
             >
               {alreadySearchable
-                ? 'Every page already has selectable text — nothing to add.'
+                ? 'Every page already looks like it has selectable text, so nothing was added.'
                 : `Added a searchable text layer to ${result.pagesOcred} page${
                     result.pagesOcred === 1 ? '' : 's'
                   }.`}
+              {alreadySearchable && (
+                <span className="block text-[11px] font-normal text-slate-500 mt-0.5">
+                  If this is a scan whose text you still can’t select, run OCR on every page anyway.
+                </span>
+              )}
               {!alreadySearchable && result.pagesSkipped > 0 && (
                 <span className="block text-[11px] font-normal text-emerald-600 mt-0.5">
                   {result.pagesSkipped} page{result.pagesSkipped === 1 ? '' : 's'} already had text and{' '}
@@ -141,6 +163,14 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
               >
                 {alreadySearchable ? 'Close' : 'Done'}
               </button>
+              {alreadySearchable && mode === 'auto' && (
+                <button
+                  onClick={() => run('all')}
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded text-sm font-medium"
+                >
+                  Run OCR anyway
+                </button>
+              )}
               {!alreadySearchable && (
                 <button
                   onClick={download}
