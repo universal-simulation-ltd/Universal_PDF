@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -9,15 +10,38 @@ import pkg from './package.json' with { type: 'json' }
 // `desktop` mode targets the Electron build, which loads index.html over
 // `file://`, so assets must resolve relative to it (`./`). Derived from Vite's
 // `mode` so the config needs no Node `process` typings.
+// Build-version marker: prefer the Cloudflare Pages commit SHA baked in at build
+// time, fall back to the local git short SHA, then 'dev'. Surfaced as a
+// <meta name="build-sha"> tag and a startup console.log so the live build is
+// identifiable in-browser without wrangler.
+function resolveBuildSha(): string {
+  if (process.env.CF_PAGES_COMMIT_SHA) return process.env.CF_PAGES_COMMIT_SHA
+  try {
+    return execSync('git rev-parse --short HEAD').toString().trim()
+  } catch {
+    return 'dev'
+  }
+}
+const BUILD_SHA = resolveBuildSha()
+
 export default defineConfig(({ mode }) => {
   const isDesktop = mode === 'desktop'
   const BASE_PATH = isDesktop ? './' : mode === 'production' ? '/pdf/' : '/'
   return {
     base: BASE_PATH,
     define: {
-      __APP_VERSION__: JSON.stringify(pkg.version)
+      __APP_VERSION__: JSON.stringify(pkg.version),
+      'import.meta.env.VITE_BUILD_SHA': JSON.stringify(BUILD_SHA)
     },
     plugins: [
+      {
+        name: 'build-sha-meta',
+        transformIndexHtml() {
+          return [
+            { tag: 'meta', attrs: { name: 'build-sha', content: BUILD_SHA }, injectTo: 'head' as const },
+          ]
+        },
+      },
       react(),
       tailwindcss(),
       // The PWA service worker is for the hosted web app only — under Electron's

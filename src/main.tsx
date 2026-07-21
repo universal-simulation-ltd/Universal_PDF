@@ -1,6 +1,8 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { UniversalProvider } from '@unisim/sdk'
+
+console.log(`build: ${import.meta.env.VITE_BUILD_SHA}`)
 import App from './App'
 import SignMobilePage from './components/Signature/SignMobilePage'
 import SignRequestPage from './components/Signature/SignRequestPage'
