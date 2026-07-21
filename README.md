@@ -54,6 +54,8 @@ The dev server runs at <http://localhost:5173>. Build for production with `npm r
 
 Pushes to `main` auto-deploy via Cloudflare Pages, which serves the app at <https://opensource.unisim.co.uk/pdf>. The production build sets Vite `base: '/pdf/'` and ships a `public/_redirects` file that rewrites `/pdf/*` onto the flat `dist/` output.
 
+Each build bakes the commit SHA into a `<meta name="build-sha">` tag and logs `build: <sha>` to the console at startup, so you can tell which build is live in-browser. On Cloudflare Pages the SHA comes from `CF_PAGES_COMMIT_SHA`; locally it falls back to the git short SHA (or `dev`).
+
 ## Desktop app (Windows)
 
 The same client-side app can be packaged as a native desktop app with
