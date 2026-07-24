@@ -18,9 +18,10 @@ import { useCoarsePointer } from '../../hooks/useCoarsePointer'
 import { useImage } from '../../lib/useImage'
 import { RedactIcon } from '../icons/RedactIcon'
 import { SIGNATURE_INK, formatSigningDate } from '../../lib/signature'
+import { composeSignature, sigHasLabels } from '../../lib/composeSignature'
 import { FONT_CSS } from '../../lib/fonts'
 import { effectiveRuns, runFontStyle, runHasStyle, runsToPlainText, runsToHtml, parseRunsFromDom, mergeRuns } from '../../lib/textRuns'
-import type { Annotation, DrawAnnotation, ImageAnnotation, SignatureFieldAnnotation, TextAnnotation, TextRun } from '../../types/annotations'
+import type { Annotation, DrawAnnotation, ImageAnnotation, SignatureData, SignatureFieldAnnotation, SigAlign, TextAnnotation, TextRun } from '../../types/annotations'
 
 // On-screen font stacks, keyed by family id (shared with the toolbar + export).
 const FONT_STACK = FONT_CSS
@@ -288,6 +289,42 @@ function containRect(
   return { x: (boxW - w) / 2, y: (boxH - h) / 2, width: w, height: h }
 }
 
+// Read the editable signature payload from a placed signature (a dropped
+// library signature / stamp / image, or a signed request box), if any.
+function sigDataOf(a: Annotation): SignatureData | null {
+  if (a.type === 'image') return a.sig ?? null
+  if (a.type === 'sigfield') return a.signed?.data ?? null
+  return null
+}
+
+// The editable payload for an image, synthesising one on first edit for images
+// placed before this existed (or plain imported pictures / stamps): the current
+// rendered image becomes the untouched "ink" and labels compose on top of it.
+function ensureImageSigData(a: ImageAnnotation): SignatureData {
+  return (
+    a.sig ?? {
+      ink: a.src,
+      inkWidth: a.width,
+      inkHeight: a.height,
+      showName: false,
+      showDate: false,
+      align: 'center',
+      labelScale: 1,
+      color: SIGNATURE_INK
+    }
+  )
+}
+
+// Whether an annotation is a signature that can be double-tapped to edit its
+// name/date options: any placed image (drawn signature, stamp or picture) or a
+// request box that's been signed in-app (has re-editable data).
+function isEditableSignature(a: Annotation | undefined): boolean {
+  if (!a) return false
+  if (a.type === 'image') return true
+  if (a.type === 'sigfield') return !!a.signed?.data
+  return false
+}
+
 // A "Request signature" box. Unsigned it's a dashed placeholder with a
 // "Sign here" caption (and the requested Name / Date lines); signed it shows the
 // baked signature image contained inside the box. The whole box is clickable —
@@ -296,7 +333,8 @@ function SigField({
   a,
   scale,
   common,
-  armed
+  armed,
+  onDblClick
 }: {
   a: SignatureFieldAnnotation
   scale: number
@@ -306,6 +344,8 @@ function SigField({
   // Selected but not yet "armed to sign" — show the "Click again to sign" hint
   // (the first click selects so the box can be dragged/placed; the second signs).
   armed: boolean
+  // Double-tap a signed box to edit its name/date options (never redraws ink).
+  onDblClick: () => void
 }) {
   const img = useImage(a.signed?.src ?? '')
   const captionRef = useRef<Konva.Text>(null)
@@ -362,6 +402,8 @@ function SigField({
       x={a.x}
       y={a.y}
       draggable={!!common.draggable && !locked}
+      onDblClick={onDblClick}
+      onDblTap={onDblClick}
       onTransform={onTransform}
       onTransformEnd={(e) => {
         captionRef.current?.scale({ x: 1, y: 1 })
@@ -521,6 +563,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // Pointer position used to render the ghost-signature preview that
   // follows the cursor while the signature tool is armed.
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null)
+  // Id of the placed signature whose name/date options are open in the
+  // double-tap editor. The editor only ever changes labels/styling — it
+  // re-composes from the untouched ink, never the strokes.
+  const [sigEditId, setSigEditId] = useState<string | null>(null)
   // Coarse pointer (touch) needs bigger Transformer anchors + a longer rotate
   // arm to be grabbable with a finger — the 9px desktop anchors are fiddly on
   // mobile. The handles themselves render on every device (the Transformer is
@@ -716,6 +762,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           width: targetW,
           height: targetW * ratio,
           src: active.dataUrl,
+          // Carry the re-editable ink + options so the placed signature's
+          // name/date can be changed (double-tap) / restyled (pill) later.
+          sig: active.sig,
         })
         // If this signature carries separate name/date pieces, arm them for
         // click-placement instead of dropping straight into Select.
@@ -960,10 +1009,12 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       return
     }
     setSelected(id)
-    // A signature-request box takes two clicks: the first selects it (so it can
-    // be dragged into place and shows the "Click again to sign" hint), the
-    // second opens the pad. Re-signing an already-signed box works the same way.
-    if (ann?.type === 'sigfield') {
+    // An UNSIGNED signature-request box takes two clicks: the first selects it
+    // (so it can be dragged into place and shows the "Click again to sign"
+    // hint), the second opens the pad. A signed box just selects — its options
+    // are edited by double-tapping (and it can be re-drawn from that editor), so
+    // a stray second click can't accidentally reopen the pad and lose the ink.
+    if (ann?.type === 'sigfield' && !ann.signed) {
       if (armedSigfieldRef.current === id) {
         armSigfield(null)
         useSignatureStore.getState().startSigningField(id)
@@ -977,6 +1028,43 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     if (tool !== 'select') return
     setEditingId(a.id)
     setSelected(a.id)
+  }
+
+  // Double-tap a placed signature (or a signed request box) to edit its
+  // name/date options. Selects it and opens the options editor. Never touches
+  // the ink — only the labels are re-composed.
+  function openSigEditor(id: string) {
+    const ann = useAnnotationStore.getState().annotations.find((a) => a.id === id)
+    if (!isEditableSignature(ann)) return
+    setSelected(id)
+    setSigEditId(id)
+  }
+
+  // Re-compose a signature from new label options and write it back, keeping the
+  // ink untouched. Images keep their on-page width and take the new aspect ratio
+  // (so the ink stays put and labels grow downward); signed request boxes just
+  // re-fit inside their fixed box.
+  async function applySigData(id: string, next: SignatureData) {
+    const cur = useAnnotationStore.getState().annotations.find((a) => a.id === id)
+    if (!cur) return
+    const composed = await composeSignature(next)
+    if (cur.type === 'image') {
+      const aspect = composed.height / composed.width
+      update(id, {
+        src: composed.dataUrl,
+        height: cur.width * aspect,
+        sig: next
+      } as Partial<Annotation>)
+    } else if (cur.type === 'sigfield') {
+      update(id, {
+        signed: {
+          src: composed.dataUrl,
+          width: composed.width,
+          height: composed.height,
+          data: next
+        }
+      } as Partial<Annotation>)
+    }
   }
 
   function onShapeDragStart(a: Annotation) {
@@ -1463,7 +1551,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                     shapeRef={shapeRefSetter(a.id)}
                     draggable={selectable}
                     onClick={(e) => onShapeClick(a.id, e)}
-                    onDblClick={() => onShapeClick(a.id)}
+                    onDblClick={() => openSigEditor(a.id)}
                     onDragStart={() => onShapeDragStart(a)}
                     onDragMove={(e) => onShapeDragMove(a, e)}
                     onDragEnd={(e) => onShapeDragEnd(a, e)}
@@ -1478,6 +1566,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                     scale={scale}
                     common={common}
                     armed={armedSigfieldId === a.id}
+                    onDblClick={() => openSigEditor(a.id)}
                   />
                 )
               default:
@@ -2184,7 +2273,229 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           document.body
         )
       })()}
+
+      {(() => {
+        // Size + alignment pill for a selected signature — only when it's
+        // showing name/date labels (nothing to style otherwise). The size
+        // stepper scales the labels and the alignment icon cycles
+        // left → centre → right; both re-compose from the untouched ink.
+        if (draggingId || editingId) return null
+        const selected = annotations.find((a) => a.id === selectedId)
+        if (!selected) return null
+        const data = sigDataOf(selected)
+        if (!data || !sigHasLabels(data)) return null
+        const bbox = getAnnotationBBox(selected)
+        const bx = bbox.x * scale
+        const by = bbox.y * scale
+        const bw = bbox.width * scale
+        const bh = bbox.height * scale
+        const CHIP_W = 210
+        const CHIP_H = 44
+        const GAP = 10
+        const left = Math.min(
+          Math.max(bx + bw / 2 - CHIP_W / 2, GAP),
+          Math.max(GAP, width - CHIP_W - GAP)
+        )
+        let top: number
+        if (by + bh + GAP + CHIP_H <= height) top = by + bh + GAP
+        else if (by - CHIP_H - GAP >= 0) top = by - CHIP_H - GAP
+        else top = Math.min(Math.max(by + bh + GAP, GAP), Math.max(GAP, height - CHIP_H - GAP))
+        const labelScale = data.labelScale ?? 1
+        const align: SigAlign = data.align ?? 'center'
+        const setScale = (v: number) =>
+          applySigData(selected.id, { ...data, labelScale: Math.min(2.5, Math.max(0.5, Math.round(v * 100) / 100)) })
+        const cycleAlign = () => {
+          const order: SigAlign[] = ['left', 'center', 'right']
+          const next = order[(order.indexOf(align) + 1) % order.length]
+          applySigData(selected.id, { ...data, align: next })
+        }
+        // Justify three little rules per the current alignment.
+        const rowW = [15, 9, 15]
+        const alignLabel = align === 'left' ? 'left' : align === 'right' ? 'right' : 'centre'
+        return (
+          <div
+            onMouseDown={(e) => { e.stopPropagation(); e.preventDefault() }}
+            onPointerDown={(e) => e.stopPropagation()}
+            style={{ position: 'absolute', left, top, zIndex: 21 }}
+            className="inline-flex items-center gap-0.5 bg-white rounded-full shadow-lg border border-slate-300 px-1 py-1"
+          >
+            <span className="px-1.5 text-xs font-medium text-slate-500 select-none">Size</span>
+            <button
+              type="button"
+              aria-label="Smaller labels"
+              onClick={(e) => { e.stopPropagation(); setScale(labelScale - 0.15) }}
+              className="w-8 h-8 rounded-full hover:bg-slate-100 text-lg font-semibold text-slate-700 leading-none"
+            >
+              −
+            </button>
+            <span className="w-9 text-center text-xs tabular-nums text-slate-600 select-none">
+              {Math.round(labelScale * 100)}%
+            </span>
+            <button
+              type="button"
+              aria-label="Bigger labels"
+              onClick={(e) => { e.stopPropagation(); setScale(labelScale + 0.15) }}
+              className="w-8 h-8 rounded-full hover:bg-slate-100 text-lg font-semibold text-slate-700 leading-none"
+            >
+              +
+            </button>
+            <span className="w-px h-6 bg-slate-200 mx-0.5" />
+            <button
+              type="button"
+              title={`Align labels: ${alignLabel} (click to cycle)`}
+              aria-label={`Align labels ${alignLabel}, click to change`}
+              onClick={(e) => { e.stopPropagation(); cycleAlign() }}
+              className="w-8 h-8 rounded-full hover:bg-slate-100 text-slate-700 flex items-center justify-center"
+            >
+              <svg viewBox="0 0 20 14" width="18" height="14" aria-hidden="true">
+                {rowW.map((w, i) => {
+                  const y = 2.5 + i * 4.5
+                  const x = align === 'left' ? 2.5 : align === 'right' ? 17.5 - w : (20 - w) / 2
+                  return <rect key={i} x={x} y={y} width={w} height={2} rx={1} fill="currentColor" />
+                })}
+              </svg>
+            </button>
+          </div>
+        )
+      })()}
+
+      {sigEditId && (() => {
+        // Options editor — opened by double-tapping a placed signature. Changes
+        // name / date / (via the pill) size + alignment only; the ink is never
+        // redrawn, just re-composited beneath the labels.
+        const target = annotations.find((a) => a.id === sigEditId)
+        if (!target) return null
+        let data: SignatureData | null = null
+        if (target.type === 'image') data = ensureImageSigData(target)
+        else if (target.type === 'sigfield' && target.signed?.data) data = target.signed.data
+        if (!data) return null
+        return (
+          <SignatureOptionsModal
+            data={data}
+            onApply={(next) => { void applySigData(sigEditId, next) }}
+            onRedraw={
+              target.type === 'sigfield'
+                ? () => { setSigEditId(null); useSignatureStore.getState().startSigningField(sigEditId) }
+                : undefined
+            }
+            onClose={() => setSigEditId(null)}
+          />
+        )
+      })()}
     </>
+  )
+}
+
+// Double-tap options editor for a placed signature. Edits name / add-name /
+// add-date only — size + alignment live on the on-canvas pill. Holds its own
+// draft state so typing stays smooth while each change re-composes the image
+// from the untouched ink.
+function SignatureOptionsModal({
+  data,
+  onApply,
+  onRedraw,
+  onClose
+}: {
+  data: SignatureData
+  onApply: (next: SignatureData) => void
+  onRedraw?: () => void
+  onClose: () => void
+}) {
+  const [name, setName] = useState(data.name ?? '')
+  const [showName, setShowName] = useState(!!data.showName)
+  const [showDate, setShowDate] = useState(!!data.showDate)
+  // Latest base payload (ink + size/alignment) — re-read on every apply so the
+  // pill's size/alignment edits aren't clobbered by a name/date change.
+  const dataRef = useRef(data)
+  dataRef.current = data
+
+  const changeName = (v: string) => {
+    setName(v)
+    onApply({ ...dataRef.current, name: v, showName: showName || !!v, showDate })
+    if (v && !showName) setShowName(true)
+  }
+  const toggleName = (v: boolean) => {
+    setShowName(v)
+    onApply({ ...dataRef.current, name, showName: v, showDate })
+  }
+  const toggleDate = (v: boolean) => {
+    setShowDate(v)
+    onApply({ ...dataRef.current, name, showName, showDate: v })
+  }
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+      onMouseDown={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-xl bg-white shadow-2xl overflow-hidden"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 pt-4 pb-2">
+          <h2 className="text-base font-semibold text-slate-900">Signature options</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="text-slate-400 hover:text-slate-700 text-2xl leading-none w-8 h-8 flex items-center justify-center"
+          >
+            ×
+          </button>
+        </div>
+        <div className="px-5 pb-4 space-y-3">
+          <p className="text-xs text-slate-500">
+            Changes the name and date only — your signature itself stays exactly as drawn.
+            Use the pill on the signature to resize or align the labels.
+          </p>
+          <input
+            value={name}
+            onChange={(e) => changeName(e.target.value)}
+            placeholder="Name"
+            className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+          />
+          <label className="flex items-center justify-between gap-2 text-sm text-slate-700 select-none cursor-pointer">
+            <span>Add name</span>
+            <input
+              type="checkbox"
+              checked={showName}
+              onChange={(e) => toggleName(e.target.checked)}
+              className="peer sr-only"
+            />
+            <span className="relative w-9 h-5 rounded-full bg-slate-300 transition-colors peer-checked:bg-orange-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:shadow after:transition-transform peer-checked:after:translate-x-4" />
+          </label>
+          <label className="flex items-center justify-between gap-2 text-sm text-slate-700 select-none cursor-pointer">
+            <span>Add date (today)</span>
+            <input
+              type="checkbox"
+              checked={showDate}
+              onChange={(e) => toggleDate(e.target.checked)}
+              className="peer sr-only"
+            />
+            <span className="relative w-9 h-5 rounded-full bg-slate-300 transition-colors peer-checked:bg-orange-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:shadow after:transition-transform peer-checked:after:translate-x-4" />
+          </label>
+        </div>
+        <div className="flex items-center justify-between gap-2 border-t border-slate-100 bg-slate-50 px-5 py-3">
+          {onRedraw ? (
+            <button
+              type="button"
+              onClick={onRedraw}
+              className="px-3 h-9 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-200"
+            >
+              Redraw signature…
+            </button>
+          ) : <span />}
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 h-9 rounded-md text-sm font-medium text-white bg-orange-600 hover:bg-orange-500"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
   )
 }
 

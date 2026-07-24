@@ -5,6 +5,8 @@ import { useUniversal } from '@unisim/sdk'
 import { useSignatureStore, type SignatureExtras } from '../../stores/signatureStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { SIGNATURE_INK, formatSigningDate } from '../../lib/signature'
+import { composeSignatureWithLabels } from '../../lib/composeSignature'
+import type { SignatureData } from '../../types/annotations'
 import { brandedQrPngDataUrl } from '../../lib/brandedQr'
 import { importImageAsSignature } from '../../lib/imageSignature'
 import {
@@ -17,17 +19,6 @@ import {
 
 const PAD_W = 600
 const PAD_H = 240
-
-const FONT = 'Helvetica, Arial, sans-serif'
-
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const im = new Image()
-    im.onload = () => resolve(im)
-    im.onerror = reject
-    im.src = src
-  })
-}
 
 // Small seeded PRNG (mulberry32) so the ink jitter/speckles are deterministic
 // for a given drawing — no flicker, stable output.
@@ -164,49 +155,6 @@ function renderInkSignature(
   return { dataUrl: canvas.toDataURL('image/png'), width: w, height: h }
 }
 
-// Stack one or more text labels (name, then date) centered beneath the
-// signature image, returning a new PNG + logical size. Rendered at 2×.
-async function composeSignatureWithLabels(
-  sigDataUrl: string,
-  sigW: number,
-  sigH: number,
-  labels: { text: string; scale: number }[],
-  color: string
-): Promise<{ dataUrl: string; width: number; height: number }> {
-  const img = await loadImage(sigDataUrl)
-  const RS = 2
-  const baseFont = Math.min(28, Math.max(14, sigH * 0.4))
-  const gap = Math.max(4, sigH * 0.08)
-
-  const canvas = document.createElement('canvas')
-  const ctx = canvas.getContext('2d')!
-
-  let maxTextW = 0
-  const lineHeights = labels.map((l) => {
-    const fs = baseFont * l.scale
-    ctx.font = `${fs * RS}px ${FONT}`
-    maxTextW = Math.max(maxTextW, ctx.measureText(l.text).width / RS)
-    return fs * 1.3
-  })
-  const outW = Math.max(sigW, maxTextW)
-  const outH = sigH + (labels.length ? gap : 0) + lineHeights.reduce((a, b) => a + b, 0)
-  canvas.width = Math.ceil(outW * RS)
-  canvas.height = Math.ceil(outH * RS)
-
-  ctx.drawImage(img, ((outW - sigW) / 2) * RS, 0, sigW * RS, sigH * RS)
-  ctx.fillStyle = color
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'top'
-  let y = sigH + gap
-  labels.forEach((l, i) => {
-    ctx.font = `${baseFont * l.scale * RS}px ${FONT}`
-    ctx.fillText(l.text, (outW / 2) * RS, y * RS)
-    y += lineHeights[i]
-  })
-
-  return { dataUrl: canvas.toDataURL('image/png'), width: outW, height: outH }
-}
-
 // iOS-style toggle used by the advanced options.
 function OptionToggle({
   checked,
@@ -235,6 +183,10 @@ export default function SignaturePad() {
   const open = useSignatureStore((s) => s.padOpen)
   const closePad = useSignatureStore((s) => s.closePad)
   const add = useSignatureStore((s) => s.add)
+  // Id of the "Request signature" box being fulfilled, if any. When set the pad
+  // fills that box (rather than adding a library signature) and offers the same
+  // name/date options every other signature gets.
+  const signingFieldId = useSignatureStore((s) => s.signingFieldId)
   const { supabase } = useUniversal()
 
   const stageRef = useRef<Konva.Stage>(null)
@@ -273,6 +225,24 @@ export default function SignaturePad() {
     setQrUrl(null)
     setPhoneStatus('waiting')
   }, [open])
+
+  // Fulfilling a "Request signature" box: seed the same name/date options the
+  // box asked for (and surface them) so the signer gets exactly the options
+  // every other signature gets, rather than having them silently dictated by
+  // the request. They stay editable — the signer can add or drop either one.
+  useEffect(() => {
+    if (!open || !signingFieldId) return
+    const ann = useAnnotationStore
+      .getState()
+      .annotations.find((a) => a.id === signingFieldId)
+    if (ann?.type !== 'sigfield') return
+    setIncludeName(!!ann.requireName)
+    setIncludeDate(!!ann.requireDate)
+    // Baked into the box (never a separate click) — a request box is a fixed
+    // slot, so the labels always travel inside it.
+    setSeparatePlacement(false)
+    if (ann.requireName || ann.requireDate) setAdvancedOpen(true)
+  }, [open, signingFieldId])
 
   // While in phone mode: render the QR and listen for the phone's signature.
   useEffect(() => {
@@ -395,9 +365,13 @@ export default function SignaturePad() {
       closePad()
       return
     }
+    // The signer's chosen options (seeded from the request, but freely
+    // adjustable in the pad) decide which labels get baked in.
+    const wantName = includeName && !!trimmedName
+    const wantDate = includeDate
     const labels: { text: string; scale: number }[] = []
-    if (ann.requireName && trimmedName) labels.push({ text: trimmedName, scale: 1 })
-    if (ann.requireDate) labels.push({ text: formatSigningDate(), scale: 0.8 })
+    if (wantName) labels.push({ text: trimmedName, scale: 1 })
+    if (wantDate) labels.push({ text: formatSigningDate(), scale: 0.8 })
 
     let src = sig.dataUrl
     let w = sig.width
@@ -408,7 +382,20 @@ export default function SignaturePad() {
       w = composed.width
       h = composed.height
     }
-    useAnnotationStore.getState().update(fieldId, { signed: { src, width: w, height: h } })
+    // Carry the untouched ink + options so the box's name/date stay re-editable
+    // (double-tap) and restyleable (size/alignment pill) later.
+    const data: SignatureData = {
+      ink: sig.dataUrl,
+      inkWidth: sig.width,
+      inkHeight: sig.height,
+      name: trimmedName || undefined,
+      showName: wantName,
+      showDate: wantDate,
+      align: 'center',
+      labelScale: 1,
+      color: inkColor
+    }
+    useAnnotationStore.getState().update(fieldId, { signed: { src, width: w, height: h, data } })
     resetForm()
     closePad()
     useAnnotationStore.getState().setTool('select')
@@ -453,7 +440,23 @@ export default function SignaturePad() {
       finalH = composed.height
     }
 
-    add({ name: sigName, dataUrl: finalUrl, width: finalW, height: finalH, extras })
+    // Carry the untouched ink + baked-label options onto the library signature
+    // so, once placed, its name/date can be re-edited (double-tap) and restyled
+    // (size/alignment pill) without ever redrawing the strokes. Separately-
+    // placed labels aren't baked into the image, so the image starts label-free.
+    const sig: SignatureData = {
+      ink: ink.dataUrl,
+      inkWidth: ink.width,
+      inkHeight: ink.height,
+      name: wantName ? trimmed : undefined,
+      showName: wantName && !separatePlacement,
+      showDate: wantDate && !separatePlacement,
+      align: 'center',
+      labelScale: 1,
+      color: inkColor
+    }
+
+    add({ name: sigName, dataUrl: finalUrl, width: finalW, height: finalH, extras, sig })
     resetForm()
     closePad()
     useAnnotationStore.getState().setTool('signature')
