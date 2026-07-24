@@ -125,6 +125,36 @@ export type MarkAnnotation = Base & {
   rotation?: number
 }
 
+// How the name/date labels beneath a signature are horizontally aligned
+// (relative to the ink). Cycled by the size/alignment pill.
+export type SigAlign = 'left' | 'center' | 'right'
+
+// Re-editable label options for a placed signature. Changing any of these
+// re-composes the rendered image from the untouched ink — the strokes are never
+// altered, only the labels beneath them.
+export type SignatureLabelOptions = {
+  name?: string
+  showName?: boolean
+  showDate?: boolean
+  align?: SigAlign
+  // Multiplier on the base label font size (driven by the size pill).
+  labelScale?: number
+  // Colour used for the name/date labels (matches the ink by default).
+  color?: string
+}
+
+// The full re-editable signature payload attached to a placed signature. `ink`
+// is the ink-only PNG (the drawn strokes or imported image) and is NEVER mutated
+// by option edits; the annotation's rendered image is always `ink` composited
+// with the labels described by the options above. Its presence marks an image /
+// signed field as an editable signature (double-tap to change name/date, and a
+// size/alignment pill when labels are showing).
+export type SignatureData = SignatureLabelOptions & {
+  ink: string
+  inkWidth: number
+  inkHeight: number
+}
+
 export type ImageAnnotation = Base & {
   type: 'image'
   x: number
@@ -133,6 +163,9 @@ export type ImageAnnotation = Base & {
   height: number
   src: string
   rotation?: number
+  // Present when this image is a placed signature whose name/date labels can be
+  // re-edited without touching the ink. `src` is the composite derived from it.
+  sig?: SignatureData
 }
 
 // A "Request signature" placeholder box. Until it is signed it renders as a
@@ -162,6 +195,11 @@ export type SignatureFieldAnnotation = Base & {
     src: string
     width: number
     height: number
+    // Present for boxes signed in-app (not re-detected from a flattened PDF):
+    // the untouched ink + label options, so the name/date can be re-edited
+    // (double-tap) or restyled (size/alignment pill) and `src` re-composed
+    // without altering the strokes.
+    data?: SignatureData
   }
 }
 

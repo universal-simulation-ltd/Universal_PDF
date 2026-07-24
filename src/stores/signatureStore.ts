@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import type { SignatureData } from '../types/annotations'
 
 // Name/date the user chose to place as SEPARATE text (next to the signature)
 // rather than baking into the image. Absent when everything is baked in.
@@ -18,6 +19,11 @@ export interface Signature {
   height: number
   createdAt: number
   extras?: SignatureExtras
+  // The untouched ink + baked-label options, carried onto the placed image
+  // annotation so a dropped signature's name/date can be re-edited later
+  // (double-tap / size+alignment pill) without re-drawing the strokes. `dataUrl`
+  // stays the composite used for the library thumbnail + ghost preview.
+  sig?: SignatureData
 }
 
 // Queue of extra text pieces awaiting placement after a "separate" signature is
