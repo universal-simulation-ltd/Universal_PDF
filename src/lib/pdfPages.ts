@@ -8,7 +8,7 @@ export async function applyPageOrderToPdf(
   sourceBytes: ArrayBuffer,
   newOrder: number[]
 ): Promise<ArrayBuffer> {
-  const pdf = await PDFDocument.load(sourceBytes)
+  const pdf = await PDFDocument.load(sourceBytes, { updateMetadata: false })
   const originalPages = pdf.getPages()
   const count = originalPages.length
 

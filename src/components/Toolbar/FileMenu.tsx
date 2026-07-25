@@ -33,6 +33,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const setOcrOpen = usePdfStore((s) => s.setOcrOpen)
   const setMergeOpen = usePdfStore((s) => s.setMergeOpen)
   const setConvertOpen = usePdfStore((s) => s.setConvertOpen)
+  const setMetadataOpen = usePdfStore((s) => s.setMetadataOpen)
   const isXfa = usePdfStore((s) => s.isXfa)
   const setSearchOpen = useSearchStore((s) => s.setOpen)
   const openForRedact = useSearchStore((s) => s.openForRedact)
@@ -469,6 +470,16 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                     <span className="flex-1 text-left">
                       <span className="block font-medium leading-tight">Convert into images</span>
                       <span className="block text-[11px] text-slate-500 leading-tight">Render each page to PNG or JPG (a ZIP for multiple pages)</span>
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => { setMetadataOpen(true); setOpen(false) }}
+                    className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
+                  >
+                    <span aria-hidden="true">🏷</span>
+                    <span className="flex-1 text-left">
+                      <span className="block font-medium leading-tight">Document metadata</span>
+                      <span className="block text-[11px] text-slate-500 leading-tight">See who and what this file names — then scrub it</span>
                     </span>
                   </button>
                 </div>

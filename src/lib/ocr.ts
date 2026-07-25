@@ -272,7 +272,7 @@ export async function makeSearchablePdf(
   })
   modelLoaded = true
 
-  const outDoc = await PDFDocument.load(sourceBytes)
+  const outDoc = await PDFDocument.load(sourceBytes, { updateMetadata: false })
   const font = await outDoc.embedFont(StandardFonts.Helvetica)
   const outPages = outDoc.getPages()
 
