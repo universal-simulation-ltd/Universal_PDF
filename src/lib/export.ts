@@ -134,7 +134,10 @@ export async function buildAnnotatedPdfBytes(
   scale: number,
   formValues?: FormFieldValue[]
 ): Promise<Uint8Array> {
-  const sourcePdf = await PDFDocument.load(sourceBytes)
+  // updateMetadata: false — pdf-lib otherwise stamps its own Producer and a
+  // fresh ModDate on every save, which would quietly re-add metadata to a
+  // document the user had just scrubbed (see lib/pdfMetadata.ts).
+  const sourcePdf = await PDFDocument.load(sourceBytes, { updateMetadata: false })
 
   // Fill PDF form fields if any. Flatten so values bake into the page
   // content streams — that way any redacted page rasterizes with the user's
@@ -685,7 +688,7 @@ export async function compressPdf(
   const outName = fileName.replace(/\.pdf$/i, '') + '-compressed.pdf'
 
   if (quality === 'light') {
-    const pdf = await PDFDocument.load(sourceBytes)
+    const pdf = await PDFDocument.load(sourceBytes, { updateMetadata: false })
     const bytes = await pdf.save({ useObjectStreams: true })
     return { bytes, originalSize, compressedSize: bytes.byteLength, fileName: outName, quality }
   }

@@ -21,6 +21,7 @@ import SendToSignDialog from './components/SendToSignDialog'
 import OcrModal from './components/Ocr/OcrModal'
 import MergeDialog from './components/Convert/MergeDialog'
 import ConvertDialog from './components/Convert/ConvertDialog'
+import MetadataDialog from './components/Metadata/MetadataDialog'
 import MobileWelcomeToast from './components/Onboarding/MobileWelcomeToast'
 import { UniversalAppsNavBar, UniversalBar, ChangelogMenu } from '@unisim/sdk'
 
@@ -56,6 +57,8 @@ export default function App() {
   const setMergeOpen = usePdfStore((s) => s.setMergeOpen)
   const convertOpen = usePdfStore((s) => s.convertOpen)
   const setConvertOpen = usePdfStore((s) => s.setConvertOpen)
+  const metadataOpen = usePdfStore((s) => s.metadataOpen)
+  const setMetadataOpen = usePdfStore((s) => s.setMetadataOpen)
   const sourceBytes = usePdfStore((s) => s.sourceBytes)
   const fileName = usePdfStore((s) => s.fileName)
 
@@ -345,6 +348,9 @@ export default function App() {
       {mergeOpen && <MergeDialog initialFile={currentDocFile} onClose={() => setMergeOpen(false)} />}
       {convertOpen && (
         <ConvertDialog initialMode="pdf-to-images" initialPdf={currentDocFile} onClose={() => setConvertOpen(false)} />
+      )}
+      {metadataOpen && sourceBytes && (
+        <MetadataDialog sourceBytes={sourceBytes} onClose={() => setMetadataOpen(false)} />
       )}
     </div>
   )

@@ -3,6 +3,7 @@ import { loadPdf, type PDFDocumentProxy } from '../lib/pdfjs'
 import { listRecents, saveRecent, getRecent, getRecentBySlug, getRecentEdits, updateRecentEdits, deleteRecent, renameRecent, type RecentMeta, type RecentEdits } from '../lib/recents'
 import { readEmbeddedSigFields } from '../lib/export'
 import { applyPageOrderToPdf, buildPageIndexMap } from '../lib/pdfPages'
+import { scrubPdfMetadata } from '../lib/pdfMetadata'
 import { useAnnotationStore } from './annotationStore'
 import { useFormStore } from './formStore'
 import { useSearchStore } from './searchStore'
@@ -78,6 +79,7 @@ interface PdfState {
   // Advanced-menu dialogs that act on the currently-open document.
   mergeOpen: boolean
   convertOpen: boolean
+  metadataOpen: boolean
   recents: RecentMeta[]
   loadFile: (file: File) => Promise<void>
   loadFromSlug: (slug: string) => Promise<boolean>
@@ -92,6 +94,9 @@ interface PdfState {
   setOcrOpen: (open: boolean) => void
   setMergeOpen: (open: boolean) => void
   setConvertOpen: (open: boolean) => void
+  setMetadataOpen: (open: boolean) => void
+  /** Strip the Info dictionary + XMP packet from the open document, in place. */
+  scrubMetadata: () => Promise<void>
   refreshRecents: () => Promise<void>
   openRecent: (id: string) => Promise<void>
   removeRecent: (id: string) => Promise<void>
@@ -116,6 +121,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   ocrOpen: false,
   mergeOpen: false,
   convertOpen: false,
+  metadataOpen: false,
   recents: [],
   togglePageNav: () => set((s) => ({ pageNavOpen: !s.pageNavOpen })),
   setPageNavOpen: (pageNavOpen) => set({ pageNavOpen }),
@@ -126,6 +132,28 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   setOcrOpen: (ocrOpen) => set({ ocrOpen }),
   setMergeOpen: (mergeOpen) => set({ mergeOpen }),
   setConvertOpen: (convertOpen) => set({ convertOpen }),
+  setMetadataOpen: (metadataOpen) => set({ metadataOpen }),
+  scrubMetadata: async () => {
+    const bytes = get().sourceBytes
+    const fileName = get().fileName
+    if (!bytes || !fileName) return
+
+    // Same atomic shape as applyPageOrder: build the replacement document
+    // first, and only swap state once it has loaded. Annotations and form
+    // values are deliberately left alone — stripping metadata doesn't touch a
+    // single page, so the user's work in progress survives it.
+    const newBytes = await scrubPdfMetadata(bytes.slice(0))
+    const doc = await loadPdf(newBytes.slice(0)).promise
+    get().doc?.destroy()
+    set({ doc, numPages: doc.numPages, sourceBytes: newBytes, isXfa: doc.isPureXfa })
+
+    saveRecent(fileName, newBytes)
+      .then((slug) => {
+        if (slug) setHashSlug(slug)
+        return get().refreshRecents()
+      })
+      .catch(() => {})
+  },
   loadFile: async (file) => {
     set({ loading: true })
     try {
@@ -194,7 +222,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   reset: () => {
     get().doc?.destroy()
     clearDocumentState()
-    set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, previewOpen: false, presentOpen: false, ocrOpen: false, mergeOpen: false, convertOpen: false })
+    set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, previewOpen: false, presentOpen: false, ocrOpen: false, mergeOpen: false, convertOpen: false, metadataOpen: false })
     setHashSlug(null)
   },
   refreshRecents: async () => {
