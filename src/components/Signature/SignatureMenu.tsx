@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useSignatureStore } from '../../stores/signatureStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
+import { usePdfStore } from '../../stores/pdfStore'
 
 interface SignatureMenuProps {
   // Retained for call-site compatibility; the compact panel always sits above
@@ -74,6 +75,7 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
 
   const tool = useAnnotationStore((s) => s.tool)
   const setTool = useAnnotationStore((s) => s.setTool)
+  const setSendToSignOpen = usePdfStore((s) => s.setSendToSignOpen)
 
   useEffect(() => {
     if (!open) return
@@ -198,6 +200,26 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
           <p className="text-xs text-slate-400">
             Then drag a rectangle where the signature should go.
           </p>
+          {/* Hand the document to someone else instead of signing it here:
+              stores it online against a Universal ID and mints a signing link
+              (its own dialog, which gates on there being a box to sign). Lives
+              on this tab because it is the other half of "request a signature"
+              — it used to sit in the Export modal, which was the wrong home. */}
+          <div className="border-t border-slate-100 pt-3">
+            <button
+              onClick={() => { setSendToSignOpen(true); setOpen(false) }}
+              className="w-full px-3 py-2.5 rounded-md border border-orange-300 bg-orange-50 hover:bg-orange-100 text-orange-800 text-sm font-medium flex items-center justify-center gap-2"
+            >
+              <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M3 10.5c3-4.5 5-4.5 6 0s3 4.5 5-1.5" />
+                <path d="M13 4l3 3-6.5 6.5L6 14l.5-3.5L13 4z" />
+              </svg>
+              Send to sign
+            </button>
+            <p className="mt-1.5 text-xs text-slate-400">
+              Get a signing link, or email the document to someone.
+            </p>
+          </div>
         </div>
       ) : (
       <>

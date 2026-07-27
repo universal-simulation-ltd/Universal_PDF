@@ -90,6 +90,23 @@ So the "no uploads" rule is currently satisfied by the pad's own shape; there is
 no import path into a box to disable. If an upload route is ever added to the
 pad, it must check `requireLive`.
 
+## Send to sign
+
+**Sign → Request → "Send to sign"** stores the flattened PDF online against a
+Universal ID and mints a signing link (`SendToSignDialog`; recipient side is
+`SignRequestPage` via `?signdoc=<token>`). It lives on the Request tab because
+it is the other half of asking someone for a signature — the tab either drops a
+box for someone opening the file locally, or hands the whole document to a
+named recipient.
+
+It used to be launched from the **Export** modal, which was the wrong home: the
+action is nothing to do with saving a copy. When it moved, the **typed "REDACT"
+confirmation moved with it** — into `SendToSignDialog` itself. That gate is not
+cosmetic: storing runs the same `buildAnnotatedPdfBytes` flatten as export, so
+it is equally a point of no return for redactions. Any future surface that
+launches the dialog inherits the gate for free, which is the point of it living
+on the action rather than the launcher.
+
 ## Suite context
 
 This repo is one part of the **Universal Simulation suite** (the open-source

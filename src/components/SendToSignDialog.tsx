@@ -48,6 +48,18 @@ export default function SendToSignDialog() {
   // A sign request must have at least one "Sign here" box so the signer knows
   // where to sign — gate the store step on it.
   const hasSignHereBox = useAnnotationStore((s) => s.annotations.some((a) => a.type === 'sigfield'))
+  // Storing is a point of no return for redactions, exactly as export is: the
+  // stored copy is the same flattened bytes, so the rasterise-and-rebuild pass
+  // removes the underlying text for good. This gate used to live on the Export
+  // modal's "Send to sign" button; it belongs to the destructive action, not to
+  // whichever surface happens to launch it.
+  const isXfa = usePdfStore((s) => s.isXfa)
+  const redactCount = useAnnotationStore(
+    (s) => s.annotations.filter((a) => a.type === 'redact').length
+  )
+  const needsRedactConfirm = !isXfa && redactCount > 0
+  const [redactConfirm, setRedactConfirm] = useState('')
+  const redactConfirmed = !needsRedactConfirm || redactConfirm.trim().toLowerCase() === 'redact'
 
   const { supabase, session, activeOrgId } = useUniversal()
   const { user } = useUser()
@@ -84,6 +96,7 @@ export default function SendToSignDialog() {
     setCopied(false)
     setEmail('')
     setEmailState('idle')
+    setRedactConfirm('')
   }
 
   // ── Email-verification gate ──
@@ -365,14 +378,33 @@ export default function SendToSignDialog() {
                     </div>
                   </div>
                 ) : canStore ? (
+                  <>
+                  {needsRedactConfirm && (
+                    <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3">
+                      <p className="text-sm font-medium text-red-900">
+                        {redactCount} redaction{redactCount === 1 ? '' : 's'} will be applied permanently
+                      </p>
+                      <p className="mt-1 text-xs text-red-800">
+                        The stored copy is flattened — the text under each black box is removed for
+                        good. Type <strong>REDACT</strong> to confirm.
+                      </p>
+                      <input
+                        value={redactConfirm}
+                        onChange={(e) => setRedactConfirm(e.target.value)}
+                        placeholder="REDACT"
+                        className="mt-2 w-full rounded-lg border border-red-300 px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+                      />
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={onCreateLink}
-                    disabled={busy}
-                    className="mt-3 w-full rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50"
+                    disabled={busy || !redactConfirmed}
+                    className="mt-3 w-full rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {busy ? 'Storing…' : `Store online & create sign link${freeToken === 'available' ? '' : ' (1 token)'}`}
                   </button>
+                  </>
                 ) : freeToken === null ? null : (
                   <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
                     <p className="text-sm text-amber-800">
