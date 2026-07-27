@@ -165,7 +165,10 @@ export default function App() {
       {doc && <UniversalBar />}
       {doc && (
         <div className="bg-slate-900 text-white relative z-[45] overflow-x-auto" style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}>
-          {/* Home, pinned to the far left of the bar — out in the margin to the
+          {/* Home — a filled circle carrying the same chrome as the Actions pill
+              at the other end of the bar (slate-700 fill, slate-600 hairline,
+              38px), because a bare glyph is easy to miss for the only way out
+              of an open document. Pinned to the far left of the bar — out in the margin to the
               left of the centred tool cluster, so it reads as window chrome
               rather than an editing tool. The universal navbar is landing-page
               only; while a doc is open the dark toolbar is the whole chrome.
@@ -181,7 +184,7 @@ export default function App() {
               onClick={reset}
               title="Back to home"
               aria-label="Back to home"
-              className="p-1.5 rounded-md text-[#ea580c] hover:text-orange-400 hover:bg-slate-800 active:bg-slate-700"
+              className="h-[38px] w-[38px] shrink-0 inline-flex items-center justify-center rounded-full bg-slate-700 ring-1 ring-slate-600 text-[#ea580c] hover:bg-slate-600 hover:ring-slate-500 hover:text-orange-400 active:bg-slate-500 transition-colors"
             >
               <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M3 10.5 12 3l9 7.5" />
@@ -205,7 +208,7 @@ export default function App() {
                 onClick={reset}
                 title="Back to home"
                 aria-label="Back to home"
-                className="lg:hidden p-1.5 rounded-md text-[#ea580c] hover:text-orange-400 hover:bg-slate-800 active:bg-slate-700"
+                className="lg:hidden h-[38px] w-[38px] shrink-0 inline-flex items-center justify-center rounded-full bg-slate-700 ring-1 ring-slate-600 text-[#ea580c] hover:bg-slate-600 hover:ring-slate-500 hover:text-orange-400 active:bg-slate-500 transition-colors"
               >
                 <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M3 10.5 12 3l9 7.5" />
