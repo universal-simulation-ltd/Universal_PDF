@@ -207,6 +207,11 @@ export default function SignaturePad() {
   //         user positions with extra clicks (e.g. into a form's name field).
   const [separatePlacement, setSeparatePlacement] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
+  // True when the box being fulfilled asked for live ink. Surfaced to the signer
+  // so the requirement is visible to the person it constrains; the pad's own
+  // Draw / Sign-on-phone modes already produce nothing but drawn ink, so there
+  // is no upload path here to disable.
+  const [fieldRequiresLive, setFieldRequiresLive] = useState(false)
 
   // ── Sign-on-phone handoff (mirrors Ergo Assess) ───────────────────────────
   const [mode, setMode] = useState<'draw' | 'phone'>('draw')
@@ -231,13 +236,17 @@ export default function SignaturePad() {
   // every other signature gets, rather than having them silently dictated by
   // the request. They stay editable — the signer can add or drop either one.
   useEffect(() => {
-    if (!open || !signingFieldId) return
+    if (!open || !signingFieldId) {
+      setFieldRequiresLive(false)
+      return
+    }
     const ann = useAnnotationStore
       .getState()
       .annotations.find((a) => a.id === signingFieldId)
     if (ann?.type !== 'sigfield') return
     setIncludeName(!!ann.requireName)
     setIncludeDate(!!ann.requireDate)
+    setFieldRequiresLive(!!ann.requireLive)
     // Baked into the box (never a separate click) — a request box is a fixed
     // slot, so the labels always travel inside it.
     setSeparatePlacement(false)
@@ -502,6 +511,16 @@ export default function SignaturePad() {
             </button>
           </div>
         </div>
+        {/* The box asked for live ink. Worded as what the document asks for —
+            NOT as a guarantee the ink is verified — because this is a
+            client-side constraint, the same class of claim as the signing
+            certificate page. */}
+        {fieldRequiresLive && (
+          <p className="mb-3 rounded-md bg-orange-50 border border-orange-200 px-3 py-2 text-xs text-orange-800" style={{ maxWidth: padW }}>
+            This box asks to be signed here rather than with an uploaded image.
+            Drawing it on your phone counts — that is drawn ink too.
+          </p>
+        )}
         {mode === 'phone' ? (
           <div className="flex flex-col items-center gap-3 py-2 text-center" style={{ width: padW }}>
             {qrUrl

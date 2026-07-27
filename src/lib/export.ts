@@ -18,7 +18,15 @@ const SIG_FIELDS_KEY = 'UPDFSigFields'
 // so they map straight back onto the same page at any zoom on reopen.
 type EmbeddedSigField = Pick<
   SignatureFieldAnnotation,
-  'id' | 'pageIndex' | 'x' | 'y' | 'width' | 'height' | 'requireName' | 'requireDate'
+  | 'id'
+  | 'pageIndex'
+  | 'x'
+  | 'y'
+  | 'width'
+  | 'height'
+  | 'requireName'
+  | 'requireDate'
+  | 'requireLive'
 >
 
 // Rotate (x, y) around (cx, cy) by `rad` radians.
@@ -505,6 +513,7 @@ export async function buildAnnotatedPdfBytes(
             const parts: string[] = []
             if (a.requireName) parts.push('Name')
             if (a.requireDate) parts.push('Date')
+            if (a.requireLive) parts.push('Live')
             const label = sanitizeForWinAnsi(['Sign here', ...parts].join(' • '))
             const size = sw(Math.min(a.height * 0.28, 18))
             // Inset from the box's top-left corner. The box is in canvas units
@@ -539,7 +548,8 @@ export async function buildAnnotatedPdfBytes(
       width: a.width,
       height: a.height,
       requireName: a.requireName,
-      requireDate: a.requireDate
+      requireDate: a.requireDate,
+      requireLive: a.requireLive
     }))
   try {
     const key = PDFName.of(SIG_FIELDS_KEY)
@@ -595,6 +605,7 @@ export async function readEmbeddedSigFields(
           height: v.height,
           requireName: !!v.requireName,
           requireDate: !!v.requireDate,
+          requireLive: !!v.requireLive,
           // The outline is baked into this exported page, so the re-detected box
           // is locked in place — click-to-sign only. Editing/moving comes from a
           // `.unipdf` backup, which restores the original unlocked annotation.

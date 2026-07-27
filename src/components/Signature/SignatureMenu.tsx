@@ -15,18 +15,26 @@ type Tab = 'signatures' | 'stamps' | 'request'
 
 const DESKTOP_PANEL_WIDTH = 320 // w-80
 
-// Small labelled iOS-style toggle used by the "Request" tab.
+// Small labelled iOS-style toggle used by the "Request" tab. `tooltip` renders
+// as a native hover/focus title on the row — deliberately the browser's own
+// tooltip rather than a bespoke popover, since the panel is portaled to <body>
+// and a custom bubble would need its own positioning pass.
 function ToggleRow({
   label,
   checked,
-  onChange
+  onChange,
+  tooltip
 }: {
   label: string
   checked: boolean
   onChange: (v: boolean) => void
+  tooltip?: string
 }) {
   return (
-    <label className="flex items-center justify-between gap-2 text-sm text-slate-700 select-none cursor-pointer">
+    <label
+      title={tooltip}
+      className="flex items-center justify-between gap-2 text-sm text-slate-700 select-none cursor-pointer"
+    >
       <span>{label}</span>
       <input
         type="checkbox"
@@ -59,8 +67,10 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
   const remove = useSignatureStore((s) => s.remove)
   const requestName = useSignatureStore((s) => s.requestName)
   const requestDate = useSignatureStore((s) => s.requestDate)
+  const requestLive = useSignatureStore((s) => s.requestLive)
   const setRequestName = useSignatureStore((s) => s.setRequestName)
   const setRequestDate = useSignatureStore((s) => s.setRequestDate)
+  const setRequestLive = useSignatureStore((s) => s.setRequestLive)
 
   const tool = useAnnotationStore((s) => s.tool)
   const setTool = useAnnotationStore((s) => s.setTool)
@@ -171,6 +181,12 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
               label="Ask for date"
               checked={requestDate}
               onChange={setRequestDate}
+            />
+            <ToggleRow
+              label="Require live signature"
+              checked={requestLive}
+              onChange={setRequestLive}
+              tooltip="This stops the user from uploading an image of their signature. Signing on a phone is still allowed — that is drawn ink too."
             />
           </div>
           <button

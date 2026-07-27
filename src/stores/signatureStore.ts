@@ -47,9 +47,11 @@ interface SignatureState {
   importTarget: ImportTarget
   stampPickerOpen: boolean
   // "Request signature" options — chosen before the box is drawn. Whether the
-  // next signature-request box should also ask for a name and/or a date line.
+  // next signature-request box should also ask for a name and/or a date line,
+  // and whether it should require live ink rather than an uploaded image.
   requestName: boolean
   requestDate: boolean
+  requestLive: boolean
   // Id of the signature-request field currently being signed. When set, the
   // pad fills that field on save instead of adding a reusable library
   // signature. Transient — not persisted.
@@ -62,6 +64,7 @@ interface SignatureState {
   rename: (id: string, name: string) => void
   setRequestName: (v: boolean) => void
   setRequestDate: (v: boolean) => void
+  setRequestLive: (v: boolean) => void
   // Open the pad to sign a specific request field (or re-sign an existing one).
   startSigningField: (id: string) => void
   openPad: () => void
@@ -84,6 +87,7 @@ export const useSignatureStore = create<SignatureState>()(
       stampPickerOpen: false,
       requestName: false,
       requestDate: false,
+      requestLive: false,
       signingFieldId: null,
       add: (sig) => {
         const id = crypto.randomUUID()
@@ -109,6 +113,7 @@ export const useSignatureStore = create<SignatureState>()(
         })),
       setRequestName: (requestName) => set({ requestName }),
       setRequestDate: (requestDate) => set({ requestDate }),
+      setRequestLive: (requestLive) => set({ requestLive }),
       startSigningField: (id) => set({ signingFieldId: id, padOpen: true }),
       openPad: () => set({ padOpen: true }),
       // Closing the pad always abandons any in-progress field signing.

@@ -182,6 +182,18 @@ export type SignatureFieldAnnotation = Base & {
   // Which extra lines the box asks for, chosen before it was drawn.
   requireName?: boolean
   requireDate?: boolean
+  // Asks that the box be signed with live ink — the pad, or the phone (which is
+  // still drawn ink, just on a better input device) — rather than an uploaded
+  // image of a signature. Rides on the annotation rather than a
+  // `pdf_sign_requests` column so it travels with the document, the `.unipdf`
+  // backup and the hosted upload, and binds the rule to the BOX: it applies to
+  // anyone who opens the PDF, not just people who arrived via a send-to-sign
+  // link.
+  //
+  // ⚠️ This is a constraint the signer's own browser enforces, so it is a
+  // STATED REQUIREMENT, not proof — same class of claim as the signing
+  // certificate page. Don't let UI copy imply the ink is verified as live.
+  requireLive?: boolean
   // True for boxes re-detected from a flattened/exported PDF, where the outline
   // is already baked into the page. Locked boxes stay put (non-movable /
   // resizable / deletable) so moving them can't leave a baked "ghost" behind —

@@ -58,6 +58,38 @@ cache) so it works offline afterwards.
   connection or a future self-hosted-assets path (as Images does with
   `VITE_BG_REMOVAL_PATH`).
 
+## Signature-request boxes ("Sign here")
+
+The **Sign → Request** tab drops a dashed *"Sign here"* box on the page
+(`sigfield` annotation). Anyone who opens the PDF in Universal PDF can click it
+to sign — it is not tied to the send-to-sign link flow. Three options are chosen
+*before* the box is drawn and are carried **on the annotation**, not in the
+database:
+
+| Option | Annotation field | Effect |
+|---|---|---|
+| Ask for name | `requireName` | Seeds the pad's "include name" |
+| Ask for date | `requireDate` | Seeds the pad's "include date" |
+| Require live signature | `requireLive` | Asks for drawn ink, not an uploaded image |
+
+Carrying them on the annotation (rather than a `pdf_sign_requests` column) means
+they travel with the document — through the `.unipdf` backup, the hosted upload,
+and an exported PDF (unsigned boxes are embedded in the document catalog under
+`UPDFSigFields` and re-detected by `readEmbeddedSigFields` on reopen). It also
+binds the rule to the **box**, so it applies to anyone who opens the file.
+
+⚠️ **`requireLive` is a stated requirement, not proof.** It is a constraint the
+signer's own browser enforces — the same class of claim as the signing
+certificate page. Never let UI copy imply the ink has been *verified* as live.
+Signing on a phone deliberately still counts: that is drawn ink too, just on a
+better input device.
+
+Note that the only way to fill a `sigfield` is `startSigningField()` → the
+signature pad, which offers **Draw** and **Sign on phone** and no image upload.
+So the "no uploads" rule is currently satisfied by the pad's own shape; there is
+no import path into a box to disable. If an upload route is ever added to the
+pad, it must check `requireLive`.
+
 ## Suite context
 
 This repo is one part of the **Universal Simulation suite** (the open-source

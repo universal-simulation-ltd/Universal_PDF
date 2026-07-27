@@ -355,6 +355,7 @@ function SigField({
   const parts: string[] = []
   if (a.requireName) parts.push('Name')
   if (a.requireDate) parts.push('Date')
+  if (a.requireLive) parts.push('Live')
   const caption = ['Sign here', ...parts].join(' • ')
   // Fixed, small caption size — deliberately NOT derived from the box height, so
   // resizing the box never rescales (and blurs) the text. Clamped down only so
@@ -979,7 +980,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           width: w,
           height: h,
           requireName: sig.requestName,
-          requireDate: sig.requestDate
+          requireDate: sig.requestDate,
+          requireLive: sig.requestLive
         })
         // One box per arming — drop back to Select so it can be signed / moved.
         useAnnotationStore.getState().setTool('select')
