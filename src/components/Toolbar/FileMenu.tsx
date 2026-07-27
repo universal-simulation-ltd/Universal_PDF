@@ -7,7 +7,18 @@ import { LANGS, persistLang, readSavedLang, type LangCode } from '../../lib/lang
 import { RedactIcon } from '../icons/RedactIcon'
 
 interface Props {
-  variant?: 'header' | 'toolbar'
+  /**
+   * `toolbar` (default) and `header` own their trigger and panel — the dark
+   * editor bar and the white navbar respectively.
+   *
+   * `rows` renders the menu BODY only, no trigger and no panel, for the SDK's
+   * `actions` slot: since @unisim/sdk 0.78.0 the app's actions and the profile
+   * are one pill with one dropdown, so this menu supplies its rows and the SDK
+   * supplies the container. The body is a flat accordion list — every submenu
+   * expands in place rather than flying out — which is exactly why it can be
+   * dropped into someone else's panel unchanged.
+   */
+  variant?: 'header' | 'toolbar' | 'rows'
 }
 
 export default function FileMenu({ variant = 'toolbar' }: Props) {
@@ -225,27 +236,17 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
     )
   }
 
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className={triggerClass}
-        aria-haspopup="true"
-        aria-expanded={open}
-      >
-        Actions
-        <svg viewBox="0 0 12 12" className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true">
-          <path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="application/pdf"
-        hidden
-        onChange={onPick}
-      />
-      {open && renderMenu(
+  const fileInput = (
+    <input
+      ref={fileInputRef}
+      type="file"
+      accept="application/pdf"
+      hidden
+      onChange={onPick}
+    />
+  )
+
+  const body = (
         <>
           {/* Current file name — a non-interactive header at the very top of the
               dropdown so the user always knows which PDF the actions apply to. */}
@@ -601,7 +602,11 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
             </>
           )}
 
-          {/* Language submenu */}
+          {/* Language submenu — "Document" is load-bearing, not decoration. This
+              sets the PDF's own `document.documentElement.lang`; the SDK's
+              profile menu carries the SUITE-WIDE UI language, and since 0.78.0
+              both live in this one dropdown. Two rows called "Language" in one
+              panel is a coin toss for the user. */}
           <button
             onClick={() => { setLangSubOpen((v) => !v); setShowOtherHint(false) }}
             className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
@@ -609,7 +614,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
             aria-expanded={langSubOpen}
           >
             <span aria-hidden="true">{currentLangOpt.flag}</span>
-            <span className="flex-1 text-left">Language</span>
+            <span className="flex-1 text-left">Document language</span>
             <span className="text-[11px] text-slate-500 uppercase tracking-wide mr-1">
               {currentLangOpt.code === 'other' ? 'EN' : currentLangOpt.code}
             </span>
@@ -651,8 +656,36 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
               )}
             </div>
           )}
-        </>,
-      )}
+        </>
+  )
+
+  // Rows mode: the SDK's dropdown is the container, so there is no trigger, no
+  // panel and no `open` state in play (the outside-click and positioning
+  // effects above are both gated on `open`, which stays false here).
+  if (variant === 'rows') {
+    return (
+      <>
+        {fileInput}
+        {body}
+      </>
+    )
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className={triggerClass}
+        aria-haspopup="true"
+        aria-expanded={open}
+      >
+        Actions
+        <svg viewBox="0 0 12 12" className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true">
+          <path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {fileInput}
+      {open && renderMenu(body)}
     </div>
   )
 }

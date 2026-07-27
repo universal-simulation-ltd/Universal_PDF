@@ -1,4 +1,4 @@
-import { useState, type ComponentProps } from 'react'
+import { useState, type ComponentProps, type ReactNode } from 'react'
 import {
   UserProfile,
   SignInDialog,
@@ -17,8 +17,12 @@ const HUB_LOGIN_HREF = 'https://app.unisim.co.uk/login'
  * landing-page only). Mirrors the navbar's exact auth wiring: a plain click on
  * "Sign in" opens the in-app <SignInDialog /> so guests sign in via a popup and
  * stay in the app; modified clicks still follow hubLoginHref.
+ *
+ * Pass `actions` to merge the Actions menu into this control the way the other
+ * Universal Apps do — one pill, one dropdown, app rows above the account rows —
+ * instead of an Actions button and an avatar sitting apart in the same bar.
  */
-export default function ToolbarUserProfile() {
+export default function ToolbarUserProfile({ actions }: { actions?: ReactNode }) {
   const { user, loading: userLoading } = useUser()
   const { profile, loading: profileLoading } = useProfile()
   const { supabase, session } = useUniversal()
@@ -46,7 +50,15 @@ export default function ToolbarUserProfile() {
 
   return (
     <>
-      <UserProfile {...resolvedUser} menuAlign="right" tier={subscription?.tier} />
+      <UserProfile
+        {...resolvedUser}
+        menuAlign="right"
+        tier={subscription?.tier}
+        actions={actions}
+        // The bar this sits in is slate-900, so the pill takes the dark
+        // treatment — otherwise it reads as a white chip punched into it.
+        pillTheme="dark"
+      />
       <SignInDialog
         open={signInOpen}
         onClose={() => setSignInOpen(false)}
