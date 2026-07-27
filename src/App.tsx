@@ -165,12 +165,16 @@ export default function App() {
       {doc && <UniversalBar />}
       {doc && (
         <div className="bg-slate-900 text-white relative z-[45] overflow-x-auto" style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}>
-          {/* Home + Actions, pinned to the far left of the bar — out in the
-              margin to the left of the centred tool cluster, so they read as
-              window chrome rather than editing tools. The universal navbar is
-              landing-page only; while a doc is open the dark toolbar is the
-              whole chrome. md+ only: that margin only exists on wider screens.
-              Mobile keeps a home button inside the cluster below. */}
+          {/* Home, pinned to the far left of the bar — out in the margin to the
+              left of the centred tool cluster, so it reads as window chrome
+              rather than an editing tool. The universal navbar is landing-page
+              only; while a doc is open the dark toolbar is the whole chrome.
+              lg+ only: that margin only exists on wider screens. Mobile keeps a
+              home button inside the cluster below.
+
+              Actions used to sit here too. It now rides in the profile pill at
+              the far right — one control, one dropdown — matching the other
+              Universal Apps. */}
           <div className="hidden lg:flex absolute inset-y-0 left-0 z-10 items-center gap-1 pl-3">
             <button
               type="button"
@@ -185,7 +189,6 @@ export default function App() {
                 <path d="M10 21v-6h4v6" />
               </svg>
             </button>
-            <FileMenu variant="toolbar" />
           </div>
           <div
             className="mx-auto w-full min-w-max flex items-center justify-between gap-6 py-2 min-h-[52px]"
@@ -210,11 +213,6 @@ export default function App() {
                   <path d="M10 21v-6h4v6" />
                 </svg>
               </button>
-              {/* Mobile-only Actions. On md+ it lives in the universal navbar,
-                  or — when that bar is hidden — in the far-left chrome group. */}
-              <div className="lg:hidden">
-                <FileMenu variant="toolbar" />
-              </div>
               <ToolbarDesktopTools />
             </div>
             <div className="flex items-center gap-2 justify-end shrink-0 [&>*]:shrink-0">
@@ -223,7 +221,7 @@ export default function App() {
                   far right of the bar below, mirroring the Home/Actions chrome
                   on the far left. */}
               <div className="lg:hidden flex items-center gap-2 [&>*]:shrink-0">
-                <ToolbarUserProfile />
+                <ToolbarUserProfile actions={<FileMenu variant="rows" />} />
                 <ChangelogMenu
                   iconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
                   productFilter="pdf"
@@ -241,7 +239,7 @@ export default function App() {
             className="hidden lg:flex absolute inset-y-0 z-10 items-center gap-2 pr-3"
             style={{ right: 'var(--doc-scrollbar-width, 0px)' }}
           >
-            <ToolbarUserProfile />
+            <ToolbarUserProfile actions={<FileMenu variant="rows" />} />
             <ChangelogMenu
               iconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
               productFilter="pdf"
