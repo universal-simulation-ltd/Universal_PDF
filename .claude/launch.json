@@ -2,11 +2,17 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "dev",
+      "name": "universal-pdf",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 5173,
-      "autoPort": true
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5174",
+        "--strictPort"
+      ],
+      "port": 5174
     }
   ]
 }
