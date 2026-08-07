@@ -76,6 +76,13 @@ interface PdfState {
   hostedStoreOpen: boolean
   sendToSignOpen: boolean
   ocrOpen: boolean
+  // True while two fingers are down on the viewer for a pinch-zoom. The
+  // annotation layer watches this so a pinch is only ever a zoom: any drag /
+  // stroke / rubber-band already in flight is abandoned, and no new one can
+  // start until the fingers lift. Lives here (not in the annotation store)
+  // because the gesture belongs to the viewport, and it has to be readable
+  // across every page's layer — a pinch can straddle two pages.
+  pinching: boolean
   // Advanced-menu dialogs that act on the currently-open document.
   mergeOpen: boolean
   convertOpen: boolean
@@ -92,6 +99,7 @@ interface PdfState {
   setHostedStoreOpen: (open: boolean) => void
   setSendToSignOpen: (open: boolean) => void
   setOcrOpen: (open: boolean) => void
+  setPinching: (pinching: boolean) => void
   setMergeOpen: (open: boolean) => void
   setConvertOpen: (open: boolean) => void
   setMetadataOpen: (open: boolean) => void
@@ -119,6 +127,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   hostedStoreOpen: false,
   sendToSignOpen: false,
   ocrOpen: false,
+  pinching: false,
   mergeOpen: false,
   convertOpen: false,
   metadataOpen: false,
@@ -130,6 +139,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   setHostedStoreOpen: (hostedStoreOpen) => set({ hostedStoreOpen }),
   setSendToSignOpen: (sendToSignOpen) => set({ sendToSignOpen }),
   setOcrOpen: (ocrOpen) => set({ ocrOpen }),
+  setPinching: (pinching) => set({ pinching }),
   setMergeOpen: (mergeOpen) => set({ mergeOpen }),
   setConvertOpen: (convertOpen) => set({ convertOpen }),
   setMetadataOpen: (metadataOpen) => set({ metadataOpen }),

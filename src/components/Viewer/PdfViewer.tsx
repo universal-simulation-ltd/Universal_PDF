@@ -84,6 +84,10 @@ export default function PdfViewer() {
 
     function onStart(e: TouchEvent) {
       if (e.touches.length !== 2 || !el) return
+      // Announce the pinch so the annotation layer can abandon whatever the
+      // first finger had started — a two-finger gesture is a zoom and nothing
+      // else, never a zoom plus a half-committed drag.
+      usePdfStore.getState().setPinching(true)
       const [t1, t2] = [e.touches[0], e.touches[1]]
       const rect = el.getBoundingClientRect()
       pinch = {
@@ -120,8 +124,13 @@ export default function PdfViewer() {
       })
     }
 
-    function onEnd() {
+    function onEnd(e: TouchEvent) {
       pinch = null
+      // Stay in "pinching" until every finger is off the glass. Lifting just
+      // one would otherwise hand the remaining finger straight back to the
+      // annotation layer mid-gesture, which is exactly the accidental drag
+      // this flag exists to prevent.
+      if (e.touches.length === 0) usePdfStore.getState().setPinching(false)
     }
 
     el.addEventListener('touchstart', onStart, { passive: true })
@@ -133,6 +142,7 @@ export default function PdfViewer() {
       el.removeEventListener('touchmove', onMove)
       el.removeEventListener('touchend', onEnd)
       el.removeEventListener('touchcancel', onEnd)
+      usePdfStore.getState().setPinching(false)
     }
   }, [])
 
@@ -177,6 +187,9 @@ export default function PdfViewer() {
     function onDown(e: PointerEvent) {
       if (!el) return
       if (e.button !== 0 && e.pointerType === 'mouse') return
+      // A pinch owns the scroll position (it anchors the zoom on the midpoint),
+      // so a pan running alongside it would fight the same two properties.
+      if (usePdfStore.getState().pinching) return
       dragging = true
       startX = e.clientX
       startY = e.clientY
@@ -186,6 +199,12 @@ export default function PdfViewer() {
     }
     function onMove(e: PointerEvent) {
       if (!dragging || !el) return
+      // A pinch that starts mid-pan takes over: drop the pan rather than
+      // scrolling against the zoom's own scroll correction.
+      if (usePdfStore.getState().pinching) {
+        dragging = false
+        return
+      }
       el.scrollLeft = startScrollLeft - (e.clientX - startX)
       el.scrollTop = startScrollTop - (e.clientY - startY)
     }

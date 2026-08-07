@@ -153,6 +153,15 @@ export type SignatureData = SignatureLabelOptions & {
   ink: string
   inkWidth: number
   inkHeight: number
+  // The raw pen strokes the ink was rasterised from, in the pad's own pixel
+  // space — flat [x,y,x,y,…] arrays, one per stroke. Present only for
+  // signatures drawn in-app (the pad or the phone); an imported picture has no
+  // strokes. Keeping them lets `ink` be re-rendered after placement, which is
+  // what makes the "realistic" toggle re-editable rather than baked in forever.
+  strokes?: number[][]
+  // Whether `ink` was rendered with the realistic pen treatment. Only
+  // meaningful alongside `strokes` — without them the look can't be changed.
+  realistic?: boolean
 }
 
 export type ImageAnnotation = Base & {
