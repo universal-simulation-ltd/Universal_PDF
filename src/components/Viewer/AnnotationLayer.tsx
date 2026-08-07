@@ -21,7 +21,7 @@ import { SIGNATURE_INK, formatSigningDate } from '../../lib/signature'
 import { composeSignature, sigHasLabels } from '../../lib/composeSignature'
 import { FONT_CSS } from '../../lib/fonts'
 import { effectiveRuns, runFontStyle, runHasStyle, runsToPlainText, runsToHtml, parseRunsFromDom, mergeRuns } from '../../lib/textRuns'
-import type { Annotation, DrawAnnotation, ImageAnnotation, SignatureData, SignatureFieldAnnotation, SigAlign, TextAnnotation, TextRun } from '../../types/annotations'
+import type { Annotation, DrawAnnotation, ImageAnnotation, SignatureData, SignatureFieldAnnotation, SigAlign, TextAnnotation, Tool, TextRun } from '../../types/annotations'
 
 // On-screen font stacks, keyed by family id (shared with the toolbar + export).
 const FONT_STACK = FONT_CSS
@@ -119,6 +119,28 @@ function getAnnotationBBox(a: Annotation): { x: number; y: number; width: number
     }
   }
 }
+
+// Tools that drop a new object and then stay armed, so the next click on empty
+// page space places another one (ticking a column of checkboxes in a row).
+// Because the fresh object is auto-selected, these are exactly the cases where
+// the confirm affordance is worth showing next to Delete: it's the way out of
+// the loop, back to Select, without hunting for the toolbar. 'select',
+// 'marquee', 'hand', 'selecttext' and 'form' place nothing, so a selection made
+// with them has nothing to confirm.
+const PLACEMENT_TOOLS = new Set<Tool>([
+  'text',
+  'draw',
+  'highlight',
+  'rect',
+  'ellipse',
+  'redact',
+  'tick',
+  'cross',
+  'line',
+  'image',
+  'signature',
+  'sigfield'
+])
 
 // Highlighter strokes are free-draw lines that carry an opacity (pencil
 // strokes leave it undefined). They are intentionally left out of marquee
@@ -1853,6 +1875,13 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         // Delete affordance on the currently-selected object — same visibility
         // as the resize/rotate Transformer (any selection, not while dragging or
         // editing text). Sits just off the top-right corner.
+        //
+        // While a placement tool is still armed, a Confirm affordance sits
+        // beside it. Placing (say) a cross leaves the tool armed so the next
+        // click drops another one — which is what you want when ticking a run of
+        // boxes — and this gives the object three outcomes without a trip to the
+        // toolbar: confirm it and drop back to Select, bin it, or just click
+        // elsewhere on the page to place the next one.
         if (draggingId || editingId) return null
         const selected = annotations.find((a) => a.id === selectedId)
         if (!selected) return null
@@ -1860,28 +1889,42 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         // the page. They shouldn't get selected anyway, but guard here too.
         if (selected.type === 'sigfield' && selected.locked) return null
         const bbox = getAnnotationBBox(selected)
+        const left = (bbox.x + bbox.width) * scale + 8
+        const top = bbox.y * scale - 8
         return (
-          <button
-            type="button"
-            title="Delete"
-            aria-label="Delete selected object"
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={(e) => { e.stopPropagation(); remove(selected.id) }}
-            style={{
-              position: 'absolute',
-              left: (bbox.x + bbox.width) * scale + 8,
-              top: bbox.y * scale - 8,
-              zIndex: 21
-            }}
-            className="w-8 h-8 rounded-full bg-white shadow-lg border border-slate-300 text-red-600 hover:bg-red-600 hover:text-white hover:border-red-600 flex items-center justify-center transition-colors"
-          >
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M4 7h16" />
-              <path d="M9 7V5h6v2" />
-              <path d="M6 7l1 13h10l1-13" />
-              <path d="M10 11v6M14 11v6" />
-            </svg>
-          </button>
+          <>
+            <button
+              type="button"
+              title="Delete"
+              aria-label="Delete selected object"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); remove(selected.id) }}
+              style={{ position: 'absolute', left, top, zIndex: 21 }}
+              className="w-8 h-8 rounded-full bg-white shadow-lg border border-slate-300 text-red-600 hover:bg-red-600 hover:text-white hover:border-red-600 flex items-center justify-center transition-colors"
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M4 7h16" />
+                <path d="M9 7V5h6v2" />
+                <path d="M6 7l1 13h10l1-13" />
+                <path d="M10 11v6M14 11v6" />
+              </svg>
+            </button>
+            {PLACEMENT_TOOLS.has(tool) && (
+              <button
+                type="button"
+                title="Done — keep this and go back to Select"
+                aria-label="Confirm placement and switch to the Select tool"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); setSelected(null); setTool('select') }}
+                style={{ position: 'absolute', left: left + 36, top, zIndex: 21 }}
+                className="w-8 h-8 rounded-full bg-white shadow-lg border border-slate-300 text-emerald-600 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 flex items-center justify-center transition-colors"
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M5 13l4 4L19 7" />
+                </svg>
+              </button>
+            )}
+          </>
         )
       })()}
 
