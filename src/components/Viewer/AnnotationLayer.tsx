@@ -13,12 +13,14 @@ import {
 } from 'react-konva'
 import type Konva from 'konva'
 import { useAnnotationStore } from '../../stores/annotationStore'
+import { usePdfStore } from '../../stores/pdfStore'
 import { useSignatureStore } from '../../stores/signatureStore'
 import { useCoarsePointer } from '../../hooks/useCoarsePointer'
 import { useImage } from '../../lib/useImage'
 import { RedactIcon } from '../icons/RedactIcon'
 import { SIGNATURE_INK, formatSigningDate } from '../../lib/signature'
 import { composeSignature, sigHasLabels } from '../../lib/composeSignature'
+import { inkColorFor, renderInkSignature } from '../../lib/renderInk'
 import { FONT_CSS } from '../../lib/fonts'
 import { effectiveRuns, runFontStyle, runHasStyle, runsToPlainText, runsToHtml, parseRunsFromDom, mergeRuns } from '../../lib/textRuns'
 import type { Annotation, DrawAnnotation, ImageAnnotation, SignatureData, SignatureFieldAnnotation, SigAlign, TextAnnotation, Tool, TextRun } from '../../types/annotations'
@@ -141,6 +143,39 @@ const PLACEMENT_TOOLS = new Set<Tool>([
   'signature',
   'sigfield'
 ])
+
+// A newly placed object is sized in display pixels (`N / scale`) so it looks
+// the same on screen at any zoom. Zoomed right out that stops making sense: at
+// 25% a 160px-wide signature is 640pt on a 595pt-wide A4 page — wider than the
+// sheet it lands on. Cap a placement at half the page in either direction,
+// scaling both sides together so the aspect ratio survives.
+const MAX_PLACEMENT_FRACTION = 0.5
+
+function fitPlacement(
+  w: number,
+  h: number,
+  pageW: number,
+  pageH: number
+): { width: number; height: number } {
+  const k = Math.min(
+    1,
+    w > 0 ? (pageW * MAX_PLACEMENT_FRACTION) / w : 1,
+    h > 0 ? (pageH * MAX_PLACEMENT_FRACTION) / h : 1
+  )
+  return { width: w * k, height: h * k }
+}
+
+// Where a Konva node sits when it is faithfully showing the model's position —
+// the inverse of nodeMovePatch. Used to put a node back after a drag is
+// cancelled (a pinch starting mid-drag), so the shape returns to where the user
+// left it instead of committing a move they never meant to make.
+function nodeHomePosition(a: Annotation): { x: number; y: number } {
+  // A pen stroke carries its position in `points`, so its node sits at origin.
+  if (a.type === 'draw') return { x: 0, y: 0 }
+  // Konva Ellipse is positioned by its centre; we store the top-left bbox.
+  if (a.type === 'ellipse') return { x: a.x + a.width / 2, y: a.y + a.height / 2 }
+  return { x: a.x, y: a.y }
+}
 
 // Highlighter strokes are free-draw lines that carry an opacity (pencil
 // strokes leave it undefined). They are intentionally left out of marquee
@@ -531,6 +566,11 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const setStrokeWidth = useAnnotationStore((s) => s.setStrokeWidth)
   const setFontSize = useAnnotationStore((s) => s.setFontSize)
 
+  // Two fingers are down on the viewer for a pinch-zoom (see PdfViewer). While
+  // this is true the layer starts nothing and finishes nothing — the gesture
+  // belongs entirely to the zoom.
+  const pinching = usePdfStore((s) => s.pinching)
+
   const activeSignature = useSignatureStore((s) => {
     const id = s.activeId
     return id ? s.signatures.find((x) => x.id === id) ?? null : null
@@ -542,6 +582,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
 
   const drawingRef = useRef(false)
   const activePointerIds = useRef(new Set<number>())
+  // Set by cancelGesture; makes the dragend handlers discard the move instead
+  // of writing it to the store. Cleared when a fresh gesture legitimately
+  // starts (a new pointerdown or dragstart) or when the cancelled drag ends.
+  const gestureCancelled = useRef(false)
   const [currentLine, setCurrentLine] = useState<number[] | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
@@ -647,17 +691,75 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     return { x: p.x / scale, y: p.y / scale }
   }
 
+  // The page in the annotation store's own units (PDF points). `width`/`height`
+  // are display pixels at the current zoom, so dividing out the scale gives a
+  // zoom-independent page size to measure placements against.
+  const pageW = width / scale
+  const pageH = height / scale
+
+  // Abandon every gesture in flight on this page and put anything mid-drag back
+  // where it started. A pinch is a zoom and only a zoom, so the drag / stroke /
+  // rubber-band the first finger began is discarded rather than half-committed.
+  // Also the right response to `pointercancel`, where the browser has taken the
+  // pointer away from us and no pointerup is coming.
+  function cancelGesture() {
+    drawingRef.current = false
+    setCurrentLine(null)
+    marqueeRef.current = null
+    setMarquee(null)
+    setLineDrag(null)
+    groupDragLast.current = null
+    // Tell the dragend handlers (Konva fires them from stopDrag, and line
+    // anchors fire theirs whenever the finger finally lifts) to drop the move.
+    gestureCancelled.current = true
+    const annos = useAnnotationStore.getState().annotations
+    for (const [id, node] of shapeRefs.current) {
+      if (!node.isDragging()) continue
+      node.stopDrag()
+      const ann = annos.find((a) => a.id === id)
+      if (ann) node.position(nodeHomePosition(ann))
+    }
+    // Members of a group drag are moved directly by onShapeDragMove, so they
+    // are not "dragging" themselves and need putting back explicitly.
+    for (const id of useAnnotationStore.getState().selectedIds) {
+      const node = shapeRefs.current.get(id)
+      const ann = annos.find((a) => a.id === id)
+      if (node && ann) node.position(nodeHomePosition(ann))
+    }
+    // A resize/rotate already under way is stopped where it stands rather than
+    // reverted — Konva's Transformer has no undo for a partial transform, and
+    // the alternative (letting it keep tracking finger one while the zoom
+    // changes underneath) is the dual action we're here to prevent.
+    trRef.current?.stopTransform()
+    trRef.current?.forceUpdate()
+    trRef.current?.getLayer()?.batchDraw()
+    setDraggingId(null)
+  }
+
+  // A pinch can begin with its second finger on a different page (each page has
+  // its own Stage and pointer bookkeeping), so react to the viewer's flag too
+  // rather than relying on this layer seeing both fingers.
+  useEffect(() => {
+    if (pinching) cancelGesture()
+    // cancelGesture only touches refs + setState, so re-running solely on the
+    // pinch edge is what we want.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pinching])
+
   function onPointerDown(e: Konva.KonvaEventObject<PointerEvent>) {
     activePointerIds.current.add(e.evt.pointerId)
-    if (activePointerIds.current.size > 1) {
+    if (activePointerIds.current.size > 1 || pinching) {
       // Multi-touch (pinch-to-zoom) — abort any in-progress drawing stroke
-      // or rubber-band selection.
-      drawingRef.current = false
-      setCurrentLine(null)
-      marqueeRef.current = null
-      setMarquee(null)
+      // or rubber-band selection. The local pointer count catches a pinch
+      // that lands entirely on this page; `pinching` (set by the viewer's own
+      // touch handler) also catches one straddling two pages, where each
+      // layer only ever sees a single finger.
+      cancelGesture()
       return
     }
+    // A clean single-pointer gesture is starting — whatever a previous pinch
+    // cancelled is behind us.
+    gestureCancelled.current = false
     if (editingId) return // ignore stage events while typing
     if (tool === 'hand') return // pan handled by PdfViewer
     // Let Konva's Transformer own clicks on its anchors / rotate knob —
@@ -774,16 +876,18 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       const sigState = useSignatureStore.getState()
       const active = sigState.signatures.find((x) => x.id === sigState.activeId)
       if (active) {
-        const targetW = 160 / scale
         const ratio = active.height / active.width
+        // Capped at half the page — see fitPlacement. The ghost preview runs
+        // the same numbers, so what you see under the cursor is what lands.
+        const fit = fitPlacement(160 / scale, (160 / scale) * ratio, pageW, pageH)
         add({
           id: crypto.randomUUID(),
           pageIndex,
           type: 'image',
-          x: pos.x - targetW / 2,
-          y: pos.y - (targetW * ratio) / 2,
-          width: targetW,
-          height: targetW * ratio,
+          x: pos.x - fit.width / 2,
+          y: pos.y - fit.height / 2,
+          width: fit.width,
+          height: fit.height,
           src: active.dataUrl,
           // Carry the re-editable ink + options so the placed signature's
           // name/date can be changed (double-tap) / restyled (pill) later.
@@ -807,16 +911,16 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       if (src) {
         const img = new Image()
         img.onload = () => {
-          const targetW = 200 / scale
           const ratio = img.naturalHeight / img.naturalWidth
+          const fit = fitPlacement(200 / scale, (200 / scale) * ratio, pageW, pageH)
           add({
             id: crypto.randomUUID(),
             pageIndex,
             type: 'image',
-            x: pos.x - targetW / 2,
-            y: pos.y - (targetW * ratio) / 2,
-            width: targetW,
-            height: targetW * ratio,
+            x: pos.x - fit.width / 2,
+            y: pos.y - fit.height / 2,
+            width: fit.width,
+            height: fit.height,
             src
           })
           useAnnotationStore.getState().setTool('select')
@@ -827,6 +931,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   }
 
   function onPointerMove(e: Konva.KonvaEventObject<PointerEvent>) {
+    if (pinching) return
     const pos = getPos(e)
     if (marqueeRef.current) {
       const m = marqueeRef.current
@@ -862,6 +967,16 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     setHoverPos(null)
     activePointerIds.current.clear()
     onPointerUp()
+  }
+
+  // The browser has taken this pointer over (it decided the touch was a scroll
+  // or a pinch). No pointerup is coming, so drop the id here — otherwise it
+  // sticks in the set and makes the next single-finger touch look like
+  // multi-touch — and abandon whatever it had started.
+  function onPointerCancel(e: Konva.KonvaEventObject<PointerEvent>) {
+    activePointerIds.current.delete(e.evt.pointerId)
+    setHoverPos(null)
+    cancelGesture()
   }
 
   function onPointerUp(e?: Konva.KonvaEventObject<PointerEvent>) {
@@ -988,8 +1103,12 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         // Give a stray tap a sensible default-sized box so the field still
         // lands somewhere usable; a real drag uses the swept rectangle.
         const dragged = Math.abs(x2 - x1) > 8 && Math.abs(y2 - y1) > 8
-        const w = dragged ? Math.abs(x2 - x1) : 200 / scale
-        const h = dragged ? Math.abs(y2 - y1) : 70 / scale
+        // A swept rectangle is explicit intent and kept as drawn; the tap
+        // default is a display-pixel size, so cap it against the page the same
+        // way a dropped signature is (see fitPlacement).
+        const tapFit = fitPlacement(200 / scale, 70 / scale, pageW, pageH)
+        const w = dragged ? Math.abs(x2 - x1) : tapFit.width
+        const h = dragged ? Math.abs(y2 - y1) : tapFit.height
         const x = dragged ? Math.min(x1, x2) : x1 - w / 2
         const y = dragged ? Math.min(y1, y2) : y1 - h / 2
         const sig = useSignatureStore.getState()
@@ -1092,6 +1211,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   }
 
   function onShapeDragStart(a: Annotation) {
+    gestureCancelled.current = false
     setDraggingId(a.id)
     const ids = useAnnotationStore.getState().selectedIds
     if (ids.length > 1 && ids.includes(a.id)) {
@@ -1105,6 +1225,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // While dragging one member of a multi-selection, translate every other
   // selected node by the same delta so the group moves rigidly together.
   function onShapeDragMove(a: Annotation, e: Konva.KonvaEventObject<DragEvent>) {
+    if (gestureCancelled.current) return
     const last = groupDragLast.current
     if (!last) return
     const ids = useAnnotationStore.getState().selectedIds
@@ -1165,11 +1286,19 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   }
 
   function onLineAnchorDragMove(a: DrawAnnotation, index: 0 | 1, e: Konva.KonvaEventObject<DragEvent>) {
+    if (gestureCancelled.current) return
     const { x, y } = resolveLineAnchor(a, index, e)
     setLineDrag({ id: a.id, index, x, y })
   }
 
   function onLineAnchorDragEnd(a: DrawAnnotation, index: 0 | 1, e: Konva.KonvaEventObject<DragEvent>) {
+    if (gestureCancelled.current) {
+      // Cancelled by a pinch — the anchor's x/y props snap it back to the
+      // line's untouched endpoint on the next render.
+      gestureCancelled.current = false
+      setLineDrag(null)
+      return
+    }
     const { x, y } = resolveLineAnchor(a, index, e)
     const points = [...a.points]
     points[index * 2] = x
@@ -1180,6 +1309,13 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
 
   function onShapeDragEnd(a: Annotation, e: Konva.KonvaEventObject<DragEvent>) {
     setDraggingId(null)
+    if (gestureCancelled.current) {
+      // A pinch (or a browser pointercancel) took this gesture over.
+      // cancelGesture already put the nodes back; commit nothing.
+      gestureCancelled.current = false
+      groupDragLast.current = null
+      return
+    }
     const ids = useAnnotationStore.getState().selectedIds
     if (groupDragLast.current && ids.length > 1) {
       groupDragLast.current = null
@@ -1358,7 +1494,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     setEditingId(null)
   }
 
-  const selectable = tool === 'select'
+  // Dragging is off while a pinch is running, so a second finger can never
+  // turn a zoom into a zoom-plus-drag.
+  const selectable = tool === 'select' && !pinching
   const cursor =
     tool === 'hand' ? 'grab' :
     tool === 'marquee' ? 'crosshair' :
@@ -1373,10 +1511,18 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // passive selecttext tool keep vertical panning + pinch-zoom available.
   const touchAction = (tool === 'select' || tool === 'form' || tool === 'hand' || tool === 'selecttext') ? 'pan-y pinch-zoom' : 'none'
 
-  const ghostSigWidth = 160 / scale
-  const ghostSigHeight = activeSignature
-    ? (ghostSigWidth * activeSignature.height) / activeSignature.width
-    : 0
+  // Mirrors the drop sizing above (cap included) so the ghost under the cursor
+  // is exactly what gets placed.
+  const ghostSig = activeSignature
+    ? fitPlacement(
+        160 / scale,
+        ((160 / scale) * activeSignature.height) / activeSignature.width,
+        pageW,
+        pageH
+      )
+    : { width: 0, height: 0 }
+  const ghostSigWidth = ghostSig.width
+  const ghostSigHeight = ghostSig.height
 
   return (
     <>
@@ -1394,6 +1540,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
         onPointerLeave={onPointerLeaveStage}
       >
         <Layer>
@@ -1761,13 +1908,15 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               <Transformer
                 ref={trRef}
                 onTransformEnd={onGroupTransformEnd}
-                rotateEnabled={rotatable}
-                resizeEnabled={resizable}
+                // Both handles go dead during a pinch, so a second finger
+                // can't turn a zoom into a zoom-plus-resize.
+                rotateEnabled={rotatable && !pinching}
+                resizeEnabled={resizable && !pinching}
                 keepRatio={!isMulti && single?.type === 'image'}
                 // Bigger rotate arm + anchors on touch so they clear the finger
                 // and are easy to grab; desktop keeps the compact sizing.
                 rotateAnchorOffset={coarsePointer ? 40 : 28}
-                enabledAnchors={resizable ? ['top-left', 'top-right', 'bottom-left', 'bottom-right'] : []}
+                enabledAnchors={resizable && !pinching ? ['top-left', 'top-right', 'bottom-left', 'bottom-right'] : []}
                 borderStroke="#ea580c"
                 borderStrokeWidth={1.5}
                 borderDash={[6, 4]}
@@ -2148,6 +2297,40 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       })()}
 
       {(() => {
+        // Send-to-sign affordance on a selected "Sign here" box. Placing the
+        // boxes and emailing the document for signing are two halves of one
+        // job, and the dialog refuses to mint a link until at least one box
+        // exists — so the moment a box is on the page is exactly the moment to
+        // offer the next step, rather than sending the user back to
+        // Sign ▾ → Request → Send to sign. Sits under the Delete affordance,
+        // where a box/ellipse would carry its Fill toggle.
+        if (draggingId || editingId) return null
+        const selected = annotations.find((a) => a.id === selectedId)
+        if (!selected || selected.type !== 'sigfield') return null
+        if (selected.locked) return null
+        const bbox = getAnnotationBBox(selected)
+        return (
+          <button
+            type="button"
+            title="Send to sign — email this document as a signature request"
+            aria-label="Send to sign"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); usePdfStore.getState().setSendToSignOpen(true) }}
+            style={{
+              position: 'absolute',
+              left: (bbox.x + bbox.width) * scale + 8,
+              top: bbox.y * scale - 8 + 36,
+              zIndex: 20
+            }}
+            className="h-8 px-2 rounded-full bg-white shadow-lg border border-slate-300 hover:border-orange-500 hover:bg-orange-50 flex items-center justify-center gap-0.5 text-sm leading-none whitespace-nowrap"
+          >
+            <span aria-hidden="true">✉️</span>
+            <span aria-hidden="true">✍️</span>
+          </button>
+        )
+      })()}
+
+      {(() => {
         // Fill toggle follows the same visibility as the Delete affordance: any
         // single rect/ellipse selection (not while dragging or editing text),
         // regardless of the active tool. A box is auto-selected the moment it's
@@ -2432,9 +2615,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
 }
 
 // Double-tap options editor for a placed signature. Edits name / add-name /
-// add-date only — size + alignment live on the on-canvas pill. Holds its own
-// draft state so typing stays smooth while each change re-composes the image
-// from the untouched ink.
+// add-date, plus the realistic-ink look when the signature was drawn in-app —
+// size + alignment live on the on-canvas pill. Holds its own draft state so
+// typing stays smooth while each change re-composes the image from the ink.
 function SignatureOptionsModal({
   data,
   onApply,
@@ -2449,10 +2632,18 @@ function SignatureOptionsModal({
   const [name, setName] = useState(data.name ?? '')
   const [showName, setShowName] = useState(!!data.showName)
   const [showDate, setShowDate] = useState(!!data.showDate)
+  const [realistic, setRealistic] = useState(!!data.realistic)
   // Latest base payload (ink + size/alignment) — re-read on every apply so the
   // pill's size/alignment edits aren't clobbered by a name/date change.
   const dataRef = useRef(data)
   dataRef.current = data
+
+  // The realism toggle is only offered for signatures drawn in-app, where the
+  // pen strokes were kept alongside the ink. An imported picture is just
+  // pixels — there is nothing to re-render, so the option stays hidden rather
+  // than pretending to do something.
+  const strokes = data.strokes
+  const canRestyle = !!strokes && strokes.length > 0
 
   const changeName = (v: string) => {
     setName(v)
@@ -2466,6 +2657,25 @@ function SignatureOptionsModal({
   const toggleDate = (v: boolean) => {
     setShowDate(v)
     onApply({ ...dataRef.current, name, showName, showDate: v })
+  }
+  // Re-render the ink from the original strokes at the new realism setting and
+  // swap it in — the labels are then re-composited over it by applySigData.
+  // The ink colour follows the toggle exactly as it does in the pad, and the
+  // labels pick up the same colour so the two never drift apart.
+  const toggleRealistic = (v: boolean) => {
+    if (!strokes) return
+    const color = inkColorFor(v)
+    const ink = renderInkSignature(strokes, color, v)
+    if (!ink) return
+    setRealistic(v)
+    onApply({
+      ...dataRef.current,
+      ink: ink.dataUrl,
+      inkWidth: ink.width,
+      inkHeight: ink.height,
+      color,
+      realistic: v
+    })
   }
 
   return createPortal(
@@ -2490,8 +2700,9 @@ function SignatureOptionsModal({
         </div>
         <div className="px-5 pb-4 space-y-3">
           <p className="text-xs text-slate-500">
-            Changes the name and date only — your signature itself stays exactly as drawn.
-            Use the pill on the signature to resize or align the labels.
+            {canRestyle
+              ? 'Changes the labels and the pen style — the strokes you drew stay exactly as drawn. Use the pill on the signature to resize or align the labels.'
+              : 'Changes the name and date only — your signature itself stays exactly as drawn. Use the pill on the signature to resize or align the labels.'}
           </p>
           <input
             value={name}
@@ -2519,6 +2730,23 @@ function SignatureOptionsModal({
             />
             <span className="relative w-9 h-5 rounded-full bg-slate-300 transition-colors peer-checked:bg-orange-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:shadow after:transition-transform peer-checked:after:translate-x-4" />
           </label>
+          {canRestyle && (
+            <label className="flex items-center justify-between gap-2 text-sm text-slate-700 select-none cursor-pointer border-t border-slate-100 pt-3">
+              <span>
+                Make it look more realistic
+                <span className="block text-xs text-slate-400 font-normal">
+                  Blue ink, uneven pressure and a hand wobble
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={realistic}
+                onChange={(e) => toggleRealistic(e.target.checked)}
+                className="peer sr-only"
+              />
+              <span className="relative shrink-0 w-9 h-5 rounded-full bg-slate-300 transition-colors peer-checked:bg-orange-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:shadow after:transition-transform peer-checked:after:translate-x-4" />
+            </label>
+          )}
         </div>
         <div className="flex items-center justify-between gap-2 border-t border-slate-100 bg-slate-50 px-5 py-3">
           {onRedraw ? (
