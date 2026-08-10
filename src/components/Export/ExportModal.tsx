@@ -3,6 +3,7 @@ import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { useFormStore } from '../../stores/formStore'
 import { buildAnnotatedPdfBytes, compressPdf, downloadPdfBytes } from '../../lib/export'
+import { nextExportName, previewExportName } from '../../lib/exportName'
 import { RedactIcon } from '../icons/RedactIcon'
 
 // Annotations are stored in PDF-point space (the editor divides the on-screen
@@ -142,17 +143,19 @@ export default function ExportModal({ open, onClose }: Props) {
   const didShrink = saved > 0
   const effectiveTab: Variant = ready && tab === 'compressed' && !didShrink ? 'original' : tab
 
-  const outNameBase = (fileName ?? 'document.pdf').replace(/\.pdf$/i, '')
-  const originalName = `${outNameBase}-updated.pdf`
-  const compressedName = `${outNameBase}-updated-compressed.pdf`
+  // ⚠️ The name is claimed at DOWNLOAD time, not here. `nextExportName`
+  // increments a per-document counter, so working it out during render would
+  // burn a version on every re-render — hence `previewExportName` for the
+  // label and `nextExportName` for the actual save.
+  const previewName = previewExportName(fileName)
 
   function download(which: 'original' | 'compressed') {
     if (!annotated || !compressed) return
-    if (which === 'original') {
-      downloadPdfBytes(annotated.slice(), originalName)
-    } else {
-      downloadPdfBytes(compressed.slice(), compressedName)
-    }
+    // One name for either variant: the modal closes after a download, so only
+    // one of the two ever leaves per opening, and which variant it was is not
+    // something the file needs to carry.
+    const name = nextExportName(fileName)
+    downloadPdfBytes((which === 'original' ? annotated : compressed).slice(), name)
     onClose()
   }
 
@@ -203,7 +206,7 @@ export default function ExportModal({ open, onClose }: Props) {
               <button
                 onClick={() => {
                   if (!annotated) return
-                  downloadPdfBytes(annotated.slice(), `${outNameBase}-filled.pdf`)
+                  downloadPdfBytes(annotated.slice(), nextExportName(fileName))
                   onClose()
                 }}
                 disabled={!annotated}
@@ -327,7 +330,14 @@ export default function ExportModal({ open, onClose }: Props) {
               </div>
             )}
 
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2">
+            {/* The name, before the button is pressed. It is the point of the
+                change and it is not otherwise guessable — a second export from
+                the same document goes to v2, not v1. */}
+            <p className="mt-4 text-xs text-slate-500">
+              Saves as <span className="font-medium text-slate-700">{previewName}</span>
+            </p>
+
+            <div className="mt-2 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2">
               <button
                 onClick={() => download(effectiveTab)}
                 disabled={!ready || !redactConfirmed}
