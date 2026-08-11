@@ -51,6 +51,15 @@ export default function BatchCompressModal({
   const totalSaved = totalOriginal - totalCompressed
   const pct = totalOriginal > 0 ? (totalSaved / totalOriginal) * 100 : 0
   const didShrink = totalSaved > 0
+  // Same honesty rule as the single-file modal: "try a stronger quality" is
+  // only true for the lossless pass. Where rasterising would have bloated a
+  // file, compressPdf kept the lossless bytes and says so here.
+  const someFellBack = results.some((r) => r.fellBackToLossless)
+  const noGainNote = someFellBack
+    ? 'Kept the lossless version where turning pages into images would have made the file bigger.'
+    : quality === 'light'
+      ? 'Already optimised — try Balanced or Maximum for image-heavy PDFs.'
+      : 'Already optimised — these PDFs are as small as they go.'
 
   async function changeQuality(q: CompressQuality) {
     if (q === quality || busy) return
@@ -170,7 +179,7 @@ export default function BatchCompressModal({
               ? `Compressing ${progress}/${files.length}…`
               : didShrink
                 ? `Saved ${formatSize(totalSaved)} (${pct.toFixed(1)}%) across ${files.length} files`
-                : 'Already optimised — try a stronger quality for image-heavy PDFs.'}
+                : noGainNote}
           </div>
         </div>
 

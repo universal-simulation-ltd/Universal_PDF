@@ -121,9 +121,14 @@ export default function LandingPage() {
   }
 
   async function onCompressFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files
+    // ⚠️ `input.files` is a LIVE FileList, not a snapshot. Clearing `value` (so
+    // the same file can be re-picked) empties the very list you are holding —
+    // so reading `files.length` afterwards gave 0 and "1 Click Compress" did
+    // nothing at all when you picked a file through the browser (dropping one
+    // still worked, which is why it went unnoticed). Materialise first.
+    const files = Array.from(e.target.files ?? [])
     e.target.value = ''
-    if (files && files.length > 0) await runCompress(files)
+    if (files.length > 0) await runCompress(files)
   }
 
   async function onOcrFile(e: React.ChangeEvent<HTMLInputElement>) {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const STORAGE_KEY = 'universal-pdf-mobile-welcome-dismissed'
 const MOBILE_QUERY = '(max-width: 767px)'
@@ -22,6 +22,7 @@ function persistDismissed() {
 export default function MobileWelcomeToast() {
   const [mounted, setMounted] = useState(false)
   const [visible, setVisible] = useState(false)
+  const boxRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -41,6 +42,22 @@ export default function MobileWelcomeToast() {
     window.setTimeout(() => setMounted(false), 250)
   }
 
+  // ⚠️ This coach-mark floats exactly where every toolbar panel opens — the
+  // Sign menu, the draw/text option trays — so leaving it up until someone
+  // finds the × hid the whole Sign panel behind it on a first mobile visit
+  // (tabs and all, unreachable). Any touch outside it now takes it away, and
+  // the listener is capture-phase + non-blocking so that same tap still lands
+  // on whatever was tapped.
+  useEffect(() => {
+    if (!mounted) return
+    function onDown(e: PointerEvent) {
+      if (boxRef.current?.contains(e.target as Node)) return
+      close()
+    }
+    window.addEventListener('pointerdown', onDown, true)
+    return () => window.removeEventListener('pointerdown', onDown, true)
+  }, [mounted])
+
   function dontShowAgain() {
     persistDismissed()
     close()
@@ -50,10 +67,13 @@ export default function MobileWelcomeToast() {
 
   return (
     <div
+      ref={boxRef}
       role="dialog"
       aria-live="polite"
       aria-label="Welcome to Universal PDF"
-      className={`md:hidden fixed left-1/2 -translate-x-1/2 z-50 w-[min(92vw,360px)] transition-all duration-300 ${
+      /* z-30: below the bottom bar (z-40) and its panels (z-40/z-50) so a
+         greeting can never cover a control, above the document either way. */
+      className={`md:hidden fixed left-1/2 -translate-x-1/2 z-30 w-[min(92vw,360px)] transition-all duration-300 ${
         visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
       }`}
       style={{ bottom: 'calc(96px + env(safe-area-inset-bottom))' }}

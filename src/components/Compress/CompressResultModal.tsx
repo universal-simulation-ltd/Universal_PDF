@@ -44,6 +44,16 @@ export default function CompressResultModal({
   const pct = result.originalSize > 0 ? (saved / result.originalSize) * 100 : 0
   const didShrink = saved > 0
 
+  // What the bottom strip says when nothing was saved. "Try a stronger quality"
+  // is only true advice for the lossless pass — on a text PDF the rasterising
+  // qualities are what made it bigger, and compressPdf has already fallen back
+  // to the lossless bytes rather than hand over the bloated ones.
+  const noGainNote = result.fellBackToLossless
+    ? 'Kept the lossless version — turning these pages into images would have made the file bigger.'
+    : quality === 'light'
+      ? 'Already optimised — try Balanced or Maximum for image-heavy PDFs.'
+      : 'Already optimised — this PDF is as small as it goes.'
+
   async function changeQuality(q: CompressQuality) {
     if (q === quality || busy) return
     setQuality(q)
@@ -145,7 +155,7 @@ export default function CompressResultModal({
               ? 'Compressing…'
               : didShrink
                 ? `Saved ${formatSize(saved)} (${pct.toFixed(1)}%)`
-                : 'Already optimised — try a stronger quality for image-heavy PDFs.'}
+                : noGainNote}
           </div>
         </div>
 

@@ -660,6 +660,10 @@ export interface CompressResult {
   compressedSize: number
   fileName: string
   quality: CompressQuality
+  /** Set when a rasterising quality was asked for but produced a *bigger* file
+   *  than the lossless pass, so the lossless bytes were returned instead. A
+   *  text-only PDF is the common case: 7 KB of text becomes ~860 KB of JPEG. */
+  fellBackToLossless?: boolean
 }
 
 // Render one source page through pdfjs at the given DPI and return JPEG bytes.
@@ -706,9 +710,10 @@ export async function compressPdf(
 
   const { renderScale, jpegQuality } = RASTER_SETTINGS[quality]
   // pdfjs detaches the buffer it's handed, so give it a copy and keep the
-  // original for pdf-lib (which we use only to read each page's size).
+  // original for pdf-lib (which we use for each page's size, and for the
+  // lossless yardstick below).
   const pdfjsDoc = await pdfjsLib.getDocument({ data: sourceBytes.slice(0) }).promise
-  const srcPdf = await PDFDocument.load(sourceBytes)
+  const srcPdf = await PDFDocument.load(sourceBytes, { updateMetadata: false })
   const out = await PDFDocument.create()
   for (let i = 0; i < srcPdf.getPageCount(); i++) {
     const { width, height } = srcPdf.getPage(i).getSize()
@@ -718,5 +723,21 @@ export async function compressPdf(
     page.drawImage(img, { x: 0, y: 0, width, height })
   }
   const bytes = await out.save({ useObjectStreams: true })
+  // ⚠️ Rasterising is only a win when there is something raster-shaped to win.
+  // A text-only PDF turns 7 KB of glyphs into ~860 KB of JPEG — 100× bigger,
+  // with the text no longer selectable. "1 Click Compress" must never hand back
+  // a bigger file than it was given, so measure the lossless pass and keep
+  // whichever is smaller. Same document either way; only the bytes differ.
+  const lossless = await srcPdf.save({ useObjectStreams: true })
+  if (bytes.byteLength >= lossless.byteLength) {
+    return {
+      bytes: lossless,
+      originalSize,
+      compressedSize: lossless.byteLength,
+      fileName: outName,
+      quality,
+      fellBackToLossless: true
+    }
+  }
   return { bytes, originalSize, compressedSize: bytes.byteLength, fileName: outName, quality }
 }
