@@ -16,6 +16,22 @@ const smoothstep = (x: number) => x * x * (3 - 2 * x)
 const unSmoothstep = (y: number) => 0.5 - Math.sin(Math.asin(1 - 2 * y) / 3)
 
 /**
+ * The signature stroke, written once and drawn three times — the ink, and the
+ * two dots that ride its leading edge. They have to be the same path, or the
+ * nib drifts off the line it is supposed to be drawing.
+ *
+ * ⚠️ All three carry `pathLength={100}`, so every dash number in the CSS is a
+ * PERCENTAGE of the stroke rather than a guess at its length. The guess was
+ * wrong: the ink was dashed against 360 units and the curve is 187, so the
+ * signature finished at 52% of its window and then sat there — and a nib
+ * offset against 360 would have been parked past the end of the path, drawing
+ * nothing at all. Normalising also means the curve can be redrawn without
+ * anything here needing to know.
+ */
+const SIGNATURE_D =
+  'M92 506 C 108 488, 122 522, 138 502 S 168 488, 184 506 S 214 520, 232 498 L 252 504'
+
+/**
  * The landing illustration: a document that writes itself, charts itself, gets
  * signed and ticked, then unwinds and does it again.
  *
@@ -148,7 +164,18 @@ export default function PdfIllustration() {
           <filter id="soft-shadow" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#0f172a" floodOpacity="0.15" />
           </filter>
+          <radialGradient id="halo-grad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#fb923c" stopOpacity="0.75" />
+            <stop offset="45%" stopColor="#fb923c" stopOpacity="0.5" />
+            <stop offset="100%" stopColor="#fb923c" stopOpacity="0" />
+          </radialGradient>
         </defs>
+
+        {/* The warm ground the page sits on, growing with it. It fills the box:
+            the page covers everything from x 60 to 440, so a halo any smaller
+            than this only ever shows under the drop shadow, which is exactly
+            where it cannot be seen. */}
+        <ellipse className="pdf-halo" cx="250" cy="300" rx="250" ry="300" fill="url(#halo-grad)" />
 
         {/* Back sheet (peeking) */}
         <g className="pdf-back">
@@ -207,7 +234,8 @@ export default function PdfIllustration() {
           {/* Animated signature stroke */}
           <path
             className="pdf-signature"
-            d="M92 506 C 108 488, 122 522, 138 502 S 168 488, 184 506 S 214 520, 232 498 L 252 504"
+            d={SIGNATURE_D}
+            pathLength={100}
             fill="none"
             stroke="#ea580c"
             strokeWidth="2.5"
@@ -215,7 +243,19 @@ export default function PdfIllustration() {
             strokeLinejoin="round"
           />
 
-          {/* Tick stamp */}
+          {/* The nib writing it: a bright dot with a soft one behind, both
+              pinned to the ink's leading edge by the same dash arithmetic. */}
+          <g className="pdf-nib-in">
+            <g className="pdf-nib-out">
+              <path className="pdf-nib-glow" d={SIGNATURE_D} pathLength={100} fill="none" stroke="#fb923c" strokeOpacity="0.35" strokeWidth="16" strokeLinecap="round" />
+              <path className="pdf-nib" d={SIGNATURE_D} pathLength={100} fill="none" stroke="#f97316" strokeWidth="7" strokeLinecap="round" />
+            </g>
+          </g>
+
+          {/* Tick stamp, and the ring it throws off as it lands */}
+          <g className="pdf-tick-ring" style={{ transformOrigin: '380px 510px' }}>
+            <circle cx="380" cy="510" r="22" fill="none" stroke="#10b981" strokeWidth="3" />
+          </g>
           <g className="pdf-tick" style={{ transformOrigin: '380px 510px' }}>
             <circle cx="380" cy="510" r="22" fill="#ecfdf5" stroke="#10b981" strokeWidth="2" />
             <path d="M370 510 L378 518 L392 502" stroke="#10b981" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
