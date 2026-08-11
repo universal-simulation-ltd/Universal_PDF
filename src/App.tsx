@@ -49,7 +49,6 @@ export default function App() {
   const loading = usePdfStore((s) => s.loading)
   const refreshRecents = usePdfStore((s) => s.refreshRecents)
   const loadFromCurrentUrl = usePdfStore((s) => s.loadFromCurrentUrl)
-  const reset = usePdfStore((s) => s.reset)
 
   const ocrOpen = usePdfStore((s) => s.ocrOpen)
   const setOcrOpen = usePdfStore((s) => s.setOcrOpen)
@@ -135,14 +134,26 @@ export default function App() {
         alert('Failed to load PDF')
       }
     }
+    // ⚠️ A second `drop` listener, in the CAPTURE phase, purely to clear the
+    // overlay. Zones that handle their own drop — the landing page's circle,
+    // the 1-Click-Compress target — must stop the event so `loadFile` is not
+    // called twice for one file, and stopping it means the bubble-phase `onDrop`
+    // above never runs and never resets `dragCounter`. Capture runs before any
+    // of them and cannot be suppressed, so the overlay always goes away.
+    function onDropCapture() {
+      dragCounter.current = 0
+      setDragOver(false)
+    }
     window.addEventListener('dragenter', onEnter)
     window.addEventListener('dragover', onOver)
     window.addEventListener('dragleave', onLeave)
+    window.addEventListener('drop', onDropCapture, true)
     window.addEventListener('drop', onDrop)
     return () => {
       window.removeEventListener('dragenter', onEnter)
       window.removeEventListener('dragover', onOver)
       window.removeEventListener('dragleave', onLeave)
+      window.removeEventListener('drop', onDropCapture, true)
       window.removeEventListener('drop', onDrop)
     }
   }, [loadFile])
@@ -165,34 +176,13 @@ export default function App() {
       {doc && <UniversalBar />}
       {doc && (
         <div className="bg-slate-900 text-white relative z-[45] overflow-x-auto" style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}>
-          {/* Home — a filled circle carrying the same chrome as the Actions pill
-              at the other end of the bar (slate-700 fill, slate-600 hairline,
-              38px), because a bare glyph is easy to miss for the only way out
-              of an open document. Pinned to the far left of the bar — out in the margin to the
-              left of the centred tool cluster, so it reads as window chrome
-              rather than an editing tool. The universal navbar is landing-page
-              only; while a doc is open the dark toolbar is the whole chrome.
-              lg+ only: that margin only exists on wider screens. Mobile keeps a
-              home button inside the cluster below.
-
-              Actions used to sit here too. It now rides in the profile pill at
-              the far right — one control, one dropdown — matching the other
-              Universal Apps. */}
-          <div className="hidden lg:flex absolute inset-y-0 left-0 z-10 items-center gap-1 pl-3">
-            <button
-              type="button"
-              onClick={reset}
-              title="Back to home"
-              aria-label="Back to home"
-              className="h-[38px] w-[38px] shrink-0 inline-flex items-center justify-center rounded-full bg-slate-700 ring-1 ring-slate-600 text-[#ea580c] hover:bg-slate-600 hover:ring-slate-500 hover:text-orange-400 active:bg-slate-500 transition-colors"
-            >
-              <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M3 10.5 12 3l9 7.5" />
-                <path d="M5.5 9.5V21h13V9.5" />
-                <path d="M10 21v-6h4v6" />
-              </svg>
-            </button>
-          </div>
+          {/* No home button on this bar. Leaving an open document is
+              Actions → File → Close PDF, in the profile pill at the far right —
+              one control, one dropdown, matching the other Universal Apps. A
+              second way out pinned to the far left (and a third inside the tool
+              cluster on mobile) spent the bar's scarcest space on a control the
+              menu already carries. Actions used to sit out here too, and moved
+              into the same pill for the same reason. */}
           <div
             className="mx-auto w-full min-w-max flex items-center justify-between gap-6 py-2 min-h-[52px]"
             style={{ maxWidth: 'clamp(600px, var(--doc-display-width, 80rem), 80rem)' }}
@@ -202,27 +192,12 @@ export default function App() {
                 desktop tool chrome switches to the bottom bar below lg (1024px)
                 — at narrower widths the Select group collides with Actions. */}
             <div className="flex items-center gap-2 shrink-0 [&>*]:shrink-0 lg:pl-5">
-              {/* Mobile-only home — desktop pins it to the far left above. */}
-              <button
-                type="button"
-                onClick={reset}
-                title="Back to home"
-                aria-label="Back to home"
-                className="lg:hidden h-[38px] w-[38px] shrink-0 inline-flex items-center justify-center rounded-full bg-slate-700 ring-1 ring-slate-600 text-[#ea580c] hover:bg-slate-600 hover:ring-slate-500 hover:text-orange-400 active:bg-slate-500 transition-colors"
-              >
-                <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M3 10.5 12 3l9 7.5" />
-                  <path d="M5.5 9.5V21h13V9.5" />
-                  <path d="M10 21v-6h4v6" />
-                </svg>
-              </button>
               <ToolbarDesktopTools />
             </div>
             <div className="flex items-center gap-2 justify-end shrink-0 [&>*]:shrink-0">
               <ToolbarDesktopActions />
               {/* Mobile-only profile + changelog — on md+ they're pinned to the
-                  far right of the bar below, mirroring the Home/Actions chrome
-                  on the far left. */}
+                  far right of the bar below. */}
               <div className="lg:hidden flex items-center gap-2 [&>*]:shrink-0">
                 <ToolbarUserProfile actions={<FileMenu variant="rows" />} />
                 <ChangelogMenu
@@ -234,7 +209,7 @@ export default function App() {
           </div>
           {/* Profile + changelog previously lived in the top navbar; with that
               bar gone while viewing, they're pinned to the far right of the
-              bar — mirroring the Home/Actions chrome pinned to the far left.
+              bar, and now carry the whole of the document's chrome.
               The right offset tracks the viewer scrollbar width (like the
               bar's own padding-right) so the cluster lines up with the
               document's right edge. */}

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { DropRing, useFileDrop } from '@unisim/sdk'
 import { usePdfStore } from '../../stores/pdfStore'
 import { createExamplePdfFile } from '../../lib/examplePdf'
 import { compressPdf, type CompressQuality, type CompressResult } from '../../lib/export'
@@ -18,7 +19,6 @@ import { CONTAINER } from '../../lib/layout'
 const DEFAULT_COMPRESS_QUALITY: CompressQuality = 'balanced'
 
 export default function LandingPage() {
-  const inputRef = useRef<HTMLInputElement>(null)
   const compressInputRef = useRef<HTMLInputElement>(null)
   const ocrInputRef = useRef<HTMLInputElement>(null)
   const loadFile = usePdfStore((s) => s.loadFile)
@@ -40,6 +40,16 @@ export default function LandingPage() {
   const [mergeOpen, setMergeOpen] = useState(false)
   const [convertMode, setConvertMode] = useState<ConvertMode | null>(null)
   const [ocrJob, setOcrJob] = useState<{ bytes: ArrayBuffer; name: string } | null>(null)
+
+  // The suite's shared drop mechanics — drag depth, the hidden input, click and
+  // Enter and Space, resetting the value so the same file can be picked twice.
+  // `openFiles` is a hoisted declaration, so referring to it here is fine.
+  const drop = useFileDrop({
+    onFiles: openFiles,
+    accept: 'application/pdf',
+    multiple: false,
+    label: 'Drop a PDF here, or click to browse',
+  })
 
   async function runCompress(fileList: File[] | FileList) {
     const files = Array.from(fileList).filter(
@@ -79,17 +89,21 @@ export default function LandingPage() {
     }
   }
 
-  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (file) {
-      try {
-        await loadFile(file)
-      } catch (err) {
-        console.error(err)
-        alert('Failed to load PDF')
-      }
+  // Shared by the circle's picker and its drop. The picker is filtered by
+  // `accept`, a drop is not — so the check has to live here.
+  async function openFiles(files: File[]) {
+    const file = files[0]
+    if (!file) return
+    if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
+      alert('Please choose a PDF file.')
+      return
     }
-    e.target.value = ''
+    try {
+      await loadFile(file)
+    } catch (err) {
+      console.error(err)
+      alert('Failed to load PDF')
+    }
   }
 
   async function openExample() {
@@ -167,31 +181,62 @@ export default function LandingPage() {
 
             {/* Box 1: open a PDF → recent files → example */}
             <div className="mt-7 bg-white border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6">
-              {/* Open existing — primary action */}
-              <button
-                type="button"
-                onClick={() => inputRef.current?.click()}
-                className="group relative w-full flex items-center gap-4 p-5 border-2 border-dashed border-orange-500 bg-orange-50/40 rounded-xl text-left hover:bg-orange-50 hover:border-orange-600 hover:shadow-lg hover:shadow-orange-500/10 transition-all"
-              >
-                <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-xl ring-4 ring-orange-500/0 group-hover:ring-orange-500/15 transition-all" />
-                <div className="shrink-0 w-12 h-12 rounded-lg bg-orange-600 text-white flex items-center justify-center text-2xl shadow-sm group-hover:scale-105 transition-transform">
-                  📄
+              {/* Open existing — primary action, wearing the suite's shared
+                  drop circle (`DropRing` + `useFileDrop` from @unisim/sdk)
+                  rather than a copy, so it is the same front door Universal
+                  Compress and the Converter's All tab open on. It replaced a
+                  dashed rectangle: one look for "drop a file here" across the
+                  suite. Always `idle` — nothing runs on this page, and a busy
+                  chase on an empty page reads as "still loading".
+
+                  ⚠️ The drag handlers stop the event. App.tsx also watches
+                  `window` so a PDF can land anywhere on the page, and without
+                  this the same file would go through `loadFile` twice — which
+                  destroys the document the first call just set and writes two
+                  recents entries. Stopping enter/leave as well keeps that
+                  listener's depth counter balanced (its full-screen overlay
+                  steps aside while the circle has the drag, and the circle's
+                  own highlight takes over), and its capture-phase reset clears
+                  the overlay on a drop this one swallows. */}
+              <div className="flex flex-col items-center">
+                <div
+                  {...drop.dropzoneProps}
+                  onDragEnter={(e) => { e.stopPropagation(); drop.dropzoneProps.onDragEnter(e) }}
+                  onDragLeave={(e) => { e.stopPropagation(); drop.dropzoneProps.onDragLeave(e) }}
+                  onDrop={(e) => { e.stopPropagation(); drop.dropzoneProps.onDrop(e) }}
+                  className={`relative w-full max-w-[260px] cursor-pointer rounded-full transition-transform focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orange-600 ${
+                    drop.over ? 'scale-[1.02]' : ''
+                  }`}
+                >
+                  <DropRing size="100%" over={drop.over} motion="idle">
+                    <svg
+                      viewBox="0 0 24 24"
+                      className={`mb-1 h-9 w-9 ${drop.over ? 'text-orange-500' : 'text-slate-400'}`}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      {/* A page with its corner turned — the thing you drop,
+                          not an upload tray. Nothing is uploaded. */}
+                      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+                      <path d="M14 3v5h5" />
+                      <path d="M9 13h6" />
+                      <path d="M9 17h4" />
+                    </svg>
+                    <span className="text-[15px] font-bold text-slate-900">
+                      {drop.over ? 'Drop to open' : 'Drop a PDF here'}
+                    </span>
+                    <span className="text-[11.5px] leading-relaxed text-slate-500">
+                      it stays on your device
+                    </span>
+                    <span className="mt-1 text-[11px] text-slate-400">or click to browse</span>
+                  </DropRing>
                 </div>
-                <div className="min-w-0">
-                  <div className="font-semibold text-slate-900 text-base">Open a PDF</div>
-                  <div className="text-sm text-slate-600">Click to choose, or drop a file anywhere</div>
-                </div>
-                <span className="ml-auto text-orange-600 text-lg group-hover:translate-x-0.5 transition-transform" aria-hidden="true">
-                  →
-                </span>
-              </button>
-              <input
-                ref={inputRef}
-                type="file"
-                accept="application/pdf"
-                hidden
-                onChange={onFile}
-              />
+                <input {...drop.inputProps} className="hidden" />
+              </div>
 
               {/* When there are recents, tuck them and the example into a
                   collapsed collapsible so the primary action stays front and

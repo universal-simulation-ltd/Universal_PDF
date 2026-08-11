@@ -31,7 +31,7 @@ Open the [app URL](https://pdf.unisim.co.uk/), then:
 
 ## How to use
 
-1. **Open a PDF** — click *Open PDF* or drag-and-drop a file anywhere on the page
+1. **Open a PDF** — drop one on the circle, click it to browse, or drag-and-drop a file anywhere on the page
 2. **Pick a tool** from the toolbar (Text, Draw, Tick, Cross, Rectangle, or Sign)
 3. **Click / tap on the page** to place the annotation
 4. **Switch to *Select*** to drag, resize, recolour, or delete existing annotations — or *Select text* (same menu) to drag over and copy the PDF's own text
