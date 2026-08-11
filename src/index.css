@@ -82,8 +82,15 @@ body {
              translate(calc(7px + 11px * var(--e)), calc(11px + 9px * var(--e)));
 }
 
-/* Body text writes itself in, line after line. */
+/* Body text writes itself in, line after line.
+
+   ⚠️ `transform-box: fill-box` is load-bearing, not tidying. On an SVG element
+   `transform-box` defaults to `view-box`, so "left center" meant the left edge
+   of the 500 × 600 CANVAS, not of the line — every line slid in from x=0 while
+   it grew, instead of writing itself out from where it starts. Wrong since this
+   was written, and invisible because it still ends in the right place. */
 .pdf-illu .pdf-line {
+  transform-box: fill-box;
   transform-origin: left center;
   transform: scaleX(var(--e));
   opacity: calc(0.4 + 0.6 * var(--e));
@@ -114,6 +121,12 @@ body {
    settling back — five of them, one after another, is the liveliest moment in
    the sweep and it was previously the flattest. */
 .pdf-illu .pdf-bars .bar {
+  /* Same trap as `.pdf-line`: without this, "bottom" is the bottom of the
+     canvas and the bars slide down out of the chart while they grow. The
+     overshoot is what finally made it visible — one bar poking out below the
+     card — because scaling past 1 about a point 200 units away throws the
+     element a long way. */
+  transform-box: fill-box;
   transform-origin: bottom;
   transform: scaleY(calc(var(--e) * (1 + 0.3 * var(--pop))));
   opacity: var(--e);
@@ -125,14 +138,44 @@ body {
 .pdf-illu .pdf-bars .b4 { --from: 0.33; }
 .pdf-illu .pdf-bars .b5 { --from: 0.36; }
 
-/* The cursor leads: it arrives at the signature line before the ink does. It
-   fades in on the way, on the same window — parking on frame 0 used to leave a
-   pointer stranded in the middle of a document nobody was pointing at. */
-.pdf-illu .pdf-cursor {
-  transform: translate(calc(340px - 160px * var(--e)), calc(360px + 140px * var(--e)));
+/* The pen flies in from off to the right, just before the ink starts. It
+   replaced a mouse cursor that travelled to the same line: two things arriving
+   at one signature reads as a bug, and a pen is what is actually happening. */
+/* ⚠️ In from BELOW right, not above right: the signature sits at the bottom
+   left, so an entrance from above crosses the whole document — a half-faded pen
+   flying over the chart on its way down. From below it comes off the page edge
+   nearest where it is going, which is also where a hand would come from. */
+.pdf-illu .pdf-pen-in {
+  transform: translate(calc(140px * (1 - var(--e))), calc(120px * (1 - var(--e))));
   opacity: var(--e);
-  --from: 0.38;
-  --span: 0.20;
+  --from: 0.42;
+  --span: 0.08;
+}
+
+/* ...and leaves the way it came once the signature is finished. `1 - --e` is
+   deliberate and correct HERE, unlike on the stamp ring: this element must be
+   opaque before its window, and only fade at the end. */
+.pdf-illu .pdf-pen-out {
+  transform: translate(calc(110px * var(--e)), calc(90px * var(--e)));
+  opacity: calc(1 - var(--e));
+  --from: 0.78;
+  --span: 0.06;
+}
+
+/* The tip rides the same curve the ink is drawn along, over the same window, so
+   the pen and the ink cannot come apart. `offset-anchor` follows
+   `transform-origin`, and `transform-box: view-box` makes that the group's own
+   0,0 — where the tip is drawn. */
+.pdf-illu .pdf-pen-ride {
+  /* `offset-path` itself is an inline style in PdfIllustration.tsx — the curve
+     is written once there, as the origin-relative twin of the signature's own
+     `d`, rather than copied into this file where the two could drift. */
+  offset-distance: calc(var(--e) * 100%);
+  offset-rotate: 0deg;
+  transform-box: view-box;
+  transform-origin: 0 0;
+  --from: 0.50;
+  --span: 0.28;
 }
 
 /* Signature draws along its own path length — in percent, because the paths
@@ -149,10 +192,9 @@ body {
 /* The nib: a single round dot riding the very tip of the ink.
    ⚠️ It is the SAME path with a dash pattern of "0.01 long, then a gap longer
    than the path" — one round cap and nothing else — offset to the ink's leading
-   edge. Not a circle on an `offset-path`: the dot and the ink are then two
-   descriptions of one position that can disagree (and motion-path on SVG fails
-   silently, leaving the dot parked at the origin). Here they cannot: both read
-   the same 360 and the same `--e`. */
+   edge. Both read the same percentage and the same `--e`, so they cannot come
+   apart. The pen below has to use `offset-path` instead, because a pen is not
+   expressible as a dash; anything that CAN be a dash should be one. */
 .pdf-illu .pdf-nib,
 .pdf-illu .pdf-nib-glow {
   stroke-dasharray: 0.01 1000;
@@ -192,8 +234,20 @@ body {
 .pdf-illu .pdf-tick {
   transform: scale(calc(var(--e) * (1 + 0.28 * var(--pop))));
   opacity: var(--e);
-  --from: 0.80;
-  --span: 0.14;
+  --from: 0.78;
+  --span: 0.12;
+}
+
+/* APPROVED lands last, and lands HARD: it arrives at 2.4× and decelerates onto
+   the page, which is the whole difference between a stamp and a fade-in. The
+   sweep's own easing slows to a crawl near 1, so it holds there before the loop
+   turns back. */
+.pdf-illu .pdf-stamp {
+  transform-origin: 250px 332px;
+  transform: rotate(-13deg) scale(calc(1 + 1.4 * (1 - var(--e))));
+  opacity: calc(0.92 * var(--e));
+  --from: 0.86;
+  --span: 0.12;
 }
 
 /* The impact: one ring thrown off the stamp, expanding and fading. It starts a
@@ -208,8 +262,8 @@ body {
      0. `--pop` is 0 at both ends, which is what "only exists while it happens"
      actually means. */
   opacity: calc(0.85 * var(--pop));
-  --from: 0.84;
-  --span: 0.14;
+  --from: 0.82;
+  --span: 0.12;
 }
 
 /* Reduced motion is handled in PdfIllustration.tsx, which parks `--t` at 1 and

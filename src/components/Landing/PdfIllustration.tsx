@@ -32,8 +32,21 @@ const SIGNATURE_D =
   'M92 506 C 108 488, 122 522, 138 502 S 168 488, 184 506 S 214 520, 232 498 L 252 504'
 
 /**
- * The landing illustration: a document that writes itself, charts itself, gets
- * signed and ticked, then unwinds and does it again.
+ * The same curve with its start moved to the origin — what the pen rides.
+ *
+ * `offset-path` needs the path in the element's OWN coordinate system, and the
+ * pen hangs inside a `translate(92 506)` group so that a browser without motion
+ * path support still puts it somewhere sensible: parked at the start of the
+ * signature, pen in hand, rather than dumped at the top-left corner of the SVG.
+ * That fallback is the whole reason for the wrapper.
+ */
+const SIGNATURE_D_LOCAL =
+  'M0 0 C 16 -18, 30 16, 46 -4 S 76 -18, 92 0 S 122 14, 140 -8 L 160 -2'
+
+/**
+ * The landing illustration: a document that writes itself, charts itself, is
+ * signed by a pen that flies in for the job, gets ticked and stamped APPROVED,
+ * then unwinds and does it again.
  *
  * ONE CLOCK, NOT NINE ANIMATIONS
  * ------------------------------
@@ -252,6 +265,58 @@ export default function PdfIllustration() {
             </g>
           </g>
 
+          {/* The pen that does the writing. It flies in from off to the right,
+              rides the same curve the ink is drawn along, and leaves again.
+
+              The tip is the group's own origin, which is why the wrapper below
+              translates to the start of the signature: `offset-anchor` defaults
+              to `transform-origin`, and with `transform-box: view-box` that is
+              local 0,0 — so the tip, not the middle of the pen, is what sits on
+              the path. `offset-rotate: 0deg` keeps it upright; following the
+              tangent of a signature makes it cartwheel. */}
+          <g transform="translate(92 506)">
+            <g className="pdf-pen-in">
+              <g className="pdf-pen-out">
+                {/* `offset-path` is set here rather than in `index.css` so the
+                    curve exists exactly once in the source. The window it moves
+                    over, and everything else about it, is still in the
+                    stylesheet with the rest of the sweep. */}
+                <g className="pdf-pen-ride" style={{ offsetPath: `path("${SIGNATURE_D_LOCAL}")` }}>
+                  <g transform="rotate(40)">
+                    {/* Drawn pointing straight up from the tip at 0,0 and
+                        rotated once, rather than every point being worked out
+                        along a diagonal. */}
+                    <path d="M0 0 L-4.5 -15 L4.5 -15 Z" fill="#1e293b" />
+                    <rect x="-5.5" y="-21" width="11" height="6" fill="#cbd5e1" />
+                    <rect x="-6" y="-56" width="12" height="35" rx="2.5" fill="#ea580c" />
+                    <rect x="-6" y="-56" width="4.5" height="35" rx="2" fill="#fb923c" opacity="0.6" />
+                    <rect x="-4.5" y="-64" width="9" height="9" rx="3" fill="#1e293b" />
+                  </g>
+                </g>
+              </g>
+            </g>
+          </g>
+
+          {/* APPROVED, slammed across the middle of the page — the last beat of
+              the sweep and the only thing that overlaps the document's own
+              content, which is what a real stamp does. */}
+          <g className="pdf-stamp">
+            <rect x="112" y="292" width="276" height="80" rx="10" fill="none" stroke="#059669" strokeWidth="5" />
+            <rect x="122" y="302" width="256" height="60" rx="6" fill="none" stroke="#059669" strokeWidth="1.5" opacity="0.6" />
+            <text
+              x="250"
+              y="345"
+              textAnchor="middle"
+              fontSize="38"
+              fontWeight="800"
+              letterSpacing="4"
+              fill="#059669"
+              fontFamily="ui-sans-serif, system-ui"
+            >
+              APPROVED
+            </text>
+          </g>
+
           {/* Tick stamp, and the ring it throws off as it lands */}
           <g className="pdf-tick-ring" style={{ transformOrigin: '380px 510px' }}>
             <circle cx="380" cy="510" r="22" fill="none" stroke="#10b981" strokeWidth="3" />
@@ -278,10 +343,6 @@ export default function PdfIllustration() {
           </g>
         </g>
 
-        {/* Cursor */}
-        <g className="pdf-cursor" aria-hidden="true">
-          <path d="M0 0 L0 18 L5 14 L9 22 L12 21 L8 13 L14 13 Z" fill="#0f172a" stroke="#ffffff" strokeWidth="1" />
-        </g>
       </svg>
     </div>
   )
