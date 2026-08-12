@@ -184,7 +184,11 @@ export default function LandingPage() {
               View, annotate, sign and export — everything stays on your device.
             </p>
 
-            {/* Box 1: open a PDF → recent files → example */}
+            {/* One box, read top to bottom: upload → recent → compress →
+                more options. Compress and the power-user tools used to sit in
+                a second card below this one, which read as a separate, lesser
+                panel — Universal Images keeps everything in a single card and
+                this now matches it. */}
             <div className="mt-7 bg-white border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6">
               {/* Open existing — primary action, wearing the suite's shared
                   drop circle (`DropRing` + `useFileDrop` from @unisim/sdk)
@@ -266,10 +270,9 @@ export default function LandingPage() {
               ) : (
                 <div className="mt-5">{exampleButton}</div>
               )}
-            </div>
 
-            {/* Box 2: convert tools — compress & text → PDF */}
-            <div className="mt-4 bg-white border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6 space-y-3">
+              <div className="mt-5 h-px bg-slate-200" aria-hidden="true" />
+
               {/* Compress */}
               <button
                 type="button"
@@ -297,7 +300,7 @@ export default function LandingPage() {
                   if (files && files.length > 0) runCompress(files)
                 }}
                 className={[
-                  'group w-full flex items-center gap-4 p-4 border rounded-xl text-left transition-colors disabled:opacity-60 disabled:cursor-wait',
+                  'group mt-5 w-full flex items-center gap-4 p-4 border rounded-xl text-left transition-colors disabled:opacity-60 disabled:cursor-wait',
                   dragOverCompress
                     ? 'border-amber-500 bg-amber-50 border-dashed border-2'
                     : 'border-slate-200 hover:border-amber-400 hover:bg-amber-50/50'
@@ -335,7 +338,7 @@ export default function LandingPage() {
                   the whole panel into view so every revealed option is visible
                   (it sits near the bottom of the fold on shorter screens). */}
               <details
-                className="group"
+                className="group mt-3"
                 onToggle={(e) => {
                   if (!e.currentTarget.open) return
                   const el = e.currentTarget
