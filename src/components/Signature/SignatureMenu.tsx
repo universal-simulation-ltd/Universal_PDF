@@ -139,7 +139,7 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
           onClick={() => setTab('signatures')}
           className={`flex-1 px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
             tab === 'signatures'
-              ? 'text-orange-600 border-b-2 border-orange-500 -mb-px'
+              ? 'text-orange-700 border-b-2 border-orange-500 -mb-px'
               : 'text-slate-400 hover:text-slate-600'
           }`}
         >
@@ -149,7 +149,7 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
           onClick={() => setTab('stamps')}
           className={`flex-1 px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
             tab === 'stamps'
-              ? 'text-orange-600 border-b-2 border-orange-500 -mb-px'
+              ? 'text-orange-700 border-b-2 border-orange-500 -mb-px'
               : 'text-slate-400 hover:text-slate-600'
           }`}
         >
@@ -159,7 +159,7 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
           onClick={() => setTab('request')}
           className={`flex-1 px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
             tab === 'request'
-              ? 'text-orange-600 border-b-2 border-orange-500 -mb-px'
+              ? 'text-orange-700 border-b-2 border-orange-500 -mb-px'
               : 'text-slate-400 hover:text-slate-600'
           }`}
         >
@@ -263,13 +263,13 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
         <div className="grid grid-cols-2 border-t border-slate-100">
           <button
             onClick={() => { openPad(); setOpen(false) }}
-            className="px-3 py-2.5 text-sm font-medium text-orange-600 hover:bg-orange-50"
+            className="px-3 py-2.5 text-sm font-medium text-orange-700 hover:bg-orange-50"
           >
             + Draw new
           </button>
           <button
             onClick={() => { openImport('signature'); setOpen(false) }}
-            className="px-3 py-2.5 text-sm font-medium text-orange-600 hover:bg-orange-50 border-l border-slate-100"
+            className="px-3 py-2.5 text-sm font-medium text-orange-700 hover:bg-orange-50 border-l border-slate-100"
           >
             + Import image
           </button>
@@ -278,13 +278,13 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
         <div className="grid grid-cols-2 border-t border-slate-100">
           <button
             onClick={() => { openStampPicker(); setOpen(false) }}
-            className="px-3 py-2.5 text-sm font-medium text-orange-600 hover:bg-orange-50"
+            className="px-3 py-2.5 text-sm font-medium text-orange-700 hover:bg-orange-50"
           >
             + Preset stamps
           </button>
           <button
             onClick={() => { openImport('stamp'); setOpen(false) }}
-            className="px-3 py-2.5 text-sm font-medium text-orange-600 hover:bg-orange-50 border-l border-slate-100"
+            className="px-3 py-2.5 text-sm font-medium text-orange-700 hover:bg-orange-50 border-l border-slate-100"
           >
             + Import image
           </button>

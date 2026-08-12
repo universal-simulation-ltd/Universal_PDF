@@ -336,7 +336,7 @@ export default function QrDialog() {
               href={UNIVERSAL_QR_URL}
               target="_blank"
               rel="noreferrer"
-              className="text-xs text-orange-600 hover:text-orange-700 underline-offset-2 hover:underline"
+              className="text-xs text-orange-700 hover:text-orange-800 underline-offset-2 hover:underline"
             >
               Design one in Universal QR ↗
             </a>

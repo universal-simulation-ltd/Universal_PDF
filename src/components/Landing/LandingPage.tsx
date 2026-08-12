@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { DropRing, useFileDrop } from '@unisim/sdk'
+import { DropAnywhere, DropRing, useFileDrop } from '@unisim/sdk'
 import { usePdfStore } from '../../stores/pdfStore'
 import { createExamplePdfFile } from '../../lib/examplePdf'
 import { compressPdf, type CompressQuality, type CompressResult } from '../../lib/export'
@@ -44,12 +44,38 @@ export default function LandingPage() {
   // The suite's shared drop mechanics — drag depth, the hidden input, click and
   // Enter and Space, resetting the value so the same file can be picked twice.
   // `openFiles` is a hoisted declaration, so referring to it here is fine.
+  //
+  // `pageWide`: the circle is where to aim, not where you have to land. A PDF let
+  // go two pixels outside the ring used to be handed to the browser, which
+  // navigates away from the tab — on this page that costs nothing, but the same
+  // gesture over the compress pill or the recents list is a plain miss and the
+  // app should just take the file. It replaces the `window` listener App.tsx used
+  // to keep for this, and with it the stopPropagation wrappers this zone needed
+  // to stop that listener loading the same file a second time: the hook skips any
+  // drop that landed inside a `data-unisim-dropzone`, which this is.
+  //
+  // Not while one of this page's own dialogs is up: every one of them is either
+  // showing a result for a file already chosen or asking for a different file of
+  // its own, and swapping the document out from behind it would leave the dialog
+  // describing something that is no longer there.
+  const modalOpen =
+    !!compressJob || !!batchJob || transformOpen || mergeOpen || !!convertMode || !!ocrJob
   const drop = useFileDrop({
     onFiles: openFiles,
     accept: 'application/pdf',
     multiple: false,
+    pageWide: true,
+    disabled: modalOpen,
     label: 'Drop a PDF here, or click to browse',
   })
+  // ⚠️ `over`/`pageOver` go true for a page drag whether or not the zone is
+  // disabled — the hook lights every page-wide zone and only checks `disabled`
+  // when deciding who TAKES the file. Lighting a ring that will not take
+  // anything is a lie, so gate the visuals on the same condition. The compress
+  // pill below is the other case: it is its own drop target with its own
+  // meaning, so the "drop anywhere to open" hint has no business over it.
+  const over = drop.over && !modalOpen
+  const showDropHint = drop.pageOver && !modalOpen && !dragOverCompress
 
   async function runCompress(fileList: File[] | FileList) {
     const files = Array.from(fileList).filter(
@@ -195,29 +221,23 @@ export default function LandingPage() {
                   suite. Always `idle` — nothing runs on this page, and a busy
                   chase on an empty page reads as "still loading".
 
-                  ⚠️ The drag handlers stop the event. App.tsx also watches
-                  `window` so a PDF can land anywhere on the page, and without
-                  this the same file would go through `loadFile` twice — which
-                  destroys the document the first call just set and writes two
-                  recents entries. Stopping enter/leave as well keeps that
-                  listener's depth counter balanced (its full-screen overlay
-                  steps aside while the circle has the drag, and the circle's
-                  own highlight takes over), and its capture-phase reset clears
-                  the overlay on a drop this one swallows. */}
+                  The drag handlers used to stop the event so App.tsx's own
+                  `window` listener would not put the same file through
+                  `loadFile` twice. That listener is gone — this zone is
+                  `pageWide` now, and the hook recognises its own zones by the
+                  `data-unisim-dropzone` marker it spreads on, so a drop that
+                  lands here is never picked up a second time. */}
               <div className="flex flex-col items-center">
                 <div
                   {...drop.dropzoneProps}
-                  onDragEnter={(e) => { e.stopPropagation(); drop.dropzoneProps.onDragEnter(e) }}
-                  onDragLeave={(e) => { e.stopPropagation(); drop.dropzoneProps.onDragLeave(e) }}
-                  onDrop={(e) => { e.stopPropagation(); drop.dropzoneProps.onDrop(e) }}
                   className={`relative w-full max-w-[260px] cursor-pointer rounded-full transition-transform focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orange-600 ${
-                    drop.over ? 'scale-[1.02]' : ''
+                    over ? 'scale-[1.02]' : ''
                   }`}
                 >
-                  <DropRing size="100%" over={drop.over} motion="idle">
+                  <DropRing size="100%" over={over} motion="idle">
                     <svg
                       viewBox="0 0 24 24"
-                      className={`mb-1 h-9 w-9 ${drop.over ? 'text-orange-500' : 'text-slate-400'}`}
+                      className={`mb-1 h-9 w-9 ${over ? 'text-orange-500' : 'text-slate-400'}`}
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="1.8"
@@ -233,7 +253,7 @@ export default function LandingPage() {
                       <path d="M9 17h4" />
                     </svg>
                     <span className="text-[15px] font-bold text-slate-900">
-                      {drop.over ? 'Drop to open' : 'Drop a PDF here'}
+                      {over ? 'Drop to open' : 'Drop a PDF here'}
                     </span>
                     <span className="text-[11.5px] leading-relaxed text-slate-500">
                       it stays on your device
@@ -276,9 +296,15 @@ export default function LandingPage() {
                 <span className="h-px flex-1 bg-slate-200" aria-hidden="true" />
               </div>
 
-              {/* Compress */}
+              {/* Compress. ⚠️ `data-unisim-dropzone` is load-bearing, not
+                  decoration: the circle above is page-wide, and without this
+                  marker a file let go on THIS pill would be taken by the circle
+                  as well and opened for viewing instead of compressed. The
+                  marker is how the page-wide listener recognises a drop that
+                  another target has already claimed. */}
               <button
                 type="button"
+                data-unisim-dropzone=""
                 onClick={() => compressInputRef.current?.click()}
                 disabled={compressing}
                 onDragEnter={(e) => {
@@ -446,6 +472,15 @@ export default function LandingPage() {
           }}
         />
       )}
+
+      {/* The other half of `pageWide` — the circle lights up wherever the drag
+          is, and this says why, in the margin where the pointer actually is. */}
+      <DropAnywhere
+        show={showDropHint}
+        title="Drop to open"
+        hint="PDF files only — anywhere on this page will do"
+        icon={<span aria-hidden="true">📄</span>}
+      />
     </div>
   )
 }

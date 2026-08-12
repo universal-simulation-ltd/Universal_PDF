@@ -129,7 +129,7 @@ export default function SignatureImport() {
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            className="w-full p-8 border-2 border-dashed border-slate-300 hover:border-orange-500 rounded-lg text-slate-500 hover:text-orange-600 transition-colors flex flex-col items-center gap-2"
+            className="w-full p-8 border-2 border-dashed border-slate-300 hover:border-orange-500 rounded-lg text-slate-500 hover:text-orange-700 transition-colors flex flex-col items-center gap-2"
           >
             <div className="text-3xl">🖼️</div>
             <div className="font-medium">Choose an image</div>
@@ -165,7 +165,7 @@ export default function SignatureImport() {
               <button
                 type="button"
                 onClick={() => inputRef.current?.click()}
-                className="ml-auto text-xs text-slate-500 hover:text-orange-600 underline-offset-2 hover:underline"
+                className="ml-auto text-xs text-slate-500 hover:text-orange-700 underline-offset-2 hover:underline"
               >
                 Choose different file
               </button>

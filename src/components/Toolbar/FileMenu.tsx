@@ -647,7 +647,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                     href="https://www.unisim.co.uk"
                     target="_blank"
                     rel="noreferrer"
-                    className="text-orange-600 hover:underline font-medium"
+                    className="text-orange-700 hover:underline font-medium"
                   >
                     Contact UNI SIM
                   </a>{' '}
