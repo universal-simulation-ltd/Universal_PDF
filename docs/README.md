@@ -107,6 +107,66 @@ it is equally a point of no return for redactions. Any future surface that
 launches the dialog inherits the gate for free, which is the point of it living
 on the action rather than the launcher.
 
+## QR codes (Add QR code)
+
+The **QR button** in the toolbar (desktop: beside the image button; mobile:
+beside *Image*) opens a cut-down Universal QR — a link box and six style
+presets — and drops the generated code onto the page.
+
+**It is an image annotation, not a new type.** "Add to page" renders a
+1024 px PNG, hands it to `setUploadedImageSrc` and arms the existing `image`
+tool, so the code is placed, moved, resized, undone and baked into the export
+by machinery that already existed. Placed at the default ~200 pt that works out
+around 360 dpi, so the code still scans off a printed page.
+
+### Sharing a design model with Universal QR
+
+`src/lib/qr/` is a port of Universal QR's renderer, kept deliberately faithful:
+
+| File | From | Notes |
+|---|---|---|
+| `design.ts` | its `lib/qr.ts` | `QrDesign` is a field-for-field copy of its `QrConfig`; the six presets are its `PRESETS` verbatim |
+| `frames.ts` | its `lib/frames.ts` | shaped plates (circle/star/hexagon/…), canvas path only |
+| `decor.ts` | its `lib/decor.ts` | the burst/scatter marks a shaped plate is filled with |
+| `render.ts` | its `lib/compose.ts` | one canvas composite for plain and shaped codes alike |
+
+The *editor* is what is simplified, not the format — because a design imported
+from Universal QR is restored whole, and a code that rendered differently in the
+two apps would be the version of this feature nobody trusts. Verified by
+rendering all six presets through both apps' pipelines and diffing the pixels:
+**identical**, the sole delta being the centre mark's antialiasing (Universal QR
+inlines a 256 px data URI of the icon; here the shipped `unisim-icon.png` is
+downscaled by the browser).
+
+⚠️ The one rule the geometry keeps: **the code itself is never clipped** to a
+shape. A silhouette is only ever the *plate* the code sits on — the code is
+rendered smaller and centred in the largest square that fits. See `frames.ts`.
+
+### Your saved codes, with no backend
+
+Universal QR keeps designs in `localStorage` under `unisim.qr.designs.v1`, and
+in production the two apps are the **same origin** — `opensource.unisim.co.uk/pdf`
+and `/qr`, both behind the opensource-portal Worker — so that store is simply
+readable from here. Open the dialog and the codes designed next door are already
+listed; clicking one restores it whole (its link, colours, plate and any uploaded
+logo). No account, no API, no round trip.
+
+`src/lib/qr/library.ts` is **read-only** by design: it is another app's store,
+capped at 12 entries, and evicting someone's saved design because they added a
+QR to a PDF would be a bad trade. The origin is also not guaranteed —
+`pdf.unisim.co.uk` and the Electron build are separate origins with their own
+empty storage — so the dialog also imports Universal QR's `.uniqr.json` backup,
+which works anywhere.
+
+### Colours
+
+`qrContrastIssue` warns on an **inverted** code (light modules on dark — strict
+decoders reject those outright) or a **low-contrast** one (right polarity, too
+thin a ratio: it passes a desk test and fails in print). The six presets all
+pass; the check exists for designs arriving from Universal QR's full studio,
+because baking an unscannable code into an exported PDF is the failure nobody
+notices until the poster is printed.
+
 ## Suite context
 
 This repo is one part of the **Universal Simulation suite** (the open-source
