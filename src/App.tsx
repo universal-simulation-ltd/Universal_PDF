@@ -24,7 +24,7 @@ import ConvertDialog from './components/Convert/ConvertDialog'
 import MetadataDialog from './components/Metadata/MetadataDialog'
 import QrDialog from './components/Qr/QrDialog'
 import MobileWelcomeToast from './components/Onboarding/MobileWelcomeToast'
-import { UniversalAppsNavBar, UniversalBar, ChangelogMenu, DropAnywhere, useFileDrop } from '@unisim/sdk'
+import { UniversalAppsNavBar, UniversalBar, ChangelogMenu, DropAnywhere, UpdateNotice, useFileDrop } from '@unisim/sdk'
 
 // Apply the saved language to <html lang> on first mount.
 import { persistLang, readSavedLang } from './lib/lang'
@@ -152,6 +152,14 @@ export default function App() {
             suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
             contentClassName={CONTAINER}
           />
+          {/* Renders nothing until this tab is genuinely running superseded
+              code — see the SDK's useAppUpdate. Deliberately inside the
+              landing-page block: with a document open there is unsaved work on
+              screen, and inviting a reload over the top of it is worse than
+              waiting until the user is back at the front door. */}
+          <div className={`${CONTAINER} pt-4`}>
+            <UpdateNotice />
+          </div>
         </div>
       )}
       {/* The full navbar is landing-page only. While a doc is open we keep just
