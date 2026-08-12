@@ -296,12 +296,18 @@ export default function LandingPage() {
                 <span className="h-px flex-1 bg-slate-200" aria-hidden="true" />
               </div>
 
-              {/* Compress. ⚠️ `data-unisim-dropzone` is load-bearing, not
-                  decoration: the circle above is page-wide, and without this
-                  marker a file let go on THIS pill would be taken by the circle
-                  as well and opened for viewing instead of compressed. The
-                  marker is how the page-wide listener recognises a drop that
-                  another target has already claimed. */}
+              {/* Compress. `data-unisim-dropzone` says out loud what this
+                  already is: a drop target with its own meaning, sitting on a
+                  page whose circle is page-wide. It is how the hook recognises
+                  a drop another target has claimed.
+
+                  It is belt-and-braces TODAY — measured, not assumed: strip the
+                  marker at runtime and a file dropped here still compresses,
+                  because `onDrop` below stops the event and React's synthetic
+                  stopPropagation reaches the native event before it gets past
+                  the root container to the hook's `window` listener. The marker
+                  is what keeps that true if the stopPropagation is ever tidied
+                  away as redundant — which, on its own, it would then not be. */}
               <button
                 type="button"
                 data-unisim-dropzone=""
