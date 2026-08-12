@@ -2125,7 +2125,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             aria-pressed={active}
             onClick={(e) => { e.stopPropagation(); onClick() }}
             className={`w-8 h-8 rounded-full leading-none text-base flex items-center justify-center transition-colors ${extra} ${
-              active ? 'bg-orange-600 text-white' : 'hover:bg-slate-100 text-slate-700'
+              active ? 'bg-orange-700 text-white' : 'hover:bg-slate-100 text-slate-700'
             }`}
           >
             {label}
@@ -2249,7 +2249,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               onClick={toggleSnap}
               title="Rigid line — snap to horizontal, vertical or diagonal (hold Shift while dragging an end for a one-off snap)"
               className={`px-2.5 h-7 rounded-full text-xs font-medium transition-colors ${
-                lineSnap ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                lineSnap ? 'bg-orange-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
               Snap {lineSnap ? 'On' : 'Off'}
@@ -2491,7 +2491,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 <button
                   type="button"
                   onClick={redactInstead}
-                  className="px-3 h-9 rounded-md text-sm font-medium text-white bg-orange-600 hover:bg-orange-500"
+                  className="px-3 h-9 rounded-md text-sm font-medium text-white bg-orange-700 hover:bg-orange-800"
                 >
                   Redact instead
                 </button>
@@ -2761,7 +2761,7 @@ function SignatureOptionsModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 h-9 rounded-md text-sm font-medium text-white bg-orange-600 hover:bg-orange-500"
+            className="px-4 h-9 rounded-md text-sm font-medium text-white bg-orange-700 hover:bg-orange-800"
           >
             Done
           </button>

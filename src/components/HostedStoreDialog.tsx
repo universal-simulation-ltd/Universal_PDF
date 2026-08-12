@@ -203,7 +203,7 @@ export default function HostedStoreDialog() {
             {!signedIn ? (
               <div className="mt-3 rounded-lg bg-slate-50 p-3">
                 <p className="text-sm text-slate-700">Sign in with your <strong>Universal ID</strong> to store PDFs online.</p>
-                <a href={SIGNIN_URL} className="mt-2 inline-flex rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700">
+                <a href={SIGNIN_URL} className="mt-2 inline-flex rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800">
                   Create / sign in with Universal ID →
                 </a>
               </div>
@@ -223,7 +223,7 @@ export default function HostedStoreDialog() {
                     <button
                       onClick={onStore}
                       disabled={busy}
-                      className="mt-3 w-full rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50"
+                      className="mt-3 w-full rounded-lg bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-50"
                     >
                       {busy ? 'Backing up…' : justStored ? '✓ Backed up' : `Back up this PDF online${freeToken === 'available' ? '' : ' (1 token)'}`}
                     </button>
@@ -234,7 +234,7 @@ export default function HostedStoreDialog() {
                           ? 'Your free PDF token is in use — delete the stored PDF below to get it back, or add tokens.'
                           : 'You have no tokens left.'}
                       </p>
-                      <a href={GET_TOKENS_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded-lg bg-orange-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-orange-700">
+                      <a href={GET_TOKENS_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded-lg bg-orange-700 px-3.5 py-2 text-sm font-semibold text-white hover:bg-orange-800">
                         Get tokens →
                       </a>
                     </div>
@@ -260,7 +260,7 @@ export default function HostedStoreDialog() {
                             <span className="block truncate text-xs font-medium text-slate-700">{u.file_name || 'document.pdf'}</span>
                             <span className="block text-[10px] text-slate-400">{new Date(u.created_at).toLocaleDateString()}</span>
                           </span>
-                          <button onClick={() => onOpen(u)} disabled={busy} className="shrink-0 rounded-md bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-700 disabled:opacity-50">Open</button>
+                          <button onClick={() => onOpen(u)} disabled={busy} className="shrink-0 rounded-md bg-orange-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-800 disabled:opacity-50">Open</button>
                           <button onClick={() => onDelete(u)} disabled={busy} className="shrink-0 rounded-md px-2 py-1.5 text-xs font-medium text-slate-400 hover:text-rose-600 disabled:opacity-50" title="Delete and refund the token">Delete</button>
                         </li>
                       ))}

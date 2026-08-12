@@ -240,7 +240,7 @@ export default function MergeDialog({ onClose, initialFile }: Props) {
           <button
             onClick={onMergeDownload}
             disabled={!canMerge}
-            className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {busy ? 'Merging…' : `⬇ Merge ${items.length || ''} & download`}
           </button>

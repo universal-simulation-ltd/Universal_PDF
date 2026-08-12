@@ -206,7 +206,7 @@ export default function ConvertDialog({ initialMode, onClose, initialPdf }: Prop
               <button
                 onClick={runPdfToImages}
                 disabled={!pdf || busy}
-                className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {busy ? progress || 'Converting…' : '⬇ Convert & download'}
               </button>
@@ -274,7 +274,7 @@ export default function ConvertDialog({ initialMode, onClose, initialPdf }: Prop
               <button
                 onClick={() => runImagesToPdf(false)}
                 disabled={images.length === 0 || busy}
-                className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {busy ? 'Converting…' : '⬇ Convert & download'}
               </button>

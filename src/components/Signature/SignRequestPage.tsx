@@ -105,7 +105,7 @@ export default function SignRequestPage({ token }: { token: string }) {
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-3xl">🔏</div>
         <h1 className="text-lg font-semibold text-slate-900">Can't open this document</h1>
         <p className="max-w-sm text-sm text-slate-500">{error}</p>
-        <a href={import.meta.env.BASE_URL} className="mt-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700">
+        <a href={import.meta.env.BASE_URL} className="mt-2 rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800">
           Open Universal PDF
         </a>
       </main>
@@ -128,7 +128,7 @@ export default function SignRequestPage({ token }: { token: string }) {
           <button
             type="button"
             onClick={downloadCopy}
-            className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold hover:bg-orange-500"
+            className="rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold hover:bg-orange-800"
           >
             Download your copy
           </button>
@@ -180,7 +180,7 @@ export default function SignRequestPage({ token }: { token: string }) {
               type="button"
               onClick={onSubmit}
               disabled={phase === 'submitting'}
-              className="mt-3 w-full rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-60"
+              className="mt-3 w-full rounded-lg bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
             >
               {phase === 'submitting' ? 'Sending back…' : 'Finish & send back to sender'}
             </button>
@@ -192,7 +192,7 @@ export default function SignRequestPage({ token }: { token: string }) {
         <button
           type="button"
           onClick={() => setBanner(true)}
-          className="fixed bottom-20 right-3 z-[60] rounded-full bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white shadow-2xl hover:bg-orange-700 md:bottom-4 md:right-4"
+          className="fixed bottom-20 right-3 z-[60] rounded-full bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white shadow-2xl hover:bg-orange-800 md:bottom-4 md:right-4"
         >
           Finish signing →
         </button>

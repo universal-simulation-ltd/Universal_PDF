@@ -219,7 +219,7 @@ export default function StampPicker() {
                 type="button"
                 onClick={saveCustomStamp}
                 disabled={!previewText}
-                className="px-4 py-2 text-sm font-medium rounded-md bg-orange-600 text-white hover:bg-orange-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm font-medium rounded-md bg-orange-700 text-white hover:bg-orange-800 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Save to my stamps
               </button>

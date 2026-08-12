@@ -357,7 +357,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                       type="button"
                       onClick={commitRename}
                       disabled={!renameDraft.trim() || renameDraft.trim() === fileName}
-                      className="px-3 py-1 text-xs font-medium text-white bg-orange-600 hover:bg-orange-500 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-3 py-1 text-xs font-medium text-white bg-orange-700 hover:bg-orange-800 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Save
                     </button>

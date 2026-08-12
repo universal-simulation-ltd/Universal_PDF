@@ -340,7 +340,7 @@ export default function PdfViewer() {
                 title="Show pages"
                 className={`flex items-center gap-1.5 px-2.5 h-8 rounded text-sm font-medium transition-colors ${
                   pageNavOpen
-                    ? 'bg-orange-600 text-white hover:bg-orange-500'
+                    ? 'bg-orange-700 text-white hover:bg-orange-800'
                     : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50'
                 }`}
               >

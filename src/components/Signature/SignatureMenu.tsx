@@ -193,7 +193,7 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
           </div>
           <button
             onClick={placeRequestField}
-            className="w-full px-3 py-2.5 rounded-md bg-orange-600 hover:bg-orange-500 text-white text-sm font-medium"
+            className="w-full px-3 py-2.5 rounded-md bg-orange-700 hover:bg-orange-800 text-white text-sm font-medium"
           >
             {tool === 'sigfield' ? 'Draw the box on the page…' : 'Place signature box'}
           </button>
@@ -311,7 +311,7 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
         <button
           onClick={() => setOpen((o) => !o)}
           className={`h-10 px-3 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
-            armed ? 'bg-orange-600 hover:bg-orange-500' : 'bg-slate-700 hover:bg-slate-600'
+            armed ? 'bg-orange-700 hover:bg-orange-800' : 'bg-slate-700 hover:bg-slate-600'
           }`}
         >
           <span>✍</span>

@@ -223,7 +223,7 @@ export default function BatchCompressModal({
           <button
             onClick={downloadAll}
             disabled={busy}
-            className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded text-sm font-medium disabled:opacity-60 disabled:cursor-wait"
+            className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium disabled:opacity-60 disabled:cursor-wait"
           >
             ⬇ Download all ({files.length}) as ZIP
           </button>

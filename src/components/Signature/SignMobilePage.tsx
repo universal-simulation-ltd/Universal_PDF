@@ -140,7 +140,7 @@ export default function SignMobilePage({ token }: { token: string }) {
         type="button"
         onClick={submit}
         disabled={status === 'sending'}
-        className="mt-1 rounded-xl bg-orange-600 py-3 text-sm font-semibold hover:bg-orange-500 disabled:opacity-60"
+        className="mt-1 rounded-xl bg-orange-700 py-3 text-sm font-semibold hover:bg-orange-800 disabled:opacity-60"
       >
         {status === 'sending' ? 'Sending…' : 'Send signature to Universal PDF'}
       </button>

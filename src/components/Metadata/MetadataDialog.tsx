@@ -204,7 +204,7 @@ export default function MetadataDialog({ sourceBytes, onClose }: Props) {
             <button
               onClick={onScrub}
               disabled={busy}
-              className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded text-sm font-medium disabled:opacity-50"
+              className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium disabled:opacity-50"
             >
               {phase === 'scrubbing' ? 'Stripping…' : 'Scrub metadata'}
             </button>

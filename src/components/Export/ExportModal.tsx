@@ -210,7 +210,7 @@ export default function ExportModal({ open, onClose }: Props) {
                   onClose()
                 }}
                 disabled={!annotated}
-                className="px-4 py-2.5 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
+                className="px-4 py-2.5 bg-orange-700 hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
               >
                 <span aria-hidden="true">⬇</span>
                 Download filled form
@@ -341,7 +341,7 @@ export default function ExportModal({ open, onClose }: Props) {
               <button
                 onClick={() => download(effectiveTab)}
                 disabled={!ready || !redactConfirmed}
-                className="px-4 py-2.5 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
+                className="px-4 py-2.5 bg-orange-700 hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
               >
                 <span aria-hidden="true">⬇</span>
                 Download {effectiveTab === 'original' ? 'Original' : 'Compressed'}

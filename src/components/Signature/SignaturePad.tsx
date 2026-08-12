@@ -371,7 +371,7 @@ export default function SignaturePad() {
               <button
                 type="button"
                 onClick={() => setMode('phone')}
-                className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition ${mode === 'phone' ? 'bg-orange-600 text-white' : 'text-orange-600 hover:bg-orange-600/10 hover:text-orange-700'}`}
+                className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition ${mode === 'phone' ? 'bg-orange-700 text-white' : 'text-orange-600 hover:bg-orange-600/10 hover:text-orange-700'}`}
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="7" y="2" width="10" height="20" rx="2.5" /><line x1="11" y1="18" x2="13" y2="18" />
@@ -466,7 +466,7 @@ export default function SignaturePad() {
             <button
               onClick={save}
               disabled={lines.length === 0}
-              className="px-4 py-2 bg-orange-600 hover:bg-orange-500 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded text-sm font-medium"
+              className="px-4 py-2 bg-orange-700 hover:bg-orange-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded text-sm font-medium"
             >
               Save
             </button>
@@ -496,14 +496,14 @@ export default function SignaturePad() {
                     <button
                       type="button"
                       onClick={() => setSeparatePlacement(false)}
-                      className={`px-3 py-1.5 ${!separatePlacement ? 'bg-orange-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
+                      className={`px-3 py-1.5 ${!separatePlacement ? 'bg-orange-700 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
                     >
                       With signature
                     </button>
                     <button
                       type="button"
                       onClick={() => setSeparatePlacement(true)}
-                      className={`px-3 py-1.5 border-l border-slate-300 ${separatePlacement ? 'bg-orange-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
+                      className={`px-3 py-1.5 border-l border-slate-300 ${separatePlacement ? 'bg-orange-700 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
                     >
                       Separate click
                     </button>

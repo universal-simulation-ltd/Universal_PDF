@@ -276,7 +276,7 @@ export default function SendToSignDialog() {
               <button
                 type="button"
                 onClick={() => setSignInOpen(true)}
-                className="mt-3 inline-flex rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700"
+                className="mt-3 inline-flex rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800"
               >
                 Create a free Universal ID →
               </button>
@@ -400,7 +400,7 @@ export default function SendToSignDialog() {
                     type="button"
                     onClick={onCreateLink}
                     disabled={busy || !redactConfirmed}
-                    className="mt-3 w-full rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="mt-3 w-full rounded-lg bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {busy ? 'Storing…' : `Store online & create sign link${freeToken === 'available' ? '' : ' (1 token)'}`}
                   </button>
@@ -412,7 +412,7 @@ export default function SendToSignDialog() {
                         ? 'Your free PDF token is in use — delete the stored PDF (Actions → Back up / store) to get it back, or add tokens.'
                         : 'You have no tokens left.'}
                     </p>
-                    <a href={GET_TOKENS_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded-lg bg-orange-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-orange-700">
+                    <a href={GET_TOKENS_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded-lg bg-orange-700 px-3.5 py-2 text-sm font-semibold text-white hover:bg-orange-800">
                       Get tokens →
                     </a>
                   </div>
@@ -447,7 +447,7 @@ export default function SendToSignDialog() {
                       type="button"
                       onClick={onSendEmail}
                       disabled={!minted || busy || !email.trim()}
-                      className="shrink-0 rounded-lg bg-orange-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50"
+                      className="shrink-0 rounded-lg bg-orange-700 px-3.5 py-2 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-50"
                     >
                       {emailState === 'sending' ? 'Sending…' : 'Send'}
                     </button>

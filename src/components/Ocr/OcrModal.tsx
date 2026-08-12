@@ -166,7 +166,7 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
               {alreadySearchable && mode === 'auto' && (
                 <button
                   onClick={() => run('all')}
-                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded text-sm font-medium"
+                  className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium"
                 >
                   Run OCR anyway
                 </button>
@@ -182,7 +182,7 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
               {!alreadySearchable && onOpen && (
                 <button
                   onClick={openResult}
-                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded text-sm font-medium"
+                  className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium"
                 >
                   Open searchable PDF
                 </button>

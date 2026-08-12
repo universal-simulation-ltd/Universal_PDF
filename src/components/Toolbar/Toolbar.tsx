@@ -332,7 +332,7 @@ export function ToolbarDesktopTools() {
         onClick={() => togglePanel(panel)}
         className={`w-[14px] h-[14px] text-[9px] font-bold rounded-[3px] flex items-center justify-center transition-colors border self-start mt-[3px] -ml-[2px] leading-none ${
           openPanel === panel
-            ? 'bg-orange-500 border-orange-400 text-white'
+            ? 'bg-orange-700 border-orange-400 text-white'
             : 'bg-slate-600 border-slate-500 text-slate-300 hover:bg-slate-500 hover:text-white'
         }`}
         title={`${openPanel === panel ? 'Close' : 'Open'} options`}
@@ -386,7 +386,7 @@ export function ToolbarDesktopTools() {
         onPointerCancel={endLongPress}
         title={panel ? `${label} — tap again or long-press for options` : label}
         className={`w-9 h-9 rounded flex items-center justify-center text-lg font-semibold transition-colors ${
-          tool === id ? 'bg-orange-600' : 'hover:bg-slate-700'
+          tool === id ? 'bg-orange-700' : 'hover:bg-slate-700'
         }`}
       >
         {icon}
@@ -459,7 +459,7 @@ export function ToolbarDesktopTools() {
                 key={opt.id}
                 onClick={() => { if (opt.id === 'selecttext') setSelected(null); setTool(opt.id); setOpenPanel(null) }}
                 className={`w-full flex items-center gap-3 px-3 py-2 text-left text-sm transition-colors ${
-                  tool === opt.id ? 'bg-orange-600 text-white' : 'hover:bg-slate-700 text-slate-100'
+                  tool === opt.id ? 'bg-orange-700 text-white' : 'hover:bg-slate-700 text-slate-100'
                 }`}
               >
                 <span className="text-lg leading-none w-5 text-center">{opt.icon}</span>
@@ -503,7 +503,7 @@ export function ToolbarDesktopTools() {
                 title={f.label}
                 style={{ fontFamily: f.css }}
                 className={`px-2 h-8 rounded text-sm transition-colors ${
-                  fontFamily === f.id ? 'bg-orange-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-100'
+                  fontFamily === f.id ? 'bg-orange-700 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-100'
                 }`}
               >
                 {f.preview}
@@ -515,7 +515,7 @@ export function ToolbarDesktopTools() {
               aria-label={moreFonts ? 'Show fewer fonts' : 'Show more fonts'}
               aria-expanded={moreFonts}
               className={`w-8 h-8 rounded text-lg leading-none transition-colors ${
-                moreFonts ? 'bg-orange-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-100'
+                moreFonts ? 'bg-orange-700 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-100'
               }`}
             >
               {moreFonts ? '−' : '+'}
@@ -538,7 +538,7 @@ export function ToolbarDesktopTools() {
           onPointerCancel={endLongPress}
           title="Highlighter — tap again or long-press for options"
           className={`w-9 h-9 rounded flex items-center justify-center transition-colors ${
-            tool === 'highlight' ? 'bg-orange-600' : 'hover:bg-slate-700'
+            tool === 'highlight' ? 'bg-orange-700' : 'hover:bg-slate-700'
           }`}
         >
           <HighlighterIcon className="w-5 h-5" />
@@ -566,7 +566,7 @@ export function ToolbarDesktopTools() {
                 onClick={() => setTool(s.id)}
                 title={s.label}
                 className={`w-9 h-9 rounded flex items-center justify-center text-lg font-semibold text-white transition-colors ${
-                  tool === s.id ? 'bg-orange-600' : 'hover:bg-slate-700'
+                  tool === s.id ? 'bg-orange-700' : 'hover:bg-slate-700'
                 }`}
               >
                 {s.icon}
@@ -599,7 +599,7 @@ export function ToolbarDesktopTools() {
       <label
         title="Upload and place an image"
         className={`w-9 h-9 rounded flex items-center justify-center transition-colors cursor-pointer ${
-          tool === 'image' ? 'bg-orange-600' : 'hover:bg-slate-700'
+          tool === 'image' ? 'bg-orange-700' : 'hover:bg-slate-700'
         }`}
       >
         <PictureFrameIcon active={tool === 'image'} className="w-5 h-5" />
@@ -649,7 +649,7 @@ export function ToolbarDesktopActions() {
         <button
           onClick={() => setExportOpen(true)}
           disabled={!sourceBytes}
-          className="px-4 h-9 rounded bg-orange-600 hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium"
+          className="px-4 h-9 rounded bg-orange-700 hover:bg-orange-800 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium"
         >
           Export
         </button>
@@ -765,7 +765,7 @@ export function ToolbarMobile() {
               key={opt.id}
               onClick={() => { setTool(opt.id); setOpenPanel(null) }}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                tool === opt.id ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                tool === opt.id ? 'bg-orange-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
               <span className="text-lg leading-none">{opt.icon}</span>
@@ -803,7 +803,7 @@ export function ToolbarMobile() {
               title={f.label}
               style={{ fontFamily: f.css }}
               className={`px-2.5 h-9 rounded-lg text-sm transition-colors ${
-                fontFamily === f.id ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                fontFamily === f.id ? 'bg-orange-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
               {f.preview}
@@ -815,7 +815,7 @@ export function ToolbarMobile() {
             aria-label={moreFonts ? 'Show fewer fonts' : 'Show more fonts'}
             aria-expanded={moreFonts}
             className={`w-9 h-9 rounded-lg text-lg leading-none transition-colors ${
-              moreFonts ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              moreFonts ? 'bg-orange-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
           >
             {moreFonts ? '−' : '+'}
@@ -836,7 +836,7 @@ export function ToolbarMobile() {
             }}
             title="Highlighter"
             className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-              tool === 'highlight' ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              tool === 'highlight' ? 'bg-orange-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
           >
             <HighlighterIcon className="w-6 h-6" />
@@ -847,7 +847,7 @@ export function ToolbarMobile() {
               onClick={() => setTool(s.id)}
               title={s.label}
               className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl font-semibold transition-colors ${
-                tool === s.id ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                tool === s.id ? 'bg-orange-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
               {s.icon}
@@ -917,7 +917,7 @@ export function ToolbarMobile() {
           onClick={() => togglePanel(panel)}
           className={`absolute top-1 right-1 w-[13px] h-[13px] text-[8px] font-bold rounded-[2px] flex items-center justify-center leading-none border ${
             openPanel === panel
-              ? 'bg-orange-500 border-orange-400 text-white'
+              ? 'bg-orange-700 border-orange-400 text-white'
               : 'bg-slate-700 border-slate-600 text-slate-400'
           }`}
         >

@@ -199,7 +199,7 @@ export default function SignatureImport() {
           <button
             onClick={save}
             disabled={!preview || busy}
-            className="px-4 py-2 bg-orange-600 hover:bg-orange-500 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded text-sm font-medium"
+            className="px-4 py-2 bg-orange-700 hover:bg-orange-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded text-sm font-medium"
           >
             Save
           </button>

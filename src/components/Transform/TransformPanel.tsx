@@ -202,7 +202,7 @@ export default function TransformPanel({ open, onClose }: Props) {
               type="button"
               onClick={build}
               disabled={busy || !text.trim()}
-              className="px-4 py-1.5 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 rounded-lg shadow-sm disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-1.5 text-sm font-medium text-white bg-orange-700 hover:bg-orange-800 rounded-lg shadow-sm disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
             >
               {busy ? 'Building…' : 'Build PDF'}
             </button>
