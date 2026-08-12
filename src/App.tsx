@@ -22,6 +22,7 @@ import OcrModal from './components/Ocr/OcrModal'
 import MergeDialog from './components/Convert/MergeDialog'
 import ConvertDialog from './components/Convert/ConvertDialog'
 import MetadataDialog from './components/Metadata/MetadataDialog'
+import QrDialog from './components/Qr/QrDialog'
 import MobileWelcomeToast from './components/Onboarding/MobileWelcomeToast'
 import { UniversalAppsNavBar, UniversalBar, ChangelogMenu } from '@unisim/sdk'
 
@@ -307,6 +308,7 @@ export default function App() {
       <PresentMode />
       <HostedStoreDialog />
       <SendToSignDialog />
+      <QrDialog />
       {ocrOpen && sourceBytes && (
         <OcrModal
           sourceBytes={sourceBytes}

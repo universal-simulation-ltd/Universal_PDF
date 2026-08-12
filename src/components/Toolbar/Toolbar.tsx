@@ -31,6 +31,28 @@ function HighlighterIcon({ className = 'w-6 h-6' }: { className?: string }) {
   )
 }
 
+function QrIcon({ className = 'w-6 h-6' }: { className?: string }) {
+  // Finder eyes in the suite orange, modules in a light slate — the same
+  // arrangement the generator's own default wears, so the button looks like
+  // what it makes. No active state: the button opens a dialog rather than
+  // selecting a tool (what it arms afterwards is the image tool).
+  const eye = '#fb923c'
+  const dot = '#e2e8f0'
+  return (
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+      {([[3, 3], [15, 3], [3, 15]] as const).map(([x, y]) => (
+        <g key={`${x}-${y}`}>
+          <rect x={x} y={y} width="6" height="6" rx="1.6" fill="none" stroke={eye} strokeWidth="1.6" />
+          <rect x={x + 2} y={y + 2} width="2" height="2" rx="0.6" fill={eye} />
+        </g>
+      ))}
+      {([[13, 13], [17, 13], [13, 17], [19, 17], [17, 19], [11, 6], [11, 10], [6, 11], [10, 11], [14, 11], [19, 11], [11, 14]] as const).map(([x, y]) => (
+        <rect key={`${x}-${y}`} x={x} y={y} width="2" height="2" rx="0.5" fill={dot} />
+      ))}
+    </svg>
+  )
+}
+
 function PictureFrameIcon({ active = false, className = 'w-6 h-6' }: { active?: boolean; className?: string }) {
   const frame = active ? '#fff' : '#fbbf24'
   const sky = '#7dd3fc'
@@ -250,6 +272,7 @@ export function ToolbarDesktopTools() {
   const fontFamily = useAnnotationStore((s) => s.fontFamily)
   const setFontFamily = useAnnotationStore((s) => s.setFontFamily)
   const setUploadedImageSrc = useAnnotationStore((s) => s.setUploadedImageSrc)
+  const setQrOpen = usePdfStore((s) => s.setQrOpen)
 
   const [openPanel, setOpenPanel] = useState<Panel>(null)
   // Reveals the extra built-in fonts (Georgia, Verdana, …) in the text panel.
@@ -589,6 +612,16 @@ export function ToolbarDesktopTools() {
         />
       </label>
 
+      {/* Generate a QR code — it lands as an image annotation, so it sits next
+          to the image button rather than in the tool groups. */}
+      <button
+        onClick={() => setQrOpen(true)}
+        title="Add a QR code"
+        className="w-9 h-9 rounded flex items-center justify-center transition-colors hover:bg-slate-700"
+      >
+        <QrIcon className="w-5 h-5" />
+      </button>
+
       {/* Delete (only when an annotation is selected) */}
       {selectedId && (
         <button
@@ -643,6 +676,7 @@ export function ToolbarMobile() {
   const fontFamily = useAnnotationStore((s) => s.fontFamily)
   const setFontFamily = useAnnotationStore((s) => s.setFontFamily)
   const setUploadedImageSrc = useAnnotationStore((s) => s.setUploadedImageSrc)
+  const setQrOpen = usePdfStore((s) => s.setQrOpen)
 
   const sourceBytes = usePdfStore((s) => s.sourceBytes)
 
@@ -945,6 +979,15 @@ export function ToolbarMobile() {
             onChange={handleImageUpload}
           />
         </label>
+
+        {/* QR — beside Image, since that's where it lands on the page. */}
+        <button
+          onClick={() => setQrOpen(true)}
+          className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 text-slate-200"
+        >
+          <QrIcon className="w-6 h-6" />
+          <span className="text-[10px] font-medium">QR</span>
+        </button>
 
         <div className="flex-1 h-full flex items-stretch">
           <SignatureMenu openUpward compact />

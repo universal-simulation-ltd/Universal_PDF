@@ -87,6 +87,8 @@ interface PdfState {
   mergeOpen: boolean
   convertOpen: boolean
   metadataOpen: boolean
+  // The "Add QR code" generator (toolbar, next to the image button).
+  qrOpen: boolean
   recents: RecentMeta[]
   loadFile: (file: File) => Promise<void>
   loadFromSlug: (slug: string) => Promise<boolean>
@@ -103,6 +105,7 @@ interface PdfState {
   setMergeOpen: (open: boolean) => void
   setConvertOpen: (open: boolean) => void
   setMetadataOpen: (open: boolean) => void
+  setQrOpen: (open: boolean) => void
   /** Strip the Info dictionary + XMP packet from the open document, in place. */
   scrubMetadata: () => Promise<void>
   refreshRecents: () => Promise<void>
@@ -131,6 +134,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   mergeOpen: false,
   convertOpen: false,
   metadataOpen: false,
+  qrOpen: false,
   recents: [],
   togglePageNav: () => set((s) => ({ pageNavOpen: !s.pageNavOpen })),
   setPageNavOpen: (pageNavOpen) => set({ pageNavOpen }),
@@ -143,6 +147,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   setMergeOpen: (mergeOpen) => set({ mergeOpen }),
   setConvertOpen: (convertOpen) => set({ convertOpen }),
   setMetadataOpen: (metadataOpen) => set({ metadataOpen }),
+  setQrOpen: (qrOpen) => set({ qrOpen }),
   scrubMetadata: async () => {
     const bytes = get().sourceBytes
     const fileName = get().fileName
@@ -232,7 +237,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   reset: () => {
     get().doc?.destroy()
     clearDocumentState()
-    set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, previewOpen: false, presentOpen: false, ocrOpen: false, mergeOpen: false, convertOpen: false, metadataOpen: false })
+    set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, previewOpen: false, presentOpen: false, ocrOpen: false, mergeOpen: false, convertOpen: false, metadataOpen: false, qrOpen: false })
     setHashSlug(null)
   },
   refreshRecents: async () => {
