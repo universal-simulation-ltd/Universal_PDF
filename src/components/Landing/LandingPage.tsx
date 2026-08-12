@@ -142,27 +142,24 @@ export default function LandingPage() {
     setOcrJob({ bytes: await file.arrayBuffer(), name: file.name })
   }
 
+  // Universal Images' front door is a stack of full-width centred pills with an
+  // "or" between them, and this box now speaks the same language. The old rows
+  // here were chunky cards — 48px icon tile, title, subtitle, trailing arrow —
+  // which made every option shout as loudly as the drop circle above them.
+  const PILL =
+    'w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors'
+  const PILL_IDLE =
+    'border-slate-300 hover:border-orange-400 hover:bg-orange-50/40 text-slate-700'
+
   const exampleButton = (
     <button
       type="button"
       onClick={openExample}
       disabled={opening}
-      className="group w-full flex items-center gap-4 p-4 border border-slate-200 rounded-xl text-left hover:border-orange-400 hover:bg-orange-50/50 transition-colors disabled:opacity-60 disabled:cursor-wait"
+      className={`${PILL} ${PILL_IDLE} disabled:opacity-60 disabled:cursor-wait`}
     >
-      <div className="shrink-0 w-12 h-12 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center text-2xl">
-        👁
-      </div>
-      <div className="min-w-0">
-        <div className="font-semibold text-slate-900">
-          {opening ? 'Opening example…' : 'Open example PDF'}
-        </div>
-        <div className="text-sm text-slate-500">
-          form · image · signature · annotations
-        </div>
-      </div>
-      <span className="ml-auto text-slate-400 group-hover:text-orange-700 transition-colors" aria-hidden="true">
-        →
-      </span>
+      <span aria-hidden="true">👁</span>
+      {opening ? 'Opening example…' : 'Try with example PDF'}
     </button>
   )
 
@@ -247,16 +244,18 @@ export default function LandingPage() {
                 <input {...drop.inputProps} className="hidden" />
               </div>
 
-              {/* When there are recents, tuck them and the example into a
-                  collapsed collapsible so the primary action stays front and
-                  centre. With no recents, the example stays visible to help
-                  first-time visitors. */}
+              {/* This slot is the same pill either way — it says "Recent files"
+                  and opens the list once you have some, and "Try with example
+                  PDF" until then. A first-time visitor has nothing to be recent,
+                  so offering an empty list would be a dead end; someone with
+                  history rarely wants the sample again, so it moves inside. */}
               {hasRecents ? (
                 <details className="group mt-5">
-                  <summary className="flex items-center gap-2 cursor-pointer select-none list-none px-1 py-1 text-xs uppercase tracking-wide font-medium text-slate-500 hover:text-slate-700 transition-colors">
-                    <span>Recent files &amp; example</span>
+                  <summary className={`${PILL} ${PILL_IDLE} cursor-pointer select-none list-none`}>
+                    <span aria-hidden="true">🕘</span>
+                    Recent files
                     <span
-                      className="ml-auto text-base text-slate-400 transition-transform group-open:rotate-180"
+                      className="text-base text-slate-400 transition-transform group-open:rotate-180"
                       aria-hidden="true"
                     >
                       ⌄
@@ -271,7 +270,11 @@ export default function LandingPage() {
                 <div className="mt-5">{exampleButton}</div>
               )}
 
-              <div className="mt-5 h-px bg-slate-200" aria-hidden="true" />
+              <div className="mt-4 flex items-center gap-3 text-xs text-slate-500">
+                <span className="h-px flex-1 bg-slate-200" aria-hidden="true" />
+                <span>or</span>
+                <span className="h-px flex-1 bg-slate-200" aria-hidden="true" />
+              </div>
 
               {/* Compress */}
               <button
@@ -300,30 +303,22 @@ export default function LandingPage() {
                   if (files && files.length > 0) runCompress(files)
                 }}
                 className={[
-                  'group mt-5 w-full flex items-center gap-4 p-4 border rounded-xl text-left transition-colors disabled:opacity-60 disabled:cursor-wait',
+                  PILL,
+                  'mt-3 disabled:opacity-60 disabled:cursor-wait',
+                  // Dashed + amber while a file is over it — the one bit of the
+                  // old card worth keeping, because this pill is a drop target
+                  // as well as a button and nothing else in the box is.
                   dragOverCompress
-                    ? 'border-amber-500 bg-amber-50 border-dashed border-2'
-                    : 'border-slate-200 hover:border-amber-400 hover:bg-amber-50/50'
+                    ? 'border-amber-500 border-dashed bg-amber-50 text-amber-900'
+                    : PILL_IDLE
                 ].join(' ')}
               >
-                <div className="shrink-0 w-12 h-12 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-2xl">
-                  ⬇
-                </div>
-                <div className="min-w-0">
-                  <div className="font-semibold text-slate-900">
-                    {compressing
-                      ? compressProgress || 'Compressing…'
-                      : dragOverCompress
-                        ? 'Drop to compress'
-                        : '1 Click Compress'}
-                  </div>
-                  <div className="text-sm text-slate-500">
-                    Drop one or more files — batch them into a ZIP
-                  </div>
-                </div>
-                <span className="ml-auto text-slate-400 group-hover:text-amber-700 transition-colors" aria-hidden="true">
-                  →
-                </span>
+                <span aria-hidden="true">⬇</span>
+                {compressing
+                  ? compressProgress || 'Compressing…'
+                  : dragOverCompress
+                    ? 'Drop to compress'
+                    : '1 Click Compress — drop one or many'}
               </button>
               <input
                 ref={compressInputRef}
@@ -357,64 +352,37 @@ export default function LandingPage() {
                   </span>
                 </summary>
 
-                {/* Merge PDFs */}
+                {/* The four tools wear the same pill as the two above, so
+                    expanding this doesn't drop a stack of chunky cards into a
+                    box of slim buttons. Each label carries its old subtitle
+                    after an em dash — "what it is — what it does" — which is
+                    the shape Images uses on its Convert pill. */}
                 <button
                   type="button"
                   onClick={() => setMergeOpen(true)}
-                  className="group/btn mt-3 w-full flex items-center gap-4 p-4 border border-slate-200 rounded-xl text-left hover:border-orange-400 hover:bg-orange-50/50 transition-colors"
+                  className={`${PILL} ${PILL_IDLE} mt-3`}
                 >
-                  <div className="shrink-0 w-12 h-12 rounded-lg bg-orange-100 text-orange-700 flex items-center justify-center text-2xl">
-                    ⧉
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-semibold text-slate-900">Merge PDFs</div>
-                    <div className="text-sm text-slate-500">
-                      Combine several files into one — reorder before you export
-                    </div>
-                  </div>
-                  <span className="ml-auto text-slate-400 group-hover/btn:text-orange-700 transition-colors" aria-hidden="true">
-                    →
-                  </span>
+                  <span aria-hidden="true">⧉</span>
+                  Merge PDFs — combine several into one
                 </button>
 
-                {/* Convert PDF ↔ images */}
                 <button
                   type="button"
                   onClick={() => setConvertMode('pdf-to-images')}
-                  className="group/btn mt-3 w-full flex items-center gap-4 p-4 border border-slate-200 rounded-xl text-left hover:border-indigo-400 hover:bg-indigo-50/50 transition-colors"
+                  className={`${PILL} ${PILL_IDLE} mt-3`}
                 >
-                  <div className="shrink-0 w-12 h-12 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center text-2xl">
-                    ⇄
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-semibold text-slate-900">Convert</div>
-                    <div className="text-sm text-slate-500">
-                      PDF → images (PNG/JPG), or images → PDF
-                    </div>
-                  </div>
-                  <span className="ml-auto text-slate-400 group-hover/btn:text-indigo-700 transition-colors" aria-hidden="true">
-                    →
-                  </span>
+                  <span aria-hidden="true">⇄</span>
+                  Convert — PDF ↔ images (PNG/JPG)
                 </button>
 
                 {/* Make searchable (OCR) — scanned/image-only PDF → text layer */}
                 <button
                   type="button"
                   onClick={() => ocrInputRef.current?.click()}
-                  className="group/btn mt-3 w-full flex items-center gap-4 p-4 border border-slate-200 rounded-xl text-left hover:border-emerald-400 hover:bg-emerald-50/50 transition-colors"
+                  className={`${PILL} ${PILL_IDLE} mt-3`}
                 >
-                  <div className="shrink-0 w-12 h-12 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl">
-                    🔎
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-semibold text-slate-900">Make searchable (OCR)</div>
-                    <div className="text-sm text-slate-500">
-                      Read a scanned PDF on your device — find, select &amp; copy its text
-                    </div>
-                  </div>
-                  <span className="ml-auto text-slate-400 group-hover/btn:text-emerald-700 transition-colors" aria-hidden="true">
-                    →
-                  </span>
+                  <span aria-hidden="true">🔎</span>
+                  Make searchable (OCR) — read a scan
                 </button>
                 <input
                   ref={ocrInputRef}
@@ -424,24 +392,13 @@ export default function LandingPage() {
                   onChange={onOcrFile}
                 />
 
-                {/* Transform text → PDF */}
                 <button
                   type="button"
                   onClick={() => setTransformOpen(true)}
-                  className="group/btn mt-3 w-full flex items-center gap-4 p-4 border border-slate-200 rounded-xl text-left hover:border-sky-400 hover:bg-sky-50/60 transition-colors"
+                  className={`${PILL} ${PILL_IDLE} mt-3`}
                 >
-                  <div className="shrink-0 w-12 h-12 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center text-2xl">
-                    ✎
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-semibold text-slate-900">Transform text into a PDF</div>
-                    <div className="text-sm text-slate-500">
-                      Paste Markdown — headings, lists, tables &amp; code blocks
-                    </div>
-                  </div>
-                  <span className="ml-auto text-slate-400 group-hover/btn:text-sky-700 transition-colors" aria-hidden="true">
-                    →
-                  </span>
+                  <span aria-hidden="true">✎</span>
+                  Transform text into a PDF — paste Markdown
                 </button>
               </details>
             </div>
