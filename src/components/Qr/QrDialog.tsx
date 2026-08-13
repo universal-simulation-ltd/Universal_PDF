@@ -10,12 +10,14 @@ import {
   type QrPreset
 } from '../../lib/qr/design'
 import { PLACEMENT_SIZE, renderQrPng } from '../../lib/qr/render'
+import { copyQrPngToClipboard, downloadQrPng } from '../../lib/qr/download'
 import {
   loadSavedQrDesigns,
   readQrBackupFile,
   UNIVERSAL_QR_URL,
   type SavedQrDesign
 } from '../../lib/qr/library'
+import QrEnlargeModal from './QrEnlargeModal'
 
 // A simplified Universal QR: the same design model and the same six presets,
 // with a link box instead of the full studio. Generating the code produces a
@@ -110,6 +112,9 @@ export default function QrDialog() {
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState<SavedQrDesign[]>([])
   const [adding, setAdding] = useState(false)
+  const [enlarged, setEnlarged] = useState(false)
+  const [downloading, setDownloading] = useState(false)
+  const [copied, setCopied] = useState<'idle' | 'ok' | 'fail'>('idle')
   const backupInputRef = useRef<HTMLInputElement>(null)
 
   const data = design.data.trim()
@@ -124,17 +129,21 @@ export default function QrDialog() {
     setPreview(null)
     setError(null)
     setAdding(false)
+    setEnlarged(false)
+    setCopied('idle')
     setSaved(loadSavedQrDesigns())
   }, [open])
 
+  // Escape closes the enlarged code first, not the whole dialog underneath it —
+  // the modal has its own handler for that, and both listeners see the keypress.
   useEffect(() => {
-    if (!open) return
+    if (!open || enlarged) return
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') setOpen(false)
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [open, setOpen])
+  }, [open, enlarged, setOpen])
 
   // Live preview, debounced. `cancelled` guards the async gap: a fast typist
   // can start several renders, and without it the slowest one wins.
@@ -214,6 +223,26 @@ export default function QrDialog() {
     }
   }
 
+  /** Save the code as a PNG — the same 1024 px render "Add to page" places. */
+  async function download() {
+    if (!data || downloading) return
+    setDownloading(true)
+    try {
+      await downloadQrPng(design)
+    } catch (err) {
+      setError((err as Error).message || 'Could not save that code.')
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  async function copy() {
+    if (!data) return
+    const ok = await copyQrPngToClipboard(design)
+    setCopied(ok ? 'ok' : 'fail')
+    window.setTimeout(() => setCopied('idle'), 1800)
+  }
+
   return (
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
@@ -234,11 +263,23 @@ export default function QrDialog() {
         </div>
 
         <div className="px-6 pb-5 flex flex-col sm:flex-row gap-5">
-          {/* Preview */}
+          {/* Preview — click it to enlarge for scanning, as in Universal QR. */}
           <div className="flex flex-col items-center gap-2 shrink-0">
             <div
-              className="rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden"
+              className={`group relative rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden ${
+                preview ? 'cursor-zoom-in' : ''
+              }`}
               style={{ width: PREVIEW_SIZE, height: PREVIEW_SIZE }}
+              onClick={() => preview && setEnlarged(true)}
+              role={preview ? 'button' : undefined}
+              tabIndex={preview ? 0 : undefined}
+              aria-label={preview ? 'Enlarge QR code for scanning' : undefined}
+              onKeyDown={(e) => {
+                if (preview && (e.key === 'Enter' || e.key === ' ')) {
+                  e.preventDefault()
+                  setEnlarged(true)
+                }
+              }}
             >
               {preview ? (
                 <img
@@ -253,12 +294,71 @@ export default function QrDialog() {
                   {data ? 'Drawing…' : 'Enter a link or some text to see the code'}
                 </span>
               )}
+
+              {preview && (
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 flex items-center justify-center bg-slate-900/70 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity"
+                >
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-900 shadow-md">
+                    <svg viewBox="0 0 16 16" className="w-4 h-4" aria-hidden="true">
+                      <circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+                      <path
+                        d="M10.5 10.5 L14 14 M7 5 V9 M5 7 H9"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    Tap to enlarge
+                  </span>
+                </div>
+              )}
             </div>
             {data && (
               <div className="text-xs text-slate-500 max-w-[224px] truncate" title={design.data}>
                 {qrDisplayName(design)}
               </div>
             )}
+
+            {/* Taking the code away with you — the page isn't the only place a
+                generated QR is wanted, and re-drawing it next door in Universal
+                QR just to save a PNG is a silly round trip. */}
+            <div className="flex flex-col gap-1.5 w-[224px]">
+              <button
+                type="button"
+                onClick={download}
+                disabled={!data || downloading}
+                className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md border border-slate-300 text-sm font-medium text-slate-700 hover:border-orange-400 hover:bg-orange-50/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <svg
+                  viewBox="0 0 20 20"
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M10 3v10m0 0l-3.5-3.5M10 13l3.5-3.5M4 16h12" />
+                </svg>
+                {downloading ? 'Preparing…' : 'Download PNG'}
+              </button>
+              <button
+                type="button"
+                onClick={copy}
+                disabled={!data}
+                className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md border border-slate-300 text-sm font-medium text-slate-700 hover:border-orange-400 hover:bg-orange-50/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {copied === 'ok'
+                  ? '✓ Copied to clipboard'
+                  : copied === 'fail'
+                    ? 'Copy not supported — use Download'
+                    : 'Copy PNG to clipboard'}
+              </button>
+            </div>
           </div>
 
           {/* Controls */}
@@ -408,6 +508,10 @@ export default function QrDialog() {
           </div>
         </div>
       </div>
+
+      {enlarged && (
+        <QrEnlargeModal design={design} initialPng={preview} onClose={() => setEnlarged(false)} />
+      )}
     </div>
   )
 }

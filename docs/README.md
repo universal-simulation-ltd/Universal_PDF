@@ -119,6 +119,33 @@ tool, so the code is placed, moved, resized, undone and baked into the export
 by machinery that already existed. Placed at the default ~200 pt that works out
 around 360 dpi, so the code still scans off a printed page.
 
+### Enlarging it, and taking it away
+
+Clicking the 224 px preview opens `QrEnlargeModal` — Universal QR's
+`EnlargeModal` in the same clothes (dark backdrop, "click to dismiss" down each
+side, the two hints that fix most failed scans), because the point of both is
+the same: a preview shows what the code *looks* like, and a second phone needs
+something it can actually read. It opens showing the preview render upscaled and
+swaps in a 900 px one as it arrives — a blank card for a few hundred ms reads as
+a broken modal, and a soft QR still scans. Clicks on the code itself don't
+dismiss, so a phone held against the screen doesn't close what it came for.
+Escape closes the enlargement only; the dialog's own Escape handler stands down
+while it is open, since both listeners see the keypress.
+
+**Download PNG** and **Copy PNG to clipboard** sit under the preview
+(`src/lib/qr/download.ts`). Neither has a renderer of its own — both call the
+same `renderQrPng` at the same `PLACEMENT_SIZE`, so the file you save is
+pixel-for-pixel the image "Add to page" would have stamped in. Two notes:
+
+- The `data:` URL is decoded to a Blob by hand rather than with `fetch()`. The
+  Electron build serves the app off its own protocol with a strict CSP, and a
+  fetch of a `data:` URL is the sort of request that gets refused there.
+- The clipboard write is handed the render **promise**, not an awaited blob:
+  Safari only honours a write inside the gesture that asked for it, and drawing a
+  QR is asynchronous. Browsers that won't take a promise there fall through to
+  the awaited form, and a genuine refusal says "Copy not supported — use
+  Download" rather than showing a tick over nothing.
+
 ### Sharing a design model with Universal QR
 
 `src/lib/qr/` is a port of Universal QR's renderer, kept deliberately faithful:
