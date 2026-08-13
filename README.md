@@ -11,6 +11,7 @@ A clean Progressive Web App for viewing, annotating, and signing PDFs — works 
 ## Features
 
 - **View** multi-page PDFs with zoom (50%–300%), pinch-to-zoom on touch, and a thumbnail navigator
+- **Open Word and OpenDocument files** — drop a `.docx` or `.odt` on the circle and it is converted to a PDF *on your device* (nothing is uploaded), then opens ready to annotate and sign. Headings, bold/italic, bulleted and numbered lists, tables and links all come across as real, selectable text. The page layout is re-typeset rather than copied, so fonts, columns, headers/footers and floating shapes will differ — the app says so when it opens one. Word 97–2003 `.doc` is not supported; save it as `.docx` first
 - **Select text** — the *Select text* tool (in the Select ▾ menu) lets you drag over the PDF's own text and copy it (Ctrl/⌘C)
 - **Make searchable (OCR)** — turn a scanned / image-only PDF into a searchable, selectable one *entirely on your device* (no upload). Find, copy and redact-by-search then work. The OCR engine downloads once on first use, then works offline
 - **Annotate** with free draw, text, rectangles, ticks, and crosses, in any of six colours
@@ -32,7 +33,7 @@ Open the [app URL](https://pdf.unisim.co.uk/), then:
 
 ## How to use
 
-1. **Open a PDF** — drop one on the circle, click it to browse, or drag-and-drop a file anywhere on the page
+1. **Open a document** — drop a PDF, Word (`.docx`) or OpenDocument (`.odt`) file on the circle, click it to browse, or drag-and-drop anywhere on the page. Word and ODT files are converted to PDF on your device first
 2. **Pick a tool** from the toolbar (Text, Draw, Tick, Cross, Rectangle, or Sign)
 3. **Click / tap on the page** to place the annotation
 4. **Switch to *Select*** to drag, resize, recolour, or delete existing annotations — or *Select text* (same menu) to drag over and copy the PDF's own text

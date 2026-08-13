@@ -90,7 +90,12 @@ interface PdfState {
   // The "Add QR code" generator (toolbar, next to the image button).
   qrOpen: boolean
   recents: RecentMeta[]
-  loadFile: (file: File) => Promise<void>
+  // Set when the open document was converted from Word/OpenDocument rather than
+  // opened as a PDF, so the viewer can say so — what is on screen is a
+  // re-typeset version, not a facsimile. Cleared by the next load.
+  importNotice: string | null
+  dismissImportNotice: () => void
+  loadFile: (file: File, options?: { notice?: string }) => Promise<void>
   loadFromSlug: (slug: string) => Promise<boolean>
   loadFromCurrentUrl: () => Promise<boolean>
   reset: () => void
@@ -136,6 +141,8 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   metadataOpen: false,
   qrOpen: false,
   recents: [],
+  importNotice: null,
+  dismissImportNotice: () => set({ importNotice: null }),
   togglePageNav: () => set((s) => ({ pageNavOpen: !s.pageNavOpen })),
   setPageNavOpen: (pageNavOpen) => set({ pageNavOpen }),
   setPreviewOpen: (previewOpen) => set({ previewOpen }),
@@ -169,7 +176,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
       })
       .catch(() => {})
   },
-  loadFile: async (file) => {
+  loadFile: async (file, options) => {
     set({ loading: true })
     try {
       get().doc?.destroy()
@@ -185,7 +192,10 @@ export const usePdfStore = create<PdfState>((set, get) => ({
         fileName: file.name,
         sourceBytes: buf,
         isXfa: doc.isPureXfa,
-        loading: false
+        loading: false,
+        // Always assigned, never merged: opening a PDF normally has to clear a
+        // notice left over from the converted document before it.
+        importNotice: options?.notice ?? null
       })
       // Re-hydrate any signature-request boxes embedded in the PDF (from a prior
       // export) so a reopened / shared file's boxes are interactive again. The
@@ -237,7 +247,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   reset: () => {
     get().doc?.destroy()
     clearDocumentState()
-    set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, previewOpen: false, presentOpen: false, ocrOpen: false, mergeOpen: false, convertOpen: false, metadataOpen: false, qrOpen: false })
+    set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, previewOpen: false, presentOpen: false, ocrOpen: false, mergeOpen: false, convertOpen: false, metadataOpen: false, qrOpen: false, importNotice: null })
     setHashSlug(null)
   },
   refreshRecents: async () => {

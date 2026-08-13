@@ -37,12 +37,9 @@ if (typeof document !== 'undefined') {
 import { usePdfStore } from './stores/pdfStore'
 import { useSignatureStore } from './stores/signatureStore'
 import { CONTAINER } from './lib/layout'
+import { OfficeImportError, toViewablePdf } from './lib/officeToPdf'
 
 const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_PDF'
-
-function isPdfFile(file: File) {
-  return file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
-}
 
 export default function App() {
   const loadFile = usePdfStore((s) => s.loadFile)
@@ -61,6 +58,8 @@ export default function App() {
   const setMetadataOpen = usePdfStore((s) => s.setMetadataOpen)
   const sourceBytes = usePdfStore((s) => s.sourceBytes)
   const fileName = usePdfStore((s) => s.fileName)
+  const importNotice = usePdfStore((s) => s.importNotice)
+  const dismissImportNotice = usePdfStore((s) => s.dismissImportNotice)
 
   // The currently-open document as a File, for the Advanced-menu dialogs that
   // start from it (Merge with another PDF, Convert into images). A fresh copy of
@@ -120,16 +119,15 @@ export default function App() {
       const file = files[0]
       if (!file) return
       // A page-wide target takes whatever lands on it; `accept` only ever
-      // filtered the picker, and there is no picker here.
-      if (!isPdfFile(file)) {
-        alert('Please drop a PDF file.')
-        return
-      }
+      // filtered the picker, and there is no picker here — so `toViewablePdf`
+      // does the checking, converting a Word or OpenDocument file on the way
+      // through and refusing anything else with a message worth reading.
       try {
-        await loadFile(file)
+        const { file: pdf, notice } = await toViewablePdf(file)
+        await loadFile(pdf, { notice })
       } catch (err) {
         console.error(err)
-        alert('Failed to load PDF')
+        alert(err instanceof OfficeImportError ? err.message : 'Failed to load PDF')
       }
     },
     clickToBrowse: false,
@@ -220,6 +218,27 @@ export default function App() {
 
       {doc && <ToolbarMobile />}
       {doc && <MobileWelcomeToast />}
+
+      {/* Converted-from-Word notice. It sits in the flow above the viewer rather
+          than floating over it: what it says changes how you should read the
+          document, so it should not be something you dismiss by accident before
+          reading, nor cover the first line of the page it is describing. */}
+      {doc && importNotice && (
+        <div className="bg-amber-50 border-b border-amber-200 text-amber-900">
+          <div className="mx-auto w-full max-w-5xl px-4 py-2 flex items-start gap-3 text-[13px]">
+            <span aria-hidden="true">ℹ</span>
+            <p className="flex-1">{importNotice}</p>
+            <button
+              type="button"
+              onClick={dismissImportNotice}
+              className="shrink-0 rounded px-2 py-0.5 hover:bg-amber-100 font-medium"
+              aria-label="Dismiss conversion notice"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* When a PDF is open, isolate the viewer in its own stacking context so
           its positioned layers (Konva canvas, annotation/form overlays, the

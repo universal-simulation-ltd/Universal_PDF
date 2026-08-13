@@ -3,6 +3,12 @@ import { DropAnywhere, DropRing, useFileDrop } from '@unisim/sdk'
 import { usePdfStore } from '../../stores/pdfStore'
 import { createExamplePdfFile } from '../../lib/examplePdf'
 import { compressPdf, type CompressQuality, type CompressResult } from '../../lib/export'
+import {
+  isPdfFile,
+  OfficeImportError,
+  PDF_OR_OFFICE_ACCEPT,
+  toViewablePdf
+} from '../../lib/officeToPdf'
 import CompressResultModal from '../Compress/CompressResultModal'
 import BatchCompressModal, { type BatchSource } from '../Compress/BatchCompressModal'
 import MergeDialog from '../Convert/MergeDialog'
@@ -24,6 +30,7 @@ export default function LandingPage() {
   const loadFile = usePdfStore((s) => s.loadFile)
   const hasRecents = usePdfStore((s) => s.recents.length > 0)
   const [opening, setOpening] = useState(false)
+  const [converting, setConverting] = useState(false)
   const [compressing, setCompressing] = useState(false)
   const [compressProgress, setCompressProgress] = useState('')
   const [compressJob, setCompressJob] = useState<{
@@ -62,11 +69,11 @@ export default function LandingPage() {
     !!compressJob || !!batchJob || transformOpen || mergeOpen || !!convertMode || !!ocrJob
   const drop = useFileDrop({
     onFiles: openFiles,
-    accept: 'application/pdf',
+    accept: PDF_OR_OFFICE_ACCEPT,
     multiple: false,
     pageWide: true,
     disabled: modalOpen,
-    label: 'Drop a PDF here, or click to browse',
+    label: 'Drop a PDF, Word or OpenDocument file here, or click to browse',
   })
   // ⚠️ `over`/`pageOver` go true for a page drag whether or not the zone is
   // disabled — the hook lights every page-wide zone and only checks `disabled`
@@ -117,18 +124,24 @@ export default function LandingPage() {
 
   // Shared by the circle's picker and its drop. The picker is filtered by
   // `accept`, a drop is not — so the check has to live here.
+  //
+  // A Word or OpenDocument file is converted first, on this device, and the
+  // PDF that comes out is what gets opened. `convertOfficeFile` throws a
+  // message written to be read, so anything it says is shown as-is — including
+  // its "save it as .docx first" answer for a legacy .doc, which is the whole
+  // point of not simply rejecting everything that isn't a PDF here.
   async function openFiles(files: File[]) {
     const file = files[0]
     if (!file) return
-    if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
-      alert('Please choose a PDF file.')
-      return
-    }
+    setConverting(!isPdfFile(file))
     try {
-      await loadFile(file)
+      const { file: pdf, notice } = await toViewablePdf(file)
+      await loadFile(pdf, { notice })
     } catch (err) {
       console.error(err)
-      alert('Failed to load PDF')
+      alert(err instanceof OfficeImportError ? err.message : 'Failed to load PDF')
+    } finally {
+      setConverting(false)
     }
   }
 
@@ -253,12 +266,17 @@ export default function LandingPage() {
                       <path d="M9 17h4" />
                     </svg>
                     <span className="text-[15px] font-bold text-slate-900">
-                      {over ? 'Drop to open' : 'Drop a PDF here'}
+                      {converting ? 'Converting…' : over ? 'Drop to open' : 'Drop a PDF here'}
                     </span>
                     <span className="text-[11.5px] leading-relaxed text-slate-500">
                       it stays on your device
                     </span>
-                    <span className="mt-1 text-[11px] text-slate-400">or click to browse</span>
+                    {/* Word and OpenDocument files are converted here rather
+                        than turned away, so the circle has to say so — nobody
+                        drops a .docx on a thing labelled "PDF" to find out. */}
+                    <span className="mt-1 text-[11px] text-slate-400">
+                      or click to browse — .pdf, .docx, .odt
+                    </span>
                   </DropRing>
                 </div>
                 <input {...drop.inputProps} className="hidden" />

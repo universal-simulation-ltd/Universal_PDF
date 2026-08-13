@@ -26,6 +26,62 @@ Scanned / image-only PDFs can be made **searchable on-device via OCR**
 
 MIT licensed — free and open source, like all Universal Apps.
 
+## Word / OpenDocument import
+
+Dropping a `.docx` or `.odt` anywhere a PDF is accepted converts it **on the
+device** — nothing is uploaded — and opens the result in the viewer.
+
+    officeToPdf.ts     front door: sniff the format, dispatch, own every message
+    ├── unzip.ts       minimal ZIP *reader* (mirror of zip.ts's writer)
+    ├── officeXml.ts   namespace-agnostic XML helpers, shared by both parsers
+    ├── docxToBlocks.ts  OOXML  → Block[]
+    ├── odtToBlocks.ts   ODF    → Block[]
+    └── blockPdf.ts    Block[] → PDF (the engine Markdown already used)
+
+The shape that makes this small: **`blockPdf.ts` is the whole renderer**, split
+out of `markdownToPdf.ts`, which is now only a parser. Word, ODF and Markdown
+all produce the same `Block[]`, so there is one layout engine, one set of house
+styles, and one place to improve any of it. Both office parsers are
+`import()`ed on demand — about 2 kB gzipped each — so a user who only ever
+opens PDFs downloads neither.
+
+What this is and is not: the output is a **re-typeset document**, not a
+facsimile. Text, headings, bold/italic, bulleted and numbered lists (including
+nesting), tables and hyperlinks survive as real selectable text — so Find,
+copy-paste and redact-by-search work on it. The author's fonts, columns,
+headers/footers, floating shapes and exact page breaks do not. `App.tsx` shows a
+notice saying exactly that, because the alternative is someone assuming they are
+looking at a copy.
+
+Things learnt the hard way, all of them still true:
+
+- **A heading is not always tagged as one.** OOXML has `w:pStyle` but a custom
+  style can declare its level via `w:outlineLvl` instead; ODF has `text:h` but
+  LibreOffice writes plenty of headings as a `text:p` whose style merely
+  *descends from* "Heading 1". Both parsers resolve the style's parent chain
+  before deciding what a paragraph is.
+- **ODF escapes style names**: `Heading_20_1` is `Heading 1`. Comparing the raw
+  name matches nothing, silently.
+- **Match on `localName`, never the prefix.** Both formats are heavily
+  namespaced and the prefixes are a producer's choice.
+- **Bold is often inherited**, applied by the paragraph or character style
+  rather than on the run — and `<w:b w:val="0"/>` switches it back off. Direct
+  formatting wins over the character style, which wins over the paragraph's.
+- **`.doc` is a different format entirely** (OLE2 compound file, not a ZIP), and
+  so is `.rtf`. Both are routinely called "Word files", so both get a refusal
+  that says what to do — "save it as .docx and try again" — rather than the
+  generic "please choose a PDF" that made the question look unreasonable.
+- **`·` is WinAnsi-encodable and Markdown was flattening it.** The sanitiser's
+  `·` → `*` rule exists so pasted bullets become list markers; applied to an
+  imported document it turned every "UNI·SIM" into "UNI\*SIM". That one rule is
+  now Markdown-only (`sanitize(text, { markdownGlyphs: true })`).
+
+Verified against real third-party Word documents plus a fixture exercising every
+supported construct, by comparing the converted PDF's extracted text against
+LibreOffice's own extraction of the same source (100% of words carried across on
+all of them), and with the table parser deliberately broken first to prove the
+check could fail.
+
 ## On-device OCR (make searchable)
 
 The **Actions → "Make searchable (OCR)"** item (and a card on the landing

@@ -4,6 +4,7 @@ import { useAnnotationStore } from '../../stores/annotationStore'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useSearchStore } from '../../stores/searchStore'
 import { LANGS, persistLang, readSavedLang, type LangCode } from '../../lib/lang'
+import { OfficeImportError, PDF_OR_OFFICE_ACCEPT, toViewablePdf } from '../../lib/officeToPdf'
 import { RedactIcon } from '../icons/RedactIcon'
 
 interface Props {
@@ -94,10 +95,13 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
     const f = e.target.files?.[0]
     if (f) {
       try {
-        await loadFile(f)
+        // Same front door as the landing page: a Word or OpenDocument file is
+        // converted on-device first, and its notice rides along with the load.
+        const { file, notice } = await toViewablePdf(f)
+        await loadFile(file, { notice })
       } catch (err) {
         console.error(err)
-        alert('Failed to load PDF')
+        alert(err instanceof OfficeImportError ? err.message : 'Failed to load PDF')
       }
     }
     e.target.value = ''
@@ -240,7 +244,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
     <input
       ref={fileInputRef}
       type="file"
-      accept="application/pdf"
+      accept={PDF_OR_OFFICE_ACCEPT}
       hidden
       onChange={onPick}
     />

@@ -13,6 +13,7 @@
     "build:desktop": "tsc -b && vite build --mode desktop",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
+    "test:e2e": "node e2e/office-import.e2e.mjs",
     "electron": "electron .",
     "dist": "npm run build:desktop && electron-builder",
     "dist:win": "npm run build:desktop && electron-builder --win",
