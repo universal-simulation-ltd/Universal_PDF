@@ -10,6 +10,7 @@ import {
   qrDisplayName,
   withBranding,
   type QrDesign,
+  type QrPlacement,
   type QrPreset
 } from '../../lib/qr/design'
 import { imageUrlToDataUrl, PLACEMENT_SIZE, renderQrPng } from '../../lib/qr/render'
@@ -22,12 +23,21 @@ import {
   type SavedQrDesign
 } from '../../lib/qr/library'
 import QrEnlargeModal from './QrEnlargeModal'
+import type { Annotation } from '../../types/annotations'
 
 // A simplified Universal QR: the same design model and the same six presets,
 // with a link box instead of the full studio. Generating the code produces a
 // PNG, which is armed for click-to-place through the existing image-annotation
 // path — so it moves, resizes, undoes and bakes into the export like any other
 // placed picture, with no new annotation type.
+//
+// The same dialog doubles as the EDITOR for a code already on the page (the ✏️
+// on the selected code). It is deliberately the same component rather than a
+// second, smaller one: the thing you want to change after placing a code — a
+// typo'd link, the wrong style, branding you meant to turn on — is exactly what
+// this dialog already edits, and the state it edits is carried on the
+// annotation (`ImageAnnotation.qr`). In edit mode it seeds from that state and
+// re-renders the placed image in place instead of arming a new placement.
 
 const PREVIEW_SIZE = 224
 // Long enough that typing a URL doesn't render a code per keystroke, short
@@ -106,8 +116,12 @@ function PresetGlyph({ preset }: { preset: QrPreset }) {
 export default function QrDialog() {
   const open = usePdfStore((s) => s.qrOpen)
   const setOpen = usePdfStore((s) => s.setQrOpen)
+  // Set when the ✏️ on a placed code opened this: the annotation to write the
+  // re-rendered code back to, and the design it was placed with.
+  const qrEdit = usePdfStore((s) => s.qrEdit)
   const setUploadedImageSrc = useAnnotationStore((s) => s.setUploadedImageSrc)
   const setTool = useAnnotationStore((s) => s.setTool)
+  const updateAnnotation = useAnnotationStore((s) => s.update)
 
   // The design as the STYLE controls left it — presets, saved codes, the link.
   // Branding is overlaid on top rather than edited in (see `withBranding`), so
@@ -150,23 +164,38 @@ export default function QrDialog() {
   const colorRejected = !!brandColor && !isSafeQrAccent(brandColor, design.bgColor)
 
   // Fresh dialog every time, seeded with the app's default look and whatever
-  // Universal QR has saved on this device.
+  // Universal QR has saved on this device — or, when the ✏️ on a placed code
+  // opened this, with that code's own state, so what comes up is the code you
+  // clicked rather than a new one.
   useEffect(() => {
     if (!open) return
-    setBase({ ...DEFAULT_DESIGN, ...(QR_PRESETS.find((p) => p.name === 'Rounded')?.patch ?? {}) })
-    setPresetName('Rounded')
-    // Branding starts OFF — a document gets the UNI·SIM mark until somebody
-    // asks for something else — but the fields behind the switch are seeded, so
-    // flipping it produces the company's own code rather than an empty panel.
-    setBranded(false)
-    setBrandTouched(false)
+    if (qrEdit) {
+      const { base: editBase, branding, presetName: editPreset } = qrEdit.placement
+      setBase(editBase)
+      setPresetName(editPreset)
+      setBranded(!!branding)
+      setBrandLogo(branding?.logo ?? null)
+      setBrandColor(branding?.color ?? null)
+      // Pinned from the off: this code's branding is a decision somebody
+      // already made, and the org sync must not overwrite it on the way in.
+      setBrandTouched(true)
+    } else {
+      setBase({ ...DEFAULT_DESIGN, ...(QR_PRESETS.find((p) => p.name === 'Rounded')?.patch ?? {}) })
+      setPresetName('Rounded')
+      // Branding starts OFF — a document gets the UNI·SIM mark until somebody
+      // asks for something else — but the fields behind the switch are seeded,
+      // so flipping it produces the company's own code rather than an empty
+      // panel.
+      setBranded(false)
+      setBrandTouched(false)
+    }
     setPreview(null)
     setError(null)
     setAdding(false)
     setEnlarged(false)
     setCopied('idle')
     setSaved(loadSavedQrDesigns())
-  }, [open])
+  }, [open, qrEdit])
 
   // Until the user edits the branding themselves it simply TRACKS the company's
   // — which also covers the mark arriving a moment after the dialog opened,
@@ -282,14 +311,50 @@ export default function QrDialog() {
     }
   }
 
+  /** The editor state to hang on the annotation, so this code can be edited
+   *  again once it is on the page. Branding stays an overlay here rather than
+   *  being folded into the design — see `QrPlacement`. */
+  function placement(): QrPlacement {
+    return {
+      base,
+      branding: branded ? { logo: brandLogo, color: brandColor } : null,
+      presetName
+    }
+  }
+
   /** Render at placement resolution and arm it for click-to-place. */
   async function addToPage() {
     if (!data) return
     setAdding(true)
     try {
       const png = await renderQrPng(design, PLACEMENT_SIZE)
-      setUploadedImageSrc(png)
+      setUploadedImageSrc(png, placement())
       setTool('image')
+      setOpen(false)
+    } catch (err) {
+      setError((err as Error).message || 'Could not draw that code.')
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  /** Re-render the code being edited and write it back to its annotation,
+   *  leaving the box exactly where and how big it was — the point of editing a
+   *  placed code is that it stays placed. (A QR renders square, so the aspect
+   *  can't shift under a changed style either.) */
+  async function saveEdit() {
+    if (!data || !qrEdit) return
+    const target = useAnnotationStore.getState().annotations.find((a) => a.id === qrEdit.id)
+    if (!target || target.type !== 'image') {
+      // Undone or deleted while the dialog was up. Say so rather than writing a
+      // patch into nothing and closing as if it had worked.
+      setError('That code is no longer on the page — close this and add a new one.')
+      return
+    }
+    setAdding(true)
+    try {
+      const png = await renderQrPng(design, PLACEMENT_SIZE)
+      updateAnnotation(qrEdit.id, { src: png, qr: placement() } as Partial<Annotation>)
       setOpen(false)
     } catch (err) {
       setError((err as Error).message || 'Could not draw that code.')
@@ -327,7 +392,9 @@ export default function QrDialog() {
     >
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 pt-5 pb-3">
-          <h2 className="text-lg font-semibold text-slate-900">Add a QR code</h2>
+          <h2 className="text-lg font-semibold text-slate-900">
+            {qrEdit ? 'Edit this QR code' : 'Add a QR code'}
+          </h2>
           <button
             onClick={() => setOpen(false)}
             className="text-slate-400 hover:text-slate-700 text-2xl leading-none w-8 h-8 flex items-center justify-center"
@@ -573,7 +640,11 @@ export default function QrDialog() {
         </div>
 
         <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between gap-3">
-          <span className="text-xs text-slate-400">Then click the page to place it.</span>
+          <span className="text-xs text-slate-400">
+            {qrEdit
+              ? 'The code on the page is replaced where it sits.'
+              : 'Then click the page to place it.'}
+          </span>
           <div className="flex gap-2">
             <button
               type="button"
@@ -584,11 +655,17 @@ export default function QrDialog() {
             </button>
             <button
               type="button"
-              onClick={addToPage}
+              onClick={qrEdit ? saveEdit : addToPage}
               disabled={!data || adding}
               className="px-4 py-2 text-sm font-medium rounded-md bg-orange-700 text-white hover:bg-orange-800 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {adding ? 'Adding…' : 'Add to page'}
+              {qrEdit
+                ? adding
+                  ? 'Updating…'
+                  : 'Update code'
+                : adding
+                  ? 'Adding…'
+                  : 'Add to page'}
             </button>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { Annotation, FontFamily, Tool } from '../types/annotations'
+import type { QrPlacement } from '../lib/qr/design'
 
 interface AnnotationState {
   tool: Tool
@@ -21,6 +22,11 @@ interface AnnotationState {
   // Full selection set. Drives the group move/resize/rotate Transformer.
   selectedIds: string[]
   uploadedImageSrc: string | null
+  // Set alongside `uploadedImageSrc` when the armed image is a generated QR
+  // code: the editor state it came from, which rides onto the annotation at
+  // placement so the code can be edited again on the page. Null for an
+  // ordinary uploaded picture.
+  uploadedImageQr: QrPlacement | null
   past: Annotation[][]
   future: Annotation[][]
   setTool: (t: Tool) => void
@@ -33,7 +39,7 @@ interface AnnotationState {
   setSelected: (id: string | null) => void
   setSelectedIds: (ids: string[]) => void
   toggleSelected: (id: string) => void
-  setUploadedImageSrc: (src: string | null) => void
+  setUploadedImageSrc: (src: string | null, qr?: QrPlacement | null) => void
   add: (a: Annotation) => void
   addMany: (items: Annotation[]) => void
   update: (id: string, patch: Partial<Annotation>) => void
@@ -71,10 +77,14 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
   selectedId: null,
   selectedIds: [],
   uploadedImageSrc: null,
+  uploadedImageQr: null,
   past: [],
   future: [],
   setTool: (tool) => set({ tool }),
-  setUploadedImageSrc: (uploadedImageSrc) => set({ uploadedImageSrc }),
+  // The QR payload defaults to null rather than being left alone, so arming a
+  // plain picture after a code can't drop the code's design onto it.
+  setUploadedImageSrc: (uploadedImageSrc, uploadedImageQr = null) =>
+    set({ uploadedImageSrc, uploadedImageQr }),
   setColor: (color) =>
     set((s) => {
       const sel = s.annotations.find((a) => a.id === s.selectedId)
@@ -254,6 +264,7 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
       selectedId: null,
       selectedIds: [],
       uploadedImageSrc: null,
+      uploadedImageQr: null,
       past: [],
       future: []
     }),

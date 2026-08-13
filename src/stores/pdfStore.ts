@@ -8,6 +8,7 @@ import { useAnnotationStore } from './annotationStore'
 import { useFormStore } from './formStore'
 import { useSearchStore } from './searchStore'
 import { useSignatureStore } from './signatureStore'
+import type { QrPlacement } from '../lib/qr/design'
 
 // Restore a recent's saved edits into the live stores. Applies whenever the
 // stored arrays EXIST (even when empty) so a deliberately-cleared document
@@ -89,6 +90,10 @@ interface PdfState {
   metadataOpen: boolean
   // The "Add QR code" generator (toolbar, next to the image button).
   qrOpen: boolean
+  // Set when the generator was opened by the ✏️ on a code already on the page
+  // rather than by the toolbar: the annotation to write back to, and the editor
+  // state it was placed with. Null for a fresh code.
+  qrEdit: { id: string; placement: QrPlacement } | null
   recents: RecentMeta[]
   // Set when the open document was converted from Word/OpenDocument rather than
   // opened as a PDF, so the viewer can say so — what is on screen is a
@@ -111,6 +116,8 @@ interface PdfState {
   setConvertOpen: (open: boolean) => void
   setMetadataOpen: (open: boolean) => void
   setQrOpen: (open: boolean) => void
+  /** Reopen the generator on a code already placed on a page. */
+  openQrEditor: (id: string, placement: QrPlacement) => void
   /** Strip the Info dictionary + XMP packet from the open document, in place. */
   scrubMetadata: () => Promise<void>
   refreshRecents: () => Promise<void>
@@ -140,6 +147,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   convertOpen: false,
   metadataOpen: false,
   qrOpen: false,
+  qrEdit: null,
   recents: [],
   importNotice: null,
   dismissImportNotice: () => set({ importNotice: null }),
@@ -154,7 +162,11 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   setMergeOpen: (mergeOpen) => set({ mergeOpen }),
   setConvertOpen: (convertOpen) => set({ convertOpen }),
   setMetadataOpen: (metadataOpen) => set({ metadataOpen }),
-  setQrOpen: (qrOpen) => set({ qrOpen }),
+  // Clearing the edit target on every open AND close is what keeps the toolbar
+  // button meaning "a new code": without it, closing an edit and pressing QR
+  // again would come back up still pointed at the annotation it last wrote to.
+  setQrOpen: (qrOpen) => set({ qrOpen, qrEdit: null }),
+  openQrEditor: (id, placement) => set({ qrOpen: true, qrEdit: { id, placement } }),
   scrubMetadata: async () => {
     const bytes = get().sourceBytes
     const fileName = get().fileName
@@ -247,7 +259,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   reset: () => {
     get().doc?.destroy()
     clearDocumentState()
-    set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, previewOpen: false, presentOpen: false, ocrOpen: false, mergeOpen: false, convertOpen: false, metadataOpen: false, qrOpen: false, importNotice: null })
+    set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, previewOpen: false, presentOpen: false, ocrOpen: false, mergeOpen: false, convertOpen: false, metadataOpen: false, qrOpen: false, qrEdit: null, importNotice: null })
     setHashSlug(null)
   },
   refreshRecents: async () => {

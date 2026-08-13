@@ -1,3 +1,5 @@
+import type { QrPlacement } from '../lib/qr/design'
+
 export type Tool =
   | 'select'
   | 'marquee'
@@ -175,6 +177,12 @@ export type ImageAnnotation = Base & {
   // Present when this image is a placed signature whose name/date labels can be
   // re-edited without touching the ink. `src` is the composite derived from it.
   sig?: SignatureData
+  // Present when this image is a QR code generated in-app: the editor state it
+  // was rendered from, so the ✏️ on the selected code (or a double-tap) can
+  // bring the generator back up on THIS code — change the link, the style or
+  // the branding — and re-render `src` in place. Absent on plain pictures, and
+  // on codes placed before this existed, which stay ordinary images.
+  qr?: QrPlacement
 }
 
 // A "Request signature" placeholder box. Until it is signed it renders as a

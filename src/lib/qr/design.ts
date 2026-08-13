@@ -409,6 +409,29 @@ export function withBranding(design: QrDesign, branding: QrBranding | null): QrD
   }
 }
 
+/** The editor state behind a code that has been placed on a page — what the
+ *  dialog would need to come back up showing exactly the code you are looking
+ *  at, so the ✏️ on a placed code reopens an editor rather than a fresh one.
+ *
+ *  Deliberately NOT the composed design: branding is an overlay here (see
+ *  `withBranding`), and flattening it on the way out would come back in as an
+ *  anonymously recoloured design with a picture in the middle — the branding
+ *  switch would read as off, and turning it "on" would then do nothing. Keeping
+ *  the three pieces apart round-trips the editor, not just the picture. */
+export interface QrPlacement {
+  /** The design as the STYLE controls left it, before branding. */
+  base: QrDesign
+  /** The branding overlaid on top, or null when the switch was off. */
+  branding: QrBranding | null
+  /** Which preset chip was lit, if the design still matches one. */
+  presetName: string | null
+}
+
+/** The composed design a placement actually rendered as. */
+export function placementDesign(p: QrPlacement): QrDesign {
+  return withBranding(p.base, p.branding)
+}
+
 export type ContrastIssue =
   | { kind: 'inverted' }
   | { kind: 'low'; ratio: number; where: 'modules' | 'corners' }

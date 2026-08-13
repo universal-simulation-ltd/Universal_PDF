@@ -175,6 +175,33 @@ tool, so the code is placed, moved, resized, undone and baked into the export
 by machinery that already existed. Placed at the default ~200 pt that works out
 around 360 dpi, so the code still scans off a printed page.
 
+### Editing a code that's already on the page
+
+A placed code carries the state it was generated from — `QrPlacement` on
+`ImageAnnotation.qr`: the base design, the branding overlay, and which preset
+chip was lit. Selecting the code shows an **✏️ button** beneath the delete
+affordance (double-tapping the code does the same); it reopens the *same*
+dialog, seeded with that state, and **Add to page** becomes **Update code**,
+which re-renders at `PLACEMENT_SIZE` and writes `src` back to the annotation.
+The box doesn't move or resize — a QR renders square, so a changed style can't
+shift the aspect either — and the update is one undo step like any other edit.
+
+Three things worth keeping if this is ever touched:
+
+- **The placement stores the editor's state, not the composed design.**
+  Branding is an *overlay* here (`withBranding`), so flattening it on the way
+  out would come back in as an anonymously recoloured design with a picture in
+  the middle: the branding switch would read as off, and flipping it "on" would
+  do nothing. Keeping the base, the branding and the preset name apart
+  round-trips the editor rather than just the picture.
+- **The ✏️ is only on codes generated in-app.** A photo of a QR is an image
+  annotation too, and there's no design behind it to bring back up. Codes placed
+  before this existed have no `qr` either, and stay plain images.
+- **Double-tap routes past the signature options editor.** Every image
+  annotation is double-tap-editable as a signature (name/date labels); a QR
+  reaching that modal would be nonsense, so `openSigEditor` hands a code with a
+  `qr` payload to the generator instead.
+
 ### Enlarging it, and taking it away
 
 Clicking the 224 px preview opens `QrEnlargeModal` — Universal QR's

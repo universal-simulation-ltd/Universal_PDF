@@ -24,6 +24,7 @@ import { inkColorFor, renderInkSignature } from '../../lib/renderInk'
 import { FONT_CSS } from '../../lib/fonts'
 import { effectiveRuns, runFontStyle, runHasStyle, runsToPlainText, runsToHtml, parseRunsFromDom, mergeRuns } from '../../lib/textRuns'
 import type { Annotation, DrawAnnotation, ImageAnnotation, SignatureData, SignatureFieldAnnotation, SigAlign, TextAnnotation, Tool, TextRun } from '../../types/annotations'
+import type { QrPlacement } from '../../lib/qr/design'
 
 // On-screen font stacks, keyed by family id (shared with the toolbar + export).
 const FONT_STACK = FONT_CSS
@@ -907,7 +908,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         }
       }
     } else if (tool === 'image') {
-      const src = useAnnotationStore.getState().uploadedImageSrc
+      const { uploadedImageSrc: src, uploadedImageQr: qr } = useAnnotationStore.getState()
       if (src) {
         const img = new Image()
         img.onload = () => {
@@ -921,7 +922,11 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             y: pos.y - fit.height / 2,
             width: fit.width,
             height: fit.height,
-            src
+            src,
+            // A generated QR carries the design it was drawn from, so the code
+            // on the page can be edited (✏️ / double-tap) rather than only
+            // deleted and re-made. Plain pictures have none and stay pictures.
+            ...(qr ? { qr } : {})
           })
           useAnnotationStore.getState().setTool('select')
         }
@@ -1176,11 +1181,25 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // Double-tap a placed signature (or a signed request box) to edit its
   // name/date options. Selects it and opens the options editor. Never touches
   // the ink — only the labels are re-composed.
+  //
+  // A generated QR code is an image annotation too, so it would otherwise land
+  // in the signature options editor, which has nothing to say about it. It gets
+  // its own generator instead — the same one that drew it.
   function openSigEditor(id: string) {
     const ann = useAnnotationStore.getState().annotations.find((a) => a.id === id)
+    if (ann?.type === 'image' && ann.qr) {
+      openQrEditor(id, ann.qr)
+      return
+    }
     if (!isEditableSignature(ann)) return
     setSelected(id)
     setSigEditId(id)
+  }
+
+  /** Bring the QR generator back up on a code already on the page. */
+  function openQrEditor(id: string, qr: QrPlacement) {
+    setSelected(id)
+    usePdfStore.getState().openQrEditor(id, qr)
   }
 
   // Re-compose a signature from new label options and write it back, keeping the
@@ -2040,6 +2059,11 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         const bbox = getAnnotationBBox(selected)
         const left = (bbox.x + bbox.width) * scale + 8
         const top = bbox.y * scale - 8
+        // Delete and Confirm run rightwards off the top-right corner; the QR
+        // Edit button stacks BENEATH Delete instead of extending that row, so a
+        // code sitting against the right margin of a narrow screen doesn't push
+        // it out past the page.
+        const placedQr = selected.type === 'image' ? selected.qr : undefined
         return (
           <>
             <button
@@ -2070,6 +2094,26 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               >
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M5 13l4 4L19 7" />
+                </svg>
+              </button>
+            )}
+            {placedQr && (
+              // Edit ✏️ — reopens the generator on THIS code, so the link, the
+              // style or the branding can be changed after placing it. Only on
+              // codes generated in-app: a picture of a QR has no design behind
+              // it to bring back up. (Double-tapping the code does the same.)
+              <button
+                type="button"
+                title="Edit this QR code — link, style or branding"
+                aria-label="Edit this QR code"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); openQrEditor(selected.id, placedQr) }}
+                style={{ position: 'absolute', left, top: top + 36, zIndex: 21 }}
+                className="w-8 h-8 rounded-full bg-white shadow-lg border border-slate-300 text-orange-700 hover:bg-orange-700 hover:text-white hover:border-orange-700 flex items-center justify-center transition-colors"
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M4 20h4l10-10a2.83 2.83 0 0 0-4-4L4 16v4z" />
+                  <path d="M13.5 6.5l4 4" />
                 </svg>
               </button>
             )}
