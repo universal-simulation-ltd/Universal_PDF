@@ -1,15 +1,19 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useOrg, useOrgBranding } from '@unisim/sdk'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import {
   DEFAULT_DESIGN,
+  isSafeQrAccent,
   QR_PRESETS,
   qrContrastIssue,
   qrDisplayName,
+  withBranding,
   type QrDesign,
   type QrPreset
 } from '../../lib/qr/design'
-import { PLACEMENT_SIZE, renderQrPng } from '../../lib/qr/render'
+import { imageUrlToDataUrl, PLACEMENT_SIZE, renderQrPng } from '../../lib/qr/render'
+import QrBrandingPanel from './QrBrandingPanel'
 import { copyQrPngToClipboard, downloadQrPng } from '../../lib/qr/download'
 import {
   loadSavedQrDesigns,
@@ -105,7 +109,16 @@ export default function QrDialog() {
   const setUploadedImageSrc = useAnnotationStore((s) => s.setUploadedImageSrc)
   const setTool = useAnnotationStore((s) => s.setTool)
 
-  const [design, setDesign] = useState<QrDesign>(DEFAULT_DESIGN)
+  // The design as the STYLE controls left it — presets, saved codes, the link.
+  // Branding is overlaid on top rather than edited in (see `withBranding`), so
+  // picking a different preset can't quietly drop the user's mark and turning
+  // branding off can't leave a half-recoloured code behind.
+  const [base, setBase] = useState<QrDesign>(DEFAULT_DESIGN)
+  const [branded, setBranded] = useState(false)
+  const [brandLogo, setBrandLogo] = useState<string | null>(null)
+  const [brandColor, setBrandColor] = useState<string | null>(null)
+  /** Set once the user edits the branding, pinning it against the org sync. */
+  const [brandTouched, setBrandTouched] = useState(false)
   const [presetName, setPresetName] = useState<string | null>('Rounded')
   const [preview, setPreview] = useState<string | null>(null)
   const [rendering, setRendering] = useState(false)
@@ -117,15 +130,36 @@ export default function QrDialog() {
   const [copied, setCopied] = useState<'idle' | 'ok' | 'fail'>('idle')
   const backupInputRef = useRef<HTMLInputElement>(null)
 
+  // The signed-in company's branding, ready to drop onto a code. Guests and
+  // orgs that never set one get nulls, and the panel says so.
+  const { org } = useOrg()
+  const orgBranding = useOrgBranding()
+  const [orgLogo, setOrgLogo] = useState<string | null>(null)
+  const orgColor = orgBranding.brand_color
+  // The square icon first — it is the 1:1 mark, and the centre of a QR is a
+  // square hole. A wide wordmark scaled to fit it would be unreadably small.
+  const orgMarkUrl = orgBranding.icon_url ?? orgBranding.logo_url
+
+  const design = useMemo(
+    () => withBranding(base, branded ? { logo: brandLogo, color: brandColor } : null),
+    [base, branded, brandLogo, brandColor]
+  )
   const data = design.data.trim()
   const issue = data ? qrContrastIssue(design) : null
+  // The brand colour was kept for the logo but refused by the code itself.
+  const colorRejected = !!brandColor && !isSafeQrAccent(brandColor, design.bgColor)
 
   // Fresh dialog every time, seeded with the app's default look and whatever
   // Universal QR has saved on this device.
   useEffect(() => {
     if (!open) return
-    setDesign({ ...DEFAULT_DESIGN, ...(QR_PRESETS.find((p) => p.name === 'Rounded')?.patch ?? {}) })
+    setBase({ ...DEFAULT_DESIGN, ...(QR_PRESETS.find((p) => p.name === 'Rounded')?.patch ?? {}) })
     setPresetName('Rounded')
+    // Branding starts OFF — a document gets the UNI·SIM mark until somebody
+    // asks for something else — but the fields behind the switch are seeded, so
+    // flipping it produces the company's own code rather than an empty panel.
+    setBranded(false)
+    setBrandTouched(false)
     setPreview(null)
     setError(null)
     setAdding(false)
@@ -133,6 +167,38 @@ export default function QrDialog() {
     setCopied('idle')
     setSaved(loadSavedQrDesigns())
   }, [open])
+
+  // Until the user edits the branding themselves it simply TRACKS the company's
+  // — which also covers the mark arriving a moment after the dialog opened,
+  // since it has to be fetched. The first edit pins it, so a late-resolving
+  // company logo can never overwrite a mark somebody just chose.
+  useEffect(() => {
+    if (!open || brandTouched) return
+    setBrandLogo(orgLogo)
+    setBrandColor(orgColor)
+  }, [open, brandTouched, orgLogo, orgColor])
+
+  // Pull the company mark into a data URI once, so nothing downstream — the
+  // preview, the placement render, the exported PDF — depends on that URL still
+  // resolving. A host with no CORS header taints the canvas and throws; that is
+  // simply "no mark available", not an error worth showing anyone.
+  useEffect(() => {
+    if (!orgMarkUrl) {
+      setOrgLogo(null)
+      return
+    }
+    let cancelled = false
+    imageUrlToDataUrl(orgMarkUrl)
+      .then((dataUrl) => {
+        if (!cancelled) setOrgLogo(dataUrl)
+      })
+      .catch(() => {
+        if (!cancelled) setOrgLogo(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [orgMarkUrl])
 
   // Escape closes the enlarged code first, not the whole dialog underneath it —
   // the modal has its own handler for that, and both listeners see the keypress.
@@ -180,17 +246,28 @@ export default function QrDialog() {
   if (!open) return null
 
   function applyPreset(preset: QrPreset) {
-    setDesign((d) => ({ ...d, ...preset.patch }))
+    setBase((d) => ({ ...d, ...preset.patch }))
     setPresetName(preset.name)
   }
 
-  // A saved design is restored whole — its own link, colours, plate and logo —
-  // so what lands on the page is the code the user designed next door, not an
-  // approximation of it.
-  function pickSaved(entry: SavedQrDesign) {
-    setDesign(entry.design)
+  /** Take a design in from elsewhere — a saved code or a backup file.
+   *
+   *  Restored whole, so what lands on the page is the code the user designed
+   *  next door rather than an approximation of it. Its logo comes in through
+   *  the branding switch instead of the base design: a design that already
+   *  carries a brand mark IS a branded design, so the switch flips on showing
+   *  that mark, and turning it off is how you take it back off again. Without
+   *  this the overlay would strip an imported logo on arrival. */
+  function adoptDesign(incoming: QrDesign) {
+    setBase(incoming)
     setPresetName(null)
     setError(null)
+    if (incoming.logoDataUrl) {
+      setBranded(true)
+      setBrandTouched(true)
+      setBrandLogo(incoming.logoDataUrl)
+      setBrandColor(incoming.matchCornerColor ? null : incoming.cornerColor)
+    }
   }
 
   async function onBackupFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -199,9 +276,7 @@ export default function QrDialog() {
     if (!file) return
     try {
       const { design: imported } = await readQrBackupFile(file)
-      setDesign(imported)
-      setPresetName(null)
-      setError(null)
+      adoptDesign(imported)
     } catch (err) {
       setError((err as Error).message)
     }
@@ -371,7 +446,7 @@ export default function QrDialog() {
                 id="qr-data"
                 autoFocus
                 value={design.data}
-                onChange={(e) => setDesign((d) => ({ ...d, data: e.target.value }))}
+                onChange={(e) => setBase((d) => ({ ...d, data: e.target.value }))}
                 placeholder="https://example.com"
                 className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
               />
@@ -404,15 +479,25 @@ export default function QrDialog() {
               </div>
             </div>
 
-            <label className="flex items-center gap-2 text-sm text-slate-600">
-              <input
-                type="checkbox"
-                checked={design.unisimMark}
-                onChange={(e) => setDesign((d) => ({ ...d, unisimMark: e.target.checked }))}
-                className="accent-orange-600"
-              />
-              UNI·SIM mark {design.logoDataUrl ? 'in the corner' : 'in the centre'}
-            </label>
+            <QrBrandingPanel
+              on={branded}
+              onToggle={setBranded}
+              logo={brandLogo}
+              onLogo={(v) => {
+                setBrandTouched(true)
+                setBrandLogo(v)
+              }}
+              color={brandColor}
+              onColor={(v) => {
+                setBrandTouched(true)
+                setBrandColor(v)
+              }}
+              orgName={org?.name ?? null}
+              orgLogo={orgLogo}
+              orgColor={orgColor}
+              colorRejected={branded && colorRejected}
+              onError={setError}
+            />
 
             {issue && (
               <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
@@ -448,7 +533,7 @@ export default function QrDialog() {
                 <button
                   key={entry.id}
                   type="button"
-                  onClick={() => pickSaved(entry)}
+                  onClick={() => adoptDesign(entry.design)}
                   title={`${entry.name || 'Saved code'} — ${entry.design.data}`}
                   className="shrink-0 w-20 border-2 border-slate-200 rounded-lg p-1.5 hover:border-orange-400 hover:bg-slate-50 transition-colors"
                 >

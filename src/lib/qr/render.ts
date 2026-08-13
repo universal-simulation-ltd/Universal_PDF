@@ -32,6 +32,38 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   })
 }
 
+/**
+ * Turn a remote image URL into a self-contained PNG data URI.
+ *
+ * Used to pull a tenant's company mark out of storage and into the design, so
+ * that from then on nothing — the live preview, the placement render, the
+ * exported PDF — depends on that URL still resolving.
+ *
+ * It goes through `<img>` + canvas rather than `fetch()` on purpose: the
+ * desktop builds serve the app from their own protocol, where a strict CSP
+ * refuses a cross-origin fetch, while loading an image is a permission those
+ * builds already grant. It also flattens an SVG mark into pixels, which is what
+ * qr-code-styling and the embedded PDF image both want.
+ *
+ * Rejects if the host serves no CORS header — the canvas is tainted and
+ * `toDataURL` throws. Callers treat that as "no company mark available".
+ */
+export async function imageUrlToDataUrl(src: string, max = 512): Promise<string> {
+  if (src.startsWith('data:')) return src
+  const img = await loadImage(src)
+  // An SVG with no intrinsic size reports 0×0; give it a square to draw into.
+  const w = img.naturalWidth || max
+  const h = img.naturalHeight || max
+  const scale = Math.min(1, max / Math.max(w, h))
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, Math.round(w * scale))
+  canvas.height = Math.max(1, Math.round(h * scale))
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('Canvas is not available in this browser.')
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+  return canvas.toDataURL('image/png')
+}
+
 /** The scale the code is drawn at — 1 unless decoration needs room. */
 function decorScaleOf(design: QrDesign): number {
   return design.decorStyle && design.decorStyle !== 'none' ? DECOR_CODE_SCALE : 1

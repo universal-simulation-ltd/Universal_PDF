@@ -352,6 +352,57 @@ function contrastRatio(a: string, b: string): number {
 /** The minimum module↔background ratio a decoder can rely on. */
 const MIN_QR_CONTRAST = 3
 
+/** Is `color` safe to draw PARTS OF THE CODE in against `bgColor`?
+ *
+ *  Used to decide whether a company's brand colour can take over the finder
+ *  eyes. A brand palette is chosen for headers and buttons, where a pale mint
+ *  or a bright yellow is perfectly good; the same colour on a finder eye is a
+ *  code that photographs badly or, if it is lighter than the background,
+ *  doesn't decode at all. When this says no the colour is still the tenant's
+ *  brand — it just stays out of the modules (see `withBranding`). */
+export function isSafeQrAccent(color: string, bgColor: string): boolean {
+  if (!/^#?[0-9a-f]{6}$/i.test(color.trim())) return false
+  return (
+    luminance(color) <= luminance(bgColor) - 0.02 &&
+    contrastRatio(color, bgColor) >= MIN_QR_CONTRAST
+  )
+}
+
+/** What "custom branding" means to a design: a mark, a colour, or both. */
+export interface QrBranding {
+  /** The company's square mark as a self-contained data URI. */
+  logo: string | null
+  /** The company's brand colour, `#rrggbb`. */
+  color: string | null
+}
+
+/** Overlay branding onto a design — or take it off again.
+ *
+ *  This is applied on top of whatever preset or saved design is selected rather
+ *  than being edited into it, so switching style keeps the branding and turning
+ *  branding off restores the style untouched. Two rules:
+ *
+ *  - The centre mark is one or the other, never both. With branding off the
+ *    code carries the UNI·SIM mark (the app's default); with branding on it
+ *    carries the tenant's, and ours steps aside rather than becoming a corner
+ *    stamp — someone who has deliberately put their own brand on a code being
+ *    printed on their own document did not ask for a second logo on it.
+ *  - The brand colour recolours the FINDER EYES only, and only when it can be
+ *    read (see `isSafeQrAccent`). The modules stay as the preset drew them:
+ *    they are the part a scanner has to resolve, and a brand colour is not
+ *    chosen against that constraint. */
+export function withBranding(design: QrDesign, branding: QrBranding | null): QrDesign {
+  if (!branding) return { ...design, logoDataUrl: null, unisimMark: true }
+  const accent =
+    branding.color && isSafeQrAccent(branding.color, design.bgColor) ? branding.color : null
+  return {
+    ...design,
+    logoDataUrl: branding.logo,
+    unisimMark: false,
+    ...(accent ? { matchCornerColor: false, cornerColor: accent } : {})
+  }
+}
+
 export type ContrastIssue =
   | { kind: 'inverted' }
   | { kind: 'low'; ratio: number; where: 'modules' | 'corners' }
