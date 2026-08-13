@@ -8,6 +8,18 @@
 //
 // The result is a *re-typeset* document, not a facsimile of the original's page
 // layout, and callers are expected to say so (see `IMPORT_NOTICE`).
+//
+// ⚠️ THIS STACK EXISTS TWICE IN THE SUITE. Universal Converter's Files tab
+// shipped its own document readers and a dependency-free PDF writer —
+// `src/lib/doc/*` and `src/lib/pdfcore.ts` — on 2026-08-13, the same afternoon
+// as this, from a parallel session neither could see. The ZIP reader, the XML
+// helpers, the OOXML/ODF walkers and the layout engine all overlap.
+//
+// They are not identical: that side also reads .doc, .rtf, .csv, .json, .txt,
+// .md and .html, embeds images, and writes without pdf-lib; this side refuses
+// .doc and .rtf. Consolidating them into @unisim/sdk is an open backlog item
+// ("Universal Converter" in backlog-unisim.md). Until it is done, A FIX HERE IS
+// A FIX TO NEITHER — check the twin.
 
 import { blocksToPdf, safeFilename } from './blockPdf'
 import { openZip, ZipError } from './unzip'
