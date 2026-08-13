@@ -82,6 +82,12 @@ export interface QrDesign {
   unisimMark: boolean
 }
 
+// ⚠️ This file is the QR STUDIO's design model — shapes, plates, decoration, a
+// user's own logo — and it stays here on purpose. If all you need is the house
+// code (ink modules, orange finder eyes, the mark in the centre, click to
+// enlarge), use @unisim/sdk's <UnisimQr> instead of adding another renderer;
+// this app's sign-on-phone code does exactly that. The defaults below are the
+// same measured arrangement the SDK ships, so the two agree by construction.
 export const DEFAULT_DESIGN: QrDesign = {
   name: '',
   // Empty, unlike Universal QR — which prefills its own address so a fresh

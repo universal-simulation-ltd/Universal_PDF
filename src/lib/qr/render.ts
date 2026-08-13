@@ -4,7 +4,7 @@
 // so the plate, the decoration and the corner stamp cannot drift apart from
 // each other the way two parallel render paths would. qr-code-styling is
 // browser-only and heavy, so it is imported lazily at call time to keep it out
-// of the main bundle (the same treatment ../brandedQr gives it).
+// of the main bundle (the same treatment @unisim/sdk's <UnisimQr> gives it).
 
 import {
   buildQrOptions,

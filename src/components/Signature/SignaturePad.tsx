@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Stage, Layer, Line } from 'react-konva'
 import type Konva from 'konva'
-import { useUniversal } from '@unisim/sdk'
+import { UnisimQr, useUniversal } from '@unisim/sdk'
 import { useSignatureStore, type SignatureExtras } from '../../stores/signatureStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { formatSigningDate } from '../../lib/signature'
 import { inkColorFor, renderInkSignature } from '../../lib/renderInk'
 import { composeSignatureWithLabels } from '../../lib/composeSignature'
 import type { SignatureData } from '../../types/annotations'
-import { brandedQrPngDataUrl } from '../../lib/brandedQr'
 import { importImageAsSignature } from '../../lib/imageSignature'
 import {
   mobileSignChannel,
@@ -83,7 +82,6 @@ export default function SignaturePad() {
   const [mode, setMode] = useState<'draw' | 'phone'>('draw')
   const [token, setToken] = useState(randomToken)
   const [pin, setPin] = useState(randomPin)
-  const [qrUrl, setQrUrl] = useState<string | null>(null)
   const [phoneStatus, setPhoneStatus] = useState<'waiting' | 'received'>('waiting')
 
   // Fresh token + PIN every time the pad opens, so a QR from an earlier
@@ -93,7 +91,6 @@ export default function SignaturePad() {
     setMode('draw')
     setToken(randomToken())
     setPin(randomPin())
-    setQrUrl(null)
     setPhoneStatus('waiting')
   }, [open])
 
@@ -119,11 +116,10 @@ export default function SignaturePad() {
     if (ann.requireName || ann.requireDate) setAdvancedOpen(true)
   }, [open, signingFieldId])
 
-  // While in phone mode: render the QR and listen for the phone's signature.
+  // While in phone mode: listen for the phone's signature. (The QR draws
+  // itself — see <UnisimQr> below.)
   useEffect(() => {
     if (!open || mode !== 'phone') return
-    brandedQrPngDataUrl(mobileSignUrl(token), 240).then(setQrUrl).catch(() => setQrUrl(null))
-
     const channel = supabase.channel(mobileSignChannel(token))
     channel
       .on('broadcast', { event: 'signature' }, (msg) => {
@@ -399,9 +395,23 @@ export default function SignaturePad() {
         )}
         {mode === 'phone' ? (
           <div className="flex flex-col items-center gap-3 py-2 text-center" style={{ width: padW }}>
-            {qrUrl
-              ? <img src={qrUrl} alt="Scan to sign on your phone" className="h-48 w-48 rounded-lg" />
-              : <div className="h-48 w-48 animate-pulse rounded-lg bg-slate-200" />}
+            {/* Click enlarges it — this dialog is a small window on a big
+                screen, and the code is being read by a camera held up to it. */}
+            <UnisimQr
+              value={mobileSignUrl(token)}
+              size={192}
+              label="signing on your phone"
+              className="rounded-lg"
+              lightbox={{
+                title: "Point your phone's camera at this code",
+                hint: (
+                  <>
+                    Then enter this PIN on your phone:
+                    <span className="mt-1 block text-2xl font-bold tracking-[0.3em] text-white">{pin}</span>
+                  </>
+                )
+              }}
+            />
             <p className="text-sm text-slate-600">Scan with your phone, then enter this PIN:</p>
             <p className="text-2xl font-bold tracking-[0.3em] text-slate-900">{pin}</p>
             <p className={`text-xs ${phoneStatus === 'received' ? 'text-green-600' : 'text-slate-400'}`}>
