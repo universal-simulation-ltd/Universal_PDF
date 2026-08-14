@@ -44,6 +44,7 @@ export default function BatchCompressModal({
   const [quality, setQuality] = useState<CompressQuality>(initialQuality)
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [filePct, setFilePct] = useState(0)
   const reqId = useRef(0)
 
   const totalOriginal = results.reduce((n, r) => n + r.originalSize, 0)
@@ -67,11 +68,15 @@ export default function BatchCompressModal({
     const id = ++reqId.current
     setBusy(true)
     setProgress(0)
+    setFilePct(0)
     try {
       const next: CompressResult[] = []
       for (let i = 0; i < files.length; i++) {
+        setFilePct(0)
         // Slice so pdfjs can detach without consuming our kept-around copy.
-        const r = await compressPdf(files[i].sourceBytes.slice(0), files[i].fileName, q)
+        const r = await compressPdf(files[i].sourceBytes.slice(0), files[i].fileName, q, (f) => {
+          if (id === reqId.current) setFilePct(f)
+        })
         if (id !== reqId.current) return
         next.push(r)
         setProgress(i + 1)
@@ -176,7 +181,7 @@ export default function BatchCompressModal({
             ].join(' ')}
           >
             {busy
-              ? `Compressing ${progress}/${files.length}…`
+              ? `Compressing ${Math.min(progress + 1, files.length)}/${files.length} — ${Math.round(filePct * 100)}%`
               : didShrink
                 ? `Saved ${formatSize(totalSaved)} (${pct.toFixed(1)}%) across ${files.length} files`
                 : noGainNote}

@@ -98,7 +98,15 @@ export default function LandingPage() {
       if (files.length === 1) {
         const buf = await files[0].arrayBuffer()
         // Slice so the kept-around source survives pdfjs detaching its copy.
-        const result = await compressPdf(buf.slice(0), files[0].name, DEFAULT_COMPRESS_QUALITY)
+        // The percentage is the page counter: rasterising a long scan is
+        // minutes of work, and a pill that just says "Compressing…" for all of
+        // it is indistinguishable from one that has crashed.
+        const result = await compressPdf(
+          buf.slice(0),
+          files[0].name,
+          DEFAULT_COMPRESS_QUALITY,
+          (f) => setCompressProgress(`Compressing… ${Math.round(f * 100)}%`)
+        )
         setCompressJob({ sourceBytes: buf, fileName: files[0].name, result })
         return
       }
@@ -108,7 +116,12 @@ export default function LandingPage() {
       for (let i = 0; i < files.length; i++) {
         setCompressProgress(`Compressing ${i + 1}/${files.length}…`)
         const buf = await files[i].arrayBuffer()
-        const result = await compressPdf(buf.slice(0), files[i].name, DEFAULT_COMPRESS_QUALITY)
+        const result = await compressPdf(
+          buf.slice(0),
+          files[i].name,
+          DEFAULT_COMPRESS_QUALITY,
+          (f) => setCompressProgress(`Compressing ${i + 1}/${files.length} — ${Math.round(f * 100)}%`)
+        )
         sources.push({ sourceBytes: buf, fileName: files[i].name })
         results.push(result)
       }
