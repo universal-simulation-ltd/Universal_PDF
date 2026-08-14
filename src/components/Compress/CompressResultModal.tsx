@@ -38,6 +38,7 @@ export default function CompressResultModal({
   const [result, setResult] = useState<CompressResult>(initialResult)
   const [quality, setQuality] = useState<CompressQuality>(initialResult.quality)
   const [busy, setBusy] = useState(false)
+  const [progressPct, setProgressPct] = useState(0)
   const reqId = useRef(0)
 
   const saved = result.originalSize - result.compressedSize
@@ -59,9 +60,12 @@ export default function CompressResultModal({
     setQuality(q)
     const id = ++reqId.current
     setBusy(true)
+    setProgressPct(0)
     try {
       // Slice so pdfjs can safely detach without consuming our kept-around copy.
-      const r = await compressPdf(sourceBytes.slice(0), fileName, q)
+      const r = await compressPdf(sourceBytes.slice(0), fileName, q, (f) => {
+        if (id === reqId.current) setProgressPct(f)
+      })
       if (id === reqId.current) setResult(r)
     } catch (err) {
       console.error(err)
@@ -152,7 +156,7 @@ export default function CompressResultModal({
             ].join(' ')}
           >
             {busy
-              ? 'Compressing…'
+              ? `Compressing… ${Math.round(progressPct * 100)}%`
               : didShrink
                 ? `Saved ${formatSize(saved)} (${pct.toFixed(1)}%)`
                 : noGainNote}

@@ -694,17 +694,27 @@ async function rasterizePageToJpeg(
   return new Uint8Array(await blob.arrayBuffer())
 }
 
+// A rasterised result this much smaller than the input is a landslide the
+// lossless pass cannot overturn: repacking removes structural slack, never
+// image data, so a third off is a good day for it and half is out of reach.
+// Below this ratio we skip the yardstick save entirely — see compressPdf.
+const LANDSLIDE_RATIO = 0.5
+
 export async function compressPdf(
   sourceBytes: ArrayBuffer,
   fileName: string,
-  quality: CompressQuality = 'light'
+  quality: CompressQuality = 'light',
+  onProgress: (fraction: number) => void = () => {}
 ): Promise<CompressResult> {
   const originalSize = sourceBytes.byteLength
   const outName = fileName.replace(/\.pdf$/i, '') + '-compressed.pdf'
+  onProgress(0.05)
 
   if (quality === 'light') {
     const pdf = await PDFDocument.load(sourceBytes, { updateMetadata: false })
+    onProgress(0.5)
     const bytes = await pdf.save({ useObjectStreams: true })
+    onProgress(1)
     return { bytes, originalSize, compressedSize: bytes.byteLength, fileName: outName, quality }
   }
 
@@ -715,20 +725,35 @@ export async function compressPdf(
   const pdfjsDoc = await pdfjsLib.getDocument({ data: sourceBytes.slice(0) }).promise
   const srcPdf = await PDFDocument.load(sourceBytes, { updateMetadata: false })
   const out = await PDFDocument.create()
-  for (let i = 0; i < srcPdf.getPageCount(); i++) {
+  const pageCount = srcPdf.getPageCount()
+  for (let i = 0; i < pageCount; i++) {
     const { width, height } = srcPdf.getPage(i).getSize()
     const imgBytes = await rasterizePageToJpeg(pdfjsDoc, i, renderScale, jpegQuality)
     const img = await out.embedJpg(imgBytes)
     const page = out.addPage([width, height])
     page.drawImage(img, { x: 0, y: 0, width, height })
+    // Rendering is nearly all the wall-clock, so the bar is the page counter.
+    onProgress(0.05 + ((i + 1) / pageCount) * 0.9)
   }
   const bytes = await out.save({ useObjectStreams: true })
   // ⚠️ Rasterising is only a win when there is something raster-shaped to win.
   // A text-only PDF turns 7 KB of glyphs into ~860 KB of JPEG — 100× bigger,
   // with the text no longer selectable. "1 Click Compress" must never hand back
-  // a bigger file than it was given, so measure the lossless pass and keep
-  // whichever is smaller. Same document either way; only the bytes differ.
+  // a bigger file than it was given, so the lossless pass is the yardstick and
+  // whichever is smaller wins. Same document either way; only the bytes differ.
+  //
+  // But that yardstick is the most expensive step in here — it serialises the
+  // whole source document a second time, which on a 45 MB scan means a second
+  // 45 MB buffer on top of the source, pdfjs's copy and the parsed doc. Big
+  // files were dying on it. So only pay for it when the lossless pass could
+  // plausibly win: a landslide raster result is already smaller than anything
+  // a repack could produce, and is returned without measuring.
+  if (bytes.byteLength < originalSize * LANDSLIDE_RATIO) {
+    onProgress(1)
+    return { bytes, originalSize, compressedSize: bytes.byteLength, fileName: outName, quality }
+  }
   const lossless = await srcPdf.save({ useObjectStreams: true })
+  onProgress(1)
   if (bytes.byteLength >= lossless.byteLength) {
     return {
       bytes: lossless,
