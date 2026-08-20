@@ -11,6 +11,35 @@ body {
   overscroll-behavior: none;
 }
 
+/* ---------- Form controls do not inherit a colour meant for something else ---
+
+   Tailwind's preflight gives `input`/`textarea`/`select` `color: inherit`, and
+   `inherit` here means the DOM parent, which is not always the thing the
+   control is sitting on. Every dialog in this app is rendered from inside the
+   toolbar — `ToolbarDesktopActions` renders `<ExportModal>`, and the toolbar
+   lives in a `bg-slate-900 text-white` bar. `position: fixed` moves the panel
+   out of the bar visually but NOT out of it in the DOM, so a control that named
+   no colour of its own inherited white and was drawn white-on-white. That is
+   exactly what the Export dialog's "Type REDACT to confirm" box did: you typed
+   the word that unlocks a destructive, irreversible action and saw nothing
+   (reported by James; reproduced at a contrast ratio of 1.00, fixed 2026-08-20).
+
+   Every other element in those panels escaped only because it happened to name
+   a `text-*` class; eighteen text-entry controls did not. So the default is set
+   once, here, rather than by remembering a class on each new input forever.
+
+   ⚠️ It MUST be in `@layer base`. Tailwind v4 puts utilities in a layer, and an
+   unlayered rule outranks every layered one — a bare `input { color: … }` would
+   beat `.text-white` and `.text-slate-700` and silently repaint the controls
+   that DO get this right. Inside `base`, any explicit `text-*` still wins. */
+@layer base {
+  input,
+  textarea,
+  select {
+    color: var(--color-slate-900);
+  }
+}
+
 /* ---------- Landing PDF illustration ----------
 
    The whole picture is ONE timeline: `--t`, 0 (a plain unsigned document) to 1

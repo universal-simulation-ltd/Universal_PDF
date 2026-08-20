@@ -31,20 +31,42 @@ const PLAYWRIGHT_CANDIDATES = [
   '../../Universal_Beam/node_modules/playwright/index.js',
   '../../Universal_Exports/node_modules/playwright/index.js',
   '../../Universal_Video/node_modules/playwright/index.js',
+  '../../../UNI_SIM_Assess/Ergo_Assess/frontend/node_modules/playwright/index.js',
   '../node_modules/playwright/index.js'
 ]
 
+// ⚠️ IMPORTING a candidate is not the same as being able to USE it, and the
+// difference is the whole reason this loop launches rather than resolves.
+// Playwright pins an exact browser revision, so a sibling whose package
+// imports perfectly can still be paired with a revision that was never
+// downloaded on this machine — on the Mac, 2026-08-20, Universal_Exports
+// (1.60.0, wants chromium 1223) imported fine and then died on `.launch()`
+// with "Executable doesn't exist", while a newer sibling had 1228 sitting
+// right there. The first-that-imports rule picked the broken one every time
+// and the repo's only test suite could not run at all.
 async function loadPlaywright() {
+  const problems = []
   for (const rel of PLAYWRIGHT_CANDIDATES) {
+    let mod
     try {
-      return (await import(pathToFileURL(join(HERE, rel)).href)).default
+      mod = (await import(pathToFileURL(join(HERE, rel)).href)).default
     } catch {
-      /* try the next one */
+      continue // not installed here
+    }
+    try {
+      // Prove the browser binary exists before committing to this candidate.
+      const probe = await mod.chromium.launch()
+      await probe.close()
+      return mod
+    } catch (err) {
+      problems.push(`  ${rel}\n    ${String(err).split('\n')[0]}`)
     }
   }
   console.error(
-    'Playwright not found. Install it in a sibling Universal app (e.g. Universal_Beam),\n' +
-      'or run: npm i -D playwright && npx playwright install chromium'
+    'No usable Playwright found. Candidates that imported but could not launch:\n' +
+      (problems.join('\n') || '  (none imported at all)') +
+      '\n\nInstall it in a sibling Universal app (e.g. Universal_Beam), or run:\n' +
+      '  npm i -D playwright && npx playwright install chromium'
   )
   process.exit(2)
 }
