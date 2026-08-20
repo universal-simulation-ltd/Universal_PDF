@@ -1,29 +1,29 @@
 // Turn a Word or OpenDocument file into a PDF, on-device, so it can be opened
 // in the viewer like any other document.
 //
-// This is the front door for both importers: it works out which format is
-// actually in hand, hands the archive to the right parser, and lays the result
-// out with the same engine `markdownToPdf.ts` uses. The parsers are imported
-// dynamically — someone who only ever opens PDFs never downloads either.
+// The reading and the layout both come from `@unisim/doc` now. What is left
+// here is the part that is this app's own: deciding what it will accept, saying
+// something useful about what it will not, sniffing the package so a
+// mislabelled file still works, and naming the result.
 //
 // The result is a *re-typeset* document, not a facsimile of the original's page
 // layout, and callers are expected to say so (see `IMPORT_NOTICE`).
 //
-// ⚠️ THIS STACK EXISTS TWICE IN THE SUITE. Universal Converter's Files tab
-// shipped its own document readers and a dependency-free PDF writer —
-// `src/lib/doc/*` and `src/lib/pdfcore.ts` — on 2026-08-13, the same afternoon
-// as this, from a parallel session neither could see. The ZIP reader, the XML
-// helpers, the OOXML/ODF walkers and the layout engine all overlap.
+// ✅ THE STACK NO LONGER EXISTS TWICE. It did until 2026-08-20: Universal
+// Converter's Files tab shipped its own readers and a dependency-free PDF
+// writer on 2026-08-13, the same afternoon as this side, from a parallel
+// session neither could see — a ZIP reader, XML helpers, OOXML/ODF walkers and
+// a layout engine, all overlapping, with a header on each file saying "a fix
+// here is a fix to neither". Both now use `@unisim/doc`, which is Converter's
+// version plus this side's `pagesetup`.
 //
-// They are not identical: that side also reads .doc, .rtf, .csv, .json, .txt,
-// .md and .html, embeds images, and writes without pdf-lib; this side refuses
-// .doc and .rtf. Consolidating them into @unisim/sdk is an open backlog item
-// ("Universal Converter" in backlog-unisim.md). Until it is done, A FIX HERE IS
-// A FIX TO NEITHER — check the twin.
+// ⚠️ One consequence worth knowing: the package READS `.doc` and `.rtf`, which
+// this app still refuses by name below. That refusal is now a product choice
+// rather than a limitation, and turning it into support is a few lines. It was
+// deliberately NOT changed in the same commit as the extraction, so the
+// refactor stayed behaviour-preserving and the existing suite could prove it.
 
-import { blocksToPdf, safeFilename } from './blockPdf'
-import { openZip, ZipError } from './unzip'
-import { OfficeParseError } from './officeXml'
+import { DEFAULT_PDF_SETTINGS, ZipArchive, docToPdf, readDocx, readOdt } from '@unisim/doc'
 
 export type OfficeFormat = 'docx' | 'odt'
 
@@ -107,9 +107,9 @@ export async function convertOfficeFile(file: File): Promise<OfficeConversion> {
   }
 
   try {
-    const zip = await openZip(data)
     // Sniff the package rather than trusting the extension: a .docx renamed
     // .odt (or saved by a tool that guessed) is otherwise a confusing failure.
+    const zip = await ZipArchive.open(data)
     const format: OfficeFormat = zip.has('word/document.xml')
       ? 'docx'
       : zip.has('content.xml')
@@ -120,31 +120,36 @@ export async function convertOfficeFile(file: File): Promise<OfficeConversion> {
             )
           })()
 
-    const { blocks, title } =
-      format === 'docx'
-        ? await (await import('./docxToBlocks')).docxToBlocks(zip)
-        : await (await import('./odtToBlocks')).odtToBlocks(zip)
+    // Read through the format we SNIFFED, not the one the name claims — which
+    // is why these are called directly rather than through the package's
+    // `convertDocument`, whose reader is chosen by extension.
+    const doc = format === 'docx' ? await readDocx(file) : await readOdt(file)
 
-    if (blocks.length === 0) {
+    if (doc.blocks.length === 0) {
       throw new OfficeImportError('That document appears to be empty — there was no text to convert.')
     }
 
-    const docTitle = title || baseName(file.name)
-    const bytes = await blocksToPdf(blocks, { title: docTitle })
-    const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' })
+    // The PDF's /Title comes off the document model, not the settings — so a
+    // file whose own metadata has no title gets one from its filename rather
+    // than an empty property.
+    const result = await docToPdf(
+      { ...doc, title: doc.title || baseName(file.name) },
+      DEFAULT_PDF_SETTINGS,
+    )
     // Named from the *file*, not the document's own title: someone who converts
     // "Site survey.docx" is looking for "Site survey.pdf" afterwards.
     const pdfName = `${safeFilename(baseName(file.name))}.pdf`
     return {
-      file: new File([blob], pdfName, { type: 'application/pdf' }),
+      file: new File([result.blob], pdfName, { type: 'application/pdf' }),
       sourceName: file.name,
       format
     }
   } catch (err) {
     if (err instanceof OfficeImportError) throw err
-    // The ZIP reader and XML parser both write messages meant for the user;
-    // anything else is a genuine surprise and shouldn't be dressed up as advice.
-    if (err instanceof ZipError || err instanceof OfficeParseError) {
+    // The readers write messages meant for the user (a .doc renamed .docx says
+    // so in as many words); anything else is a genuine surprise and should not
+    // be dressed up as advice.
+    if (err instanceof Error && /\bisn’t\b|\bdamaged\b|\bmalformed\b|\bempty\b/.test(err.message)) {
       throw new OfficeImportError(err.message)
     }
     console.error('Office import failed', err)
@@ -152,6 +157,18 @@ export async function convertOfficeFile(file: File): Promise<OfficeConversion> {
       `Could not convert ${file.name}. It may be password-protected or damaged.`
     )
   }
+}
+
+/**
+ * Trim an arbitrary title down to something safe to use as a file name.
+ *
+ * Stays in the app rather than moving to `@unisim/doc` with everything else:
+ * naming is deliberately not the package's business (its `convertDocument`
+ * returns an extension, not a filename), and this app's rules are its own.
+ */
+function safeFilename(s: string): string {
+  const cleaned = s.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim()
+  return (cleaned || 'document').slice(0, 80)
 }
 
 /** The notice to show once a converted document is on screen. */

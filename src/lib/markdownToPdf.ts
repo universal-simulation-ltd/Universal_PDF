@@ -1,169 +1,59 @@
-// Markdown → the shared block model in `blockPdf.ts`, which does the laying
-// out. This file is the *parser* half only: everything about fonts, wrapping,
-// pagination and the house look lives next door, so a Word or ODF import gets
-// exactly the same treatment (see `officeToPdf.ts`).
+// Markdown → PDF, for the "Transform text into a PDF" panel.
+//
+// The parser and the layout engine both live in `@unisim/doc` now; what is left
+// here is this app's own entry point — guessing a title from the text, and
+// naming the file. See `officeToPdf.ts` for why the stack moved.
+//
+// ⚠️ `readMarkdown` takes a `File`, because every reader in that package does —
+// it is built for a converter, where a document arrives as a file. This panel
+// has a string, so it wraps one. That is a real (small) cost of sharing one
+// stack, and it is a great deal cheaper than a second Markdown parser.
 
 import {
-  blocksToPdf,
-  safeFilename,
-  sanitize,
-  type Block,
-  type BuildOptions,
-  type ListItem,
+  DEFAULT_PDF_SETTINGS,
+  docToPdf,
+  readMarkdown,
   type Orientation,
   type PaperSize,
-  type Run
-} from './blockPdf'
+} from '@unisim/doc'
 
-export type { BuildOptions, Orientation, PaperSize }
+export type { Orientation, PaperSize }
 
-// ---- Inline parser --------------------------------------------------------
-function parseInline(text: string): Run[] {
-  const runs: Run[] = []
-  const RE = /(\*\*[^*\n]+\*\*|__[^_\n]+__|\*[^*\n]+\*|_[^_\n]+_|`[^`\n]+`|\[[^\]\n]+\]\([^)\n]+\))/g
-  let last = 0
-  let m: RegExpExecArray | null
-  while ((m = RE.exec(text)) !== null) {
-    if (m.index > last) runs.push({ text: text.slice(last, m.index) })
-    const tok = m[0]
-    if (tok.startsWith('**') || tok.startsWith('__')) {
-      runs.push({ text: tok.slice(2, -2), bold: true })
-    } else if (tok[0] === '*' || tok[0] === '_') {
-      runs.push({ text: tok.slice(1, -1), italic: true })
-    } else if (tok[0] === '`') {
-      runs.push({ text: tok.slice(1, -1), code: true })
-    } else {
-      const lm = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(tok)
-      if (lm) runs.push({ text: lm[1], link: lm[2] })
-    }
-    last = m.index + tok.length
-  }
-  if (last < text.length) runs.push({ text: text.slice(last) })
-  return runs.length ? runs : [{ text }]
+export interface BuildOptions {
+  title?: string
+  paperSize?: PaperSize
+  /**
+   * Which way round the paper starts. Defaults to portrait.
+   *
+   * Only the STARTING orientation — a document that carries its own page setup
+   * (anything imported from Word or ODF) overrides it, because that file
+   * already knows which of its pages are landscape and this setting does not.
+   */
+  orientation?: Orientation
+  showPageNumbers?: boolean
 }
 
-function parseTableRow(line: string): Run[][] {
-  const trimmed = line.trim().replace(/^\|/, '').replace(/\|$/, '')
-  return trimmed.split('|').map((c) => parseInline(c.trim()))
-}
-
-// ---- Block parser ---------------------------------------------------------
-function isBlockStart(line: string): boolean {
-  if (!line.trim()) return false
-  if (/^#{1,6}\s/.test(line)) return true
-  if (line.startsWith('```')) return true
-  if (line.startsWith('>')) return true
-  if (/^[-*]\s+/.test(line)) return true
-  if (/^\d+\.\s+/.test(line)) return true
-  if (/^(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) return true
-  if (line.startsWith('|')) return true
-  return false
-}
-
-function parseMarkdown(src: string): Block[] {
-  const lines = src.replace(/\r\n?/g, '\n').split('\n')
-  const blocks: Block[] = []
-  let i = 0
-  while (i < lines.length) {
-    const line = lines[i]
-    if (!line.trim()) { i++; continue }
-
-    if (line.startsWith('```')) {
-      i++
-      const buf: string[] = []
-      while (i < lines.length && !lines[i].startsWith('```')) {
-        buf.push(lines[i])
-        i++
-      }
-      if (i < lines.length) i++
-      blocks.push({ kind: 'code', text: buf.join('\n') })
-      continue
-    }
-
-    const h = /^(#{1,3})\s+(.*)$/.exec(line)
-    if (h) {
-      const kind = (['h1', 'h2', 'h3'] as const)[h[1].length - 1]
-      blocks.push({ kind, runs: parseInline(h[2]) })
-      i++
-      continue
-    }
-
-    if (/^(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
-      blocks.push({ kind: 'hr' })
-      i++
-      continue
-    }
-
-    if (line.startsWith('|') && i + 1 < lines.length && /^\s*\|?\s*:?-+/.test(lines[i + 1])) {
-      const header = parseTableRow(line)
-      i += 2
-      const rows: Run[][][] = []
-      while (i < lines.length && lines[i].startsWith('|')) {
-        rows.push(parseTableRow(lines[i]))
-        i++
-      }
-      blocks.push({ kind: 'table', header, rows })
-      continue
-    }
-
-    if (line.startsWith('>')) {
-      const buf: string[] = []
-      while (i < lines.length && lines[i].startsWith('>')) {
-        buf.push(lines[i].replace(/^>\s?/, ''))
-        i++
-      }
-      blocks.push({ kind: 'quote', runs: parseInline(buf.join(' ')) })
-      continue
-    }
-
-    if (/^[-*]\s+/.test(line)) {
-      const items: ListItem[] = []
-      while (i < lines.length && /^[-*]\s+/.test(lines[i])) {
-        items.push({ runs: parseInline(lines[i].replace(/^[-*]\s+/, '')) })
-        i++
-      }
-      blocks.push({ kind: 'ul', items })
-      continue
-    }
-
-    if (/^\d+\.\s+/.test(line)) {
-      const items: ListItem[] = []
-      while (i < lines.length && /^\d+\.\s+/.test(lines[i])) {
-        items.push({ runs: parseInline(lines[i].replace(/^\d+\.\s+/, '')) })
-        i++
-      }
-      blocks.push({ kind: 'ol', items })
-      continue
-    }
-
-    const buf: string[] = [line]
-    i++
-    while (i < lines.length && lines[i].trim() && !isBlockStart(lines[i])) {
-      buf.push(lines[i])
-      i++
-    }
-    blocks.push({ kind: 'p', runs: parseInline(buf.join(' ')) })
-  }
-  return blocks
-}
-
-// ---- Entry points ---------------------------------------------------------
-export async function markdownToPdf(text: string, options: BuildOptions = {}): Promise<Uint8Array> {
-  // Clean the source *before* parsing, not just before drawing: pasted bullet
-  // glyphs become the `*` that makes them a list, and a stray em dash becomes a
-  // hyphen rather than a `?`.
-  const sanitized = sanitize(text, { markdownGlyphs: true })
-  return blocksToPdf(parseMarkdown(sanitized), options)
+export async function markdownToPdf(text: string, options: BuildOptions = {}): Promise<Blob> {
+  const doc = await readMarkdown(new File([text], 'document.md', { type: 'text/markdown' }))
+  const result = await docToPdf(
+    { ...doc, title: options.title || doc.title },
+    {
+      ...DEFAULT_PDF_SETTINGS,
+      paper: options.paperSize ?? DEFAULT_PDF_SETTINGS.paper,
+      orientation: options.orientation ?? 'portrait',
+      pageNumbers: options.showPageNumbers !== false,
+    },
+  )
+  return result.blob
 }
 
 export async function markdownToPdfFile(text: string, options: BuildOptions = {}): Promise<File> {
   const title = options.title || guessTitle(text) || 'document'
-  const bytes = await markdownToPdf(text, { ...options, title })
-  const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' })
-  const name = `${safeFilename(title)}.pdf`
-  return new File([blob], name, { type: 'application/pdf' })
+  const blob = await markdownToPdf(text, { ...options, title })
+  return new File([blob], `${safeFilename(title)}.pdf`, { type: 'application/pdf' })
 }
 
+/** The document's own first heading, or its first line, as a title. */
 function guessTitle(text: string): string {
   for (const raw of text.split('\n')) {
     const line = raw.trim()
@@ -173,4 +63,16 @@ function guessTitle(text: string): string {
   }
   const first = text.split('\n').map((l) => l.trim()).find((l) => l.length > 0)
   return (first ?? '').slice(0, 60)
+}
+
+/**
+ * Trim an arbitrary title down to something safe to use as a file name.
+ *
+ * Stays in the app rather than moving to `@unisim/doc`: naming is deliberately
+ * not that package's business — its `convertDocument` returns an extension, not
+ * a filename — and this app's rules are its own.
+ */
+function safeFilename(s: string): string {
+  const cleaned = s.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim()
+  return (cleaned || 'document').slice(0, 80)
 }

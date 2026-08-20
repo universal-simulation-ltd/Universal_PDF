@@ -116,12 +116,18 @@ for (const name of ['rich.docx', 'rich.odt']) {
       const arr = new Uint8Array(bin.length)
       for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i)
 
-      const { openZip } = await import('/src/lib/unzip.ts')
-      const zip = await openZip(arr.buffer)
-      const parser = name.endsWith('.odt')
-        ? (await import('/src/lib/odtToBlocks.ts')).odtToBlocks
-        : (await import('/src/lib/docxToBlocks.ts')).docxToBlocks
-      const { blocks, title } = await parser(zip)
+      // The readers moved to @unisim/doc on 2026-08-20 and take a File rather
+      // than an opened archive. The block SHAPE assertions below are unchanged
+      // and are what proves the extraction preserved behaviour — the kind names
+      // differ from the old local model ('heading'/'paragraph'/'list'/'rule'
+      // rather than 'h1'/'p'/'ul'/'hr'), so the shape mapper below translates.
+      // ⚠️ The served path, not the bare specifier. `page.evaluate` runs in the
+      // browser, which has no bundler resolution — `import('@unisim/doc')`
+      // fails with "Failed to resolve module specifier". Vite serves anything
+      // under the project root, and node_modules is under it.
+      const { readDocx, readOdt } = await import('/node_modules/@unisim/doc/dist/index.js')
+      const read = name.endsWith('.odt') ? readOdt : readDocx
+      const { blocks, title } = await read(new File([arr], name))
 
       const { convertOfficeFile } = await import('/src/lib/officeToPdf.ts')
       const conversion = await convertOfficeFile(new File([arr], name))
@@ -141,13 +147,26 @@ for (const name of ['rich.docx', 'rich.odt']) {
         pdfName: conversion.file.name,
         // A compact, comparable shape — enough to tell the two parsers apart if
         // they ever stop agreeing, without pinning down every run.
-        shape: blocks.map((b) =>
-          b.kind === 'table'
-            ? `table(${b.header.length}x${b.rows.length + 1})`
-            : b.kind === 'ul' || b.kind === 'ol'
-              ? `${b.kind}[${b.items.map((i) => i.level ?? 0).join('')}]`
-              : b.kind
-        ),
+        // ⚠️ Translated back to the OLD kind names on purpose. Every assertion
+        // below is the one that was written against the app's own model before
+        // the extraction, so leaving them untouched is what makes this suite
+        // evidence that @unisim/doc behaves the same rather than merely
+        // evidence that it behaves.
+        shape: blocks
+          .filter((b) => b.kind !== 'pagesetup')
+          .map((b) =>
+            b.kind === 'table'
+              ? `table(${(b.header ?? []).length}x${b.rows.length + 1})`
+              : b.kind === 'list'
+                ? `${b.ordered ? 'ol' : 'ul'}[${b.items.map((i) => i.level ?? 0).join('')}]`
+                : b.kind === 'heading'
+                  ? `h${b.level}`
+                  : b.kind === 'paragraph'
+                    ? 'p'
+                    : b.kind === 'rule'
+                      ? 'hr'
+                      : b.kind
+          ),
         // Each word and each space is its own PDF text item; collapse them.
         text: text.replace(/\s+/g, ' '),
         links: [...new Set(links)]
