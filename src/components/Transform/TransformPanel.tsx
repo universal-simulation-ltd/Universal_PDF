@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { usePdfStore } from '../../stores/pdfStore'
-import { markdownToPdfFile } from '../../lib/markdownToPdf'
+import { markdownToPdfFile, type Orientation } from '../../lib/markdownToPdf'
 
 interface Props {
   open: boolean
@@ -43,6 +43,10 @@ export default function TransformPanel({ open, onClose }: Props) {
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const [dragOver, setDragOver] = useState(false)
+  // Deliberately NOT remembered between openings. Landscape is the exception,
+  // not a preference — someone who built one wide table last week should not
+  // find their next document sideways without having asked for it.
+  const [orientation, setOrientation] = useState<Orientation>('portrait')
   const loadFile = usePdfStore((s) => s.loadFile)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -72,7 +76,7 @@ export default function TransformPanel({ open, onClose }: Props) {
     if (!text.trim() || busy) return
     setBusy(true)
     try {
-      const file = await markdownToPdfFile(text)
+      const file = await markdownToPdfFile(text, { orientation })
       await loadFile(file)
       onClose()
     } catch (err) {
@@ -177,24 +181,46 @@ export default function TransformPanel({ open, onClose }: Props) {
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-3 border-t border-slate-200 bg-slate-50">
-          <div className="flex items-center gap-3 text-xs text-slate-500">
+          {/* Every item is nowrap and the hints drop out one at a time as the row
+              narrows, so the two things you can actually PRESS — Load sample and
+              the orientation control — never wrap or collide. Adding the
+              orientation control without this pushed "Load sample" onto two
+              lines at 1280px. */}
+          <div className="flex items-center gap-3 text-xs text-slate-500 min-w-0">
             <button
               type="button"
               onClick={loadSample}
-              className="text-slate-600 hover:text-orange-700 underline-offset-2 hover:underline"
+              className="shrink-0 whitespace-nowrap text-slate-600 hover:text-orange-700 underline-offset-2 hover:underline"
             >
               Load sample
             </button>
-            <span aria-hidden="true">·</span>
-            <span className="hidden sm:inline">Drag a .md / .txt file to load</span>
-            <span aria-hidden="true" className="hidden sm:inline">·</span>
-            <span className="hidden md:inline text-slate-400">⌘/Ctrl + Enter to build</span>
+            <span aria-hidden="true" className="shrink-0">·</span>
+            {/* Orientation lives in the quiet row with "Load sample" rather than
+                beside the Build button, because almost nobody wants it and a
+                control given prominence is a question every user has to answer.
+                Portrait is preselected, so ignoring it entirely is correct. */}
+            <label className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+              <span className="text-slate-500">Page</span>
+              <select
+                value={orientation}
+                onChange={(e) => setOrientation(e.target.value as Orientation)}
+                aria-label="Page orientation"
+                className="bg-transparent text-slate-600 hover:text-orange-700 border border-transparent hover:border-slate-300 rounded px-1 py-0.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-orange-500"
+              >
+                <option value="portrait">Portrait</option>
+                <option value="landscape">Landscape</option>
+              </select>
+            </label>
+            <span aria-hidden="true" className="hidden lg:inline shrink-0">·</span>
+            <span className="hidden lg:inline whitespace-nowrap">Drag a .md / .txt file to load</span>
+            <span aria-hidden="true" className="hidden xl:inline shrink-0">·</span>
+            <span className="hidden xl:inline whitespace-nowrap text-slate-400">⌘/Ctrl + Enter to build</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-200 rounded-lg transition-colors"
+              className="px-3 py-1.5 text-sm whitespace-nowrap text-slate-700 hover:bg-slate-200 rounded-lg transition-colors"
             >
               Cancel
             </button>
@@ -202,7 +228,7 @@ export default function TransformPanel({ open, onClose }: Props) {
               type="button"
               onClick={build}
               disabled={busy || !text.trim()}
-              className="px-4 py-1.5 text-sm font-medium text-white bg-orange-700 hover:bg-orange-800 rounded-lg shadow-sm disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-1.5 text-sm font-medium whitespace-nowrap text-white bg-orange-700 hover:bg-orange-800 rounded-lg shadow-sm disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
             >
               {busy ? 'Building…' : 'Build PDF'}
             </button>

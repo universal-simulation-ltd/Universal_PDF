@@ -10,11 +10,12 @@ import {
   type Block,
   type BuildOptions,
   type ListItem,
+  type Orientation,
   type PaperSize,
   type Run
 } from './blockPdf'
 
-export type { BuildOptions, PaperSize }
+export type { BuildOptions, Orientation, PaperSize }
 
 // ---- Inline parser --------------------------------------------------------
 function parseInline(text: string): Run[] {

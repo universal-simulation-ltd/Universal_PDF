@@ -190,6 +190,96 @@ for (const name of ['rich.docx', 'rich.odt']) {
 console.log('\nboth formats')
 check('the two parsers agree on structure', shapes['rich.docx'] === shapes['rich.odt'], `${shapes['rich.docx']} vs ${shapes['rich.odt']}`)
 
+// ---- Page orientation -----------------------------------------------------
+//
+// James: "I imported a .doc file that had one page landscape and the rest
+// portrait, I would like to preserve that."
+//
+// ⚠️ Asserted on the PAGE SIZES OF THE FINISHED PDF, not on the blocks the
+// parser produced. Those are two different claims: the parser can emit a
+// perfect `pagesetup` and the renderer still put it on the wrong page, or
+// leave a blank sheet in front of it. Only the sizes pdf.js reads back are
+// what the user actually gets — the same reason the Converter's naming tests
+// assert `download.suggestedFilename()` rather than the store's computed name.
+//
+// Three fixtures carry the same three sections (portrait, landscape, portrait)
+// said three different ways: hand-written OOXML, the same file re-saved by
+// LibreOffice (which drops `w:orient` from the portrait sections entirely and
+// writes it FIRST on the landscape one), and ODF, which does not have sections
+// at all and expresses the change through master pages instead.
+//
+// ⚠️ These three do NOT discriminate between reading `w:orient` and reading the
+// measurements — checked, 2026-08-20, by rewriting the parser to believe the
+// label and watching all of them stay green. `orientation-contradictory.docx`
+// below is the fixture that actually pins that rule down.
+console.log('\npage orientation')
+for (const name of ['orientation.docx', 'orientation-libre.docx', 'orientation.odt']) {
+  const b64 = readFileSync(join(HERE, 'fixtures', name)).toString('base64')
+  const out = await page.evaluate(async ({ b64, name }) => {
+    const bin = atob(b64)
+    const arr = new Uint8Array(bin.length)
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i)
+    const { convertOfficeFile } = await import('/src/lib/officeToPdf.ts')
+    const conversion = await convertOfficeFile(new File([arr], name))
+    const { loadPdf } = await import('/src/lib/pdfjs.ts')
+    const doc = await loadPdf(new Uint8Array(await conversion.file.arrayBuffer())).promise
+    const pages = []
+    for (let p = 1; p <= doc.numPages; p++) {
+      const vp = (await doc.getPage(p)).getViewport({ scale: 1 })
+      const text = (await (await doc.getPage(p)).getTextContent()).items.map((i) => i.str).join(' ')
+      pages.push({
+        w: Math.round(vp.width),
+        h: Math.round(vp.height),
+        landscape: vp.width > vp.height,
+        text: text.replace(/\s+/g, ' ').trim()
+      })
+    }
+    return pages
+  }, { b64, name })
+
+  const shape = out.map((p) => `${p.landscape ? 'L' : 'P'}${p.w}x${p.h}`).join(' ')
+  check(`${name}: three pages, one per section`, out.length === 3, shape)
+  check(`${name}: portrait, landscape, portrait`,
+    out.length === 3 && !out[0].landscape && out[1].landscape && !out[2].landscape, shape)
+  // A4 at 595 x 842 pt. Not just "wider than tall" — a renderer that swapped in
+  // some other paper would still satisfy that.
+  check(`${name}: the landscape page is A4 on its side (842 x 595)`,
+    out[1] && Math.abs(out[1].w - 842) <= 2 && Math.abs(out[1].h - 595) <= 2,
+    out[1] && `${out[1].w} x ${out[1].h}`)
+  check(`${name}: the portrait pages are upright A4 (595 x 842)`,
+    out[0] && Math.abs(out[0].w - 595) <= 2 && Math.abs(out[0].h - 842) <= 2,
+    out[0] && `${out[0].w} x ${out[0].h}`)
+  // The blank-leading-page trap: a document that OPENS on a changed size must
+  // resize its first page, not add one.
+  check(`${name}: no blank page in front`, out[0] && /SECTION ONE/.test(out[0].text), out[0] && out[0].text.slice(0, 40))
+  check(`${name}: the landscape page carries the landscape section's text`,
+    out[1] && /SECTION TWO/.test(out[1].text) && !/SECTION ONE/.test(out[1].text),
+    out[1] && out[1].text.slice(0, 40))
+  check(`${name}: the last page is back to section three`,
+    out[2] && /SECTION THREE/.test(out[2].text), out[2] && out[2].text.slice(0, 40))
+}
+
+// A section whose label and measurements disagree. The rule — the label decides
+// which way round, the measurements decide the paper — is arbitrary enough that
+// it needs to be written down somewhere that fails when someone changes it.
+const contradictory = await page.evaluate(async ({ b64 }) => {
+  const bin = atob(b64)
+  const arr = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i)
+  const { convertOfficeFile } = await import('/src/lib/officeToPdf.ts')
+  const conversion = await convertOfficeFile(new File([arr], 'orientation-contradictory.docx'))
+  const { loadPdf } = await import('/src/lib/pdfjs.ts')
+  const doc = await loadPdf(new Uint8Array(await conversion.file.arrayBuffer())).promise
+  const vp = (await doc.getPage(1)).getViewport({ scale: 1 })
+  return { w: Math.round(vp.width), h: Math.round(vp.height) }
+}, { b64: readFileSync(join(HERE, 'fixtures', 'orientation-contradictory.docx')).toString('base64') })
+
+check(
+  'a section whose w:orient contradicts its w/h follows the LABEL (842 x 595)',
+  Math.abs(contradictory.w - 842) <= 2 && Math.abs(contradictory.h - 595) <= 2,
+  `${contradictory.w} x ${contradictory.h}`
+)
+
 // A .doc is not a .docx, and the refusal has to say something useful.
 const legacy = await page.evaluate(async () => {
   const bytes = new Uint8Array(520)

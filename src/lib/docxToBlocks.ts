@@ -353,6 +353,89 @@ function readTable(tbl: Element, styles: Map<string, StyleInfo>, rels: Map<strin
 }
 
 // ---- Body -----------------------------------------------------------------
+// ---- Section page setup ---------------------------------------------------
+//
+// Word models orientation per SECTION, not per page, and it stores the section
+// break in a peculiar place: `w:sectPr` sits inside the `w:pPr` of the LAST
+// paragraph of the section it describes, while the final section's properties
+// hang off the end of `w:body`. So the setup for the section you are currently
+// reading is always the NEXT `sectPr` you will meet, and the body-level one is
+// the setup for whatever is left over.
+//
+// ⚠️ Sizes are in twentieths of a point (twips), not points — 11906 twips is
+// A4's 595.3pt, not a page a hundred and sixty feet wide.
+//
+// `w:orient` is advisory and Word writes it alongside already-swapped w/h. We
+// trust w/h and use `orient` only to repair a file that disagrees with itself,
+// which LibreOffice has been known to produce.
+const TWIPS_PER_POINT = 20
+
+interface PageSetup {
+  width: number
+  height: number
+}
+
+function readSectPr(sectPr: Element): PageSetup | null {
+  const pgSz = child(sectPr, 'pgSz')
+  if (!pgSz) return null
+  const w = Number(attr(pgSz, 'w'))
+  const h = Number(attr(pgSz, 'h'))
+  if (!isFinite(w) || !isFinite(h) || w <= 0 || h <= 0) return null
+  let width = w / TWIPS_PER_POINT
+  let height = h / TWIPS_PER_POINT
+  const orient = attr(pgSz, 'orient')?.toLowerCase()
+  if (orient === 'landscape' && height > width) [width, height] = [height, width]
+  if (orient === 'portrait' && width > height) [width, height] = [height, width]
+  return { width, height }
+}
+
+/** The `sectPr` a paragraph carries, i.e. "this paragraph ends a section". */
+function paragraphSectPr(p: Element): PageSetup | null {
+  const pPr = child(p, 'pPr')
+  const sectPr = pPr && child(pPr, 'sectPr')
+  return sectPr ? readSectPr(sectPr) : null
+}
+
+/**
+ * The setup the document OPENS with.
+ *
+ * The first section's properties are on the last paragraph of that section —
+ * which may be a long way down — or, in the common single-section document, on
+ * the body itself.
+ */
+function firstSectionSetup(body: Element): PageSetup | null {
+  for (const el of children(body)) {
+    if (el.localName === 'p') {
+      const setup = paragraphSectPr(el)
+      if (setup) return setup
+    }
+  }
+  const trailing = child(body, 'sectPr')
+  return trailing ? readSectPr(trailing) : null
+}
+
+/**
+ * The setup for the section that STARTS after `afterParagraph`.
+ *
+ * Walks on to the next paragraph carrying a `sectPr`; if there is none, the
+ * remainder of the document is the final section, whose properties live on the
+ * body itself.
+ */
+function nextSectionSetup(body: Element, afterParagraph: Element): PageSetup | null {
+  let seen = false
+  for (const el of children(body)) {
+    if (el === afterParagraph) {
+      seen = true
+      continue
+    }
+    if (!seen || el.localName !== 'p') continue
+    const setup = paragraphSectPr(el)
+    if (setup) return setup
+  }
+  const trailing = child(body, 'sectPr')
+  return trailing ? readSectPr(trailing) : null
+}
+
 function bodyToBlocks(
   body: Element,
   styles: Map<string, StyleInfo>,
@@ -360,6 +443,10 @@ function bodyToBlocks(
   rels: Map<string, string>
 ): Block[] {
   const blocks: Block[] = []
+  // The paper the document opens on. Emitted before anything is drawn so the
+  // renderer resizes its first page instead of leaving a blank one in front.
+  const opening = firstSectionSetup(body)
+  if (opening) blocks.push({ kind: 'pagesetup', width: opening.width, height: opening.height })
   // Consecutive numbered paragraphs are one list, so they share numbering and
   // spacing instead of becoming a stack of one-item lists.
   let list: { ordered: boolean; items: ListItem[] } | null = null
@@ -413,6 +500,15 @@ function bodyToBlocks(
       } else {
         blocks.push({ kind: 'p', runs: segment.runs })
       }
+    }
+
+    // This paragraph carrying a `sectPr` means it ENDED a section, so the setup
+    // it holds has already been applied — what follows belongs to the next one.
+    // The next section's paper is the next `sectPr` after this paragraph, or
+    // the body's own if this was the last break.
+    if (paragraphSectPr(el)) {
+      const next = nextSectionSetup(body, el)
+      if (next) blocks.push({ kind: 'pagesetup', width: next.width, height: next.height })
     }
   }
   flushList()

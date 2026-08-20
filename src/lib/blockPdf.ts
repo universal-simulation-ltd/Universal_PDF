@@ -80,13 +80,31 @@ export type Block =
   | { kind: 'code'; text: string }
   | { kind: 'hr' }
   | { kind: 'pagebreak' }
+  // A change of paper for everything that follows, in PDF points. Emitted by
+  // the office importers when a document changes section — a Word file with one
+  // landscape page in the middle of a portrait report is the ordinary case.
+  // It is an instruction rather than a property of the document because that is
+  // how the source formats model it: orientation belongs to a section, and a
+  // section runs until the next section break.
+  | { kind: 'pagesetup'; width: number; height: number }
   | { kind: 'table'; header: Run[][]; rows: Run[][][] }
 
 export type PaperSize = 'A4' | 'A3' | 'A5' | 'Letter'
 
+export type Orientation = 'portrait' | 'landscape'
+
 export interface BuildOptions {
   title?: string
   paperSize?: PaperSize
+  /**
+   * Which way round the paper starts. Defaults to portrait.
+   *
+   * Only the STARTING orientation — a document that carries its own page setup
+   * (anything imported from Word or ODF) overrides this the moment it says so,
+   * because that file already knows which of its pages are landscape and this
+   * setting does not.
+   */
+  orientation?: Orientation
   showPageNumbers?: boolean
 }
 
@@ -204,6 +222,35 @@ class Renderer {
 
   ensure(needed: number) {
     if (this.y - needed < MARGIN.bottom) this.newPage()
+  }
+
+  /** True while nothing has been drawn on the current page yet. */
+  get pageIsEmpty() {
+    return this.y === this.page.getSize().height - MARGIN.top
+  }
+
+  /**
+   * Change the paper for this page onward.
+   *
+   * ⚠️ Resizing an untouched page rather than adding one is the whole reason
+   * this isn't just `size = …; newPage()`. A document whose FIRST section is
+   * landscape emits its page setup before any content, and the constructor has
+   * already opened a page — adding another would leave a blank portrait sheet
+   * in front of every landscape document. Once anything has been drawn the page
+   * is committed and the new paper starts a new sheet, which is also what a
+   * section break means.
+   */
+  setPageSize(width: number, height: number) {
+    const [w, h] = this.size
+    if (Math.abs(w - width) < 0.5 && Math.abs(h - height) < 0.5) return
+    this.size = [width, height]
+    if (this.pageIsEmpty) {
+      this.page.setSize(width, height)
+      this.pageWidth = width
+      this.y = height - MARGIN.top
+    } else {
+      this.newPage()
+    }
   }
 
   fontForRun(r: Run): PDFFont {
@@ -657,6 +704,9 @@ class Renderer {
       case 'pagebreak':
         this.renderPageBreak()
         break
+      case 'pagesetup':
+        this.setPageSize(block.width, block.height)
+        break
       case 'table':
         this.renderTable(block.header, block.rows)
         break
@@ -692,7 +742,9 @@ export async function blocksToPdf(blocks: Block[], options: BuildOptions = {}): 
     mono: await pdf.embedFont(StandardFonts.Courier),
     monoBold: await pdf.embedFont(StandardFonts.CourierBold)
   }
-  const size = SIZE_MAP[options.paperSize ?? 'A4']
+  const [paperW, paperH] = SIZE_MAP[options.paperSize ?? 'A4']
+  const size: [number, number] =
+    options.orientation === 'landscape' ? [paperH, paperW] : [paperW, paperH]
   const renderer = new Renderer(pdf, size, fonts)
   const body = blocks.length ? blocks : [{ kind: 'p', runs: [{ text: '(Empty document)' }] } as Block]
   for (const block of body) renderer.renderBlock(block)

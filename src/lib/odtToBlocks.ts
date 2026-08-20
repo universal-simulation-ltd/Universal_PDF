@@ -344,15 +344,139 @@ function readTable(table: Element, styles: Map<string, StyleInfo>): Block | null
 }
 
 // ---- Body -----------------------------------------------------------------
-function bodyToBlocks(body: Element, styles: Map<string, StyleInfo>, listStyles: ListStyles): Block[] {
+// ---- Page setup -----------------------------------------------------------
+//
+// ODF says orientation in a different place from Word, and via one more hop.
+// `styles.xml` holds `style:page-layout` elements (the paper) and
+// `style:master-page` elements (a named page design pointing at one), and a
+// paragraph moves the document onto a new master page by using a style that
+// carries `style:master-page-name`.
+//
+// ⚠️ And the sense is the OPPOSITE of Word's. Word's `sectPr` rides on the LAST
+// paragraph of the section it describes; ODF's master-page-name rides on the
+// FIRST paragraph of the new one. Reading them the same way puts every change
+// one page out.
+//
+// The document opens on the master page named "Standard" — ODF's fixed default
+// name — falling back to whichever master page is declared first for producers
+// that use another.
+
+const UNIT_TO_POINTS: Record<string, number> = {
+  cm: 72 / 2.54,
+  mm: 72 / 25.4,
+  in: 72,
+  pt: 1,
+  pc: 12,
+  px: 0.75
+}
+
+/** `21.001cm` -> 595.3pt. Null for anything that is not a length we know. */
+function lengthToPoints(value: string | null): number | null {
+  if (!value) return null
+  const m = /^(-?[\d.]+)\s*(cm|mm|in|pt|pc|px)$/i.exec(value.trim())
+  if (!m) return null
+  const n = Number(m[1])
+  if (!isFinite(n) || n <= 0) return null
+  return n * UNIT_TO_POINTS[m[2].toLowerCase()]
+}
+
+interface PageSetup {
+  width: number
+  height: number
+}
+
+/** Master page name -> the paper it uses. */
+function collectPageSetups(stylesDoc: Document | null): {
+  byMaster: Map<string, PageSetup>
+  firstMaster: string | null
+} {
+  const byMaster = new Map<string, PageSetup>()
+  let firstMaster: string | null = null
+  if (!stylesDoc) return { byMaster, firstMaster }
+
+  const layouts = new Map<string, PageSetup>()
+  for (const layout of descendants(stylesDoc, 'page-layout')) {
+    const name = attr(layout, 'name')
+    const props = child(layout, 'page-layout-properties')
+    if (!name || !props) continue
+    let width = lengthToPoints(attr(props, 'page-width'))
+    let height = lengthToPoints(attr(props, 'page-height'))
+    if (width === null || height === null) continue
+    // `style:print-orientation` is advisory — LibreOffice writes already-swapped
+    // width/height alongside it, and omits it entirely for portrait. Trust the
+    // measurements; use the label only to repair a file that contradicts itself.
+    const orient = attr(props, 'print-orientation')?.toLowerCase()
+    if (orient === 'landscape' && height > width) [width, height] = [height, width]
+    if (orient === 'portrait' && width > height) [width, height] = [height, width]
+    layouts.set(name, { width, height })
+  }
+
+  for (const master of descendants(stylesDoc, 'master-page')) {
+    const name = attr(master, 'name')
+    const layoutName = attr(master, 'page-layout-name')
+    if (!name || !layoutName) continue
+    const setup = layouts.get(layoutName)
+    if (!setup) continue
+    if (firstMaster === null) firstMaster = name
+    byMaster.set(name, setup)
+  }
+  return { byMaster, firstMaster }
+}
+
+/** Paragraph style name -> the master page it switches to, if any. */
+function collectStyleMasterPages(docs: (Document | null)[]): Map<string, string> {
+  const out = new Map<string, string>()
+  for (const doc of docs) {
+    if (!doc) continue
+    for (const style of descendants(doc, 'style')) {
+      const name = attr(style, 'name')
+      const master = attr(style, 'master-page-name')
+      // An EMPTY master-page-name is meaningful in ODF and means "no change" —
+      // LibreOffice writes it on styles that merely inherit. Treating it as a
+      // switch would restart the page on ordinary paragraphs.
+      if (name && master) out.set(name, master)
+    }
+  }
+  return out
+}
+
+function bodyToBlocks(
+  body: Element,
+  styles: Map<string, StyleInfo>,
+  listStyles: ListStyles,
+  pageSetups: Map<string, PageSetup>,
+  openingMaster: string | null,
+  styleMasterPages: Map<string, string>
+): Block[] {
   const blocks: Block[] = []
+
+  // The paper the document opens on, emitted before any content so the renderer
+  // resizes its first page rather than leaving a blank one in front of it.
+  const opening = openingMaster ? pageSetups.get(openingMaster) : undefined
+  if (opening) blocks.push({ kind: 'pagesetup', width: opening.width, height: opening.height })
+
+  let currentMaster = openingMaster
+  const applyMasterPage = (styleName: string | undefined) => {
+    if (!styleName) return
+    const master = styleMasterPages.get(styleName)
+    if (!master || master === currentMaster) return
+    const setup = pageSetups.get(master)
+    currentMaster = master
+    if (setup) blocks.push({ kind: 'pagesetup', width: setup.width, height: setup.height })
+  }
 
   const handle = (el: Element) => {
     switch (el.localName) {
       case 'p':
       case 'h': {
         const styleName = attr(el, 'style-name') ?? undefined
-        if (resolve(styles, styleName, 'pageBreakBefore')) blocks.push({ kind: 'pagebreak' })
+        // A master-page switch IS a page break, and a stronger one, so it is
+        // applied first and the ordinary break is not also emitted.
+        const before = blocks.length
+        applyMasterPage(styleName)
+        if (blocks.length === before && resolve(styles, styleName, 'pageBreakBefore')) {
+          blocks.push({ kind: 'pagebreak' })
+        }
         const outline = attr(el, 'outline-level')
         const level =
           el.localName === 'h'
@@ -430,6 +554,11 @@ export async function odtToBlocks(zip: ZipArchive): Promise<OfficeDocument> {
 
   const styles = collectStyles([stylesDoc, content])
   const listStyles = collectListStyles([stylesDoc, content])
+  const { byMaster, firstMaster } = collectPageSetups(stylesDoc)
+  // ODF's default master page is named "Standard"; fall back to whichever was
+  // declared first for producers that name theirs something else.
+  const openingMaster = byMaster.has('Standard') ? 'Standard' : firstMaster
+  const styleMasterPages = collectStyleMasterPages([stylesDoc, content])
 
   // `office:body` wraps an `office:text`; go via the body rather than hunting
   // for the first element named "text", which several ODF namespaces also use.
@@ -437,5 +566,8 @@ export async function odtToBlocks(zip: ZipArchive): Promise<OfficeDocument> {
   const body = bodyEl ? child(bodyEl, 'text') : null
   if (!body) throw new OfficeParseError('That .odt has no readable body.')
 
-  return { blocks: bodyToBlocks(body, styles, listStyles), title: await readTitle(zip) }
+  return {
+    blocks: bodyToBlocks(body, styles, listStyles, byMaster, openingMaster, styleMasterPages),
+    title: await readTitle(zip)
+  }
 }
