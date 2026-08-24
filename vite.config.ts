@@ -65,6 +65,22 @@ export default defineConfig(({ mode }) => {
           display: 'standalone',
           start_url: BASE_PATH,
           scope: BASE_PATH,
+          // An INSTALLED PWA can be offered as a handler for .pdf (Chromium
+          // desktop; Chrome asks permission at install time). ⚠️ This makes the
+          // app a CHOICE in the OS "Open with" list — a web app can never be
+          // the system default, and nothing here claims otherwise.
+          //
+          // `?launching=1` is the same flag Electron passes for exactly the
+          // same reason: the file arrives on `launchQueue` AFTER the bundle has
+          // loaded, so the app holds its loading state from the first paint
+          // rather than flashing the landing page on the way to a document the
+          // user already chose.
+          file_handlers: [
+            {
+              action: `${BASE_PATH}?launching=1`,
+              accept: { 'application/pdf': ['.pdf'] }
+            }
+          ],
           icons: [
             { src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
             { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },

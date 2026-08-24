@@ -102,12 +102,7 @@ export default function App() {
   // straight away so the app opens onto the document, not the landing page.
   useEffect(() => {
     const desktop = window.desktop
-    if (!desktop) {
-      // Browser build. Nothing is coming over IPC, so a `?launching=1` that
-      // somehow reached the web app must not strand it on the placeholder.
-      setLaunching(false)
-      return
-    }
+    if (!desktop) return
     const offOpen = desktop.onOpenPdf(({ name, bytes }) => {
       const file = new File([bytes], name, { type: 'application/pdf' })
       loadFile(file)
@@ -129,6 +124,48 @@ export default function App() {
       offNone()
     }
   }, [loadFile])
+
+  // Web only — an INSTALLED PWA registered as a `.pdf` handler (Chromium
+  // desktop) is handed the file on `launchQueue`, the browser's equivalent of
+  // the IPC message above. The manifest's `file_handlers.action` carries the
+  // same `?launching=1`, so this path holds the loading state from the first
+  // paint too.
+  useEffect(() => {
+    if (window.desktop) return
+    const queue = window.launchQueue
+    if (!queue) {
+      // No file handling here at all, so a `?launching=1` that reached this
+      // page (a bookmark, a shared link) must not strand it on the placeholder.
+      setLaunching(false)
+      return
+    }
+    queue.setConsumer((params) => {
+      const handle = params.files?.[0]
+      if (!handle) {
+        setLaunching(false)
+        return
+      }
+      handle
+        .getFile()
+        .then((file) => loadFile(file))
+        .catch((err) => {
+          console.error(err)
+          alert('Failed to load PDF')
+        })
+        .finally(() => setLaunching(false))
+    })
+  }, [loadFile])
+
+  // ⚠️ Backstop for the web path only. The consumer above fires when the
+  // browser has launch parameters and stays silent when it does not, so a
+  // `?launching=1` opened by hand in an installed PWA would otherwise wait on a
+  // file that is never coming. The desktop needs no equivalent — its main
+  // process says so explicitly over `no-pdf`.
+  useEffect(() => {
+    if (!launching || window.desktop) return
+    const timer = window.setTimeout(() => setLaunching(false), 3000)
+    return () => window.clearTimeout(timer)
+  }, [launching])
 
   // Drop a PDF anywhere on the page and it opens — the SDK's `pageWide`, not the
   // hand-rolled `window` listener this used to be. That copy predated the hook
