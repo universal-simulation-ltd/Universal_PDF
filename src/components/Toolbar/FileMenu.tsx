@@ -22,6 +22,72 @@ interface Props {
   variant?: 'header' | 'toolbar' | 'rows'
 }
 
+// A menu row whose explanation is behind a (?) rather than printed underneath.
+//
+// These rows used to carry a second line of description each. Six of them at
+// once made the menu a wall of text and stretched it far past the width of the
+// labels themselves — the descriptions, not the labels, were setting the size.
+// Now every row is one line, so the menu is uniform and compact, and the
+// explanation is one tap away.
+//
+// ⚠️ The action and the (?) are SIBLING buttons inside a flex row, not nested.
+// A <button> inside a <button> is invalid HTML and browsers do not agree on
+// which one a click belongs to — the row's own action would fire when you were
+// only asking what it does. For the same reason the (?) stops propagation and
+// leaves the menu open: asking for help must never pick the item.
+function InfoRow({
+  icon,
+  label,
+  info,
+  onSelect,
+  indent = 'pl-8',
+  className = '',
+}: {
+  icon: React.ReactNode
+  label: string
+  info: string
+  onSelect: () => void
+  indent?: string
+  className?: string
+}) {
+  const [showInfo, setShowInfo] = useState(false)
+  return (
+    <div className={className}>
+      <div className="flex items-stretch">
+        <button
+          type="button"
+          onClick={onSelect}
+          className={`flex-1 min-w-0 flex items-center gap-3 ${indent} pr-1 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors`}
+        >
+          <span aria-hidden="true">{icon}</span>
+          <span className="flex-1 text-left font-medium leading-tight">{label}</span>
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            setShowInfo((v) => !v)
+          }}
+          aria-expanded={showInfo}
+          aria-label={`What does "${label}" do?`}
+          className={`shrink-0 self-center mr-2 w-6 h-6 rounded-full border text-[11px] font-semibold transition-colors ${
+            showInfo
+              ? 'border-orange-300 bg-orange-50 text-orange-700'
+              : 'border-slate-300 text-slate-500 hover:border-slate-400 hover:text-slate-700'
+          }`}
+        >
+          ?
+        </button>
+      </div>
+      {showInfo && (
+        <p className={`${indent} pr-3 pb-2.5 -mt-0.5 text-[11px] leading-snug text-slate-500`}>
+          {info}
+        </p>
+      )}
+    </div>
+  )
+}
+
 export default function FileMenu({ variant = 'toolbar' }: Props) {
   const annotations = useAnnotationStore((s) => s.annotations)
   const undo = useAnnotationStore((s) => s.undo)
@@ -446,47 +512,31 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
               {advancedSubOpen && (
                 <div className="border-t border-slate-100 bg-slate-50/60 divide-y divide-slate-100">
                   {!isXfa && (
-                    <button
-                      onClick={() => { setOcrOpen(true); setOpen(false) }}
-                      className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
-                    >
-                      <span aria-hidden="true">🔎</span>
-                      <span className="flex-1 text-left">
-                        <span className="block font-medium leading-tight">Make searchable (OCR)</span>
-                        <span className="block text-[11px] text-slate-500 leading-tight">Read a scanned PDF on-device so you can find &amp; select its text</span>
-                      </span>
-                    </button>
+                    <InfoRow
+                      icon="🔎"
+                      label="Make searchable (OCR)"
+                      info="Read a scanned PDF on-device so you can find & select its text."
+                      onSelect={() => { setOcrOpen(true); setOpen(false) }}
+                    />
                   )}
-                  <button
-                    onClick={() => { setMergeOpen(true); setOpen(false) }}
-                    className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
-                  >
-                    <span aria-hidden="true">⧉</span>
-                    <span className="flex-1 text-left">
-                      <span className="block font-medium leading-tight">Merge with another PDF</span>
-                      <span className="block text-[11px] text-slate-500 leading-tight">Combine this file with others — reorder before you export</span>
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => { setConvertOpen(true); setOpen(false) }}
-                    className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
-                  >
-                    <span aria-hidden="true">⇄</span>
-                    <span className="flex-1 text-left">
-                      <span className="block font-medium leading-tight">Convert into images</span>
-                      <span className="block text-[11px] text-slate-500 leading-tight">Render each page to PNG or JPG (a ZIP for multiple pages)</span>
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => { setMetadataOpen(true); setOpen(false) }}
-                    className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
-                  >
-                    <span aria-hidden="true">🏷</span>
-                    <span className="flex-1 text-left">
-                      <span className="block font-medium leading-tight">Document metadata</span>
-                      <span className="block text-[11px] text-slate-500 leading-tight">See who and what this file names — then scrub it</span>
-                    </span>
-                  </button>
+                  <InfoRow
+                    icon="⧉"
+                    label="Merge with another PDF"
+                    info="Combine this file with others — reorder before you export."
+                    onSelect={() => { setMergeOpen(true); setOpen(false) }}
+                  />
+                  <InfoRow
+                    icon="⇄"
+                    label="Convert into images"
+                    info="Render each page to PNG or JPG (a ZIP for multiple pages)."
+                    onSelect={() => { setConvertOpen(true); setOpen(false) }}
+                  />
+                  <InfoRow
+                    icon="🏷"
+                    label="Document metadata"
+                    info="See who and what this file names — then scrub it."
+                    onSelect={() => { setMetadataOpen(true); setOpen(false) }}
+                  />
                 </div>
               )}
             </>
@@ -510,29 +560,20 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
               {redactSubOpen && (
                 <div className="border-t border-slate-100 bg-slate-50/60">
                   {!isXfa && (
-                    <button
-                      type="button"
-                      onClick={() => { openForRedact(); setOpen(false) }}
-                      className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
-                    >
-                      <span aria-hidden="true">🔍</span>
-                      <span className="flex-1 text-left">
-                        <span className="block font-medium leading-tight">Find and redact</span>
-                        <span className="block text-[11px] text-slate-500 leading-tight">Search the text and black out every match</span>
-                      </span>
-                    </button>
+                    <InfoRow
+                      icon="🔍"
+                      label="Find and redact"
+                      info="Search the text and black out every match."
+                      onSelect={() => { openForRedact(); setOpen(false) }}
+                    />
                   )}
-                  <button
-                    type="button"
-                    onClick={() => { setTool('redact'); setOpen(false) }}
-                    className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors border-t border-slate-100"
-                  >
-                    <span aria-hidden="true">✏️</span>
-                    <span className="flex-1 text-left">
-                      <span className="block font-medium leading-tight">Free draw</span>
-                      <span className="block text-[11px] text-slate-500 leading-tight">Drag a box over anything to redact it by hand</span>
-                    </span>
-                  </button>
+                  <InfoRow
+                    icon="✏️"
+                    label="Free draw"
+                    info="Drag a box over anything to redact it by hand."
+                    onSelect={() => { setTool('redact'); setOpen(false) }}
+                    className="border-t border-slate-100"
+                  />
 
                   {/* Fill colour for new redactions (black is the privacy default; white blanks a white page) */}
                   <div className="flex items-center gap-2 pl-8 pr-3 py-2.5 border-t border-slate-100">
