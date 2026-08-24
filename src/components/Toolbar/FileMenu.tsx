@@ -154,7 +154,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
     persistLang(code)
     setShowOtherHint(false)
     setLangSubOpen(false)
-    setOpen(false)
+    closeMenu()
   }
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
@@ -194,7 +194,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
       ) {
         return
       }
-      setOpen(false)
+      closeMenu()
       setLangSubOpen(false)
       setRedactSubOpen(false)
       setEditSubOpen(false)
@@ -212,7 +212,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
           setLangSubOpen(false)
           setShowOtherHint(false)
         } else {
-          setOpen(false)
+          closeMenu()
         }
       }
     }
@@ -261,6 +261,33 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [renameOpen])
 
+  /**
+   * Dismiss the menu after a terminal action.
+   *
+   * ⚠️ React's `setOpen(false)` alone is a NO-OP in `rows` mode, which is
+   * what the mobile profile pill uses: there the panel belongs to the SDK's
+   * <UserProfile> dropdown, this component's own `open` state is never true
+   * (see the rows branch at the bottom), and the SDK renders `actions` as-is
+   * without handing down any way to close itself. So on a phone every menu
+   * item left the dropdown sitting open over whatever it had just opened.
+   *
+   * The SDK's DropdownSurface closes on a document `mousedown` that lands
+   * outside its anchor and panel, so that is what this sends. It is reaching
+   * into another package's behaviour — if that surface ever stops closing on
+   * outside mousedown this silently stops working, so the real fix is for the
+   * SDK to pass a close callback alongside `actions`. Logged in the backlog.
+   *
+   * Dispatched on `document`, so the target is inside neither element and the
+   * check cannot accidentally treat it as a click on the menu itself. Safe to
+   * fire before a dialog opens: the dialog is not mounted until the next
+   * render, so it cannot see this event.
+   */
+  function closeMenu() {
+    setOpen(false)
+    if (variant !== 'rows') return
+    document.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+  }
+
   function startRename() {
     if (!fileName) return
     setRenameDraft(fileName)
@@ -277,7 +304,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
     }
     void renameFile(next)
     setRenameOpen(false)
-    setOpen(false)
+    closeMenu()
   }
 
   // Header variant nests inside the navbar chrome (no clipping), so a plain
@@ -331,7 +358,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
               once a doc is open, Open/Close live inside the File submenu below. */}
           {!doc && (
             <button
-              onClick={() => { fileInputRef.current?.click(); setOpen(false) }}
+              onClick={() => { fileInputRef.current?.click(); closeMenu() }}
               className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-orange-50 hover:text-orange-700 text-sm"
             >
               <span aria-hidden="true">📄</span>
@@ -357,7 +384,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
             <div className="border-t border-slate-100 bg-slate-50/60 divide-y divide-slate-100">
               {doc && (
                 <button
-                  onClick={() => { reset(); setOpen(false) }}
+                  onClick={() => { reset(); closeMenu() }}
                   className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
                 >
                   <span aria-hidden="true">🏠</span>
@@ -367,7 +394,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
 
               {doc && (
                 <button
-                  onClick={() => { fileInputRef.current?.click(); setOpen(false) }}
+                  onClick={() => { fileInputRef.current?.click(); closeMenu() }}
                   className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
                 >
                   <span aria-hidden="true">📄</span>
@@ -377,7 +404,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
 
               {/* Backup: free local (automatic) vs paid "Hosted by UNI·SIM" cloud. */}
               <button
-                onClick={() => { setHostedStoreOpen(true); setOpen(false) }}
+                onClick={() => { setHostedStoreOpen(true); closeMenu() }}
                 className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
               >
                 <span aria-hidden="true">💾</span>
@@ -459,7 +486,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                 <div className="border-t border-slate-100 bg-slate-50/60 divide-y divide-slate-100">
                   {showPages && (
                     <button
-                      onClick={() => { setPageNavOpen(true); setOpen(false) }}
+                      onClick={() => { setPageNavOpen(true); closeMenu() }}
                       className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
                     >
                       <span aria-hidden="true">☰</span>
@@ -469,7 +496,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                   )}
                   {showPresent && (
                     <button
-                      onClick={() => { setPresentOpen(true); setOpen(false) }}
+                      onClick={() => { setPresentOpen(true); closeMenu() }}
                       className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
                     >
                       <span aria-hidden="true">▶</span>
@@ -478,7 +505,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                   )}
                   {showFind && (
                     <button
-                      onClick={() => { setSearchOpen(true); setOpen(false) }}
+                      onClick={() => { setSearchOpen(true); closeMenu() }}
                       className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
                     >
                       <span aria-hidden="true">🔍</span>
@@ -516,26 +543,26 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                       icon="🔎"
                       label="Make searchable (OCR)"
                       info="Read a scanned PDF on-device so you can find & select its text."
-                      onSelect={() => { setOcrOpen(true); setOpen(false) }}
+                      onSelect={() => { setOcrOpen(true); closeMenu() }}
                     />
                   )}
                   <InfoRow
                     icon="⧉"
                     label="Merge with another PDF"
                     info="Combine this file with others — reorder before you export."
-                    onSelect={() => { setMergeOpen(true); setOpen(false) }}
+                    onSelect={() => { setMergeOpen(true); closeMenu() }}
                   />
                   <InfoRow
                     icon="⇄"
                     label="Convert into images"
                     info="Render each page to PNG or JPG (a ZIP for multiple pages)."
-                    onSelect={() => { setConvertOpen(true); setOpen(false) }}
+                    onSelect={() => { setConvertOpen(true); closeMenu() }}
                   />
                   <InfoRow
                     icon="🏷"
                     label="Document metadata"
                     info="See who and what this file names — then scrub it."
-                    onSelect={() => { setMetadataOpen(true); setOpen(false) }}
+                    onSelect={() => { setMetadataOpen(true); closeMenu() }}
                   />
                 </div>
               )}
@@ -564,14 +591,14 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                       icon="🔍"
                       label="Find and redact"
                       info="Search the text and black out every match."
-                      onSelect={() => { openForRedact(); setOpen(false) }}
+                      onSelect={() => { openForRedact(); closeMenu() }}
                     />
                   )}
                   <InfoRow
                     icon="✏️"
                     label="Free draw"
                     info="Drag a box over anything to redact it by hand."
-                    onSelect={() => { setTool('redact'); setOpen(false) }}
+                    onSelect={() => { setTool('redact'); closeMenu() }}
                     className="border-t border-slate-100"
                   />
 
@@ -617,7 +644,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
               {editSubOpen && (
                 <div className="border-t border-slate-100 bg-slate-50/60">
                   <button
-                    onClick={() => { if (canUndo) { undo(); setOpen(false) } }}
+                    onClick={() => { if (canUndo) { undo(); closeMenu() } }}
                     disabled={!canUndo}
                     className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
@@ -626,7 +653,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                     <span className="text-[11px] text-slate-400 tracking-wide">Ctrl+Z</span>
                   </button>
                   <button
-                    onClick={() => { if (canRedo) { redo(); setOpen(false) } }}
+                    onClick={() => { if (canRedo) { redo(); closeMenu() } }}
                     disabled={!canRedo}
                     className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed border-t border-slate-100"
                   >
@@ -635,7 +662,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                     <span className="text-[11px] text-slate-400 tracking-wide">Ctrl+Y</span>
                   </button>
                   <button
-                    onClick={() => { if (canClear) { clearAll(); setOpen(false) } }}
+                    onClick={() => { if (canClear) { clearAll(); closeMenu() } }}
                     disabled={!canClear}
                     className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-red-600 hover:bg-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed border-t border-slate-100"
                   >
