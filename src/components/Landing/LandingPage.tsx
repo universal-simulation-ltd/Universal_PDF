@@ -17,6 +17,7 @@ import RecentFilesList from '../RecentFiles/RecentFilesList'
 import OcrModal from '../Ocr/OcrModal'
 import TransformPanel from '../Transform/TransformPanel'
 import PdfIllustration from './PdfIllustration'
+import DropRingWatermark from './DropRingWatermark'
 import { DefaultAppBar, DefaultAppPill } from '../Onboarding/DefaultAppOffer'
 import { useDefaultPdfApp } from '../../hooks/useDefaultPdfApp'
 import { CONTAINER } from '../../lib/layout'
@@ -227,14 +228,33 @@ export default function LandingPage() {
         <DefaultAppBar offer={defaultApp} />
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           {/* Left: animated PDF illustration */}
-          <div className="flex flex-col items-center lg:items-start gap-4 order-2 lg:order-1">
+          {/* Desktop keeps the illustration as its own column. On a phone it
+              moves BEHIND the drop circle instead (see below): as a stacked
+              block it was a full screen-height of scrolling before the primary
+              action, which is what stopped the landing page fitting on one
+              screen. */}
+          <div className="hidden lg:flex flex-col items-center lg:items-start gap-4 order-2 lg:order-1 min-w-0">
             <PdfIllustration />
           </div>
 
-          {/* Right: open / create cards */}
-          <div className="order-1 lg:order-2">
+          {/* ⚠️ min-w-0 is load-bearing, not tidying. A grid item defaults to
+              `min-width: auto`, so its MIN-CONTENT width becomes a floor the
+              track cannot go below — and `truncate` further down does not
+              reduce that contribution, it only clips once a width is settled.
+              One recent file with a long unbreakable name (no spaces to wrap
+              at) therefore set the width of this whole column, and the h1, the
+              lead and the card were all laid out wider than the phone: the
+              heading was cut off mid-word with nothing on screen to explain
+              why. Reported from an iPhone; the recents list has to be OPEN to
+              see it, which is why it survived earlier mobile passes.
+              Right: open / create cards */}
+          <div className="order-1 lg:order-2 min-w-0">
+            {/* One line on a phone, deliberately. "Universal PDFs that just
+                work." wrapped to two lines on every phone width, and the app's
+                name is already in the navbar directly above it — so the word
+                was costing a whole line to repeat something on screen. */}
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-slate-900">
-              Universal PDFs that <span className="text-orange-600">just work</span>.
+              PDFs that <span className="text-orange-600">just work</span>.
             </h1>
             <p className="mt-3 text-slate-600 max-w-md">
               View, annotate, sign and export — everything stays on your device.
@@ -268,6 +288,24 @@ export default function LandingPage() {
                   }`}
                 >
                   <DropRing size="100%" over={over} motion="idle">
+                    {/* The ring's backdrop, and it has to live INSIDE the ring.
+                        DropRing paints an opaque white circle for its interior,
+                        so anything behind the ring is simply covered — which is
+                        exactly what swallowed the first attempt at this. As a
+                        child it lands above that fill and below the copy, which
+                        follows it in the DOM. Absolute, so it stays out of the
+                        flex column and the text stays centred.
+
+                        Shown at every width: on a phone it is the only artwork
+                        on the page (the standalone illustration is desktop-only
+                        now), and on desktop it gives the ring something to do
+                        beside the big illustration rather than sitting inert. */}
+                    <div
+                      className="pointer-events-none absolute inset-[14%] opacity-[0.3]"
+                      aria-hidden="true"
+                    >
+                      <DropRingWatermark />
+                    </div>
                     <svg
                       viewBox="0 0 24 24"
                       className={`mb-1 h-9 w-9 ${over ? 'text-orange-500' : 'text-slate-400'}`}
