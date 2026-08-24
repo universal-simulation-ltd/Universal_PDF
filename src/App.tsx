@@ -38,6 +38,7 @@ import { usePdfStore } from './stores/pdfStore'
 import { useSignatureStore } from './stores/signatureStore'
 import { CONTAINER } from './lib/layout'
 import { OfficeImportError, toViewablePdf } from './lib/officeToPdf'
+import { isNativeShell, subscribeNativeOpenPdf } from './lib/nativeOpen'
 
 const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_PDF'
 
@@ -74,8 +75,15 @@ export default function App() {
   // bundle has loaded, so without this the first paint is the landing page —
   // which then vanishes. The user picked a document; show them a document
   // opening, not the front door on the way past.
+  //
+  // On iOS and Android there is no such flag to pass — the OS hands the file to
+  // the native side, which can only be asked for it asynchronously — so a
+  // native shell holds the loading state on every launch and releases it a
+  // bridge round-trip later. A few milliseconds of "Loading PDF…" on an
+  // ordinary launch is a better trade than the landing page appearing and
+  // vanishing on a launch that did carry a document.
   const [launching, setLaunching] = useState(
-    () => new URLSearchParams(window.location.search).has('launching')
+    () => new URLSearchParams(window.location.search).has('launching') || isNativeShell()
   )
 
   // While the launch file is in flight the app is heading for the document
@@ -156,11 +164,37 @@ export default function App() {
     })
   }, [loadFile])
 
-  // ⚠️ Backstop for the web path only. The consumer above fires when the
-  // browser has launch parameters and stays silent when it does not, so a
-  // `?launching=1` opened by hand in an installed PWA would otherwise wait on a
-  // file that is never coming. The desktop needs no equivalent — its main
-  // process says so explicitly over `no-pdf`.
+  // iOS / Android — a PDF opened through the share sheet or the chooser. Same
+  // shape as the two paths above: a file turns up, or word that none is coming.
+  useEffect(() => {
+    if (window.desktop || window.launchQueue) return
+    let unsubscribe: (() => void) | null = null
+    let cancelled = false
+    void subscribeNativeOpenPdf(
+      (file) => {
+        loadFile(file)
+          .catch((err) => {
+            console.error(err)
+            alert('Failed to load PDF')
+          })
+          .finally(() => setLaunching(false))
+      },
+      () => setLaunching(false)
+    ).then((off) => {
+      if (cancelled) off()
+      else unsubscribe = off
+    })
+    return () => {
+      cancelled = true
+      unsubscribe?.()
+    }
+  }, [loadFile])
+
+  // ⚠️ Backstop for the browser and native paths. The PWA's consumer fires when
+  // the browser has launch parameters and stays silent when it does not, so a
+  // `?launching=1` opened by hand would otherwise wait on a file that is never
+  // coming; on iOS/Android it catches a bridge that never answers. The desktop
+  // needs no equivalent — its main process says so explicitly over `no-pdf`.
   useEffect(() => {
     if (!launching || window.desktop) return
     const timer = window.setTimeout(() => setLaunching(false), 3000)
@@ -340,14 +374,12 @@ export default function App() {
           <div className={`${CONTAINER} py-4 flex flex-row items-center gap-3 sm:gap-4 text-xs text-slate-500`}>
             <div className="flex items-center gap-2">
               <span>
-                100% Open source and free. Hosted by{' '}
-                <a
-                  href="https://www.unisim.co.uk"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-slate-700 hover:text-orange-700 underline-offset-2 hover:underline"
-                >
-                  UNI SIM
+                With{' '}
+                <span aria-hidden="true" className="text-orange-600">&hearts;</span>
+                <span className="sr-only">love</span>{' '}
+                from{' '}
+                <a href="https://www.unisim.co.uk" target="_blank" rel="noreferrer" className="text-slate-700 hover:text-orange-700 underline-offset-2 hover:underline">
+                  UNISIM.co.uk
                 </a>
               </span>
             </div>
