@@ -12,6 +12,13 @@ declare global {
       onOpenPdf(
         cb: (payload: { name: string; bytes: Uint8Array<ArrayBuffer> }) => void
       ): () => void
+      /**
+       * Fires when this page load is NOT getting a PDF from the OS — either
+       * there was never one (a plain launch, or a reload) or the file could
+       * not be read, in which case `unreadable` is its name. Ends the launch
+       * placeholder. Returns an unsubscribe function.
+       */
+      onNoPdf(cb: (payload: { unreadable?: string }) => void): () => void
     }
   }
 }

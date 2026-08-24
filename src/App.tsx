@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import {
   ToolbarDesktopActions,
   ToolbarDesktopTools,
@@ -69,6 +69,20 @@ export default function App() {
 
   const stampPickerOpen = useSignatureStore((s) => s.stampPickerOpen)
 
+  // Electron adds `?launching=1` when the app was started by the OS handing it
+  // a PDF (double-click / "Open with"). The file itself cannot arrive until the
+  // bundle has loaded, so without this the first paint is the landing page —
+  // which then vanishes. The user picked a document; show them a document
+  // opening, not the front door on the way past.
+  const [launching, setLaunching] = useState(
+    () => new URLSearchParams(window.location.search).has('launching')
+  )
+
+  // While the launch file is in flight the app is heading for the document
+  // view, so it wears that view's chrome. Half the flash was the landing page's
+  // navbar and footer, not just its body.
+  const showLanding = !doc && !launching
+
   useToolbarKeyboardShortcuts(!!doc)
 
   useEffect(() => {
@@ -88,14 +102,32 @@ export default function App() {
   // straight away so the app opens onto the document, not the landing page.
   useEffect(() => {
     const desktop = window.desktop
-    if (!desktop) return
-    return desktop.onOpenPdf(({ name, bytes }) => {
+    if (!desktop) {
+      // Browser build. Nothing is coming over IPC, so a `?launching=1` that
+      // somehow reached the web app must not strand it on the placeholder.
+      setLaunching(false)
+      return
+    }
+    const offOpen = desktop.onOpenPdf(({ name, bytes }) => {
       const file = new File([bytes], name, { type: 'application/pdf' })
-      loadFile(file).catch((err) => {
-        console.error(err)
-        alert('Failed to load PDF')
-      })
+      loadFile(file)
+        .catch((err) => {
+          console.error(err)
+          alert('Failed to load PDF')
+        })
+        // Cleared only once the load has settled: dropping it the moment the
+        // bytes arrive would hand one frame back to the landing page before
+        // the store's own `loading` picks up — the same flash, one step later.
+        .finally(() => setLaunching(false))
     })
+    const offNone = desktop.onNoPdf(({ unreadable }) => {
+      setLaunching(false)
+      if (unreadable) alert(`Could not open ${unreadable}`)
+    })
+    return () => {
+      offOpen()
+      offNone()
+    }
   }, [loadFile])
 
   // Drop a PDF anywhere on the page and it opens — the SDK's `pageWide`, not the
@@ -152,7 +184,7 @@ export default function App() {
     // that bar is shared by every Universal App, and the padding belongs to
     // whichever of them is wrapped for a phone — currently only this one.
     <div className="flex flex-col h-full bg-slate-100 pt-[env(safe-area-inset-top)]">
-      {!doc && (
+      {showLanding && (
         <div className="relative z-50">
           <UniversalAppsNavBar
             product="pdf"
@@ -173,7 +205,7 @@ export default function App() {
       {/* The full navbar is landing-page only. While a doc is open we keep just
           the suite brand strip up top for cross-app visual continuity; profile
           + changelog move down into the dark tools bar below. */}
-      {doc && <UniversalBar />}
+      {(doc || launching) && <UniversalBar />}
       {doc && (
         <div className="bg-slate-900 text-white relative z-[45] overflow-x-auto" style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}>
           {/* No home button on this bar. Leaving an open document is
@@ -255,7 +287,7 @@ export default function App() {
           zoom menu) stay below the navbar — otherwise they bubble up to the
           root context and can paint over the navbar's open dropdowns. */}
       <main className={`flex-1 min-h-0 md:pb-0 ${doc ? 'pb-[calc(4rem_+_env(safe-area-inset-bottom))] relative z-0 isolate' : 'overflow-auto'}`}>
-        {loading ? (
+        {loading || launching ? (
           <div className="h-full flex items-center justify-center text-slate-500">
             Loading PDF…
           </div>
@@ -266,7 +298,7 @@ export default function App() {
         )}
       </main>
 
-      {!doc && !loading && (
+      {showLanding && !loading && (
         <footer className="mt-auto border-t border-slate-200 bg-white">
           <div className={`${CONTAINER} py-4 flex flex-row items-center gap-3 sm:gap-4 text-xs text-slate-500`}>
             <div className="flex items-center gap-2">

@@ -8,6 +8,12 @@ const DEV_SERVER_URL = process.env.ELECTRON_START_URL
 
 let mainWindow = null
 
+// Whether mainWindow's renderer has finished loading. `webContents.send` before
+// that point goes nowhere — the preload's buffer only covers the gap between
+// preload and React, not the gap before preload runs — so anything arriving
+// earlier waits in `pendingPdfPath` instead of being fired into the void.
+let windowLoaded = false
+
 // PDF the app was launched with (double-click / "Open with → Universal PDF"),
 // held until the window has finished loading.
 let pendingPdfPath = null
@@ -35,7 +41,18 @@ function sendPdf(win, filePath) {
     win.webContents.send('open-pdf', { name: path.basename(filePath), bytes })
   } catch (err) {
     console.error('Failed to read PDF passed from the OS:', err)
+    // The renderer may be sitting on the launch placeholder waiting for exactly
+    // this file. Tell it to give up, or it spins forever on a file that is
+    // never coming.
+    win.webContents.send('no-pdf', { unreadable: path.basename(filePath) })
   }
+}
+
+// Hand a PDF to the window if it can receive one, and hold it otherwise.
+// `did-finish-load` flushes whatever is held.
+function deliverPdf(filePath) {
+  if (mainWindow && windowLoaded) sendPdf(mainWindow, filePath)
+  else pendingPdfPath = filePath
 }
 
 function createWindow() {
@@ -45,6 +62,12 @@ function createWindow() {
   // screens). y pins the window to the top of the work area so the full
   // height is actually visible.
   const { workArea } = screen.getPrimaryDisplay()
+  // Launched by double-clicking a PDF? The renderer needs to know at its FIRST
+  // paint, because the file itself cannot arrive until the bundle has loaded.
+  // Without this the app paints the landing page, then throws it away a beat
+  // later when the document lands — the front door flashing past on the way to
+  // a document the user already chose.
+  const launching = !!pendingPdfPath
   const win = new BrowserWindow({
     width: Math.min(1280, workArea.width),
     height: workArea.height,
@@ -53,6 +76,9 @@ function createWindow() {
     minHeight: 480,
     backgroundColor: '#f8fafc',
     autoHideMenuBar: true,
+    // Hold the window back until there is something to look at, rather than
+    // showing an empty frame while the bundle boots.
+    show: false,
     webPreferences: {
       // The renderer needs no Node or Electron APIs — keep it sandboxed. The
       // preload script only bridges OS-opened PDFs (bytes + name) into the page.
@@ -62,24 +88,50 @@ function createWindow() {
     },
   })
   mainWindow = win
+  windowLoaded = false
   win.on('closed', () => {
-    if (mainWindow === win) mainWindow = null
+    if (mainWindow === win) {
+      mainWindow = null
+      windowLoaded = false
+    }
   })
+
+  // `ready-to-show` is the right moment; `did-finish-load` is the belt-and-
+  // braces one, so a page that somehow never reaches first paint still leaves
+  // the user with a window rather than nothing at all.
+  const reveal = () => {
+    if (!win.isDestroyed() && !win.isVisible()) win.show()
+  }
+  win.once('ready-to-show', reveal)
 
   // Deliver the launch file once the bundle is loaded; the preload bridge
   // buffers it if React hasn't subscribed yet.
   win.webContents.on('did-finish-load', () => {
+    windowLoaded = true
+    reveal()
     if (pendingPdfPath) {
-      sendPdf(win, pendingPdfPath)
+      const filePath = pendingPdfPath
       pendingPdfPath = null
+      sendPdf(win, filePath)
+    } else {
+      // Nothing inbound. Said out loud rather than left to a timeout, because
+      // this also covers a manual reload (⌘R) of a window that was started with
+      // `launching` set: the flag survives the reload, the file does not, and
+      // the renderer would otherwise wait on it forever.
+      win.webContents.send('no-pdf', {})
     }
   })
 
   if (DEV_SERVER_URL) {
-    win.loadURL(DEV_SERVER_URL)
+    const devUrl = new URL(DEV_SERVER_URL)
+    if (launching) devUrl.searchParams.set('launching', '1')
+    win.loadURL(devUrl.toString())
     win.webContents.openDevTools({ mode: 'detach' })
   } else {
-    win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'))
+    win.loadFile(
+      path.join(__dirname, '..', 'dist', 'index.html'),
+      launching ? { query: { launching: '1' } } : undefined
+    )
   }
 
   // External links (e.g. the UNI SIM navbar) open in the system browser rather
@@ -120,7 +172,7 @@ if (!gotLock) {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore()
       mainWindow.focus()
-      if (filePath) sendPdf(mainWindow, filePath)
+      if (filePath) deliverPdf(filePath)
     } else if (filePath) {
       pendingPdfPath = filePath
     }
@@ -129,8 +181,7 @@ if (!gotLock) {
   // macOS delivers OS-opened files as an event (possibly before `ready`).
   app.on('open-file', (event, filePath) => {
     event.preventDefault()
-    if (mainWindow) sendPdf(mainWindow, filePath)
-    else pendingPdfPath = filePath
+    deliverPdf(filePath)
   })
 
   app.whenReady().then(() => {
