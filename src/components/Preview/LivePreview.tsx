@@ -90,8 +90,25 @@ export default function LivePreview() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-slate-900/80 backdrop-blur-sm">
-      <div className="flex items-center gap-3 px-4 py-2 bg-slate-900 text-white border-b border-slate-700">
+    // ⚠️ A `fixed inset-0` overlay is positioned against the VIEWPORT, so it
+    // escapes the safe-area padding App.tsx puts on the app root — it has to
+    // handle the insets itself. Without this the header below sits under the
+    // iOS status bar and Dynamic Island, which on a phone puts Download and
+    // Close somewhere unclickable: the preview cannot be dismissed, and the
+    // whole app reads as frozen behind it. Reported from a real iPhone.
+    // The horizontal insets matter in landscape, where the island moves to a
+    // side. All resolve to 0 in a browser.
+    <div
+      className="fixed inset-0 z-50 flex flex-col bg-slate-900/80 backdrop-blur-sm"
+      style={{
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)',
+      }}
+    >
+      <div
+        className="flex items-center gap-3 px-4 py-2 bg-slate-900 text-white border-b border-slate-700"
+        style={{ paddingTop: 'calc(0.5rem + env(safe-area-inset-top))' }}
+      >
         <div className="font-semibold tracking-tight">Preview</div>
         <span className="text-xs text-slate-400 hidden sm:inline">
           {building ? 'Updating…' : 'How the exported PDF will look'}
@@ -114,7 +131,10 @@ export default function LivePreview() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-auto bg-slate-200">
+      <div
+        className="flex-1 min-h-0 overflow-auto bg-slate-200"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
         {error ? (
           <div className="h-full flex items-center justify-center text-red-600 px-4 text-center">
             Preview failed: {error}

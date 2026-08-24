@@ -176,16 +176,25 @@ export default function PresentMode() {
   if (!open) return null
 
   return (
+    // Same trap as LivePreview: a `fixed inset-0` overlay is positioned against
+    // the viewport, outside the safe-area padding App.tsx puts on the app root,
+    // so Exit would sit under the Dynamic Island with no way out of
+    // presentation mode. All the insets are 0 in a browser.
     <div
       ref={rootRef}
       className="fixed inset-0 z-[70] bg-black flex flex-col select-none"
-      style={{ cursor: controlsVisible ? 'default' : 'none' }}
+      style={{
+        cursor: controlsVisible ? 'default' : 'none',
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)',
+      }}
     >
       {/* Top chrome — page counter + exit. */}
       <div
         className={`absolute top-0 left-0 right-0 z-10 flex items-center gap-3 px-4 py-2 text-white bg-gradient-to-b from-black/60 to-transparent transition-opacity duration-300 ${
           controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
+        style={{ paddingTop: 'calc(0.5rem + env(safe-area-inset-top))' }}
       >
         <span className="text-sm tabular-nums text-white/80">
           {numPages > 0 ? `${pageIndex + 1} / ${numPages}` : ''}
