@@ -23,6 +23,27 @@ interface Props {
   variant?: 'header' | 'toolbar' | 'rows'
 }
 
+// Middle-truncate a long file name so the END survives. A plain CSS
+// end-ellipsis throws away the extension and the tail — and "…-v3-final.pdf"
+// is usually the half that tells two documents apart. The `truncate` class
+// stays on the span underneath as the belt-and-braces cap for a name that is
+// still too wide at this length (one long unbroken word, a narrow panel).
+// 26 characters is what fits the 216px the panel's header row gives it at
+// text-sm/font-medium, with the ✎ alongside. Set it any higher and CSS
+// `truncate` clips the shortened name a SECOND time — which throws away the
+// extension the middle-ellipsis exists to keep.
+const NAME_MAX = 26
+function shortenFileName(name: string): string {
+  if (name.length <= NAME_MAX) return name
+  const dot = name.lastIndexOf('.')
+  const ext = dot > 0 && name.length - dot <= 6 ? name.slice(dot) : ''
+  const stem = ext ? name.slice(0, dot) : name
+  const keep = NAME_MAX - ext.length - 1
+  const head = Math.ceil(keep * 0.6)
+  const tail = keep - head
+  return `${stem.slice(0, head)}…${tail > 0 ? stem.slice(-tail) : ''}${ext}`
+}
+
 // A menu row whose explanation is behind a (?) rather than printed underneath.
 //
 // These rows used to carry a second line of description each. Six of them at
@@ -135,6 +156,10 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const [viewSubOpen, setViewSubOpen] = useState(false)
   const [advancedSubOpen, setAdvancedSubOpen] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
+  // Where the rename editor is drawn: the "Current file" header (clicking
+  // the name) or the File submenu's Rename row. One editor, two homes —
+  // showing it in both at once would be two inputs racing over one name.
+  const [renameInHeader, setRenameInHeader] = useState(false)
   const [renameDraft, setRenameDraft] = useState('')
   const [currentLang, setCurrentLang] = useState<LangCode>(readSavedLang())
   const [showOtherHint, setShowOtherHint] = useState(false)
@@ -289,11 +314,12 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
     closeAppMenu()
   }
 
-  function startRename() {
+  function startRename(fromHeader = false) {
     if (!fileName) return
     setRenameDraft(fileName)
     setLangSubOpen(false)
     setShowOtherHint(false)
+    setRenameInHeader(fromHeader)
     setRenameOpen(true)
   }
 
@@ -306,6 +332,57 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
     void renameFile(next)
     setRenameOpen(false)
     closeMenu()
+  }
+
+  /**
+   * The rename editor itself. Drawn either under the "Current file" header —
+   * clicking the name is the fast path, since that is where you are already
+   * looking when you decide the name is wrong — or in the File submenu's
+   * Rename row, which is where it has always lived.
+   */
+  function renameEditor(wrapperClass: string, showLabel: boolean) {
+    return (
+      <div className={wrapperClass}>
+        {showLabel && (
+          <label className="block text-[11px] uppercase tracking-wide text-slate-500 font-medium mb-1">
+            Rename PDF
+          </label>
+        )}
+        <input
+          ref={renameInputRef}
+          value={renameDraft}
+          onChange={(e) => setRenameDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              commitRename()
+            } else if (e.key === 'Escape') {
+              e.preventDefault()
+              setRenameOpen(false)
+            }
+          }}
+          className="w-full px-2 py-1.5 text-sm rounded border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+          aria-label="New file name"
+        />
+        <div className="mt-2 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setRenameOpen(false)}
+            className="px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-200 rounded"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={commitRename}
+            disabled={!renameDraft.trim() || renameDraft.trim() === fileName}
+            className="px-3 py-1 text-xs font-medium text-white bg-orange-700 hover:bg-orange-800 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    )
   }
 
   // Header variant nests inside the navbar chrome (no clipping), so a plain
@@ -346,12 +423,37 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
 
   const body = (
         <>
-          {/* Current file name — a non-interactive header at the very top of the
-              dropdown so the user always knows which PDF the actions apply to. */}
+          {/* Current file name — a header at the very top of the dropdown so the
+              user always knows which PDF the actions apply to, and the shortest
+              way to fix a wrong name: clicking it renames in place.
+
+              ⚠️ The name is capped in BOTH directions on purpose. In `rows` mode
+              the panel belongs to the SDK's <UserProfile> dropdown and sizes
+              itself to its content, so an unbounded name set the width of the
+              whole menu — a 46-character export name stretched it halfway across
+              the screen. `max-w` bounds what this row can contribute to that
+              width; shortenFileName keeps the tail readable inside it. */}
           {doc && fileName && (
             <div className="px-3 py-2 border-b border-slate-100 bg-slate-50/60">
               <div className="text-[10px] uppercase tracking-wide text-slate-400 font-medium">Current file</div>
-              <div className="text-sm font-medium text-slate-800 truncate" title={fileName}>{fileName}</div>
+              {canRename && renameOpen && renameInHeader ? (
+                renameEditor('mt-1', false)
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => startRename(true)}
+                  title={`${fileName} — click to rename`}
+                  aria-label={`Rename ${fileName}`}
+                  className="group w-full max-w-[13.5rem] flex items-center gap-1.5 text-left"
+                >
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800 group-hover:text-orange-700 transition-colors">
+                    {shortenFileName(fileName)}
+                  </span>
+                  <span aria-hidden="true" className="shrink-0 text-[11px] text-slate-400 group-hover:text-orange-700 transition-colors">
+                    ✎
+                  </span>
+                </button>
+              )}
             </div>
           )}
 
@@ -414,7 +516,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
 
               {canRename && !renameOpen && (
                 <button
-                  onClick={startRename}
+                  onClick={() => startRename()}
                   className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
                 >
                   <span aria-hidden="true">✎</span>
@@ -422,46 +524,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                 </button>
               )}
 
-              {canRename && renameOpen && (
-                <div className="pl-8 pr-3 py-2.5">
-                  <label className="block text-[11px] uppercase tracking-wide text-slate-500 font-medium mb-1">
-                    Rename PDF
-                  </label>
-                  <input
-                    ref={renameInputRef}
-                    value={renameDraft}
-                    onChange={(e) => setRenameDraft(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        commitRename()
-                      } else if (e.key === 'Escape') {
-                        e.preventDefault()
-                        setRenameOpen(false)
-                      }
-                    }}
-                    className="w-full px-2 py-1.5 text-sm rounded border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                    aria-label="New file name"
-                  />
-                  <div className="mt-2 flex justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setRenameOpen(false)}
-                      className="px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-200 rounded"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={commitRename}
-                      disabled={!renameDraft.trim() || renameDraft.trim() === fileName}
-                      className="px-3 py-1 text-xs font-medium text-white bg-orange-700 hover:bg-orange-800 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Save
-                    </button>
-                  </div>
-                </div>
-              )}
+              {canRename && renameOpen && !renameInHeader && renameEditor('pl-8 pr-3 py-2.5', true)}
             </div>
           )}
 

@@ -42,6 +42,14 @@ import { isNativeShell, subscribeNativeOpenPdf } from './lib/nativeOpen'
 
 const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_PDF'
 
+// The document's rendered width, clamped the way every bar that lines up with
+// the page clamps it (PdfViewer publishes --doc-display-width from page 1's
+// viewport), and the empty margin either side of it. The dark tools bar uses
+// the margin as a real, shrinkable gutter so its right-hand cluster sits on the
+// page's right edge — see the row itself for why that is the fixed point.
+const DOC_WIDTH = 'clamp(600px, var(--doc-display-width, 80rem), 80rem)'
+const BAR_GUTTER = `max(0px, calc((100% - ${DOC_WIDTH}) / 2))`
+
 export default function App() {
   const loadFile = usePdfStore((s) => s.loadFile)
   const doc = usePdfStore((s) => s.doc)
@@ -286,10 +294,33 @@ export default function App() {
               cluster on mobile) spent the bar's scarcest space on a control the
               menu already carries. Actions used to sit out here too, and moved
               into the same pill for the same reason. */}
+          {/* ⚠️ This row is NOT `mx-auto` + `min-w-max` any more, and the reason
+              is the whole point of it. That version grew the row to fit the
+              tools and then centred the overflow, so Actions, the profile pill
+              and the changelog icon hung PAST the document's right edge the
+              moment the tools wanted more width than the page had — which is
+              most of the time, since a page at 75% is only ~600px wide. It read
+              as one crowded strip floating in the middle of the bar rather than
+              anything belonging to the document.
+
+              Now the RIGHT-HAND CLUSTER IS THE FIXED POINT: its padding is the
+              page's own right margin, so Actions lands on the document's right
+              edge at every zoom, exactly like the page/zoom strip at the bottom
+              of the viewer. What gives instead is the empty gutter to the left
+              of the tools — a shrinkable spacer sized to the page's LEFT margin,
+              so the tools start at the page's left edge when they fit and spill
+              out into the grey margin when they don't. Nothing is hidden and
+              nothing overhangs.
+
+              ⚠️ Don't put `overflow-x-auto` on the tool cluster to solve the
+              same problem: it silently swallows half the tools behind a
+              scrollbar nobody sees. Let the gutter collapse instead. */}
           <div
-            className="mx-auto w-full min-w-max flex items-center justify-between gap-6 py-2 min-h-[52px]"
-            style={{ maxWidth: 'clamp(600px, var(--doc-display-width, 80rem), 80rem)' }}
+            className="w-full flex items-center py-2 min-h-[52px]"
+            style={{ paddingRight: `max(0.75rem, ${BAR_GUTTER})` }}
           >
+            {/* Collapsible left gutter — the page's own left margin. */}
+            <div aria-hidden="true" className="min-w-0" style={{ flexBasis: BAR_GUTTER }} />
             {/* lg:pl-5 matches the navbar header's 20px left padding so the
                 Select tool below lines up under the suite switcher. The whole
                 desktop tool chrome switches to the bottom bar below lg (1024px)
@@ -332,7 +363,11 @@ export default function App() {
                 document's right edge at every width — which is what the old
                 comment claimed but only achieved when the document happened to
                 fill the window. */}
-            <div className="flex items-center gap-2 justify-end shrink-0 [&>*]:shrink-0 lg:pr-3">
+            {/* Breathing room between the tools and the actions — grows to fill
+                whatever the document's width leaves over, shrinks to a hard 1rem
+                so the two clusters never touch. */}
+            <div aria-hidden="true" className="flex-1 min-w-4" />
+            <div className="flex items-center gap-2 justify-end shrink-0 [&>*]:shrink-0 lg:pl-4 lg:border-l lg:border-white/15">
               <ToolbarDesktopActions />
               <ToolbarUserProfile actions={<FileMenu variant="rows" />} />
               <ChangelogMenu
