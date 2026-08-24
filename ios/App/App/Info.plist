@@ -26,13 +26,26 @@
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
-	<!-- Puts Universal PDF in the iOS share sheet / "Open In" list for PDFs.
-	     iOS has no concept of a default app for a file type, so this is the whole
-	     of what an app can do. LSSupportsOpeningDocumentsInPlace is deliberately
-	     ABSENT: without it iOS copies the document into the app's Inbox and hands
-	     over a plain file:// path, which is what we want — the app reads the bytes
-	     and never writes back to the original, so in-place access would buy a
-	     security-scoped URL we would have to manage for nothing. -->
+	<!-- Puts Universal PDF in the Files app's "Open With" menu and the share
+	     sheet for PDFs. iOS 26 DOES have a default app per file type — the Open
+	     With menu marks one "Default" — so registering here is what makes the
+	     app both listed and selectable as that default. It cannot be set
+	     programmatically; the user picks.
+
+	     ⚠️ LSSupportsOpeningDocumentsInPlace was previously omitted on purpose,
+	     to be handed a plain file:// copy in the app's Inbox rather than a
+	     security-scoped URL. The reasoning was sound but the price was too
+	     high: the Files "Open With" list is built from handlers that can open a
+	     document IN PLACE, so without this key the app was absent from the list
+	     entirely — verified on an iPhone 15 Pro, where Adobe Scan, Fusion and
+	     OpenDocument-Reader Lite were all listed and this app was not.
+
+	     The plain-path guarantee is kept instead of dropped: AppDelegate copies
+	     an in-place document into the app's own container and forwards the
+	     COPY, so the web layer still only ever sees a readable file:// path it
+	     does not have to manage access for. See application(_:open:options:). -->
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
