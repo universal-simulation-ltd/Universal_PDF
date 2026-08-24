@@ -89,6 +89,23 @@ ObjC.import('CoreServices')
 `
 }
 
+// ⚠️ Whether Gatekeeper accepts this build — and the reason an unnotarized one
+// must NEVER be offered as the default handler.
+//
+// macOS refuses to let a Gatekeeper-rejected app open a QUARANTINED document,
+// which is every PDF that came from a browser. The refusal names the DOCUMENT,
+// not the app — "Apple could not verify «invoice.pdf» is free of malware" with
+// a "Move to Bin" button — so becoming the default turns every downloaded PDF
+// into what reads like a virus warning about the user's own file.
+//
+// An ad-hoc signature (a local `dist:mac:unsigned` build) is rejected here, as
+// is anything signed without a Developer ID and notarized. That is correct: the
+// offer should appear only on a build that can actually honour it.
+async function macGatekeeperAccepts(bundlePath) {
+  const { ok } = await run('spctl', ['--assess', '--type', 'execute', bundlePath], 20_000)
+  return ok
+}
+
 async function macQuery(write) {
   const { ok, stdout } = await run('osascript', ['-l', 'JavaScript', '-e', macScript(macBundlePath(), write)])
   if (!ok) return null
@@ -164,7 +181,15 @@ async function status() {
   if (process.platform === 'darwin') {
     const info = await macQuery(false)
     if (!info || !info.id) return { ...base, reason: 'no-bundle-id' }
-    return { ...base, supported: true, canSet: true, isDefault: sameId(info.id, info.current) }
+    const isDefault = sameId(info.id, info.current)
+    const notarized = await macGatekeeperAccepts(macBundlePath())
+    return {
+      ...base,
+      supported: true,
+      canSet: notarized,
+      isDefault,
+      reason: notarized ? undefined : 'not-notarized',
+    }
   }
 
   if (process.platform === 'linux') {
@@ -195,6 +220,13 @@ async function makeDefault() {
   if (!app.isPackaged) return { ok: false, isDefault: false, error: 'Not available in development.' }
 
   if (process.platform === 'darwin') {
+    if (!(await macGatekeeperAccepts(macBundlePath()))) {
+      return {
+        ok: false,
+        isDefault: false,
+        error: 'This build is not signed by Apple, and macOS would refuse to open downloaded PDFs with it.',
+      }
+    }
     const info = await macQuery(true)
     if (!info || !info.id) return { ok: false, isDefault: false, error: 'Could not read the app bundle.' }
     const isDefault = sameId(info.id, info.current)
