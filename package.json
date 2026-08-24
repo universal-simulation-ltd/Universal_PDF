@@ -31,7 +31,9 @@
   },
   "dependencies": {
     "@capacitor/android": "^7.6.8",
+    "@capacitor/app": "^7.1.2",
     "@capacitor/core": "^7.6.8",
+    "@capacitor/filesystem": "^7.1.8",
     "@capacitor/ios": "^7.6.8",
     "@unisim/doc": "^0.4.0",
     "@unisim/sdk": "^0.105.1",

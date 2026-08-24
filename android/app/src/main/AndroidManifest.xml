@@ -22,6 +22,34 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Puts Universal PDF in the "Open with" chooser for PDFs. Android
+                 has no API for an app to make itself the default; the user's own
+                 "Always" in that chooser is what does it.
+
+                 ⚠️ Both schemes are needed and neither is redundant: a file
+                 manager or mail client hands over a content:// URI through a
+                 FileProvider, while a few apps and adb still pass file://.
+                 An intent-filter matches on scheme AND mimeType, so a filter
+                 naming only one scheme silently misses the other.
+
+                 ⚠️ ACTION_SEND (the "Share" sheet) is deliberately NOT claimed.
+                 It delivers the document as EXTRA_STREAM rather than as intent
+                 data, which Capacitor's appUrlOpen does not surface — the app
+                 would appear in the share sheet and then open empty. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" android:mimeType="application/pdf" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="file" android:mimeType="application/pdf" />
+            </intent-filter>
+
         </activity>
 
         <provider

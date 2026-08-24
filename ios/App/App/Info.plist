@@ -26,6 +26,28 @@
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
+	<!-- Puts Universal PDF in the iOS share sheet / "Open In" list for PDFs.
+	     iOS has no concept of a default app for a file type, so this is the whole
+	     of what an app can do. LSSupportsOpeningDocumentsInPlace is deliberately
+	     ABSENT: without it iOS copies the document into the app's Inbox and hands
+	     over a plain file:// path, which is what we want — the app reads the bytes
+	     and never writes back to the original, so in-place access would buy a
+	     security-scoped URL we would have to manage for nothing. -->
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>PDF Document</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.adobe.pdf</string>
+			</array>
+		</dict>
+	</array>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>armv7</string>
