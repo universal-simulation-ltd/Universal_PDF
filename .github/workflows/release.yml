@@ -1,0 +1,224 @@
+# Builds the desktop installers for all three platforms and attaches them to a
+# GitHub Release. Pushing a `v*` tag is what publishes them; nothing here runs
+# on an ordinary push to main.
+#
+# Replaced the Windows-only `build-windows.yml` (2026-08-24). The Windows job
+# below is that workflow's job unchanged apart from the artifact name — see the
+# `--publish never` and Supabase-secret comments, both of which were learned the
+# hard way and still apply to all three platforms.
+#
+# Signing: none, on purpose — the suite's standing unsigned-builds policy. Both
+# Windows SmartScreen and macOS Gatekeeper will warn on first run; the download
+# page explains that and how to get past it. Linux is unaffected.
+
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to build and upload to"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  desktop:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # One platform failing shouldn't throw away the other two — a partial
+      # release we can top up beats no release at all.
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows installer
+            os: windows-latest
+            script: dist:win
+            artifacts: universal-pdf-windows
+          # macOS runners are arm64, and electron-builder packages BOTH
+          # architectures from one — see the `arch: [arm64, x64]` dmg target.
+          - name: macOS DMGs
+            os: macos-14
+            script: dist:mac:unsigned
+            artifacts: universal-pdf-macos
+          - name: Linux AppImage + deb
+            os: ubuntu-latest
+            script: dist:linux
+            artifacts: universal-pdf-linux
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # workflow_dispatch runs against a branch by default; check out the
+          # tag being released so the built version matches the release.
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build installers
+        # --publish never: electron-builder otherwise auto-publishes when it
+        # sees a tag ref and fails on the missing GH_TOKEN, killing the job
+        # before the steps below run. The "Attach to GitHub Release" step owns
+        # publishing.
+        run: npm run ${{ matrix.script }} -- --publish never
+        env:
+          # The platform Supabase URL + anon key are required to construct
+          # the SDK's Supabase client at boot; without them the renderer
+          # throws and the error boundary takes over (see PR #80). Both are
+          # public (anon key is designed for client exposure), but we route
+          # them via secrets to match how Cloudflare Pages injects them for
+          # the web build rather than committing them.
+          VITE_PLATFORM_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_PLATFORM_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          # No code-signing cert configured. CSC_IDENTITY_AUTO_DISCOVERY=false
+          # stops electron-builder from probing the keychain on hosted runners.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      # Proves the thing we are about to hand to strangers actually boots. A
+      # packaged Electron app that dies on launch looks identical to a healthy
+      # one until someone double-clicks it.
+      #
+      # ⚠️ Do NOT "simplify" this to `pgrep ... | head`: head exits 0 on empty
+      # input, so the check passes whether or not the app is running.
+      - name: Smoke-check the packaged app launches (macOS)
+        if: matrix.os == 'macos-14'
+        run: |
+          APP="release/mac-arm64/Universal PDF.app/Contents/MacOS/Universal PDF"
+          test -x "$APP"
+          # ⚠️ env -u, not `ELECTRON_RUN_AS_NODE: ''`. Electron tests whether
+          # the variable is PRESENT, not whether it is truthy, so setting it to
+          # the empty string would still make the app run as plain Node and
+          # exit 0 in under a second — looking dead when it is fine. It is set
+          # inside Electron-hosted terminals (VS Code), which is exactly how
+          # this check produced a false "crashed on boot" during development.
+          env -u ELECTRON_RUN_AS_NODE "$APP" &
+          APP_PID=$!
+          sleep 15
+          kill -0 "$APP_PID"
+          kill "$APP_PID"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifacts }}
+          path: |
+            release/*.exe
+            release/*.dmg
+            release/*.AppImage
+            release/*.deb
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Attach to GitHub Release
+        run: gh release upload "$TAG" release/Universal-PDF-* --clobber
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  android:
+    name: Android APK + AAB
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # ⚠️ Java 21, not "latest". Gradle rejects a newer class-file version
+      # outright — Java 25 fails the build with "Unsupported class file major
+      # version 69" before it compiles a line.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install deps
+        run: npm ci
+
+      # build:mobile is the `desktop` Vite mode: relative base, no service
+      # worker. The default `npm run build` bakes in the /pdf/ base path used by
+      # the hosted site, and every asset 404s inside the WebView.
+      - name: Build web bundle and sync Capacitor
+        run: npm run cap:sync
+        env:
+          VITE_PLATFORM_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_PLATFORM_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      # Absent secrets produce an empty file, and build.gradle only wires the
+      # signing config when ANDROID_KEYSTORE_PATH is set — so a fork without
+      # the keystore still gets an unsigned build rather than a hard failure.
+      # ⚠️ The secret goes through `env:`, NOT interpolated into the script.
+      # `${{ secrets.X }}` inside `run:` is substituted into the shell source
+      # before it executes, so it lands in the command line. And the emptiness
+      # test has to happen in the shell rather than in a step-level `if:` —
+      # the `secrets` context is not available to `if`.
+      - name: Decode upload keystore
+        id: keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "No ANDROID_KEYSTORE_BASE64 secret set — building UNSIGNED."
+            echo "An unsigned APK will not install on a phone and Play will reject it."
+            exit 0
+          fi
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          echo "path=$RUNNER_TEMP/upload.jks" >> "$GITHUB_OUTPUT"
+
+      - name: Build release APK + AAB
+        run: ./gradlew :app:assembleRelease :app:bundleRelease
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ steps.keystore.outputs.path }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      # Gradle's own output names (app-release.apk) say nothing about which app
+      # or which version, and every Capacitor project in the suite produces the
+      # same three words. Rename to match the desktop artifacts.
+      - name: Rename artifacts
+        id: rename
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          APK_DIR=android/app/build/outputs/apk/release
+          # Gradle names it app-release-unsigned.apk when no signing config is
+          # wired, and app-release.apk when one is — handle both so an unsigned
+          # run fails at the upload (visibly) rather than here at `mv`.
+          SRC=$(ls "$APK_DIR"/app-release*.apk | head -1)
+          mv "$SRC" "$APK_DIR/Universal-PDF-$VERSION-android.apk"
+          mv android/app/build/outputs/bundle/release/app-release.aab \
+             "android/app/build/outputs/bundle/release/Universal-PDF-$VERSION-android.aab"
+
+      # The AAB is NOT attached to the GitHub release. An .aab is not
+      # installable — it is an upload format for Google Play, and offering it
+      # next to the .apk only invites people to download the one that cannot be
+      # opened. It stays a workflow artifact for whoever does the Play upload.
+      - name: Upload AAB for the Play Console
+        uses: actions/upload-artifact@v4
+        with:
+          name: universal-pdf-android-aab
+          path: android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Attach APK to GitHub Release
+        run: gh release upload "$TAG" android/app/build/outputs/apk/release/Universal-PDF-*.apk --clobber
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

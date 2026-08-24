@@ -11,6 +11,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "build:desktop": "tsc -b && vite build --mode desktop",
+    "build:mobile": "npm run build:desktop",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "test:e2e": "node e2e/office-import.e2e.mjs",
@@ -18,11 +19,17 @@
     "electron": "electron .",
     "dist": "npm run build:desktop && electron-builder",
     "dist:win": "npm run build:desktop && electron-builder --win",
-    "cap:sync": "npm run build && npx cap sync",
+    "dist:mac": "npm run build:desktop && electron-builder --mac",
+    "dist:mac:unsigned": "CSC_IDENTITY_AUTO_DISCOVERY=false npm run build:desktop && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac -c.mac.notarize=false -c.mac.hardenedRuntime=false",
+    "dist:linux": "npm run build:desktop && electron-builder --linux",
+    "cap:sync": "npm run build:mobile && npx cap sync",
     "cap:open:ios": "npx cap open ios",
     "cap:open:android": "npx cap open android"
   },
   "dependencies": {
+    "@capacitor/android": "^7.6.8",
+    "@capacitor/core": "^7.6.8",
+    "@capacitor/ios": "^7.6.8",
     "@unisim/doc": "^0.4.0",
     "@unisim/sdk": "^0.105.1",
     "konva": "^9.3.20",
@@ -36,6 +43,7 @@
     "zustand": "^5.0.2"
   },
   "devDependencies": {
+    "@capacitor/cli": "^7.6.8",
     "@tailwindcss/vite": "^4.0.0",
     "@types/node": "^22.16.5",
     "@types/react": "^18.3.18",
@@ -63,9 +71,44 @@
         "ext": "pdf",
         "name": "PDF Document",
         "description": "PDF Document",
-        "role": "Viewer"
+        "role": "Viewer",
+        "mimeType": "application/pdf"
       }
     ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "icon": "public/unisim-icon.png",
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "notarize": true,
+      "artifactName": "Universal-PDF-${version}-mac-${arch}.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "public/unisim-icon.png",
+      "category": "Office",
+      "synopsis": "Free and open-source PDF viewer and editor",
+      "desktop": {
+        "entry": {
+          "MimeType": "application/pdf;"
+        }
+      },
+      "artifactName": "Universal-PDF-${version}-linux-${arch}.${ext}"
+    },
     "win": {
       "target": [
         "nsis"
@@ -75,7 +118,8 @@
     "nsis": {
       "oneClick": false,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Universal-PDF-Setup-${version}.${ext}"
     }
   }
 }

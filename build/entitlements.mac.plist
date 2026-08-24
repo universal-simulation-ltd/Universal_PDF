@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Hardened Runtime entitlements for a notarised macOS build.
+
+  Not used by the current release pipeline: there is no Developer ID cert, so
+  `dist:mac:unsigned` turns Hardened Runtime and notarisation off. This file is
+  what the build needs the day a cert exists — Hardened Runtime is REQUIRED for
+  notarisation, and it blocks things Electron genuinely needs.
+
+  Deliberately SHORTER than Universal USB's copy of this file: that app loads an
+  unsigned libusb .node and needs `disable-library-validation` to do it.
+  Universal PDF is pure JavaScript — pdf-lib, pdf.js and tesseract.js are all
+  WASM or JS, with no native binding to validate — so that exception is not
+  here. Don't paste it back in without a reason.
+-->
+<plist version="1.0">
+<dict>
+  <!-- Electron's V8 JIT. Without these the renderer crashes on launch. -->
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+
+  <!-- Electron sets DYLD_* variables for its own framework loading. -->
+  <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+  <true/>
+</dict>
+</plist>

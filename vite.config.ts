@@ -10,6 +10,13 @@ import pkg from './package.json' with { type: 'json' }
 // `desktop` mode targets the Electron build, which loads index.html over
 // `file://`, so assets must resolve relative to it (`./`). Derived from Vite's
 // `mode` so the config needs no Node `process` typings.
+//
+// ⚠️ `desktop` mode is ALSO what the Capacitor (Android + iOS) builds use, and
+// the name is now a misnomer — see the `build:mobile` script, which is an alias
+// for `build:desktop`. Both need exactly the same two things: a relative `base`
+// (Capacitor serves the bundle from a `capacitor://` / `https://localhost`
+// origin) and no service worker. Don't add anything Electron-specific behind
+// `isDesktop` without splitting the mode first.
 // Build-version marker: prefer the Cloudflare Pages commit SHA baked in at build
 // time, fall back to the local git short SHA, then 'dev'. Surfaced as a
 // <meta name="build-sha"> tag and a startup console.log so the live build is

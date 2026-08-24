@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Universal PDF</string>
+    <string name="title_activity_main">Universal PDF</string>
+    <string name="package_name">uk.co.unisim.pdf</string>
+    <string name="custom_url_scheme">uk.co.unisim.pdf</string>
+</resources>

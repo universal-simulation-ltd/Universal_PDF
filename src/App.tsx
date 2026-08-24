@@ -141,7 +141,17 @@ export default function App() {
   const showDropHint = pageDrop.pageOver && !!doc && !dialogOwnsDrop
 
   return (
-    <div className="flex flex-col h-full bg-slate-100">
+    // ⚠️ pt-[env(safe-area-inset-top)] is for the native (Capacitor) builds, not
+    // the web one. Capacitor runs the app in a FULL-SCREEN WKWebView / Android
+    // WebView, so without it the top bar renders underneath the iOS status bar
+    // and Dynamic Island — "Universal PDF" sitting on top of the clock, which is
+    // exactly what the first simulator run showed. In a browser the inset is 0,
+    // so this is a no-op on the web and on desktop.
+    //
+    // It lives here rather than in @unisim/sdk's UniversalAppsNavBar because
+    // that bar is shared by every Universal App, and the padding belongs to
+    // whichever of them is wrapped for a phone — currently only this one.
+    <div className="flex flex-col h-full bg-slate-100 pt-[env(safe-area-inset-top)]">
       {!doc && (
         <div className="relative z-50">
           <UniversalAppsNavBar
