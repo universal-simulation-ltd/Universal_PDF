@@ -4,7 +4,10 @@
   "private": true,
   "type": "module",
   "license": "MIT",
-  "author": "Universal Simulation Ltd",
+  "author": {
+    "name": "Universal Simulation Ltd",
+    "email": "inbox@unisim.co.uk"
+  },
   "description": "Universal PDFs that just work. Free and open source PDF viewer + editor.",
   "main": "electron/main.cjs",
   "scripts": {
