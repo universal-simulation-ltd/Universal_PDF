@@ -295,6 +295,27 @@ export default function App() {
                 desktop tool chrome switches to the bottom bar below lg (1024px)
                 — at narrower widths the Select group collides with Actions. */}
             <div className="flex items-center gap-2 shrink-0 [&>*]:shrink-0 lg:pl-5">
+              {/* Brand mark, phones and tablets only. Below lg the whole tool
+                  cluster moves to the bottom bar, leaving this end of the row
+                  empty — so on a phone the app's own name was nowhere on screen
+                  while a document was open. On lg+ the tools fill this slot and
+                  the mark would push them along, hence lg:hidden.
+
+                  ⚠️ Deliberately NOT a link or a button. The comment above is
+                  explicit that this bar has no home control: leaving a document
+                  is Actions → File → Close PDF, one way out, and a second one
+                  hiding behind the logo is exactly what was removed. It is a
+                  label.
+
+                  The mark's own tile is #0f172a, which is bg-slate-900 — so it
+                  disappears into the bar and what reads is the white page and
+                  the orange fold, not a square sitting on a square. */}
+              <span className="lg:hidden flex items-center gap-2 pl-1 select-none">
+                <ProductLogo />
+                <span className="text-sm font-semibold tracking-tight whitespace-nowrap">
+                  Universal PDF
+                </span>
+              </span>
               <ToolbarDesktopTools />
             </div>
             {/* Profile + changelog previously lived in the top navbar; with
