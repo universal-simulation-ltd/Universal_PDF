@@ -297,34 +297,28 @@ export default function App() {
             <div className="flex items-center gap-2 shrink-0 [&>*]:shrink-0 lg:pl-5">
               <ToolbarDesktopTools />
             </div>
-            <div className="flex items-center gap-2 justify-end shrink-0 [&>*]:shrink-0">
+            {/* Profile + changelog previously lived in the top navbar; with
+                that bar gone while viewing, they carry the whole of the
+                document's chrome and sit at the end of this row.
+                ⚠️ They used to be a SECOND copy, absolutely positioned against
+                the bar's right edge — the window's edge — while this row is
+                centred at the DOCUMENT's width. The two collided whenever the
+                window was about as wide as the document (~1280px, i.e. a
+                maximised window on a 13" screen): the pinned cluster painted
+                straight over Actions, and the profile pill and the changelog
+                icon landed on top of the Actions menu. In the flow they cannot
+                overlap anything, and they now genuinely line up with the
+                document's right edge at every width — which is what the old
+                comment claimed but only achieved when the document happened to
+                fill the window. */}
+            <div className="flex items-center gap-2 justify-end shrink-0 [&>*]:shrink-0 lg:pr-3">
               <ToolbarDesktopActions />
-              {/* Mobile-only profile + changelog — on md+ they're pinned to the
-                  far right of the bar below. */}
-              <div className="lg:hidden flex items-center gap-2 [&>*]:shrink-0">
-                <ToolbarUserProfile actions={<FileMenu variant="rows" />} />
-                <ChangelogMenu
-                  iconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
-                  productFilter="pdf"
-                />
-              </div>
+              <ToolbarUserProfile actions={<FileMenu variant="rows" />} />
+              <ChangelogMenu
+                iconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
+                productFilter="pdf"
+              />
             </div>
-          </div>
-          {/* Profile + changelog previously lived in the top navbar; with that
-              bar gone while viewing, they're pinned to the far right of the
-              bar, and now carry the whole of the document's chrome.
-              The right offset tracks the viewer scrollbar width (like the
-              bar's own padding-right) so the cluster lines up with the
-              document's right edge. */}
-          <div
-            className="hidden lg:flex absolute inset-y-0 z-10 items-center gap-2 pr-3"
-            style={{ right: 'var(--doc-scrollbar-width, 0px)' }}
-          >
-            <ToolbarUserProfile actions={<FileMenu variant="rows" />} />
-            <ChangelogMenu
-              iconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
-              productFilter="pdf"
-            />
           </div>
         </div>
       )}

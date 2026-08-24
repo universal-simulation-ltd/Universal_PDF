@@ -7,6 +7,12 @@ const defaultApp = require('./defaultApp.cjs')
 // (the packaged app), we load the built bundle from disk over `file://`.
 const DEV_SERVER_URL = process.env.ELECTRON_START_URL
 
+// ⚠️ NOT the same string as the page's <title>, deliberately. The web build's
+// title is its search-result headline ("open source, browser-based PDF editor")
+// — right for Google, wrong for a title bar, where nobody needs to be told what
+// kind of app the window they are looking at is.
+const WINDOW_TITLE = 'Universal PDF: Welcome to PDFs that just work.'
+
 let mainWindow = null
 
 // Whether mainWindow's renderer has finished loading. `webContents.send` before
@@ -75,6 +81,7 @@ function createWindow() {
     y: workArea.y,
     minWidth: 640,
     minHeight: 480,
+    title: WINDOW_TITLE,
     backgroundColor: '#f8fafc',
     autoHideMenuBar: true,
     // Hold the window back until there is something to look at, rather than
@@ -88,6 +95,10 @@ function createWindow() {
       nodeIntegration: false,
     },
   })
+  // A loaded page's <title> replaces the window title unless this is stopped,
+  // so `title` above would last only until the bundle finished loading.
+  win.on('page-title-updated', (event) => event.preventDefault())
+
   mainWindow = win
   windowLoaded = false
   win.on('closed', () => {
