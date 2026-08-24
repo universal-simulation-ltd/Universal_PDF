@@ -23,11 +23,30 @@ A clean Progressive Web App for viewing, annotating, and signing PDFs — works 
 - **Recents** are remembered locally so you can reopen a PDF with one tap, even offline
 - **Installable** PWA — add to home screen on phone or install on desktop, works offline after first load
 
-## Install on your device
+## Download
 
-Open the [app URL](https://pdf.unisim.co.uk/), then:
+Installers for every release are on the
+[releases page](https://github.com/universal-simulation-ltd/Universal_PDF/releases/latest):
 
-- **iOS Safari**: Share → *Add to Home Screen*
+| Platform | File | Notes |
+| --- | --- | --- |
+| Windows | `Universal-PDF-Setup-<version>.exe` | NSIS installer, per-user by default |
+| macOS | `Universal-PDF-<version>-mac-arm64.dmg` / `-x64.dmg` | Apple silicon and Intel are separate builds |
+| Linux | `Universal-PDF-<version>-linux-*.AppImage` / `.deb` | AppImage runs anywhere; `.deb` for Debian/Ubuntu |
+| Android | `Universal-PDF-<version>-android.apk` | Sideload, or install from Play once listed |
+| iOS | — | App Store only; an `.ipa` on a release is not installable |
+
+**None of the builds are code-signed**, so Windows SmartScreen and macOS
+Gatekeeper warn on first run: *More info → Run anyway* on Windows, right-click →
+*Open* on macOS.
+
+### Or install the web app — no download at all
+
+The browser version is the whole app. Open the
+[app URL](https://opensource.unisim.co.uk/pdf), then:
+
+- **iOS Safari**: Share → *Add to Home Screen* — the recommended route on iPhone
+  and iPad until the App Store listing exists
 - **Android Chrome**: menu → *Install app*
 - **Desktop Chrome / Edge**: install icon in the address bar
 
@@ -58,7 +77,7 @@ Pushes to `main` auto-deploy via Cloudflare Pages, which serves the app at <http
 
 Each build bakes the commit SHA into a `<meta name="build-sha">` tag and logs `build: <sha>` to the console at startup, so you can tell which build is live in-browser. On Cloudflare Pages the SHA comes from `CF_PAGES_COMMIT_SHA`; locally it falls back to the git short SHA (or `dev`).
 
-## Desktop app (Windows)
+## Desktop app (Windows, macOS, Linux)
 
 The same client-side app can be packaged as a native desktop app with
 [Electron](https://www.electronjs.org/). The Electron main process lives in
@@ -67,9 +86,11 @@ The same client-side app can be packaged as a native desktop app with
 service worker so assets resolve over `file://`.
 
 ```sh
-npm run build:desktop   # build the web bundle for Electron (dist/)
-npm run electron        # run the packaged-style app against that build
-npm run dist:win        # build + produce a Windows installer in release/
+npm run build:desktop      # build the web bundle for Electron (dist/)
+npm run electron           # run the packaged-style app against that build
+npm run dist:win           # Windows NSIS installer     -> release/
+npm run dist:mac:unsigned  # macOS DMGs, arm64 + x64    -> release/
+npm run dist:linux         # Linux AppImage + .deb      -> release/
 ```
 
 The installer registers Universal PDF as a `.pdf` file handler, so it appears
@@ -78,16 +99,62 @@ app). Files opened that way — or double-clicked while it's the default — loa
 straight into the editor, skipping the landing page; opening another PDF while
 the app is running reuses the existing window.
 
-`npm run dist:win` emits an NSIS `.exe` installer under `release/`. **It must
-run on Windows** (or Linux/macOS with Wine) because electron-builder packages a
-platform-native binary; cross-building from a plain Linux host won't produce a
-working Windows `.exe`. The first run downloads the Electron binary (~100 MB).
+**Each target must be built on its own OS.** electron-builder packages a
+platform-native binary, so cross-building from a plain Linux host won't produce
+a working Windows `.exe`. The first run downloads the Electron binary (~100 MB).
 
-To cut a release, push a `v*` tag — the
-[`build-windows`](.github/workflows/build-windows.yml) workflow builds the
-installer on `windows-latest` and attaches it to the matching GitHub Release.
-Manual `workflow_dispatch` also works for ad-hoc builds; the installer is
-uploaded as a workflow artifact in that case.
+To cut a release, push a `v*` tag — the [`release`](.github/workflows/release.yml)
+workflow builds all three on their matching runners and attaches them to the
+GitHub Release. `workflow_dispatch` takes an existing tag for ad-hoc rebuilds.
+
+> **Building the DMG locally on macOS needs a working `python3`.**
+> electron-builder shells out to a vendored `dmgbuild` and reports the failure
+> as `Command failed: which python`, which is misleading — it means the
+> *`python3` it found* threw, and the fallback to `python` then missed too. A
+> Homebrew Python with a mismatched `libexpat` is the usual cause. Point it at a
+> known-good interpreter with `PYTHON_PATH=/usr/bin/python3 npm run dist:mac:unsigned`.
+
+## Mobile apps (Android, iOS)
+
+The same bundle is wrapped with [Capacitor](https://capacitorjs.com/). Both
+native projects are **committed**, not generated on demand — they carry the app
+icons, the bundle id, the version wiring and the signing config.
+
+```sh
+npm run cap:sync         # build the web bundle + copy it into ios/ and android/
+npm run cap:open:android # open in Android Studio
+npm run cap:open:ios     # open in Xcode
+```
+
+⚠️ **`cap:sync` must use the relative-base build**, which is what it does
+(`build:mobile`, an alias for `build:desktop`). The default `npm run build`
+bakes in the `/pdf/` base path the hosted site uses, and every asset 404s inside
+the WebView.
+
+**Versions.** `android/app/build.gradle` reads `package.json` directly, so
+Android needs nothing. Xcode cannot, so run `node scripts/sync-ios-version.mjs`
+after a version bump (`--check` fails instead of writing, for CI). Both derive
+the build number as `major*10000 + minor*100 + patch`; both stores refuse a
+build number they have already seen, permanently.
+
+**Icons** are generated from the canonical mark by `native-icons.mjs` in the
+platform repo — not resampled from `public/icon-512.png`. Regenerate after a
+mark change rather than editing `res/mipmap-*` or `Assets.xcassets` by hand.
+
+**Android signing** is driven entirely by environment variables, so no keystore
+lives here: `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`,
+`ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`. With none set you get an unsigned
+build, which will not install on a phone and which Play rejects. CI reads the
+keystore from the `ANDROID_KEYSTORE_BASE64` secret.
+
+**Gradle needs Java 21.** Java 25 fails with `Unsupported class file major
+version 69` before compiling anything. Android Studio's bundled JBR is a
+convenient one: `export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"`.
+
+**iOS is not distributed from GitHub.** An `.ipa` attached to a release is not
+installable — the route is TestFlight or the App Store, which needs a signing
+identity and an App Store Connect listing. The Xcode project archives cleanly
+without one (`CODE_SIGNING_ALLOWED=NO`) if you only want to check it builds.
 
 ## Stack
 
