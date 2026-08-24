@@ -17,6 +17,8 @@ import RecentFilesList from '../RecentFiles/RecentFilesList'
 import OcrModal from '../Ocr/OcrModal'
 import TransformPanel from '../Transform/TransformPanel'
 import PdfIllustration from './PdfIllustration'
+import { DefaultAppBar, DefaultAppPill } from '../Onboarding/DefaultAppOffer'
+import { useDefaultPdfApp } from '../../hooks/useDefaultPdfApp'
 import { CONTAINER } from '../../lib/layout'
 
 // Balanced is the default when compressing — 'light' is lossless but usually
@@ -25,6 +27,10 @@ import { CONTAINER } from '../../lib/layout'
 const DEFAULT_COMPRESS_QUALITY: CompressQuality = 'balanced'
 
 export default function LandingPage() {
+  // One instance for both the bar and the pill below it: two would each hold
+  // their own answer, and making the app the default from one would leave the
+  // other still offering it.
+  const defaultApp = useDefaultPdfApp()
   const compressInputRef = useRef<HTMLInputElement>(null)
   const ocrInputRef = useRef<HTMLInputElement>(null)
   const loadFile = usePdfStore((s) => s.loadFile)
@@ -218,6 +224,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-full flex items-center">
       <div className={`${CONTAINER} py-8 lg:py-14`}>
+        <DefaultAppBar offer={defaultApp} />
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           {/* Left: animated PDF illustration */}
           <div className="flex flex-col items-center lg:items-start gap-4 order-2 lg:order-1">
@@ -463,6 +470,11 @@ export default function LandingPage() {
                   <span aria-hidden="true">✎</span>
                   Transform text into a PDF — paste Markdown
                 </button>
+
+                {/* Desktop only, and only while it isn't already the default —
+                    it renders nothing in the browser, where there is no such
+                    thing to set. */}
+                <DefaultAppPill offer={defaultApp} className={`${PILL} ${PILL_IDLE} mt-3`} />
               </details>
             </div>
           </div>

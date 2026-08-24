@@ -72,9 +72,9 @@
     "fileAssociations": [
       {
         "ext": "pdf",
-        "name": "PDF Document",
+        "name": "UniversalPDF.Document",
         "description": "PDF Document",
-        "role": "Viewer",
+        "role": "Editor",
         "mimeType": "application/pdf"
       }
     ],
@@ -119,6 +119,7 @@
       "icon": "public/unisim-icon.png"
     },
     "nsis": {
+      "include": "build/installer.nsh",
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,

@@ -1,6 +1,7 @@
-const { app, BrowserWindow, screen, shell } = require('electron')
+const { app, BrowserWindow, ipcMain, screen, shell } = require('electron')
 const path = require('node:path')
 const fs = require('node:fs')
+const defaultApp = require('./defaultApp.cjs')
 
 // Set by `npm run electron:dev` to load the live Vite dev server. When unset
 // (the packaged app), we load the built bundle from disk over `file://`.
@@ -183,6 +184,13 @@ if (!gotLock) {
     event.preventDefault()
     deliverPdf(filePath)
   })
+
+  // Whether this app owns .pdf on the machine, and the attempt to make it so.
+  // Both live in the main process because every route to the answer is an OS
+  // call (Launch Services, xdg-mime, the registry) that a sandboxed renderer
+  // has no way to reach.
+  ipcMain.handle('default-app:status', () => defaultApp.status())
+  ipcMain.handle('default-app:set', () => defaultApp.makeDefault())
 
   app.whenReady().then(() => {
     createWindow()

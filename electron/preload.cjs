@@ -32,4 +32,11 @@ function channel(name) {
 contextBridge.exposeInMainWorld('desktop', {
   onOpenPdf: channel('open-pdf'),
   onNoPdf: channel('no-pdf'),
+  // Whether this app is the system's default .pdf handler, and the request to
+  // become it. Request-response rather than a pushed event: the app asks when
+  // it has somewhere to put the answer.
+  defaultApp: {
+    status: () => ipcRenderer.invoke('default-app:status'),
+    makeDefault: () => ipcRenderer.invoke('default-app:set'),
+  },
 })
