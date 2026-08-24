@@ -587,6 +587,18 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // of writing it to the store. Cleared when a fresh gesture legitimately
   // starts (a new pointerdown or dragstart) or when the cancelled drag ends.
   const gestureCancelled = useRef(false)
+  // A placement that is waiting to find out whether this gesture is a tap or a
+  // swipe. The one-shot tools (text/tick/cross/signature/image) used to commit
+  // on pointerDOWN, so on a phone the box landed the instant a finger touched
+  // the page — picking Text and then scrolling left a stray empty text box
+  // behind. Now the position is remembered here and only committed if the
+  // finger lifts without travelling (see TAP_SLOP_PX).
+  //
+  // Screen coordinates, not stage coordinates: the slop must mean the same
+  // number of physical pixels at every zoom level.
+  const pendingTapRef = useRef<
+    { x: number; y: number; clientX: number; clientY: number } | null
+  >(null)
   const [currentLine, setCurrentLine] = useState<number[] | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
@@ -705,6 +717,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // pointer away from us and no pointerup is coming.
   function cancelGesture() {
     drawingRef.current = false
+    pendingTapRef.current = null
     setCurrentLine(null)
     marqueeRef.current = null
     setMarquee(null)
@@ -775,20 +788,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     // skipped, so the user can target a form field directly).
     if (tool === 'signature' && pendingExtras.length > 0) {
       const p = getPos(e)
-      const item = pendingExtras[0]
-      add({
-        id: crypto.randomUUID(),
-        pageIndex,
-        type: 'text',
-        x: p.x,
-        y: p.y,
-        text: item.text,
-        color: item.color,
-        fontSize: fontSize / scale,
-        fontFamily
-      })
-      useSignatureStore.getState().consumePendingExtra()
-      if (pendingExtras.length <= 1) useAnnotationStore.getState().setTool('select')
+      pendingTapRef.current = { x: p.x, y: p.y, clientX: e.evt.clientX, clientY: e.evt.clientY }
       return
     }
     const stage = e.target.getStage()
@@ -845,7 +845,44 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     if (tool === 'draw' || tool === 'highlight') {
       drawingRef.current = true
       setCurrentLine([pos.x, pos.y])
-    } else if (tool === 'text') {
+    } else if (tool === 'rect' || tool === 'ellipse' || tool === 'redact' || tool === 'line' || tool === 'sigfield') {
+      drawingRef.current = true
+      setCurrentLine([pos.x, pos.y, pos.x, pos.y])
+    } else {
+      // Everything else is a one-shot placement. Arm it; onPointerUp decides.
+      pendingTapRef.current = { x: pos.x, y: pos.y, clientX: e.evt.clientX, clientY: e.evt.clientY }
+    }
+  }
+
+  // How far a finger may travel between down and up and still count as a tap,
+  // in CSS pixels. 10 is the usual platform slop (iOS ~10pt, Android ~8dp) —
+  // low enough that a deliberate swipe never places, high enough that the
+  // wobble in a real tap on glass still does.
+  const TAP_SLOP_PX = 10
+
+  // Commit a one-shot placement at a point the user actually tapped.
+  function commitTapPlacement(pos: { x: number; y: number }) {
+    // Mid-sequence placement: dropping the name/date for a "separate"
+    // signature. Each tap drops the next text piece exactly where tapped
+    // (hit-testing skipped, so a form field can be targeted directly).
+    if (tool === 'signature' && pendingExtras.length > 0) {
+      const item = pendingExtras[0]
+      add({
+        id: crypto.randomUUID(),
+        pageIndex,
+        type: 'text',
+        x: pos.x,
+        y: pos.y,
+        text: item.text,
+        color: item.color,
+        fontSize: fontSize / scale,
+        fontFamily
+      })
+      useSignatureStore.getState().consumePendingExtra()
+      if (pendingExtras.length <= 1) useAnnotationStore.getState().setTool('select')
+      return
+    }
+    if (tool === 'text') {
       const id = crypto.randomUUID()
       add({
         id,
@@ -870,9 +907,6 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         size: tickSize,
         color
       })
-    } else if (tool === 'rect' || tool === 'ellipse' || tool === 'redact' || tool === 'line' || tool === 'sigfield') {
-      drawingRef.current = true
-      setCurrentLine([pos.x, pos.y, pos.x, pos.y])
     } else if (tool === 'signature') {
       const sigState = useSignatureStore.getState()
       const active = sigState.signatures.find((x) => x.id === sigState.activeId)
@@ -937,6 +971,13 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
 
   function onPointerMove(e: Konva.KonvaEventObject<PointerEvent>) {
     if (pinching) return
+    const tap = pendingTapRef.current
+    if (tap) {
+      const dx = e.evt.clientX - tap.clientX
+      const dy = e.evt.clientY - tap.clientY
+      // Travelled too far to be a tap — this is a scroll or a drag. Disarm.
+      if (Math.hypot(dx, dy) > TAP_SLOP_PX) pendingTapRef.current = null
+    }
     const pos = getPos(e)
     if (marqueeRef.current) {
       const m = marqueeRef.current
@@ -986,6 +1027,14 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
 
   function onPointerUp(e?: Konva.KonvaEventObject<PointerEvent>) {
     if (e) activePointerIds.current.delete(e.evt.pointerId)
+    // A one-shot placement armed on pointerdown and never disarmed by travel,
+    // a pinch or a browser-owned scroll: the finger stayed put, so it was a tap.
+    const tap = pendingTapRef.current
+    pendingTapRef.current = null
+    if (tap && !gestureCancelled.current) {
+      commitTapPlacement({ x: tap.x, y: tap.y })
+      return
+    }
     if (marqueeRef.current) {
       const m = marqueeRef.current
       marqueeRef.current = null
@@ -1528,7 +1577,16 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // The marquee tool reserves drags for the selection box, so the page must
   // not scroll under the gesture (touchAction: none). Select/hand/form and the
   // passive selecttext tool keep vertical panning + pinch-zoom available.
-  const touchAction = (tool === 'select' || tool === 'form' || tool === 'hand' || tool === 'selecttext') ? 'pan-y pinch-zoom' : 'none'
+  //
+  // ⚠️ The one-shot placement tools (text/tick/cross/signature/image) belong on
+  // the panning side too. They need a TAP, not a drag, so reserving the gesture
+  // bought nothing and cost everything: with Text active the page could not be
+  // scrolled at all, and the swipe that tried left a stray text box behind.
+  // Only the tools that genuinely draw through a drag keep 'none'.
+  const dragDrawTool =
+    tool === 'draw' || tool === 'highlight' || tool === 'rect' || tool === 'ellipse' ||
+    tool === 'redact' || tool === 'line' || tool === 'sigfield' || tool === 'marquee'
+  const touchAction = dragDrawTool ? 'none' : 'pan-y pinch-zoom'
 
   // Mirrors the drop sizing above (cap included) so the ghost under the cursor
   // is exactly what gets placed.
