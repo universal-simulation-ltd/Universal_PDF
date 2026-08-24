@@ -2,12 +2,16 @@ import { useEffect, useRef, useState } from 'react'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { useFormStore } from '../../stores/formStore'
+import { PDFDocument } from 'pdf-lib'
 import {
   buildAnnotatedPdfBytes,
   compressPdf,
   downloadPdfBytes,
+  estimateRasterSizes,
+  hasRasterImages,
   type CompressQuality,
-  type CompressResult
+  type CompressResult,
+  type RasterEstimate
 } from '../../lib/export'
 import { nextExportName, previewExportName } from '../../lib/exportName'
 import { RedactIcon } from '../icons/RedactIcon'
@@ -83,6 +87,12 @@ export default function ExportModal({ open, onClose }: Props) {
 
   const [annotated, setAnnotated] = useState<Uint8Array | null>(null)
   const [compressed, setCompressed] = useState<CompressResult | null>(null)
+  // null = not worked out yet. Whether the rasterising qualities have anything
+  // to bite on; see `canCompressAtAll` below for what it is used for.
+  const [hasImages, setHasImages] = useState<boolean | null>(null)
+  // What the two rasterising levels would produce, measured from one sampled
+  // page. null until known; see `offeredQualities`.
+  const [rasterEstimate, setRasterEstimate] = useState<RasterEstimate | null>(null)
   const [building, setBuilding] = useState(false)
   const [compressing, setCompressing] = useState(false)
   const [compressPct, setCompressPct] = useState(0)
@@ -113,6 +123,8 @@ export default function ExportModal({ open, onClose }: Props) {
     const myId = ++buildIdRef.current
     setAnnotated(null)
     setCompressed(null)
+    setHasImages(null)
+    setRasterEstimate(null)
     setError(null)
     setBuilding(true)
     ;(async () => {
@@ -133,6 +145,25 @@ export default function ExportModal({ open, onClose }: Props) {
         const annot = await buildAnnotatedPdfBytes(copy, annotations, EXPORT_SCALE, formValues)
         if (myId !== buildIdRef.current) return
         setAnnotated(annot)
+        // Asked of the ANNOTATED bytes, not the source: a placed signature or
+        // pasted picture is a raster image the source did not have, and it is
+        // as compressible as any other.
+        try {
+          const probe = await PDFDocument.load(annot.slice(0))
+          if (myId !== buildIdRef.current) return
+          setHasImages(hasRasterImages(probe))
+        } catch {
+          if (myId === buildIdRef.current) setHasImages(true)
+        }
+        // Runs alongside the light compression the other effect is doing, so
+        // by the time the dialog is `ready` both answers are usually in and the
+        // level buttons settle before they were ever usable.
+        try {
+          const est = await estimateRasterSizes(annot.slice(0).buffer as ArrayBuffer)
+          if (myId === buildIdRef.current) setRasterEstimate(est)
+        } catch {
+          // Unknown stays unknown — offeredQualities shows everything.
+        }
       } catch (e) {
         if (myId !== buildIdRef.current) return
         setError((e as Error).message || 'Export failed')
@@ -184,7 +215,77 @@ export default function ExportModal({ open, onClose }: Props) {
   const compSize = compressed?.compressedSize ?? 0
   const saved = origSize - compSize
   const pct = origSize > 0 ? (saved / origSize) * 100 : 0
-  const didShrink = saved > 0
+  // A saving too small to name is not a choice worth offering. Under half a
+  // percent AND under 20 KB rounds to "the same size" in the panel below, so a
+  // tab promising "−0%" is just a second button that does nothing.
+  const didShrink = saved > 0 && (pct >= 0.5 || saved >= 20 * 1024)
+
+  // Whether to show the compression controls AT ALL.
+  //
+  // Two different "no gain" cases, and only one of them means the controls are
+  // useless:
+  //
+  //  - Light found nothing, but the document HAS images. Balanced or Maximum
+  //    may still shrink it enormously — that is the whole point of them on a
+  //    scan — so the controls stay and the hint says to try them.
+  //  - The document has no images at all. Then no quality can win: the
+  //    rasterising ones have nothing to re-encode and would only inflate it
+  //    (see `fellBackToLossless`), and Light has already had its go. There is
+  //    genuinely nothing to choose, so the whole block goes.
+  //
+  // `hasImages === null` means the probe has not finished (or failed, in which
+  // case it reports true). Keep the controls until we know better — appearing
+  // late is worse than a control that turns out not to help.
+  const compressionPointless = ready && !didShrink && hasImages === false
+
+  // Which strength buttons are worth putting on screen.
+  //
+  // 'light' is always offered — it is the lossless one and the default.
+  // 'balanced' and 'strong' turn every page into a picture, which costs the
+  // document its text layer: it can no longer be selected, searched or read
+  // aloud. That is a real trade, so it is only worth OFFERING for a real
+  // saving. A level that would shave 3% off does not earn the question.
+  //
+  // Measured against the lossless result, not the original, because Light is
+  // what the user gets for free without giving anything up.
+  const RASTER_WORTH_IT = 0.2 // ≥20% smaller...
+  const RASTER_MIN_BYTES = 100 * 1024 // ...and ≥100 KB, so tiny files don't qualify on ratio alone
+  const losslessSize = compressed && !compressed.fellBackToLossless && quality === 'light'
+    ? compressed.compressedSize
+    : origSize
+  function worthOffering(estimated: number, against: number): boolean {
+    const savedVs = against - estimated
+    return savedVs >= against * RASTER_WORTH_IT && savedVs >= RASTER_MIN_BYTES
+  }
+  const offeredQualities = QUALITY_OPTIONS.filter((opt) => {
+    if (opt.value === 'light') return true
+    // Not measured yet (or the estimate failed): show everything rather than
+    // hide a level that might have been the useful one.
+    if (!rasterEstimate) return true
+    // Never hide the level currently in use — a button vanishing from under
+    // the user's own selection is worse than one that turns out not to help.
+    if (opt.value === quality) return true
+    if (opt.value === 'balanced') return worthOffering(rasterEstimate.balanced, losslessSize)
+    // Maximum has to beat the lossless file AND be meaningfully better than
+    // Balanced; if the two land in the same place, the extra visible damage
+    // buys nothing and only Balanced is worth showing.
+    return (
+      worthOffering(rasterEstimate.strong, losslessSize) &&
+      (!worthOffering(rasterEstimate.balanced, losslessSize) ||
+        worthOffering(rasterEstimate.strong, rasterEstimate.balanced))
+    )
+  })
+  // ⚠️ Two SEPARATE questions, and conflating them drops a real choice:
+  //
+  //  - showStrength: is there more than one compression level worth picking?
+  //    One button is not a choice, so the strength row goes.
+  //  - showVariantTabs: is there a compressed file worth choosing INSTEAD of
+  //    the original? A document where Light saves 40% but rasterising is not
+  //    worth offering has only one strength — and still very much has two
+  //    files. Hiding the tabs with the strength row would have stranded the
+  //    user on whichever variant happened to be selected.
+  const showVariantTabs = !compressionPointless
+  const showStrength = showVariantTabs && offeredQualities.length > 1
   const effectiveTab: Variant = ready && tab === 'compressed' && !didShrink ? 'original' : tab
 
   // Why the Compressed tab has nothing to offer. On the lossless pass that is
@@ -282,13 +383,19 @@ export default function ExportModal({ open, onClose }: Props) {
           </>
         ) : (
           <>
-            {/* Compression strength — re-compresses the annotated bytes live */}
+            {/* Compression strength — re-compresses the annotated bytes live.
+                Hidden when there is no second level worth picking; see
+                `showStrength`. */}
+            {showStrength && (
             <div className="mb-3">
               <div className="text-xs uppercase tracking-wide text-slate-500 font-medium mb-1.5">
                 Compression
               </div>
-              <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-lg">
-                {QUALITY_OPTIONS.map((opt) => {
+              <div
+                className="grid gap-1 p-1 bg-slate-100 rounded-lg"
+                style={{ gridTemplateColumns: `repeat(${offeredQualities.length}, minmax(0, 1fr))` }}
+              >
+                {offeredQualities.map((opt) => {
                   const active = opt.value === quality
                   return (
                     <button
@@ -319,8 +426,14 @@ export default function ExportModal({ open, onClose }: Props) {
                 </div>
               )}
             </div>
+            )}
 
             <div className="rounded-lg border border-slate-200 overflow-hidden">
+              {/* Two tabs are a choice. With compression ruled out there is only
+                  one file to download, so a tab strip with a permanently
+                  disabled half is chrome that asks a question it already knows
+                  the answer to. */}
+              {showVariantTabs && (
               <div className="flex bg-slate-50 border-b border-slate-200" role="tablist">
                 <button
                   type="button"
@@ -366,6 +479,7 @@ export default function ExportModal({ open, onClose }: Props) {
                   )}
                 </button>
               </div>
+              )}
 
               <div className="p-4">
                 {!ready ? (
@@ -393,6 +507,11 @@ export default function ExportModal({ open, onClose }: Props) {
                       </div>
                       <div className="text-xs text-slate-500">annotations baked in</div>
                     </div>
+                    {compressionPointless && (
+                      <div className="mt-1 text-[11px] text-slate-400">
+                        Already as small as it goes — there are no images here to compress.
+                      </div>
+                    )}
                   </>
                 ) : (
                   <>
@@ -456,7 +575,10 @@ export default function ExportModal({ open, onClose }: Props) {
                 className="px-4 py-2.5 bg-orange-700 hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
               >
                 <span aria-hidden="true">⬇</span>
-                Download {effectiveTab === 'original' ? 'Original' : 'Compressed'}
+                {/* "Download Original" only means something next to a
+                    "Download Compressed". On its own it reads as though there
+                    were another, better copy being withheld. */}
+                Download{!showVariantTabs ? '' : effectiveTab === 'original' ? ' Original' : ' Compressed'}
               </button>
               <button
                 onClick={openPrintPreview}

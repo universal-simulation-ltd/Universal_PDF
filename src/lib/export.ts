@@ -1,4 +1,4 @@
-import { PDFDocument, StandardFonts, LineCapStyle, degrees, PDFName, PDFHexString, PDFString, PDFArray, type PDFFont } from 'pdf-lib'
+import { PDFDocument, StandardFonts, LineCapStyle, degrees, PDFName, PDFHexString, PDFString, PDFArray, PDFDict, PDFStream, type PDFFont } from 'pdf-lib'
 import type { Annotation, RedactAnnotation, SignatureFieldAnnotation } from '../types/annotations'
 import type { FormFieldValue } from '../stores/formStore'
 import { hexToPdfRgb } from './colors'
@@ -643,6 +643,50 @@ export async function exportPdfWithAnnotations(
   downloadPdfBytes(bytes, outName)
 }
 
+/**
+ * Does this document contain any raster image at all?
+ *
+ * The point is to know whether the rasterising qualities ('balanced' /
+ * 'strong') could POSSIBLY help before spending a pass finding out. They shrink
+ * a file by re-encoding its pictures at a lower resolution; a document with no
+ * pictures has nothing for them to take, so turning its pages into JPEGs only
+ * ever inflates it — the comment on `fellBackToLossless` has the numbers, 7 KB
+ * of text becoming ~860 KB of JPEG.
+ *
+ * Walks each page's Resources → XObject dictionary looking for a /Subtype
+ * /Image. Cheap: dictionary lookups on an already-parsed document, no decoding
+ * and no re-serialising.
+ *
+ * ⚠️ Deliberately errs towards TRUE. Every failure path — a malformed
+ * resource dict, an XObject we cannot resolve, an exception — reports "there
+ * might be images", because the cost of being wrong is asymmetric: a false
+ * `true` shows a compression control that turns out not to help, while a false
+ * `false` silently removes the one setting that would have shrunk someone's
+ * 45 MB scan.
+ */
+export function hasRasterImages(pdf: PDFDocument): boolean {
+  try {
+    for (const page of pdf.getPages()) {
+      const resources = page.node.Resources()
+      if (!resources) return true // can't tell — assume it might
+      const xobjects = resources.lookupMaybe(PDFName.of('XObject'), PDFDict)
+      if (!xobjects) continue // this page genuinely has none
+      for (const key of xobjects.keys()) {
+        const xobj = xobjects.lookupMaybe(key, PDFStream)
+        if (!xobj) return true // unresolvable — assume it might
+        const subtype = xobj.dict.lookupMaybe(PDFName.of('Subtype'), PDFName)
+        if (subtype === PDFName.of('Image')) return true
+        // A Form XObject can nest images of its own. Rather than recurse
+        // through arbitrary nesting, treat it as "might".
+        if (subtype === PDFName.of('Form')) return true
+      }
+    }
+    return false
+  } catch {
+    return true
+  }
+}
+
 // 'light' keeps everything lossless (text stays selectable) and just re-packs
 // the file with object streams. 'balanced' and 'strong' rasterize each page to
 // JPEG — losing text selectability but shrinking image-heavy PDFs a lot — with
@@ -699,6 +743,49 @@ async function rasterizePageToJpeg(
 // image data, so a third off is a good day for it and half is out of reach.
 // Below this ratio we skip the yardstick save entirely — see compressPdf.
 const LANDSLIDE_RATIO = 0.5
+
+/** Estimated output size of each rasterising quality, in bytes. */
+export interface RasterEstimate {
+  balanced: number
+  strong: number
+}
+
+/**
+ * Predict what the rasterising qualities would produce, WITHOUT doing the full
+ * pass.
+ *
+ * The export dialog needs to know whether 'balanced' / 'strong' are worth
+ * offering at all. Actually compressing at every quality to find out is not an
+ * option: a rasterising pass over a long document is minutes of work, and the
+ * whole point is to answer the question before the user commits to one.
+ *
+ * So: rasterise ONE page at each setting, measure the JPEG, and multiply by the
+ * page count. Rasterising replaces every page with a picture of itself at fixed
+ * render settings, so per-page output size is roughly uniform across a document
+ * — which is exactly what makes one sample extrapolate honestly here, and would
+ * not for a compressor whose output tracked the input's composition.
+ *
+ * ⚠️ Samples the MIDDLE page, not the first. A first page is disproportionately
+ * often a cover, a title page or a mostly-blank letterhead — the least
+ * representative page in the file, and one that compresses far smaller than the
+ * dense pages after it. Sampling it would underestimate the output and offer a
+ * saving that never arrives.
+ *
+ * The result is an estimate and is only ever used to decide whether to SHOW an
+ * option. The size the dialog reports is always really measured.
+ */
+export async function estimateRasterSizes(sourceBytes: ArrayBuffer): Promise<RasterEstimate> {
+  const pdfjsDoc = await pdfjsLib.getDocument({ data: sourceBytes.slice(0) }).promise
+  const pageCount = pdfjsDoc.numPages
+  const sampleIndex = Math.floor(pageCount / 2)
+  const measure = async (q: 'balanced' | 'strong') => {
+    const { renderScale, jpegQuality } = RASTER_SETTINGS[q]
+    const jpeg = await rasterizePageToJpeg(pdfjsDoc, sampleIndex, renderScale, jpegQuality)
+    // + a little per page for the PDF object overhead wrapping each image.
+    return (jpeg.byteLength + 512) * pageCount
+  }
+  return { balanced: await measure('balanced'), strong: await measure('strong') }
+}
 
 export async function compressPdf(
   sourceBytes: ArrayBuffer,
