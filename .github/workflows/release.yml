@@ -143,7 +143,15 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      # ⚠️ shell: bash is REQUIRED — this step runs on Windows too, where the
+      # default shell is PowerShell. There `$TAG` is not an environment
+      # variable (that would be `$env:TAG`) and `release/Universal-PDF-*` is
+      # not expanded for an external command, so the step silently became
+      # `gh release upload "" ...` and failed with "release not found" while
+      # macOS and Linux uploaded to the very same release. The workflow this
+      # replaced used an action here, which never went near a shell.
       - name: Attach to GitHub Release
+        shell: bash
         run: gh release upload "$TAG" release/Universal-PDF-* --clobber
         env:
           TAG: ${{ inputs.tag || github.ref_name }}
