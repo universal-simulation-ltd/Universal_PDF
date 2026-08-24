@@ -287,25 +287,7 @@ export default function LandingPage() {
                     over ? 'scale-[1.02]' : ''
                   }`}
                 >
-                  <DropRing size="100%" over={over} motion="idle">
-                    {/* The ring's backdrop, and it has to live INSIDE the ring.
-                        DropRing paints an opaque white circle for its interior,
-                        so anything behind the ring is simply covered — which is
-                        exactly what swallowed the first attempt at this. As a
-                        child it lands above that fill and below the copy, which
-                        follows it in the DOM. Absolute, so it stays out of the
-                        flex column and the text stays centred.
-
-                        Shown at every width: on a phone it is the only artwork
-                        on the page (the standalone illustration is desktop-only
-                        now), and on desktop it gives the ring something to do
-                        beside the big illustration rather than sitting inert. */}
-                    <div
-                      className="pointer-events-none absolute inset-[14%] opacity-[0.3]"
-                      aria-hidden="true"
-                    >
-                      <DropRingWatermark />
-                    </div>
+                  <DropRing size="100%" over={over} motion="idle" watermark={<DropRingWatermark />}>
                     <svg
                       viewBox="0 0 24 24"
                       className={`mb-1 h-9 w-9 ${over ? 'text-orange-500' : 'text-slate-400'}`}

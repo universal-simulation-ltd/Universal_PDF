@@ -6,6 +6,7 @@ import { useSearchStore } from '../../stores/searchStore'
 import { LANGS, persistLang, readSavedLang, type LangCode } from '../../lib/lang'
 import { OfficeImportError, PDF_OR_OFFICE_ACCEPT, toViewablePdf } from '../../lib/officeToPdf'
 import { RedactIcon } from '../icons/RedactIcon'
+import { useCloseAppMenu } from '@unisim/sdk'
 
 interface Props {
   /**
@@ -271,21 +272,21 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
    * without handing down any way to close itself. So on a phone every menu
    * item left the dropdown sitting open over whatever it had just opened.
    *
-   * The SDK's DropdownSurface closes on a document `mousedown` that lands
-   * outside its anchor and panel, so that is what this sends. It is reaching
-   * into another package's behaviour — if that surface ever stops closing on
-   * outside mousedown this silently stops working, so the real fix is for the
-   * SDK to pass a close callback alongside `actions`. Logged in the backlog.
-   *
-   * Dispatched on `document`, so the target is inside neither element and the
-   * check cannot accidentally treat it as a click on the menu itself. Safe to
-   * fire before a dialog opens: the dialog is not mounted until the next
-   * render, so it cannot see this event.
+   * `useCloseAppMenu()` is the SDK's own handle on that dropdown, added in
+   * 0.110.0 for exactly this. It replaces a workaround that dispatched a
+   * synthetic document `mousedown` to trip DropdownSurface's outside-click —
+   * correct in effect, but reaching into another package's internals and liable
+   * to break silently the day that surface changed.
    */
+  const closeAppMenu = useCloseAppMenu()
+
   function closeMenu() {
     setOpen(false)
-    if (variant !== 'rows') return
-    document.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+    // In `rows` mode the panel belongs to the SDK's <UserProfile> dropdown and
+    // the `open` above is never true, so this is what actually dismisses it.
+    // Outside a UserProfile the hook is a no-op, so it costs nothing to call
+    // unconditionally.
+    closeAppMenu()
   }
 
   function startRename() {
