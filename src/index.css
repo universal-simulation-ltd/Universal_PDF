@@ -297,3 +297,27 @@ body {
 
 /* Reduced motion is handled in PdfIllustration.tsx, which parks `--t` at 1 and
    never starts the loop — the finished frame, not a slower version of it. */
+
+/* ── iOS: stop a focused field zooming the whole page ──────────────────────
+   Safari and every iOS WKWebView (so the Capacitor build too) zoom the page in
+   when a text field smaller than 16px takes focus, and they do not zoom back
+   out. The QR dialog made this obvious: its URL field is `text-sm` (14px) and
+   `autoFocus`, so merely opening QR zoomed the document and pushed the toolbar
+   off screen.
+
+   ⚠️ The usual "fix" — `maximum-scale=1, user-scalable=no` on the viewport —
+   is NOT an option here. This is a PDF reader: pinch-zooming the page is a
+   primary gesture, and the annotation Stage hands pinch to the browser via
+   `touch-action: pinch-zoom`. Disabling user scaling would take that away and
+   break zoom for anyone who needs it to read at all.
+
+   So the fields grow instead. Scoped to coarse pointers, so nothing changes on
+   a desktop. Checkboxes, radios, ranges and colour swatches are excluded — they
+   render no text, and a 16px font-size on them changes their box size. */
+@media (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
