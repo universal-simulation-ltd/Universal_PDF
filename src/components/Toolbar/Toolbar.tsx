@@ -622,6 +622,11 @@ export function ToolbarDesktopTools() {
         <QrIcon className="w-5 h-5" />
       </button>
 
+      {/* Sign — an icon in this row rather than a labelled pill over with
+          Export. It places something on the page, which is what every other
+          control in this cluster does; Export ends the document. */}
+      <SignatureMenu />
+
       {/* Delete (only when an annotation is selected) */}
       {selectedId && (
         <button
@@ -644,8 +649,8 @@ export function ToolbarDesktopActions() {
   return (
     <>
       <div className="hidden lg:flex items-center gap-2 shrink-0 [&>*]:shrink-0">
-        <SignatureMenu />
-        {/* Present moved onto the bottom zoom bar (next to − % +). */}
+        {/* Sign moved into the tool cluster (it places things on the page);
+            Present moved onto the bottom zoom bar (next to − % +). */}
         <button
           onClick={() => setExportOpen(true)}
           disabled={!sourceBytes}

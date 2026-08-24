@@ -2404,7 +2404,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         // job, and the dialog refuses to mint a link until at least one box
         // exists — so the moment a box is on the page is exactly the moment to
         // offer the next step, rather than sending the user back to
-        // Sign ▾ → Request → Send to sign. Sits under the Delete affordance,
+        // the Sign icon → Request → Send to sign. Sits under the Delete affordance,
         // where a box/ellipse would carry its Fill toggle.
         if (draggingId || editingId) return null
         const selected = annotations.find((a) => a.id === selectedId)

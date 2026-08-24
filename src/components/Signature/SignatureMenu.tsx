@@ -16,6 +16,33 @@ type Tab = 'signatures' | 'stamps' | 'request'
 
 const DESKTOP_PANEL_WIDTH = 320 // w-80
 
+// Sign, as an icon in the same family as the image and QR buttons it now sits
+// beside: a 24-box drawing in the toolbar's palette — suite orange for the pen,
+// light slate for the ink — rather than a mono glyph. It replaced a labelled
+// "✍ Sign ▾" pill, which was the odd one out in a row of icons and took four
+// times the width to say the same thing.
+function SignIcon({ active = false, className = 'w-6 h-6' }: { active?: boolean; className?: string }) {
+  const pen = active ? '#ffffff' : '#fb923c'
+  const ink = active ? '#ffffff' : '#e2e8f0'
+  return (
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+      {/* The signature itself, and the line it was signed on */}
+      <path
+        d="M3 16.6c1.7 0.5 2.6-1.1 3.2-3.5.6-2.4.9-4.6 1.9-4.6 1.1 0 .5 3.4.3 5.5-.2 2 .3 3 1.4 3 1.3 0 2.3-1.6 3.6-3"
+        fill="none"
+        stroke={ink}
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M3 20.5 H21" stroke={ink} strokeWidth="1.4" strokeLinecap="round" opacity="0.55" />
+      {/* Pen, nib down onto the end of the stroke */}
+      <path d="M14.3 14.6 L19.4 5.6 L21.6 6.9 L16.5 15.9 Z" fill="none" stroke={pen} strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M14.3 14.6 L16.5 15.9 L13.7 17.1 Z" fill={pen} stroke={pen} strokeWidth="1.2" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 // Small labelled iOS-style toggle used by the "Request" tab. `tooltip` renders
 // as a native hover/focus title on the row — deliberately the browser's own
 // tooltip rather than a bespoke popover, since the panel is portaled to <body>
@@ -308,15 +335,20 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
           <span className="text-[10px] font-medium">Sign</span>
         </button>
       ) : (
+        // Same 36px square, same hover and same armed orange as the image and
+        // QR buttons either side of it — this one lives IN the tool cluster now,
+        // not over in the actions group with Export.
         <button
           onClick={() => setOpen((o) => !o)}
-          className={`h-10 px-3 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
-            armed ? 'bg-orange-700 hover:bg-orange-800' : 'bg-slate-700 hover:bg-slate-600'
+          title="Sign — place a signature, a stamp, or a “Sign here” box"
+          aria-label="Sign"
+          aria-haspopup="true"
+          aria-expanded={open}
+          className={`w-9 h-9 rounded flex items-center justify-center transition-colors ${
+            armed ? 'bg-orange-700 hover:bg-orange-800' : 'hover:bg-slate-700'
           }`}
         >
-          <span>✍</span>
-          <span>Sign</span>
-          <span className="opacity-60 text-xs">▾</span>
+          <SignIcon active={armed} className="w-5 h-5" />
         </button>
       )}
 
