@@ -355,8 +355,21 @@ export default function App() {
                 straight over Actions and over the open Actions menu. As a grid
                 cell they cannot overlap anything, and the width they take is
                 also what sizes the empty column that centres the tools. */}
-            <div className="col-start-3 justify-self-end flex items-center gap-2 [&>*]:shrink-0">
+            <div className="col-start-3 flex items-center gap-2 [&>*]:shrink-0">
+              {/* Export floats in the middle of what is left between the
+                  centred tools and the profile — a spacer either side of it,
+                  which at a normal zoom lands it just past the document's right
+                  edge. It is deliberately NOT anchored to that edge in CSS: the
+                  page's width swings with the zoom, and an anchored Export
+                  would eventually run into the profile pill. The two spacers
+                  shrink to nothing first instead.
+
+                  ⚠️ This cell must stay STRETCHED (no `justify-self`) — it
+                  spans the whole right-hand `1fr`, which is also what keeps the
+                  tool cluster on the window's centre line. */}
+              <div aria-hidden="true" className="flex-1" />
               <ToolbarDesktopActions />
+              <div aria-hidden="true" className="flex-1" />
               <ToolbarUserProfile actions={<FileMenu variant="rows" />} />
               <ChangelogMenu
                 iconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
