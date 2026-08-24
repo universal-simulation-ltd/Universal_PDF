@@ -303,54 +303,59 @@ export default function App() {
               The page/zoom strip at the bottom of the viewer is the one that
               lines up with the document — that is deliberate, it carries
               document state (page count, name, zoom) rather than app controls. */}
-          <div className="w-full flex items-center gap-3 py-2 min-h-[52px] pr-3">
-            {/* Hard against the window's left edge (a small inset so nothing
-                touches the glass). The whole desktop tool chrome switches to the
-                bottom bar below lg (1024px) — at narrower widths the Select
-                group collides with Actions. */}
-            <div className="flex items-center gap-2 shrink-0 [&>*]:shrink-0 pl-2 lg:pl-4">
-              {/* Brand mark, phones and tablets only. Below lg the whole tool
-                  cluster moves to the bottom bar, leaving this end of the row
-                  empty — so on a phone the app's own name was nowhere on screen
-                  while a document was open. On lg+ the tools fill this slot and
-                  the mark would push them along, hence lg:hidden.
+          {/* ⚠️ Three columns with EXPLICIT `col-start-*`, not auto-placement.
+              Both `ToolbarDesktopTools` and `ToolbarDesktopActions` are
+              `hidden lg:flex`, and a `display:none` grid child is not placed at
+              all — so on a phone auto-placement would slide whatever is left
+              into column 1 and the layout would silently differ from the one you
+              designed. Pinning each cell makes the two breakpoints the same
+              structure with different cells filled.
 
-                  ⚠️ Deliberately NOT a link or a button. The comment above is
-                  explicit that this bar has no home control: leaving a document
-                  is Actions → File → Close PDF, one way out, and a second one
-                  hiding behind the logo is exactly what was removed. It is a
-                  label.
+              The outer columns are both `1fr`, which is what centres the tools:
+              column 3's content (Sign, Export, Actions, the profile pill and the
+              changelog icon) sets its width, and the equal `1fr` on column 1
+              mirrors that width as empty space. */}
+          <div className="w-full grid grid-cols-[1fr_auto_1fr] items-center gap-3 py-2 min-h-[52px] px-3">
+            {/* Brand mark, phones and tablets only. Below lg the whole tool
+                cluster moves to the bottom bar, leaving this end of the row
+                empty — so on a phone the app's own name was nowhere on screen
+                while a document was open. On lg+ the tools own the middle column
+                and this one is the empty counterweight, hence lg:hidden.
 
-                  The mark's own tile is #0f172a, which is bg-slate-900 — so it
-                  disappears into the bar and what reads is the white page and
-                  the orange fold, not a square sitting on a square. */}
-              <span className="lg:hidden flex items-center gap-2 pl-1 select-none">
-                <ProductLogo />
-                <span className="text-sm font-semibold tracking-tight whitespace-nowrap">
-                  Universal PDF
-                </span>
+                ⚠️ Deliberately NOT a link or a button. The comment above is
+                explicit that this bar has no home control: leaving a document
+                is Actions → File → Close PDF, one way out, and a second one
+                hiding behind the logo is exactly what was removed. It is a
+                label.
+
+                The mark's own tile is #0f172a, which is bg-slate-900 — so it
+                disappears into the bar and what reads is the white page and
+                the orange fold, not a square sitting on a square. */}
+            <span className="col-start-1 justify-self-start lg:hidden flex items-center gap-2 pl-1 select-none">
+              <ProductLogo />
+              <span className="text-sm font-semibold tracking-tight whitespace-nowrap">
+                Universal PDF
               </span>
+            </span>
+
+            {/* The tools themselves — centred in the window on lg+, and nothing
+                at all below it (they move to the bottom bar). */}
+            <div className="col-start-2 justify-self-center flex items-center gap-2 [&>*]:shrink-0">
               <ToolbarDesktopTools />
             </div>
             {/* Profile + changelog previously lived in the top navbar; with
                 that bar gone while viewing, they carry the whole of the
                 document's chrome and sit at the end of this row.
-                ⚠️ They used to be a SECOND copy, absolutely positioned against
-                the bar's right edge — the window's edge — while this row is
-                centred at the DOCUMENT's width. The two collided whenever the
-                window was about as wide as the document (~1280px, i.e. a
+
+                ⚠️ They must stay IN THE FLOW. They were once a second copy,
+                absolutely positioned against the bar's right edge, while the row
+                itself was centred at the document's width — and the two collided
+                whenever the window was about as wide as the document (~1280px, a
                 maximised window on a 13" screen): the pinned cluster painted
-                straight over Actions, and the profile pill and the changelog
-                icon landed on top of the Actions menu. In the flow they cannot
-                overlap anything, and they now genuinely line up with the
-                document's right edge at every width — which is what the old
-                comment claimed but only achieved when the document happened to
-                fill the window. */}
-            {/* All the slack lives here, so the two clusters sit at opposite
-                ends of the window. It shrinks to a hard 1rem before either
-                cluster gives up any width. */}
-            <div aria-hidden="true" className="flex-1 min-w-4" />
-            <div className="flex items-center gap-2 justify-end shrink-0 [&>*]:shrink-0">
+                straight over Actions and over the open Actions menu. As a grid
+                cell they cannot overlap anything, and the width they take is
+                also what sizes the empty column that centres the tools. */}
+            <div className="col-start-3 justify-self-end flex items-center gap-2 [&>*]:shrink-0">
               <ToolbarDesktopActions />
               <ToolbarUserProfile actions={<FileMenu variant="rows" />} />
               <ChangelogMenu
