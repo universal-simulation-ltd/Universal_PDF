@@ -33,6 +33,23 @@ interface Props {
 // `truncate` clips the shortened name a SECOND time — which throws away the
 // extension the middle-ellipsis exists to keep.
 const NAME_MAX = 26
+
+// The menu's resting width — wide enough for its WIDEST row, not its narrowest.
+//
+// ⚠️ The panel is not a fixed box in the variant the editor actually uses. App
+// renders <FileMenu variant="rows" /> inside the SDK's <UserProfile> dropdown,
+// and that surface sizes itself to its content above a 220px floor. So the
+// panel used to sit at 220px until you opened Advanced — whose "Make searchable
+// (OCR)" row carries a (?) button as well as the deepest indent — and then
+// jumped to 251px, re-flowing every row under the cursor mid-click.
+//
+// Measured in the browser with every submenu expanded, the widest row wants
+// 252px; 256 clears it with a little slack, so no submenu can move the edge.
+// Keep the px and the classes in step — the toolbar variant positions itself
+// from the number, and the other two size themselves from the classes.
+const MENU_WIDTH_PX = 256
+const MENU_WIDTH_CLASS = 'w-64' // 16rem
+const MENU_MIN_WIDTH_CLASS = 'min-w-64' // rows mode: the SDK surface is the box
 function shortenFileName(name: string): string {
   if (name.length <= NAME_MAX) return name
   const dot = name.lastIndexOf('.')
@@ -261,7 +278,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
       const anchor = ref.current
       if (!anchor) return
       const r = anchor.getBoundingClientRect()
-      const width = 240 // w-60
+      const width = MENU_WIDTH_PX
       const left = Math.max(8, Math.min(r.left, window.innerWidth - width - 8))
       setMenuPos({ top: r.bottom + 4, left })
     }
@@ -390,7 +407,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   // overflow box, so it portals to <body> with fixed coords.
   function renderMenu(body: React.ReactNode) {
     const panelClass =
-      'w-60 bg-white text-slate-900 rounded-lg shadow-xl border border-slate-200'
+      `${MENU_WIDTH_CLASS} bg-white text-slate-900 rounded-lg shadow-xl border border-slate-200`
     if (variant === 'header') {
       return (
         <div ref={menuRef} className={`absolute right-0 mt-2 ${panelClass} overflow-hidden z-50`}>
@@ -802,7 +819,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
     return (
       <>
         {fileInput}
-        {body}
+        <div className={MENU_MIN_WIDTH_CLASS}>{body}</div>
       </>
     )
   }
