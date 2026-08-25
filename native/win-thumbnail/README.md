@@ -29,10 +29,15 @@ scripts/ build.ps1 (Windows) and build.sh (Git Bash), output staged in dist/
   GDI+ so the angled edges are antialiased. The fan comes out of the same box
   the shell asked for, so the whole composition is measured first and the page
   fitted to what is left; everything the fan does not cover is transparent.
-- **A "120 pages" pill**, bottom-left, from 160px up, in the badge's navy with
-  a white ring — the pill lands wherever the page happens to be, and navy on a
-  dark page is invisible without one. It falls back to the bare number when the
-  words would take more than 62% of the page width.
+- **A "120 pages" pill**, bottom-left, from 112px up, in the badge's navy with
+  a white ring — it lands wherever the page happens to be, and navy on a dark
+  page is invisible without one. The **number is drawn larger than the word**,
+  baseline-aligned: at one size the two together are either too wide to sit
+  beside the badge or too small to read. "pages" is dropped entirely, rather
+  than shrunk further, on a thumbnail with no room for it.
+- The badge and the pill **share the page's width through one pair of helpers**
+  (`BadgeEdge` / `BadgeMargin`). They cannot both have the width they would
+  like at 256px, and the badge is the one that must not move.
 
 ⚠️ The pill is the only thing drawn with GDI, and **GDI writes nothing to the
 alpha channel of a 32-bit DIB**, so every pixel it touches ends up transparent.

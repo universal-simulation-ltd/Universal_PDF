@@ -33,7 +33,7 @@ extern LONG g_cDllRef;
 constexpr UINT kMinSizeForBadge = 48;
 // Badge edge as a fraction of the page's shorter side, and its cap so a
 // 1024px "jumbo" request does not get a 350px sticker.
-constexpr double kBadgeFraction = 0.28;
+constexpr double kBadgeFraction = 0.24;
 constexpr UINT kBadgeMaxPx = 128;
 constexpr double kBadgeMarginFraction = 0.03;
 
@@ -49,8 +49,8 @@ constexpr double kFanPivotBelow = 0.55;  // pivot depth under the page, x page h
 // The "52 pages" pill. Text has to survive being drawn at thumbnail scale, so
 // it appears later than the fan does, and it carries a white ring: the pill
 // lands wherever the page happens to be dark, and navy on navy is invisible.
-constexpr UINT kMinSizeForCount = 160;
-constexpr double kCountTextFraction = 0.058;
+constexpr UINT kMinSizeForCount = 112;
+constexpr double kCountTextFraction = 0.085;
 
 // The navy of the badge tile, so the pill reads as part of the same mark.
 constexpr COLORREF kInk = RGB(17, 26, 46);
