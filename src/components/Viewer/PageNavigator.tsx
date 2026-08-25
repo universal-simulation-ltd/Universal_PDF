@@ -11,12 +11,25 @@ export default function PageNavigator() {
   const open = usePdfStore((s) => s.pageNavOpen)
   const setOpen = usePdfStore((s) => s.setPageNavOpen)
   const deletePage = usePdfStore((s) => s.deletePage)
-  const movePage = usePdfStore((s) => s.movePage)
+  const applyPageOrder = usePdfStore((s) => s.applyPageOrder)
 
   const [thumbs, setThumbs] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [dropTarget, setDropTarget] = useState<{ index: number; pos: DropPosition } | null>(null)
+
+  // ── The new order is STAGED, not applied ────────────────────────────────
+  // Every reorder rewrites the whole PDF and reloads it through pdf.js — a
+  // second or more on a big file, which is a long time to wait for the first
+  // of five drags. Dragging now only shuffles this array (thumbnails are
+  // already rendered, so it is instant), and the tick at the bottom of the
+  // pane commits the lot in ONE rewrite.
+  //
+  // `null` means "no changes staged". The entries are indices into the
+  // document as it stands, which is exactly what applyPageOrder takes.
+  const [order, setOrder] = useState<number[] | null>(null)
+  const slots = order ?? Array.from({ length: numPages }, (_, i) => i)
+  const pending = order !== null
 
   // Rebuild thumbnails whenever the doc identity or page count changes (a
   // delete/reorder swaps the underlying PDFDocumentProxy).
@@ -28,6 +41,8 @@ export default function PageNavigator() {
     // Drop stale thumbs so a delete/reorder doesn't briefly render old
     // images in their previous slots before the new doc finishes rendering.
     setThumbs([])
+    // Staged moves belong to the document they were staged against.
+    setOrder(null)
     let cancelled = false
     const acc: string[] = []
     async function go() {
@@ -67,7 +82,9 @@ export default function PageNavigator() {
   }
 
   async function handleDelete(i: number) {
-    if (busy || numPages <= 1) return
+    // Deleting mid-reorder would mean two rewrites and two sets of indices to
+    // keep straight. The pane asks for the order to be settled first.
+    if (busy || numPages <= 1 || pending) return
     const ok = window.confirm(
       `Delete page ${i + 1}? Any annotations on this page will also be removed.`
     )
@@ -83,14 +100,29 @@ export default function PageNavigator() {
     }
   }
 
-  async function handleMove(from: number, to: number) {
+  // Staging only — nothing touches the PDF until the tick.
+  function handleMove(from: number, to: number) {
     if (busy || from === to) return
+    if (to < 0 || to >= slots.length) return
+    const next = slots.slice()
+    const [moved] = next.splice(from, 1)
+    next.splice(to, 0, moved)
+    // Back to where it started is not a change to confirm.
+    setOrder(next.every((idx, i) => idx === i) ? null : next)
+  }
+
+  async function applyOrder() {
+    if (!order || busy) return
     setBusy(true)
     try {
-      await movePage(from, to)
+      await applyPageOrder(order)
+      // applyPageOrder swaps the document, and the thumbnail effect clears the
+      // staging with it — but it returns early for a no-op order, so clear it
+      // here too rather than leaving a confirm bar over nothing to confirm.
+      setOrder(null)
     } catch (err) {
       console.error(err)
-      alert('Failed to reorder page')
+      alert('Failed to reorder pages')
     } finally {
       setBusy(false)
     }
@@ -172,18 +204,21 @@ export default function PageNavigator() {
             setDropTarget(null)
           }}
         >
-          {Array.from({ length: numPages }, (_, i) => (
+          {slots.map((pageIndex, i) => (
             <PageThumb
-              key={i}
+              key={pageIndex}
               index={i}
               total={numPages}
-              thumb={thumbs[i]}
+              thumb={thumbs[pageIndex]}
               busy={busy}
+              pending={pending}
               dragging={dragIndex === i}
               dropIndicator={
                 dropTarget && dropTarget.index === i ? dropTarget.pos : null
               }
-              onClick={() => scrollToPage(i)}
+              // The document has not moved yet, so scrolling has to aim at
+              // where the page still IS, not at the slot it is being dragged to.
+              onClick={() => scrollToPage(pageIndex)}
               onDelete={() => handleDelete(i)}
               onMoveUp={() => handleMove(i, i - 1)}
               onMoveDown={() => handleMove(i, i + 1)}
@@ -194,6 +229,31 @@ export default function PageNavigator() {
             />
           ))}
         </div>
+
+        {/* The confirm bar. It only exists while something is staged, so the
+            pane is unchanged for anyone who never reorders a page. */}
+        {pending && (
+          <div className="sticky bottom-0 z-10 bg-white border-t border-slate-200 px-2 py-2 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setOrder(null)}
+              disabled={busy}
+              title="Discard the new page order"
+              className="w-8 h-8 shrink-0 rounded-md border border-slate-300 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              ↺
+            </button>
+            <button
+              type="button"
+              onClick={applyOrder}
+              disabled={busy}
+              title="Apply the new page order"
+              className="flex-1 h-8 rounded-md bg-orange-700 hover:bg-orange-800 text-white text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-wait"
+            >
+              {busy ? 'Applying…' : (<><span aria-hidden="true">✓</span> Apply new order</>)}
+            </button>
+          </div>
+        )}
       </aside>
     </>
   )
@@ -204,6 +264,8 @@ interface ThumbProps {
   total: number
   thumb?: string
   busy: boolean
+  /** Moves are staged and unconfirmed — deleting is off until they settle. */
+  pending: boolean
   dragging: boolean
   dropIndicator: DropPosition | null
   onClick: () => void
@@ -221,6 +283,7 @@ function PageThumb({
   total,
   thumb,
   busy,
+  pending,
   dragging,
   dropIndicator,
   onClick,
@@ -232,7 +295,7 @@ function PageThumb({
   onDrop,
   onDragEnd
 }: ThumbProps) {
-  const canDelete = total > 1 && !busy
+  const canDelete = total > 1 && !busy && !pending
   const canMoveUp = index > 0 && !busy
   const canMoveDown = index < total - 1 && !busy
 
@@ -285,7 +348,7 @@ function PageThumb({
           type="button"
           onClick={actionHandler(onDelete)}
           disabled={!canDelete}
-          title="Delete page"
+          title={pending ? 'Apply or discard the new page order first' : 'Delete page'}
           aria-label={`Delete page ${index + 1}`}
           className="w-6 h-6 rounded-full bg-white text-red-600 hover:bg-red-600 hover:text-white border border-slate-300 shadow text-xs leading-none flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
         >
