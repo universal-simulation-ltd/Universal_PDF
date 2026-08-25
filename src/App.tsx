@@ -24,6 +24,7 @@ import ConvertDialog from './components/Convert/ConvertDialog'
 import MetadataDialog from './components/Metadata/MetadataDialog'
 import QrDialog from './components/Qr/QrDialog'
 import MobileWelcomeToast from './components/Onboarding/MobileWelcomeToast'
+import UnsavedChangesDialog from './components/Exit/UnsavedChangesDialog'
 import { UniversalAppsNavBar, UniversalBar, ChangelogMenu, DropAnywhere, UpdateNotice, useFileDrop } from '@unisim/sdk'
 
 // Apply the saved language to <html lang> on first mount.
@@ -36,6 +37,10 @@ if (typeof document !== 'undefined') {
 }
 import { usePdfStore } from './stores/pdfStore'
 import { useSignatureStore } from './stores/signatureStore'
+import { useAnnotationStore } from './stores/annotationStore'
+import { useFormStore } from './stores/formStore'
+import { useExitGuard } from './stores/exitGuard'
+import { hasUnsavedChanges, onSavedStateChanged } from './lib/unsavedChanges'
 import { CONTAINER } from './lib/layout'
 import { OfficeImportError, toViewablePdf } from './lib/officeToPdf'
 import { isNativeShell, subscribeNativeOpenPdf } from './lib/nativeOpen'
@@ -79,6 +84,8 @@ export default function App() {
   const fileName = usePdfStore((s) => s.fileName)
   const importNotice = usePdfStore((s) => s.importNotice)
   const dismissImportNotice = usePdfStore((s) => s.dismissImportNotice)
+
+  const requestExit = useExitGuard((s) => s.requestExit)
 
   // The currently-open document as a File, for the Advanced-menu dialogs that
   // start from it (Merge with another PDF, Convert into images). A fresh copy of
@@ -219,6 +226,50 @@ export default function App() {
     return () => window.clearTimeout(timer)
   }, [launching])
 
+  // ── Leaving a document that has amendments ───────────────────────────────
+  // Three ways out, one question. `requestExit` runs its action outright when
+  // there is nothing unsaved, so these are guards rather than prompts.
+
+  // Desktop (Electron): the main process holds the window's × until the
+  // renderer has answered, and it can only do that if it knows there is
+  // something to ask about. Push the answer on every change — including a save,
+  // which changes it without touching either store (hence `onSavedStateChanged`).
+  useEffect(() => {
+    const bridge = window.desktop?.unsaved
+    if (!bridge) return
+    const push = () => bridge.set(!!usePdfStore.getState().doc && hasUnsavedChanges())
+    push()
+    const offs = [
+      useAnnotationStore.subscribe(push),
+      useFormStore.subscribe(push),
+      usePdfStore.subscribe(push),
+      onSavedStateChanged(push),
+      // The window is closing for real — main asks, the popup answers, and
+      // `allowClose` is what lets the close through the second time.
+      bridge.onCloseRequest(() => requestExit('quit', () => bridge.allowClose()))
+    ]
+    return () => offs.forEach((off) => off())
+  }, [requestExit])
+
+  // Web: a browser tab can only be stopped by `beforeunload`, and only with the
+  // browser's own wording — no three-button popup exists for it.
+  //
+  // ⚠️ Deliberately NOT registered in the desktop app. Electron does not show a
+  // dialog for `beforeunload`; it just silently refuses to close the window, so
+  // this would cancel the close before the popup above was ever asked for and
+  // the × would look broken.
+  useEffect(() => {
+    if (window.desktop) return
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      if (!usePdfStore.getState().doc || !hasUnsavedChanges()) return
+      e.preventDefault()
+      // Chromium still wants the legacy assignment to raise the prompt.
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [])
+
   // Drop a PDF anywhere on the page and it opens — the SDK's `pageWide`, not the
   // hand-rolled `window` listener this used to be. That copy predated the hook
   // and carried the whole of its cost: a depth counter, a bubble-phase drop
@@ -243,6 +294,9 @@ export default function App() {
       // filtered the picker, and there is no picker here — so `toViewablePdf`
       // does the checking, converting a Word or OpenDocument file on the way
       // through and refusing anything else with a message worth reading.
+      // Dropping onto an open document replaces it, so it is an exit like any
+      // other — the guard runs the load once the user has answered.
+      requestExit('open-another', async () => {
       try {
         const { file: pdf, notice } = await toViewablePdf(file)
         await loadFile(pdf, { notice })
@@ -250,6 +304,7 @@ export default function App() {
         console.error(err)
         alert(err instanceof OfficeImportError ? err.message : 'Failed to load PDF')
       }
+      })
     },
     clickToBrowse: false,
     pageWide: true,
@@ -547,6 +602,9 @@ export default function App() {
       {metadataOpen && sourceBytes && (
         <MetadataDialog sourceBytes={sourceBytes} onClose={() => setMetadataOpen(false)} />
       )}
+      {/* Last in the list and highest in the stack: the question about leaving
+          has to be answerable whatever else is open on top of the document. */}
+      <UnsavedChangesDialog />
     </div>
   )
 }

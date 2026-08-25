@@ -20,6 +20,31 @@ declare global {
        */
       onNoPdf(cb: (payload: { unreadable?: string }) => void): () => void
       /**
+       * Write a PDF to a file the user picks. The renderer has no filesystem
+       * of its own, so the bytes go to the main process, which owns the Save
+       * dialog and the write.
+       *
+       * `cancelled` is a NORMAL outcome, not an error: backing out of the Save
+       * dialog is an answer, and the exit guard treats it as "stay here".
+       */
+      savePdf(
+        suggestedName: string,
+        bytes: Uint8Array
+      ): Promise<{ ok: boolean; cancelled?: boolean; path?: string; error?: string }>
+      /**
+       * The unsaved-changes guard. The main process holds the window's × when
+       * `set(true)` was the last thing it heard, asks the renderer over
+       * `onCloseRequest`, and closes for real when `allowClose()` answers.
+       *
+       * ⚠️ `beforeunload` is NOT the desktop mechanism: Electron shows no
+       * dialog for it and silently refuses the close instead.
+       */
+      unsaved: {
+        set(dirty: boolean): void
+        onCloseRequest(cb: () => void): () => void
+        allowClose(): void
+      }
+      /**
        * Whether this app is the system's default `.pdf` handler, and the
        * request to become it.
        *

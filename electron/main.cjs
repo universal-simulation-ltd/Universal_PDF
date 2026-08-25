@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, screen, shell } = require('electron')
+const { app, BrowserWindow, dialog, ipcMain, screen, shell } = require('electron')
 const path = require('node:path')
 const fs = require('node:fs')
 const defaultApp = require('./defaultApp.cjs')
@@ -25,6 +25,15 @@ let windowLoaded = false
 // PDF the app was launched with (double-click / "Open with → Universal PDF"),
 // held until the window has finished loading.
 let pendingPdfPath = null
+
+// Whether the open document has amendments that no saved file contains. Owned
+// by the renderer — it is the only side that knows what is on the page — and
+// pushed here over `unsaved:set` whenever the answer changes.
+let unsavedChanges = false
+
+// Set when the renderer has answered the question below and the close should
+// now go through untouched. Cleared for each new window.
+let allowClose = false
 
 // Windows passes the document path as a plain argument after the executable
 // (plus the app-dir argument when running unpackaged via `electron .`).
@@ -102,10 +111,29 @@ function createWindow() {
 
   mainWindow = win
   windowLoaded = false
+  allowClose = false
+
+  // ⚠️ The window's × is held here, in the main process, and NOT by the page's
+  // `beforeunload`: Electron shows no dialog for that event, it merely refuses
+  // the close — so a renderer using it would make the × look broken. Instead
+  // the close is cancelled once, the renderer is asked, and its answer comes
+  // back as `unsaved:allow-close`.
+  //
+  // This covers ⌘Q / Alt+F4 as well: quitting closes the window, and a
+  // cancelled window close cancels the quit with it.
+  win.on('close', (event) => {
+    if (allowClose || !unsavedChanges) return
+    event.preventDefault()
+    win.webContents.send('unsaved:close-request', {})
+  })
+
   win.on('closed', () => {
     if (mainWindow === win) {
       mainWindow = null
       windowLoaded = false
+      // Whatever was unsaved went with the window; a second window would
+      // otherwise inherit a stale "yes" and refuse to close.
+      unsavedChanges = false
     }
   })
 
@@ -201,6 +229,38 @@ if (!gotLock) {
   // Both live in the main process because every route to the answer is an OS
   // call (Launch Services, xdg-mime, the registry) that a sandboxed renderer
   // has no way to reach.
+  // The unsaved-changes guard's two halves — see `win.on('close')` above.
+  ipcMain.on('unsaved:set', (_event, dirty) => {
+    unsavedChanges = !!dirty
+  })
+  ipcMain.on('unsaved:allow-close', () => {
+    allowClose = true
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close()
+  })
+
+  // "Save and exit" — the renderer builds the PDF, the main process owns the
+  // Save dialog and the write. A cancelled dialog is reported as such rather
+  // than as an error: it means "I have changed my mind about leaving".
+  ipcMain.handle('save-pdf', async (_event, payload) => {
+    const bytes = payload && payload.bytes
+    if (!bytes) return { ok: false, error: 'There was nothing to save.' }
+    const suggestedName =
+      payload && typeof payload.suggestedName === 'string' ? payload.suggestedName : 'document.pdf'
+    try {
+      const { canceled, filePath } = await dialog.showSaveDialog(mainWindow ?? undefined, {
+        title: 'Save PDF',
+        defaultPath: suggestedName,
+        filters: [{ name: 'PDF', extensions: ['pdf'] }],
+      })
+      if (canceled || !filePath) return { ok: false, cancelled: true }
+      await fs.promises.writeFile(filePath, Buffer.from(bytes))
+      return { ok: true, path: filePath }
+    } catch (err) {
+      console.error('Failed to save the PDF:', err)
+      return { ok: false, error: err.message || 'The PDF could not be written.' }
+    }
+  })
+
   ipcMain.handle('default-app:status', () => defaultApp.status())
   ipcMain.handle('default-app:set', () => defaultApp.makeDefault())
 

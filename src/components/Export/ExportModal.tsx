@@ -14,6 +14,8 @@ import {
   type RasterEstimate
 } from '../../lib/export'
 import { nextExportName, previewExportName } from '../../lib/exportName'
+import { countRedactions, isRedactConfirmed } from '../../lib/redactGate'
+import { markSaved } from '../../lib/unsavedChanges'
 import { RedactIcon } from '../icons/RedactIcon'
 
 // Annotations are stored in PDF-point space (the editor divides the on-screen
@@ -106,10 +108,12 @@ export default function ExportModal({ open, onClose }: Props) {
   // movable black-box markup, but the rasterise-and-rebuild pass below removes
   // the underlying text for good. Gate the destructive actions behind a typed
   // "REDACT" confirmation when the document has any.
-  const redactCount = annotations.filter((a) => a.type === 'redact').length
+  // ⚠️ The rule itself lives in lib/redactGate.ts, shared with the exit
+  // guard's "Save and exit" — the other way a redaction can be baked in.
+  const redactCount = countRedactions(annotations)
   const needsRedactConfirm = !isXfa && redactCount > 0
   const [redactConfirm, setRedactConfirm] = useState('')
-  const redactConfirmed = !needsRedactConfirm || redactConfirm.trim().toLowerCase() === 'redact'
+  const redactConfirmed = !needsRedactConfirm || isRedactConfirmed(redactConfirm)
 
   useEffect(() => {
     if (!open) return
@@ -312,6 +316,9 @@ export default function ExportModal({ open, onClose }: Props) {
     // something the file needs to carry.
     const name = nextExportName(fileName)
     downloadPdfBytes((which === 'original' ? annotated : compressed.bytes).slice(), name)
+    // The amendments are now in a file, so the exit guard has nothing left to
+    // offer to save. Every route out of a document reads this.
+    markSaved()
     onClose()
   }
 
@@ -363,6 +370,7 @@ export default function ExportModal({ open, onClose }: Props) {
                 onClick={() => {
                   if (!annotated) return
                   downloadPdfBytes(annotated.slice(), nextExportName(fileName))
+                  markSaved()
                   onClose()
                 }}
                 disabled={!annotated}

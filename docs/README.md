@@ -318,6 +318,51 @@ Build it with `npm run thumbnail:build`; the release workflow does the same on
 the Windows runner. If that build fails the installer still ships, without
 thumbnails.
 
+## Leaving a document with amendments
+
+Closing a PDF you have drawn on asks first — one popup with three answers:
+**Save and exit**, **Exit without saving**, **Cancel**. Every route out goes
+through it: Actions → File → Close PDF, opening or dropping another PDF over the
+top, and (desktop) the window's close button.
+
+    lib/unsavedChanges.ts   is there anything a saved file does not have?
+    stores/exitGuard.ts     requestExit(intent, run) — the only entry point
+    components/Exit/UnsavedChangesDialog.tsx   the popup itself
+    lib/saveDocument.ts     "Save and exit" — one call, no export dialog
+
+**"Saved" means EXPORTED, not persisted.** Annotations and form values are
+already written to this device's recent files 600 ms after every change, so
+exiting loses no work either way — what it costs is the *file*. The popup says
+so rather than implying the work is about to vanish, which is why the answer to
+"why not just autosave?" is that it already does.
+
+⚠️ **Amendment is detected by array IDENTITY** (both stores replace their arrays
+immutably), plus a counter for the edits that rewrite the PDF's own bytes —
+page reorder/delete and the metadata scrub — which touch neither store and would
+otherwise be invisible. A deep compare was rejected: an imported picture is a
+multi-megabyte data URL and the comparison would run on every window close.
+
+⚠️ **Marks restored from recents are the baseline, not an amendment.** Reopening
+a document with your work on it and closing it again asks nothing.
+
+⚠️ **The desktop close is held in the MAIN process** (`win.on('close')` →
+`unsaved:close-request` → `unsaved:allow-close`), never by `beforeunload`.
+Electron shows no dialog for `beforeunload`; it silently refuses the close, so
+the × would simply stop working. The web build arms `beforeunload` and the
+desktop build does not — that split is deliberate and is asserted by the specs.
+
+⚠️ **Redactions are baked in by saving**, so "Save and exit" carries the same
+typed **REDACT** confirmation the Export dialog does. The rule itself lives once,
+in `lib/redactGate.ts`, so the two cannot drift.
+
+On the desktop the save is a real **Save dialog** and a real file (`save-pdf`
+over IPC); on the web it is a download, which is the only "save as" a browser
+has. Backing out of the Save dialog is not an exit — the popup stays up.
+
+Tested by `npm run test:exit-guard` (the popup and its answers, in a browser)
+and `npm run test:exit-guard:desktop` (the held window close and the native
+save, driving the real Electron app). Both need the dev server on :5174.
+
 ## Suite context
 
 This repo is one part of the **Universal Simulation suite** (the open-source

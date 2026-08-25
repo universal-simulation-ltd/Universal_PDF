@@ -46,6 +46,18 @@ contextBridge.exposeInMainWorld('unisimDesktop', {
 contextBridge.exposeInMainWorld('desktop', {
   onOpenPdf: channel('open-pdf'),
   onNoPdf: channel('no-pdf'),
+  // "Save and exit" writes a real file, so the bytes cross to the main process
+  // — a sandboxed renderer has no filesystem and a browser download would put
+  // the PDF in ~/Downloads without ever asking where it should go.
+  savePdf: (suggestedName, bytes) => ipcRenderer.invoke('save-pdf', { suggestedName, bytes }),
+  // Unsaved-changes guard. `set` keeps the main process told whether closing
+  // the window would lose a file; `onCloseRequest` is main asking the question
+  // it holds the × for; `allowClose` is the answer that lets it through.
+  unsaved: {
+    set: (dirty) => ipcRenderer.send('unsaved:set', !!dirty),
+    onCloseRequest: channel('unsaved:close-request'),
+    allowClose: () => ipcRenderer.send('unsaved:allow-close'),
+  },
   // Whether this app is the system's default .pdf handler, and the request to
   // become it. Request-response rather than a pushed event: the app asks when
   // it has somewhere to put the answer.

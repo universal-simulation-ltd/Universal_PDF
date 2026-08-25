@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { usePdfStore } from '../../stores/pdfStore'
+import { useExitGuard } from '../../stores/exitGuard'
 import { useSearchStore } from '../../stores/searchStore'
 import { LANGS, persistLang, readSavedLang, type LangCode } from '../../lib/lang'
 import { OfficeImportError, PDF_OR_OFFICE_ACCEPT, toViewablePdf } from '../../lib/officeToPdf'
@@ -144,6 +145,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const loadFile = usePdfStore((s) => s.loadFile)
   const renameFile = usePdfStore((s) => s.renameFile)
   const reset = usePdfStore((s) => s.reset)
+  const requestExit = useExitGuard((s) => s.requestExit)
   const setPageNavOpen = usePdfStore((s) => s.setPageNavOpen)
   const setPresentOpen = usePdfStore((s) => s.setPresentOpen)
   const setHostedStoreOpen = usePdfStore((s) => s.setHostedStoreOpen)
@@ -202,7 +204,15 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]
-    if (f) {
+    // Reset the input before anything can await: the guard may hold the load
+    // behind a popup, and the same file picked twice in a row fires no `change`
+    // at all unless the value was cleared.
+    e.target.value = ''
+    if (!f) return
+    // ⚠️ Guarded at the LOAD, not at the picker. Asking before the file dialog
+    // opens would make "Cancel" mean two different things a click apart, and
+    // would ask the question of someone who then picks nothing.
+    requestExit('open-another', async () => {
       try {
         // Same front door as the landing page: a Word or OpenDocument file is
         // converted on-device first, and its notice rides along with the load.
@@ -212,8 +222,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
         console.error(err)
         alert(err instanceof OfficeImportError ? err.message : 'Failed to load PDF')
       }
-    }
-    e.target.value = ''
+    })
   }
 
   // Header variant lives inside <UniversalAppsNavBar />'s white chrome —
@@ -504,7 +513,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
             <div className="border-t border-slate-100 bg-slate-50/60 divide-y divide-slate-100">
               {doc && (
                 <button
-                  onClick={() => { reset(); closeMenu() }}
+                  onClick={() => { requestExit('close', reset); closeMenu() }}
                   className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
                 >
                   <span aria-hidden="true">🏠</span>

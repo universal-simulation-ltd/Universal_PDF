@@ -8,6 +8,7 @@ import { useAnnotationStore } from './annotationStore'
 import { useFormStore } from './formStore'
 import { useSearchStore } from './searchStore'
 import { useSignatureStore } from './signatureStore'
+import { markSaved, noteStructuralEdit } from '../lib/unsavedChanges'
 import type { QrPlacement } from '../lib/qr/design'
 
 // Restore a recent's saved edits into the live stores. Applies whenever the
@@ -180,6 +181,9 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     const doc = await loadPdf(newBytes.slice(0)).promise
     get().doc?.destroy()
     set({ doc, numPages: doc.numPages, sourceBytes: newBytes, isXfa: doc.isPureXfa })
+    // Rewrote the bytes without touching either edit store, so the exit guard
+    // would never see it. Same for the page operations below.
+    noteStructuralEdit()
 
     saveRecent(fileName, newBytes)
       .then((slug) => {
@@ -222,6 +226,10 @@ export const usePdfStore = create<PdfState>((set, get) => ({
       } catch {
         // Best-effort — a parse failure just means no boxes are recovered.
       }
+      // Whatever is on screen now IS the document as it arrived, so the exit
+      // guard has nothing to offer to save until the user amends it. Boxes
+      // recovered from the PDF above are part of the file, not an amendment.
+      markSaved()
       // Persist to recents in the background — never blocks loading.
       // The returned slug becomes the URL hash so a refresh reloads the
       // same PDF straight from IndexedDB.
@@ -244,6 +252,10 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     // Restore the edits saved for this document (supersedes anything loadFile
     // hydrated from the PDF), so a refresh brings back the user's work.
     applyRecentEdits(hit.edits)
+    // ⚠️ Restored marks are the baseline, not amendments. They were already
+    // there when the document opened, so closing it again without touching
+    // anything must not ask about saving a file nothing has changed.
+    markSaved()
     return true
   },
   loadFromCurrentUrl: async () => {
@@ -259,6 +271,9 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   reset: () => {
     get().doc?.destroy()
     clearDocumentState()
+    // Nothing is open, so nothing is unsaved. Re-baselining here is also what
+    // keeps the structural-edit counter in step across documents.
+    markSaved()
     set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, previewOpen: false, presentOpen: false, ocrOpen: false, mergeOpen: false, convertOpen: false, metadataOpen: false, qrOpen: false, qrEdit: null, importNotice: null })
     setHashSlug(null)
   },
@@ -275,6 +290,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     await get().loadFile(file)
     // Restore the edits saved for this document (see loadFromSlug).
     applyRecentEdits(await getRecentEdits(id))
+    markSaved()
   },
   removeRecent: async (id) => {
     // Optimistic update, then drop from IndexedDB.
@@ -324,6 +340,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
 
     // Now commit, in order: remap annotations/forms (before React renders the
     // new doc so they land on the right pages), swap out the old doc, set state.
+    noteStructuralEdit()
     useAnnotationStore.getState().remapPages(indexMap)
     useFormStore.getState().remapPages(indexMap)
     get().doc?.destroy()
