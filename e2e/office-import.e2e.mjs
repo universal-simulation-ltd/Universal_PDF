@@ -1,7 +1,14 @@
 // Word / OpenDocument import — browser-level regression check.
 //
-//   npm run dev            # in one terminal
+//   ./scripts/preview.sh   # in one terminal (Universal PDF is :5174)
 //   npm run test:e2e       # in another
+//
+// ⚠️ 5174, NOT Vite's default 5173. This file said 5173 until 2026-08-25 while
+// `scripts/preview.sh` and the port registry in `Docs_UNI_SIM/dev-preview.md`
+// both say 5174 — so the documented way to start the app produced a server the
+// documented way to test it could not reach, and the suite exited 2 saying
+// "start the dev server first" while the dev server was running. Override with
+// E2E_BASE_URL if you deliberately started it somewhere else.
 //
 // It converts each fixture through the real `convertOfficeFile`, reads the PDF
 // back with the app's own pdf.js, and asserts on BOTH what came out:
@@ -24,7 +31,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
-const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:5173/'
+const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:5174/'
 
 // Sibling repos that carry a Playwright install, newest-known first.
 const PLAYWRIGHT_CANDIDATES = [
@@ -298,6 +305,74 @@ check(
   Math.abs(contradictory.w - 842) <= 2 && Math.abs(contradictory.h - 595) <= 2,
   `${contradictory.w} x ${contradictory.h}`
 )
+
+// ---- Embedded pictures are drawn at the size their AUTHOR set ------------
+//
+// Backlog: "Embedded images from .docx/.odt — the parsers read text only."
+// Half-stale by the time it was picked up (both readers already extracted the
+// bitmaps and the writer already drew them) — the part that was still true is
+// the SIZE. Every picture was drawn at its pixel count treated as points,
+// clamped to the text column, so its resolution decided how big it appeared and
+// the author's choice was ignored. A 600 dpi logo dropped in at half an inch
+// filled the page.
+//
+// ⚠️ ASSERTED ON THE `cm` MATRIX IN THE FINISHED PDF, not on the block the
+// reader produced. Those are different claims: the reader can carry a perfect
+// `wp:extent` and the writer still draw at the old size, which is exactly the
+// bug being fixed. pdf.js gives no image-placement API, and the writer emits
+// uncompressed content streams (no /Filter — there is no deflate encoder in
+// the package), so the operator can simply be read out of the bytes.
+//
+// The fixture's pixel counts and display sizes are far apart on purpose; see
+// `fixtures/make-image-fixture.mjs`.
+//
+// ⚠️ NEEDS @unisim/doc >= 0.5.0, and says so rather than failing. The sizing
+// lives in the package; this app installs it from npm by version. Publishing it
+// needs a browser one-time password only James can complete (see the SDK item
+// in the backlog), so between the code landing and the publish happening the
+// installed copy is the old one — and a suite that went red for that would be
+// reporting the publish queue, not a regression.
+console.log('\nembedded picture sizing')
+const sizingSupported = await page.evaluate(async () => {
+  const mod = await import('/node_modules/@unisim/doc/dist/index.js')
+  return typeof mod.emuToPoints === 'function'
+})
+if (!sizingSupported) {
+  console.log('  – skipped: the installed @unisim/doc predates 0.5.0 (run packages/publish.sh doc minor)')
+}
+for (const name of sizingSupported ? ['image-size.docx', 'image-size.odt'] : []) {
+  const b64 = readFileSync(join(HERE, 'fixtures', name)).toString('base64')
+  const drawn = await page.evaluate(async ({ b64, name }) => {
+    const bin = atob(b64)
+    const arr = new Uint8Array(bin.length)
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i)
+    const { convertOfficeFile } = await import('/src/lib/officeToPdf.ts')
+    const conversion = await convertOfficeFile(new File([arr], name))
+    const bytes = new Uint8Array(await conversion.file.arrayBuffer())
+    const pdf = new TextDecoder('latin1').decode(bytes)
+    // `<w> 0 0 <h> <x> <y> cm` immediately before `/Im<n> Do` is how the writer
+    // places every image, and the first two numbers are its size in points.
+    return [...pdf.matchAll(/([\d.]+) 0 0 ([\d.]+) [-\d.]+ [-\d.]+ cm\s*\/Im\d+ Do/g)]
+      .map((m) => ({ w: Number(m[1]), h: Number(m[2]) }))
+  }, { b64, name })
+
+  const near = (a, b) => a !== undefined && Math.abs(a - b) <= 1
+  const shape = JSON.stringify(drawn)
+
+  check(`${name}: both pictures made it onto the page`, drawn.length === 2, shape)
+  // 1.5in x 1in = 108 x 72 pt. Its pixels are 300 x 200, so the old rule would
+  // have drawn it at 300 x 200 — nearly three times too big.
+  check(`${name}: a 300x200 px picture placed at 1.5in x 1in draws 108 x 72 pt`,
+    near(drawn[0]?.w, 108) && near(drawn[0]?.h, 72), shape)
+  // 0.5in = 36 pt. Its pixels are 2000 x 2000, so the old rule clamped it to
+  // the full 451 pt text column — the high-resolution-logo case.
+  check(`${name}: a 2000x2000 px logo placed at 0.5in draws 36 x 36 pt, not column width`,
+    near(drawn[1]?.w, 36) && near(drawn[1]?.h, 36), shape)
+  // Guards the fallback: a declared size must never be mistaken for the pixel
+  // count, and 2000 pt would not fit on A4 in the first place.
+  check(`${name}: no picture was drawn at its pixel count`,
+    drawn.every((d) => d.w < 200), shape)
+}
 
 // A .doc is not a .docx, and the refusal has to say something useful.
 const legacy = await page.evaluate(async () => {
