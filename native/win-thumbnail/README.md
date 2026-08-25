@@ -29,6 +29,18 @@ scripts/ build.ps1 (Windows) and build.sh (Git Bash), output staged in dist/
   GDI+ so the angled edges are antialiased. The fan comes out of the same box
   the shell asked for, so the whole composition is measured first and the page
   fitted to what is left; everything the fan does not cover is transparent.
+- **Pages 2 and 3 on those sheets, for real**, from 256px up — two extra renders
+  inside the shell's budget, which is only worth spending where enough of them
+  shows to tell (about 70 ms for all three at 384px, against 45 ms for one).
+  They are rendered at **half** the front page's resolution, since barely a
+  tenth of each sheet is visible and it is drawn at an angle, and are **fitted**
+  inside the sheet rather than stretched to it — a deck whose page 2 is a
+  different shape then letterboxes onto paper instead of distorting. A page
+  that will not render leaves its sheet blank, as do all of them below 256px.
+  ⚠️ `DrawImage` needs `WrapModeTileFlipXY`, or bicubic sampling reads past the
+  source edge and leaves a pale halo down the one sliver that is visible.
+  ⚠️  needs , or bicubic sampling reads past the
+  source edge and leaves a pale halo down the one sliver that is visible.
 - **A "120 Pgs" pill**, bottom-left, in the badge's navy with a white ring — it
   lands wherever the page happens to be, and navy on a dark page is invisible
   without one. It is drawn **exactly as tall as the badge and on the same

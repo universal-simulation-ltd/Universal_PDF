@@ -46,6 +46,14 @@ constexpr UINT kMinSizeForStack = 64;
 constexpr double kFanAngleDeg = 3.5;
 constexpr double kFanPivotBelow = 0.55;  // pivot depth under the page, x page height
 
+// Below this the sheets are drawn as blank paper. Above it pages 2 and 3 are
+// rendered for real — two extra renders inside the shell's budget, which is
+// only worth spending where enough of them shows to tell. They are rendered at
+// half the front page's resolution: barely a tenth of each sheet is visible,
+// and it is being drawn at an angle.
+constexpr UINT kMinSizeForSheetPreviews = 256;
+constexpr double kSheetPreviewScale = 0.5;
+
 // The "52 Pgs" pill. It is drawn exactly as tall as the badge and on the same
 // margin, so the two read as a matched pair across the bottom of the page; the
 // text is a fraction of THAT height, not of the page. It carries a white ring

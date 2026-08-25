@@ -3,6 +3,8 @@
 
 #include "Common.h"
 
+#include <vector>
+
 // Where everything sits inside the bitmap. The front page stays upright; the
 // sheets behind it fan out, pivoting near the bottom of the stack the way a
 // real pile of paper does, so the whole composition is wider than the page and
@@ -19,9 +21,20 @@ struct Layout {
 // Fits a page of the given aspect, plus its fan, inside a cx by cx box.
 Layout ComputeLayout(double page_w, double page_h, UINT cx, int pages);
 
-// The fanned sheets. Drawn before the render, since the front page is opaque
-// and covers the part of each sheet it overlaps.
-void DrawFan(void* bits, const Layout& layout);
+// A page rendered for one of the sheets behind page 1. Empty means "draw this
+// sheet as blank paper", which is what happens below kMinSizeForSheetPreviews
+// and whenever a page will not render.
+struct SheetImage {
+  int width = 0;
+  int height = 0;
+  std::vector<BYTE> pixels;  // BGRA, opaque, so premultiplied and straight agree
+};
+
+// The fanned sheets. Drawn before the front page, since that is opaque and
+// covers the part of each sheet it overlaps. `previews[i]` backs the sheet
+// `i + 1` steps behind the front — page 2, then page 3.
+void DrawFan(void* bits, const Layout& layout, const SheetImage* previews,
+             int preview_count);
 
 // A hairline along the outside of the front page. Without it a white page on a
 // white Explorer background has no edge at all and reads as a hole.

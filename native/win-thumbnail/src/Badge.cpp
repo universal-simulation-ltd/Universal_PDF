@@ -176,7 +176,8 @@ Layout ComputeLayout(double page_w, double page_h, UINT cx, int pages) {
   return out;
 }
 
-void DrawFan(void* bits, const Layout& layout) {
+void DrawFan(void* bits, const Layout& layout, const SheetImage* previews,
+             int preview_count) {
   if (!bits || layout.sheets <= 0) return;
   InitOnceExecuteOnce(&g_gdiplus_once, StartGdiplus, nullptr, nullptr);
   if (g_gdiplus_token == 0) return;
@@ -187,15 +188,25 @@ void DrawFan(void* bits, const Layout& layout) {
                           PixelFormat32bppPARGB, static_cast<BYTE*>(bits));
   Gdiplus::Graphics g(&surface);
   g.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+  g.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBicubic);
+  g.SetPixelOffsetMode(Gdiplus::PixelOffsetModeHalf);
 
   Gdiplus::SolidBrush paper(Gdiplus::Color(255, 255, 255, 255));
   Gdiplus::Pen edge(Gdiplus::Color(120, kEdgeGrey, kEdgeGrey, kEdgeGrey), 1.0f);
 
-  const Gdiplus::RectF sheet(
-      static_cast<Gdiplus::REAL>(layout.page.left),
-      static_cast<Gdiplus::REAL>(layout.page.top),
-      static_cast<Gdiplus::REAL>(layout.page.right - layout.page.left),
-      static_cast<Gdiplus::REAL>(layout.page.bottom - layout.page.top));
+  // Bicubic sampling reads past the edge of the source unless it is told to
+  // mirror there, which shows up as a pale halo down the one sliver of each
+  // sheet that is actually visible.
+  Gdiplus::ImageAttributes attrs;
+  attrs.SetWrapMode(Gdiplus::WrapModeTileFlipXY);
+
+  const Gdiplus::REAL sheet_w =
+      static_cast<Gdiplus::REAL>(layout.page.right - layout.page.left);
+  const Gdiplus::REAL sheet_h =
+      static_cast<Gdiplus::REAL>(layout.page.bottom - layout.page.top);
+  const Gdiplus::RectF sheet(static_cast<Gdiplus::REAL>(layout.page.left),
+                             static_cast<Gdiplus::REAL>(layout.page.top),
+                             sheet_w, sheet_h);
 
   // Furthest sheet first, so each one is painted over by the one in front.
   for (int i = layout.sheets; i >= 1; --i) {
@@ -205,7 +216,31 @@ void DrawFan(void* bits, const Layout& layout) {
     g.RotateTransform(static_cast<Gdiplus::REAL>(kFanAngleDeg * i));
     g.TranslateTransform(static_cast<Gdiplus::REAL>(-layout.pivot_x),
                          static_cast<Gdiplus::REAL>(-layout.pivot_y));
+
+    // Paper first either way: a page of a different shape from the front one
+    // is fitted inside the sheet rather than stretched to it, and the letterbox
+    // then reads as the paper it is standing on.
     g.FillRectangle(&paper, sheet);
+
+    const SheetImage* preview =
+        (previews && i - 1 < preview_count) ? &previews[i - 1] : nullptr;
+    if (preview && preview->width > 0 && preview->height > 0 &&
+        !preview->pixels.empty()) {
+      Gdiplus::Bitmap page(preview->width, preview->height, preview->width * 4,
+                           PixelFormat32bppPARGB,
+                           const_cast<BYTE*>(preview->pixels.data()));
+      const Gdiplus::REAL scale =
+          (std::min)(sheet_w / preview->width, sheet_h / preview->height);
+      const Gdiplus::REAL w = preview->width * scale;
+      const Gdiplus::REAL h = preview->height * scale;
+      const Gdiplus::RectF dest(sheet.X + (sheet_w - w) / 2,
+                                sheet.Y + (sheet_h - h) / 2, w, h);
+      g.DrawImage(&page, dest, 0.0f, 0.0f,
+                  static_cast<Gdiplus::REAL>(preview->width),
+                  static_cast<Gdiplus::REAL>(preview->height),
+                  Gdiplus::UnitPixel, &attrs);
+    }
+
     g.DrawRectangle(&edge, sheet);
   }
   g.ResetTransform();

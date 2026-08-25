@@ -101,6 +101,45 @@ int ReadBlock(void* param, unsigned long position, unsigned char* buf,
   return 1;
 }
 
+// Renders one page into its own buffer, for a sheet in the fan. Half the front
+// page's resolution: only a sliver of each sheet is ever visible, and it is
+// drawn at an angle. Returns false — and the sheet stays blank paper — for any
+// page that will not render.
+bool RenderSheetPage(const PdfiumApi* pdfium, FPDF_DOCUMENT doc, int index,
+                     int max_w, int max_h, SheetImage* out) {
+  FPDF_PAGE page = pdfium->LoadPage(doc, index);
+  if (!page) return false;
+
+  const double pw = pdfium->GetPageWidthF(page);
+  const double ph = pdfium->GetPageHeightF(page);
+  if (!(pw > 0.0) || !(ph > 0.0)) {
+    pdfium->ClosePage(page);
+    return false;
+  }
+
+  const double scale = (std::min)(max_w / pw, max_h / ph) * kSheetPreviewScale;
+  const int w = (std::max)(1, static_cast<int>(std::lround(pw * scale)));
+  const int h = (std::max)(1, static_cast<int>(std::lround(ph * scale)));
+
+  out->pixels.assign(static_cast<size_t>(w) * h * 4, 0);
+  FPDF_BITMAP bmp = pdfium->BitmapCreateEx(w, h, FPDFBitmap_BGRA,
+                                           out->pixels.data(), w * 4);
+  if (!bmp) {
+    pdfium->ClosePage(page);
+    out->pixels.clear();
+    return false;
+  }
+
+  pdfium->BitmapFillRect(bmp, 0, 0, w, h, 0xFFFFFFFF);
+  pdfium->RenderPageBitmap(bmp, page, 0, 0, w, h, 0, FPDF_ANNOT);
+  pdfium->BitmapDestroy(bmp);
+  pdfium->ClosePage(page);
+
+  out->width = w;
+  out->height = h;
+  return true;
+}
+
 }  // namespace
 
 const PdfiumApi* GetPdfium() {
@@ -188,7 +227,17 @@ HRESULT RenderThumbnail(IStream* stream, UINT cx, Thumbnail* out) {
   ZeroMemory(bits, static_cast<size_t>(width) * height * 4);
 
   const RECT page_rect = layout.page;
-  DrawFan(bits, layout);
+
+  // Pages 2 and 3, for the sheets behind the front one. Two extra renders, so
+  // only above kMinSizeForSheetPreviews and only for sheets that exist; any
+  // page that will not render simply leaves its sheet as blank paper.
+  SheetImage previews[2];
+  if (edge >= kMinSizeForSheetPreviews) {
+    for (int i = 1; i <= layout.sheets && i < pages; ++i) {
+      RenderSheetPage(pdfium, doc, i, pw, ph, &previews[i - 1]);
+    }
+  }
+  DrawFan(bits, layout, previews, 2);
 
   // Render straight into the page's sub-rectangle of the same DIB by handing
   // PDFium the origin of that rectangle and the full-width stride.
