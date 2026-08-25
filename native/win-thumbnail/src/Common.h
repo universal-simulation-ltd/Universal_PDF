@@ -31,10 +31,23 @@ extern LONG g_cDllRef;
 // Below this the shell is really asking for an icon, and a badge would cover
 // most of the page, so we render the page alone.
 constexpr UINT kMinSizeForBadge = 48;
-// Badge edge as a fraction of the thumbnail's shorter side, and its cap so a
+// Badge edge as a fraction of the page's shorter side, and its cap so a
 // 1024px "jumbo" request does not get a 350px sticker.
 constexpr double kBadgeFraction = 0.28;
 constexpr UINT kBadgeMaxPx = 128;
 constexpr double kBadgeMarginFraction = 0.03;
+
+// The sheets peeking out behind page 1 on a multi-page document. Below
+// kMinSizeForStack the offset rounds to something indistinguishable from the
+// page's own edge, so the stack is dropped rather than drawn as mush.
+constexpr UINT kMinSizeForStack = 64;
+constexpr double kSheetFraction = 0.028;
+
+// The "52 pages" pill. Text has to survive being drawn at thumbnail scale, so
+// it appears later than the stack does.
+constexpr UINT kMinSizeForCount = 160;
+
+// The navy of the badge tile, so the pill reads as part of the same mark.
+constexpr COLORREF kInk = RGB(17, 26, 46);
 
 HRESULT CreateThumbnailProvider(REFIID riid, void** ppv);

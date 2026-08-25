@@ -1,4 +1,4 @@
-// Run-time binding to pdfium.dll.
+// Run-time binding to pdfium.dll, and the page render itself.
 //
 // Nothing links against pdfium.dll.lib. Two reasons, both load-bearing:
 //
@@ -39,7 +39,18 @@ struct PdfiumApi {
 // would run under the loader lock, and the surrogate is short-lived anyway.
 const PdfiumApi* GetPdfium();
 
-// Renders page 1 of `stream` into a 32-bit top-down DIB fitted inside cx x cx,
-// preserving the page's aspect ratio. The caller owns the HBITMAP.
-HRESULT RenderFirstPage(IStream* stream, UINT cx, HBITMAP* out_bitmap,
-                        UINT* out_width, UINT* out_height, void** out_bits);
+// What a finished render looks like. The bitmap is a 32-bit top-down DIB whose
+// pixels are premultiplied BGRA; everything outside `page` and the sheets
+// behind it is fully transparent.
+struct Thumbnail {
+  HBITMAP bitmap = nullptr;
+  void* bits = nullptr;
+  UINT width = 0;    // the whole bitmap, page plus the stack peeking out
+  UINT height = 0;
+  RECT page{};       // where page 1 sits inside it
+  int pages = 0;     // page count, for the "52 pages" pill
+};
+
+// Renders page 1 of `stream` fitted inside cx x cx, with a sheet or two drawn
+// behind it when the document has more pages. The caller owns the HBITMAP.
+HRESULT RenderThumbnail(IStream* stream, UINT cx, Thumbnail* out);

@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "Badge.h"
+
 namespace {
 
 HMODULE g_pdfium = nullptr;
@@ -99,6 +101,19 @@ int ReadBlock(void* param, unsigned long position, unsigned char* buf,
   return 1;
 }
 
+// How far each sheet behind the front page peeks out, up and to the right.
+// Two of them for anything over two pages, one for exactly two, none for a
+// single page — the stack is information, not decoration.
+UINT SheetOffset(UINT cx) {
+  if (cx < kMinSizeForStack) return 0;
+  return (std::max)(2u, static_cast<UINT>(std::lround(cx * kSheetFraction)));
+}
+
+int SheetCount(int pages) {
+  if (pages <= 1) return 0;
+  return pages == 2 ? 1 : 2;
+}
+
 }  // namespace
 
 const PdfiumApi* GetPdfium() {
@@ -106,10 +121,9 @@ const PdfiumApi* GetPdfium() {
   return g_pdfium ? &g_api : nullptr;
 }
 
-HRESULT RenderFirstPage(IStream* stream, UINT cx, HBITMAP* out_bitmap,
-                        UINT* out_width, UINT* out_height, void** out_bits) {
-  if (!stream || !out_bitmap || cx == 0) return E_INVALIDARG;
-  *out_bitmap = nullptr;
+HRESULT RenderThumbnail(IStream* stream, UINT cx, Thumbnail* out) {
+  if (!stream || !out || cx == 0) return E_INVALIDARG;
+  *out = Thumbnail{};
 
   const PdfiumApi* pdfium = GetPdfium();
   if (!pdfium) return E_FAIL;
@@ -137,7 +151,8 @@ HRESULT RenderFirstPage(IStream* stream, UINT cx, HBITMAP* out_bitmap,
     return E_FAIL;
   }
 
-  FPDF_PAGE page = pdfium->GetPageCount(doc) > 0 ? pdfium->LoadPage(doc, 0) : nullptr;
+  const int pages = pdfium->GetPageCount(doc);
+  FPDF_PAGE page = pages > 0 ? pdfium->LoadPage(doc, 0) : nullptr;
   if (!page) {
     pdfium->CloseDocument(doc);
     ReleaseSRWLockExclusive(&g_render_lock);
@@ -153,10 +168,19 @@ HRESULT RenderFirstPage(IStream* stream, UINT cx, HBITMAP* out_bitmap,
     return E_FAIL;
   }
 
+  // The sheets have to come out of the same cx box the shell asked for, so
+  // the page is fitted into what is left after they have taken their offset.
   const UINT edge = (std::min)(cx, kMaxRenderEdge);
-  const double scale = (std::min)(edge / page_w, edge / page_h);
-  const int width = (std::max)(1, static_cast<int>(std::lround(page_w * scale)));
-  const int height = (std::max)(1, static_cast<int>(std::lround(page_h * scale)));
+  const int sheets = SheetCount(pages);
+  const UINT offset = sheets > 0 ? SheetOffset(edge) : 0;
+  const UINT inset = offset * static_cast<UINT>(sheets);
+  const UINT box = edge > inset + 8 ? edge - inset : edge;
+
+  const double scale = (std::min)(box / page_w, box / page_h);
+  const int pw = (std::max)(1, static_cast<int>(std::lround(page_w * scale)));
+  const int ph = (std::max)(1, static_cast<int>(std::lround(page_h * scale)));
+  const int width = pw + static_cast<int>(inset);
+  const int height = ph + static_cast<int>(inset);
 
   BITMAPINFO bmi{};
   bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
@@ -176,8 +200,26 @@ HRESULT RenderFirstPage(IStream* stream, UINT cx, HBITMAP* out_bitmap,
     return E_OUTOFMEMORY;
   }
 
+  // Everything starts fully transparent: with a stack drawn, the thumbnail is
+  // no longer a plain rectangle and the notches at top-left and bottom-right
+  // must let the folder background through.
+  ZeroMemory(bits, static_cast<size_t>(width) * height * 4);
+
+  // Page 1 sits at the bottom-left, each sheet a step up and to the right.
+  RECT page_rect{0, static_cast<LONG>(inset), pw, static_cast<LONG>(inset) + ph};
+  for (int i = sheets; i >= 1; --i) {
+    const LONG dx = static_cast<LONG>(offset) * i;
+    RECT sheet{dx, static_cast<LONG>(inset) - dx, dx + pw,
+               static_cast<LONG>(inset) - dx + ph};
+    DrawSheet(bits, static_cast<UINT>(width), static_cast<UINT>(height), sheet);
+  }
+
+  // Render straight into the page's sub-rectangle of the same DIB by handing
+  // PDFium the origin of that rectangle and the full-width stride.
+  auto* first_scan = static_cast<BYTE*>(bits) +
+                     (static_cast<size_t>(page_rect.top) * width + page_rect.left) * 4;
   FPDF_BITMAP fbmp =
-      pdfium->BitmapCreateEx(width, height, FPDFBitmap_BGRA, bits, width * 4);
+      pdfium->BitmapCreateEx(pw, ph, FPDFBitmap_BGRA, first_scan, width * 4);
   if (!fbmp) {
     DeleteObject(dib);
     pdfium->ClosePage(page);
@@ -188,20 +230,22 @@ HRESULT RenderFirstPage(IStream* stream, UINT cx, HBITMAP* out_bitmap,
 
   // Paper first: a PDF page is transparent where nothing is drawn, and the
   // shell would composite that straight onto the folder background.
-  pdfium->BitmapFillRect(fbmp, 0, 0, width, height, 0xFFFFFFFF);
+  pdfium->BitmapFillRect(fbmp, 0, 0, pw, ph, 0xFFFFFFFF);
   // FPDF_ANNOT so filled form fields and stamps appear, as they do in the app.
   // No FPDF_LCD_TEXT: subpixel positioning is wrong for a bitmap that will be
   // rescaled by whatever view the shell is drawing.
-  pdfium->RenderPageBitmap(fbmp, page, 0, 0, width, height, 0, FPDF_ANNOT);
+  pdfium->RenderPageBitmap(fbmp, page, 0, 0, pw, ph, 0, FPDF_ANNOT);
   pdfium->BitmapDestroy(fbmp);
 
   pdfium->ClosePage(page);
   pdfium->CloseDocument(doc);
   ReleaseSRWLockExclusive(&g_render_lock);
 
-  *out_bitmap = dib;
-  if (out_width) *out_width = static_cast<UINT>(width);
-  if (out_height) *out_height = static_cast<UINT>(height);
-  if (out_bits) *out_bits = bits;
+  out->bitmap = dib;
+  out->bits = bits;
+  out->width = static_cast<UINT>(width);
+  out->height = static_cast<UINT>(height);
+  out->page = page_rect;
+  out->pages = pages;
   return S_OK;
 }

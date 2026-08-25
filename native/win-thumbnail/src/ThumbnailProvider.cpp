@@ -62,17 +62,17 @@ class ThumbnailProvider final : public IInitializeWithStream,
     *pdwAlpha = WTSAT_ARGB;
     if (!stream_) return E_UNEXPECTED;
 
-    HBITMAP bitmap = nullptr;
-    UINT width = 0, height = 0;
-    void* bits = nullptr;
-    HRESULT hr = RenderFirstPage(stream_, cx, &bitmap, &width, &height, &bits);
+    Thumbnail thumb;
+    HRESULT hr = RenderThumbnail(stream_, cx, &thumb);
     if (FAILED(hr)) return hr;
 
-    DrawPageEdge(bits, width, height);
+    DrawPageEdge(thumb.bits, thumb.width, thumb.height, thumb.page);
     // A badge we could not draw is not worth losing the page over.
-    StampBadge(bits, width, height);
+    StampBadge(thumb.bits, thumb.width, thumb.height, thumb.page);
+    DrawPageCount(thumb.bitmap, thumb.bits, thumb.width, thumb.height,
+                  thumb.page, thumb.pages);
 
-    *phbmp = bitmap;
+    *phbmp = thumb.bitmap;
     return S_OK;
   }
 

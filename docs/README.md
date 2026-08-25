@@ -290,6 +290,11 @@ So this is a native shell extension, `native/win-thumbnail/`, built as
 rasterises page 1 with PDFium and composites `build/pdf-document.ico` into the
 corner. `native/win-thumbnail/README.md` has the full design.
 
+A multi-page document also gets a **stack** — one sheet peeking out behind
+page 1 for two pages, two for anything longer — and a **“120 pages” pill** in
+the bottom-left from 160px up, so a long document says so without being
+opened. A single-page PDF gets neither.
+
 Three things worth knowing here:
 
 - **It appears only when Universal PDF is the default PDF app.** The handler is

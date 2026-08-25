@@ -15,6 +15,28 @@ test/    thumbtest.exe — drives it with and without the shell
 scripts/ build.ps1 (Windows) and build.sh (Git Bash), output staged in dist/
 ```
 
+## What it draws
+
+- **Page 1**, fitted to whatever size the shell asked for, on opaque paper with
+  a hairline edge — a white page on a white Explorer background otherwise has no
+  edge at all and reads as a hole.
+- **The badge** from `build/pdf-document.ico`, bottom-right, at 28% of the page's
+  shorter side and capped at 128px. Dropped below 48px, where it would cover
+  most of the page and the shell is really asking for an icon.
+- **A stack**: one sheet peeking out behind a two-page document, two for
+  anything longer, none for a single page — so the count is information rather
+  than decoration. The sheets come out of the same box the shell asked for, so
+  the page is fitted to what is left after their offset, and the notches they
+  leave at top-left and bottom-right are transparent.
+- **A "120 pages" pill**, bottom-left, from 160px up. It falls back to the bare
+  number when the words would take more than half the page's width — better a
+  readable count than a truncated one.
+
+⚠️ The pill is the only thing drawn with GDI, and **GDI writes nothing to the
+alpha channel of a 32-bit DIB**, so every pixel it touches ends up transparent.
+Alpha is restored across the pill's rectangle afterwards; it sits inside the
+page, which is opaque everywhere, so that is both safe and sufficient.
+
 ## Building
 
 ```powershell
