@@ -23,14 +23,16 @@ scripts/ build.ps1 (Windows) and build.sh (Git Bash), output staged in dist/
 - **The badge** from `build/pdf-document.ico`, bottom-right, at 28% of the page's
   shorter side and capped at 128px. Dropped below 48px, where it would cover
   most of the page and the shell is really asking for an icon.
-- **A stack**: one sheet peeking out behind a two-page document, two for
-  anything longer, none for a single page — so the count is information rather
-  than decoration. The sheets come out of the same box the shell asked for, so
-  the page is fitted to what is left after their offset, and the notches they
-  leave at top-left and bottom-right are transparent.
-- **A "120 pages" pill**, bottom-left, from 160px up. It falls back to the bare
-  number when the words would take more than half the page's width — better a
-  readable count than a truncated one.
+- **A fan**: one sheet behind a two-page document, two for anything longer,
+  none for a single page — so the stack is information rather than decoration.
+  Each sheet turns 3.5 degrees further about a pivot below the page, drawn with
+  GDI+ so the angled edges are antialiased. The fan comes out of the same box
+  the shell asked for, so the whole composition is measured first and the page
+  fitted to what is left; everything the fan does not cover is transparent.
+- **A "120 pages" pill**, bottom-left, from 160px up, in the badge's navy with
+  a white ring — the pill lands wherever the page happens to be, and navy on a
+  dark page is invisible without one. It falls back to the bare number when the
+  words would take more than 62% of the page width.
 
 ⚠️ The pill is the only thing drawn with GDI, and **GDI writes nothing to the
 alpha channel of a 32-bit DIB**, so every pixel it touches ends up transparent.
@@ -83,6 +85,17 @@ thumbnails away from whichever reader the user actually chose — so the handler
 hangs off `UniversalPDF.Document\ShellEx\{e357fccd-…}` and appears exactly when
 Universal PDF is the default app. Acrobat does the same thing with its own
 ProgID, which is why there is no handler on the bare `.pdf` key at all.
+
+**⚠️ Explorer stamps its OWN app icon on thumbnails, and an empty `TypeOverlay`
+is what stops it.** Left unset, the shell draws the application's icon — the
+UNI·SIM globe — over the badge this provider already composited, half covering
+it: two marks in one corner, neither legible. Writing an empty `TypeOverlay`
+value on the ProgID suppresses the shell's overlay and leaves ours alone. Both
+`installer.nsh` and the DLL's own `DllRegisterServer` write it.
+
+It is not the ProgID's `DefaultIcon`, the CLSID's, `Applications\<exe>`, the
+`Capabilities` `ApplicationIcon`, or a stale icon cache — all four were tried
+and captured before `TypeOverlay` turned out to be the knob.
 
 **It runs in `dllhost.exe`, not `explorer.exe`.** `DisableProcessIsolation` is
 deliberately not written, so the shell hosts the provider in a COM surrogate: a

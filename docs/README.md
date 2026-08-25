@@ -290,10 +290,14 @@ So this is a native shell extension, `native/win-thumbnail/`, built as
 rasterises page 1 with PDFium and composites `build/pdf-document.ico` into the
 corner. `native/win-thumbnail/README.md` has the full design.
 
-A multi-page document also gets a **stack** — one sheet peeking out behind
-page 1 for two pages, two for anything longer — and a **“120 pages” pill** in
-the bottom-left from 160px up, so a long document says so without being
-opened. A single-page PDF gets neither.
+A multi-page document also gets a **fan** — one sheet behind page 1 for two
+pages, two for anything longer, each turned a few degrees further — and a
+**“120 pages” pill** in the bottom-left from 160px up, so a long document says
+so without being opened. A single-page PDF gets neither.
+
+⚠️ The installer also writes an empty **`TypeOverlay`** on the ProgID. Without
+it Explorer stamps the application's own icon over the badge in the same
+corner, half covering it.
 
 Three things worth knowing here:
 

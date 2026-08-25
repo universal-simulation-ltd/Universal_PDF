@@ -94,7 +94,7 @@ add_library(UniversalPdfThumb SHARED
 )
 set_target_properties(UniversalPdfThumb PROPERTIES PREFIX "" OUTPUT_NAME "UniversalPdfThumb")
 target_include_directories(UniversalPdfThumb PRIVATE src "${PDFIUM_DIR}/include")
-target_link_libraries(UniversalPdfThumb PRIVATE windowscodecs shlwapi ole32 oleaut32 uuid gdi32 user32 advapi32)
+target_link_libraries(UniversalPdfThumb PRIVATE windowscodecs shlwapi ole32 oleaut32 uuid gdi32 gdiplus user32 advapi32)
 target_compile_definitions(UniversalPdfThumb PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
 
 if(MSVC)

@@ -37,15 +37,20 @@ constexpr double kBadgeFraction = 0.28;
 constexpr UINT kBadgeMaxPx = 128;
 constexpr double kBadgeMarginFraction = 0.03;
 
-// The sheets peeking out behind page 1 on a multi-page document. Below
-// kMinSizeForStack the offset rounds to something indistinguishable from the
-// page's own edge, so the stack is dropped rather than drawn as mush.
+// The sheets fanned out behind page 1 on a multi-page document: one at two
+// pages, two beyond that, none at one. Below kMinSizeForStack the fan is
+// smaller than the page's own edge line, so it is dropped rather than drawn as
+// mush. Each sheet turns kFanAngleDeg further about a pivot below the page,
+// which is what makes it read as paper rather than as three offset rectangles.
 constexpr UINT kMinSizeForStack = 64;
-constexpr double kSheetFraction = 0.028;
+constexpr double kFanAngleDeg = 3.5;
+constexpr double kFanPivotBelow = 0.55;  // pivot depth under the page, x page height
 
 // The "52 pages" pill. Text has to survive being drawn at thumbnail scale, so
-// it appears later than the stack does.
+// it appears later than the fan does, and it carries a white ring: the pill
+// lands wherever the page happens to be dark, and navy on navy is invisible.
 constexpr UINT kMinSizeForCount = 160;
+constexpr double kCountTextFraction = 0.058;
 
 // The navy of the badge tile, so the pill reads as part of the same mark.
 constexpr COLORREF kInk = RGB(17, 26, 46);

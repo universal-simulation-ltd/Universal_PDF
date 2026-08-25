@@ -1,15 +1,30 @@
-// Everything drawn on top of — or behind — the page render.
+// Layout, and everything drawn on top of — or behind — the page render.
 #pragma once
 
 #include "Common.h"
 
-// One sheet of the stack behind page 1: opaque paper plus the same hairline
-// the front page gets. Drawn before the render, since the page is opaque and
-// covers the part of the sheet it overlaps.
-void DrawSheet(void* bits, UINT width, UINT height, const RECT& sheet);
+// Where everything sits inside the bitmap. The front page stays upright; the
+// sheets behind it fan out, pivoting near the bottom of the stack the way a
+// real pile of paper does, so the whole composition is wider than the page and
+// has to be measured before the bitmap is allocated.
+struct Layout {
+  int width = 0;
+  int height = 0;
+  RECT page{};        // the upright front page
+  int sheets = 0;     // 0, 1 or 2
+  double pivot_x = 0; // fan pivot, in bitmap coordinates
+  double pivot_y = 0;
+};
 
-// A hairline along the outside of a page. Without it a white page on a white
-// Explorer background has no edge at all and reads as a hole.
+// Fits a page of the given aspect, plus its fan, inside a cx by cx box.
+Layout ComputeLayout(double page_w, double page_h, UINT cx, int pages);
+
+// The fanned sheets. Drawn before the render, since the front page is opaque
+// and covers the part of each sheet it overlaps.
+void DrawFan(void* bits, const Layout& layout);
+
+// A hairline along the outside of the front page. Without it a white page on a
+// white Explorer background has no edge at all and reads as a hole.
 void DrawPageEdge(void* bits, UINT width, UINT height, const RECT& page);
 
 // Composites the app badge into the bottom-right corner of the page. A failure

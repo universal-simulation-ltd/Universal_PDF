@@ -101,19 +101,6 @@ int ReadBlock(void* param, unsigned long position, unsigned char* buf,
   return 1;
 }
 
-// How far each sheet behind the front page peeks out, up and to the right.
-// Two of them for anything over two pages, one for exactly two, none for a
-// single page — the stack is information, not decoration.
-UINT SheetOffset(UINT cx) {
-  if (cx < kMinSizeForStack) return 0;
-  return (std::max)(2u, static_cast<UINT>(std::lround(cx * kSheetFraction)));
-}
-
-int SheetCount(int pages) {
-  if (pages <= 1) return 0;
-  return pages == 2 ? 1 : 2;
-}
-
 }  // namespace
 
 const PdfiumApi* GetPdfium() {
@@ -168,19 +155,14 @@ HRESULT RenderThumbnail(IStream* stream, UINT cx, Thumbnail* out) {
     return E_FAIL;
   }
 
-  // The sheets have to come out of the same cx box the shell asked for, so
-  // the page is fitted into what is left after they have taken their offset.
+  // The fan has to come out of the same cx box the shell asked for, so the
+  // whole composition is measured first and the page fitted to what is left.
   const UINT edge = (std::min)(cx, kMaxRenderEdge);
-  const int sheets = SheetCount(pages);
-  const UINT offset = sheets > 0 ? SheetOffset(edge) : 0;
-  const UINT inset = offset * static_cast<UINT>(sheets);
-  const UINT box = edge > inset + 8 ? edge - inset : edge;
-
-  const double scale = (std::min)(box / page_w, box / page_h);
-  const int pw = (std::max)(1, static_cast<int>(std::lround(page_w * scale)));
-  const int ph = (std::max)(1, static_cast<int>(std::lround(page_h * scale)));
-  const int width = pw + static_cast<int>(inset);
-  const int height = ph + static_cast<int>(inset);
+  const Layout layout = ComputeLayout(page_w, page_h, edge, pages);
+  const int width = layout.width;
+  const int height = layout.height;
+  const int pw = static_cast<int>(layout.page.right - layout.page.left);
+  const int ph = static_cast<int>(layout.page.bottom - layout.page.top);
 
   BITMAPINFO bmi{};
   bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
@@ -205,14 +187,8 @@ HRESULT RenderThumbnail(IStream* stream, UINT cx, Thumbnail* out) {
   // must let the folder background through.
   ZeroMemory(bits, static_cast<size_t>(width) * height * 4);
 
-  // Page 1 sits at the bottom-left, each sheet a step up and to the right.
-  RECT page_rect{0, static_cast<LONG>(inset), pw, static_cast<LONG>(inset) + ph};
-  for (int i = sheets; i >= 1; --i) {
-    const LONG dx = static_cast<LONG>(offset) * i;
-    RECT sheet{dx, static_cast<LONG>(inset) - dx, dx + pw,
-               static_cast<LONG>(inset) - dx + ph};
-    DrawSheet(bits, static_cast<UINT>(width), static_cast<UINT>(height), sheet);
-  }
+  const RECT page_rect = layout.page;
+  DrawFan(bits, layout);
 
   // Render straight into the page's sub-rectangle of the same DIB by handing
   // PDFium the origin of that rectangle and the full-width stride.

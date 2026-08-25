@@ -48,6 +48,12 @@
     WriteRegStr SHELL_CONTEXT "Software\Classes\CLSID\{9D3AE6B2-939A-47A9-A7F8-D30A6FC4C10F}\InprocServer32" "" "$INSTDIR\resources\UniversalPdfThumb.dll"
     WriteRegStr SHELL_CONTEXT "Software\Classes\CLSID\{9D3AE6B2-939A-47A9-A7F8-D30A6FC4C10F}\InprocServer32" "ThreadingModel" "Apartment"
     WriteRegStr SHELL_CONTEXT "Software\Classes\UniversalPDF.Document\ShellEx\{e357fccd-a995-4576-b01f-234630154e96}" "" "{9D3AE6B2-939A-47A9-A7F8-D30A6FC4C10F}"
+
+    ; An EMPTY TypeOverlay stops Explorer stamping its own app icon on top
+    ; of the thumbnail. Without it the shell draws the UNI-SIM globe over
+    ; the badge the provider already composited, half covering it - two
+    ; marks in one corner, neither of them legible.
+    WriteRegStr SHELL_CONTEXT "Software\Classes\UniversalPDF.Document" "TypeOverlay" ""
   unipdf_no_thumbnail:
 
 !macroend
@@ -57,6 +63,7 @@
   DeleteRegKey SHELL_CONTEXT "Software\Universal Simulation\Universal PDF"
   DeleteRegValue SHELL_CONTEXT "Software\Classes\.pdf\OpenWithProgids" "UniversalPDF.Document"
   DeleteRegKey SHELL_CONTEXT "Software\Classes\UniversalPDF.Document\ShellEx\{e357fccd-a995-4576-b01f-234630154e96}"
+  DeleteRegValue SHELL_CONTEXT "Software\Classes\UniversalPDF.Document" "TypeOverlay"
   DeleteRegKey SHELL_CONTEXT "Software\Classes\CLSID\{9D3AE6B2-939A-47A9-A7F8-D30A6FC4C10F}"
 
   ; The shell keeps a COM surrogate alive for a while after the last thumbnail,

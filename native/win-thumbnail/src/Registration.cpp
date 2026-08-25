@@ -65,6 +65,15 @@ HRESULT RegisterProvider() {
   hr = SetString(HKEY_CURRENT_USER, key, nullptr, clsid);
   if (FAILED(hr)) return hr;
 
+  // An EMPTY TypeOverlay stops Explorer stamping its own app icon onto the
+  // thumbnail. Left unset, the shell draws the application's globe over the
+  // badge this provider already composited, half covering it — two marks in
+  // one corner, neither legible. Confirmed by capturing a real Explorer window
+  // with and without it.
+  hr = SetString(HKEY_CURRENT_USER, L"Software\\Classes\\" UNIPDF_PROGID,
+                 L"TypeOverlay", L"");
+  if (FAILED(hr)) return hr;
+
   SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
   return S_OK;
 }
@@ -77,6 +86,14 @@ HRESULT UnregisterProvider() {
   wsprintfW(key, L"Software\\Classes\\%s\\ShellEx\\%s", UNIPDF_PROGID,
             THUMBNAIL_HANDLER_KEY);
   RegDeleteKeyW(HKEY_CURRENT_USER, key);
+
+  wsprintfW(key, L"Software\\Classes\\%s", UNIPDF_PROGID);
+  HKEY progid = nullptr;
+  if (RegOpenKeyExW(HKEY_CURRENT_USER, key, 0, KEY_SET_VALUE, &progid) ==
+      ERROR_SUCCESS) {
+    RegDeleteValueW(progid, L"TypeOverlay");
+    RegCloseKey(progid);
+  }
 
   wsprintfW(key, L"Software\\Classes\\CLSID\\%s", clsid);
   RegDeleteTreeW(HKEY_CURRENT_USER, key);
