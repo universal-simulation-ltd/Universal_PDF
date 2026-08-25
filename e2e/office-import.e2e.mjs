@@ -326,20 +326,24 @@ check(
 // The fixture's pixel counts and display sizes are far apart on purpose; see
 // `fixtures/make-image-fixture.mjs`.
 //
-// ⚠️ NEEDS @unisim/doc >= 0.5.0, and says so rather than failing. The sizing
-// lives in the package; this app installs it from npm by version. Publishing it
-// needs a browser one-time password only James can complete (see the SDK item
-// in the backlog), so between the code landing and the publish happening the
-// installed copy is the old one — and a suite that went red for that would be
-// reporting the publish queue, not a regression.
+// ⚠️ NEEDS @unisim/doc >= 0.5.0, and this now FAILS rather than skipping.
+// It skipped until 2026-08-25, for a reason that has since expired: the sizing
+// lives in the package, the package was written but unpublished, and a suite
+// that went red for that would have been reporting the publish queue rather
+// than a regression. @unisim/doc@0.5.0 is on npm now and this app's
+// package.json asks for ^0.5.0, so the only remaining ways the capability can
+// be missing are a stale node_modules or someone deleting `emuToPoints` — and
+// a silent skip reports both of those as green.
 console.log('\nembedded picture sizing')
 const sizingSupported = await page.evaluate(async () => {
   const mod = await import('/node_modules/@unisim/doc/dist/index.js')
   return typeof mod.emuToPoints === 'function'
 })
-if (!sizingSupported) {
-  console.log('  – skipped: the installed @unisim/doc predates 0.5.0 (run packages/publish.sh doc minor)')
-}
+check(
+  'the installed @unisim/doc is 0.5.0 or newer (it exports emuToPoints)',
+  sizingSupported,
+  'package.json asks for ^0.5.0 — run `npm install` to refresh node_modules',
+)
 for (const name of sizingSupported ? ['image-size.docx', 'image-size.odt'] : []) {
   const b64 = readFileSync(join(HERE, 'fixtures', name)).toString('base64')
   const drawn = await page.evaluate(async ({ b64, name }) => {
