@@ -42,6 +42,23 @@ import { isNativeShell, subscribeNativeOpenPdf } from './lib/nativeOpen'
 
 const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_PDF'
 
+// The document's rendered width, clamped exactly as the viewer clamps it
+// (`PdfViewer` publishes `--doc-display-width` from page 1's viewport), and the
+// empty margin to the right of it — the strip of grey between the page's right
+// edge and the window.
+//
+// ⚠️ Every term here is load-bearing, so do not "simplify" it:
+//   • `100vw` and not `100%` — a percentage inside a grid cell resolves against
+//     the CELL, and this cell is one `1fr` of three.
+//   • `--doc-scrollbar-width` — the page is centred inside the viewer's scroll
+//     box, which is narrower than the window by its scrollbar. The bar carries
+//     the same padding for the same reason.
+//   • `0.75rem` is the row's own `px-3`, and `0.5rem` the `gap-2` between
+//     Export and the cluster that follows it. Both sit between Export's right
+//     edge and the margin being measured, so both come off.
+const DOC_WIDTH = 'clamp(600px, var(--doc-display-width, 80rem), 80rem)'
+const DOC_RIGHT_MARGIN = `max(0px, calc((100vw - var(--doc-scrollbar-width, 0px) - ${DOC_WIDTH}) / 2 - 0.75rem - 0.5rem))`
+
 
 export default function App() {
   const loadFile = usePdfStore((s) => s.loadFile)
@@ -356,25 +373,42 @@ export default function App() {
                 cell they cannot overlap anything, and the width they take is
                 also what sizes the empty column that centres the tools. */}
             <div className="col-start-3 flex items-center gap-2 [&>*]:shrink-0">
-              {/* Export floats in the middle of what is left between the
-                  centred tools and the profile — a spacer either side of it,
-                  which at a normal zoom lands it just past the document's right
-                  edge. It is deliberately NOT anchored to that edge in CSS: the
-                  page's width swings with the zoom, and an anchored Export
-                  would eventually run into the profile pill. The two spacers
-                  shrink to nothing first instead.
+              {/* Export ENDS ON THE DOCUMENT'S RIGHT EDGE (owner, 2026-08-25:
+                  a box drawn just inside the page edge, "try export on this
+                  side"). It used to float in the middle of whatever the centred
+                  tools left over, which put it just PAST that edge, out in the
+                  grey.
+
+                  The alignment is done by giving the profile cluster a box the
+                  width of the page's right margin rather than by positioning
+                  Export: everything to the right of Export then adds up to that
+                  margin, so Export's right edge is the page's right edge at
+                  every zoom, and the profile and the changelog icon stay pinned
+                  to the window's right where they were.
+
+                  ⚠️ `min-w-max` is the collision guard, and it is why this can
+                  be anchored at all — the previous version refused to anchor
+                  because a page as wide as the window would drive Export into
+                  the profile pill. It cannot: the box never gets narrower than
+                  the two controls inside it, so once the margin runs out the
+                  box stops shrinking and the `flex-1` spacer gives up its space
+                  instead. Nothing overlaps; Export just stops moving right.
 
                   ⚠️ This cell must stay STRETCHED (no `justify-self`) — it
                   spans the whole right-hand `1fr`, which is also what keeps the
                   tool cluster on the window's centre line. */}
               <div aria-hidden="true" className="flex-1" />
               <ToolbarDesktopActions />
-              <div aria-hidden="true" className="flex-1" />
-              <ToolbarUserProfile actions={<FileMenu variant="rows" />} />
-              <ChangelogMenu
-                iconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
-                productFilter="pdf"
-              />
+              <div
+                className="flex min-w-max items-center justify-end gap-2"
+                style={{ width: DOC_RIGHT_MARGIN }}
+              >
+                <ToolbarUserProfile actions={<FileMenu variant="rows" />} />
+                <ChangelogMenu
+                  iconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
+                  productFilter="pdf"
+                />
+              </div>
             </div>
           </div>
         </div>
