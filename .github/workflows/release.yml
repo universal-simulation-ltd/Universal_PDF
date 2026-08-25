@@ -7,9 +7,26 @@
 # `--publish never` and Supabase-secret comments, both of which were learned the
 # hard way and still apply to all three platforms.
 #
-# Signing: none, on purpose — the suite's standing unsigned-builds policy. Both
-# Windows SmartScreen and macOS Gatekeeper will warn on first run; the download
-# page explains that and how to get past it. Linux is unaffected.
+# Signing, macOS: signed and notarized WHEN THE SECRETS ARE SET, unsigned when
+# they are not — decided at run time, because a matrix expression cannot read
+# `secrets`. Set all five and the next tag ships a notarized DMG; leave them
+# unset and nothing changes.
+#
+#   CSC_LINK                     the Developer ID .p12, base64-encoded
+#   CSC_KEY_PASSWORD             its password
+#   APPLE_ID                     the Apple ID that owns the team
+#   APPLE_APP_SPECIFIC_PASSWORD  an app-specific password, NOT the account one
+#   APPLE_TEAM_ID                ZH9C5TS86A
+#
+# ⚠️ WHY THIS IS NOT COSMETIC. macOS will not let a Gatekeeper-rejected app open
+# a QUARANTINED file, and every PDF that came from a browser is quarantined. On
+# an unsigned build the user gets "Apple could not verify «invoice.pdf» is free
+# of malware" with a Move to Bin button — a dialog that accuses their own file
+# and never names this app. Signing is what stops that, so an unsigned macOS
+# release is a broken one, not merely a scary-looking one.
+#
+# Windows SmartScreen still warns on first run and Linux is unaffected; the
+# download page explains both.
 
 name: release
 
@@ -65,6 +82,8 @@ jobs:
             artifacts: universal-pdf-windows
           # macOS runners are arm64, and electron-builder packages BOTH
           # architectures from one — see the `arch: [arm64, x64]` dmg target.
+          # `script` is the FALLBACK here — the signing step below overrides it
+          # when the certificate secrets are present.
           - name: macOS DMGs
             os: macos-14
             script: dist:mac:unsigned
@@ -89,12 +108,41 @@ jobs:
       - name: Install deps
         run: npm ci
 
+      # Whether this run can sign is a property of the REPO's secrets, and
+      # `strategy.matrix` is evaluated before secrets are available — so the
+      # choice cannot live in the matrix and is made here instead.
+      #
+      # Both halves are checked: a certificate with no Apple ID signs but cannot
+      # notarize, and electron-builder's notarize step then fails the whole
+      # build rather than degrading. Better to ship the known-unsigned artefact
+      # than to ship nothing.
+      - name: Decide whether the macOS build can be signed
+        id: signing
+        if: matrix.os == 'macos-14'
+        env:
+          HAVE_CERT: ${{ secrets.CSC_LINK != '' }}
+          HAVE_APPLE_ID: ${{ secrets.APPLE_ID != '' && secrets.APPLE_APP_SPECIFIC_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
+        run: |
+          if [ "$HAVE_CERT" = "true" ] && [ "$HAVE_APPLE_ID" = "true" ]; then
+            echo "Signing credentials present — building a signed, notarized DMG."
+            echo "script=dist:mac" >> "$GITHUB_OUTPUT"
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::No macOS signing secrets — shipping an UNSIGNED build."
+            echo "::warning::Gatekeeper will refuse to open quarantined PDFs with it."
+            echo "script=dist:mac:unsigned" >> "$GITHUB_OUTPUT"
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build installers
         # --publish never: electron-builder otherwise auto-publishes when it
         # sees a tag ref and fails on the missing GH_TOKEN, killing the job
         # before the steps below run. The "Attach to GitHub Release" step owns
         # publishing.
-        run: npm run ${{ matrix.script }} -- --publish never
+        # An empty step output is falsy in a GitHub expression, so the two
+        # non-mac jobs (where the step above was skipped) fall through to the
+        # matrix value untouched.
+        run: npm run ${{ steps.signing.outputs.script || matrix.script }} -- --publish never
         env:
           # The platform Supabase URL + anon key are required to construct
           # the SDK's Supabase client at boot; without them the renderer
@@ -104,9 +152,19 @@ jobs:
           # the web build rather than committing them.
           VITE_PLATFORM_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_PLATFORM_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          # No code-signing cert configured. CSC_IDENTITY_AUTO_DISCOVERY=false
-          # stops electron-builder from probing the keychain on hosted runners.
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          # ⚠️ Must be 'true' when signing. CSC_IDENTITY_AUTO_DISCOVERY=false
+          # disables electron-builder's signing path outright — with it set,
+          # CSC_LINK is imported and then ignored, and the build comes out
+          # unsigned while every log line says it is signing.
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ steps.signing.outputs.signed == 'true' && 'true' || 'false' }}
+          # All five are empty on a repo with no secrets set, which is what puts
+          # the step above on the unsigned path. Empty is not the same as
+          # absent to electron-builder, but it never reads them on that path.
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       # Proves the thing we are about to hand to strangers actually boots. A
       # packaged Electron app that dies on launch looks identical to a healthy
@@ -130,6 +188,22 @@ jobs:
           sleep 15
           kill -0 "$APP_PID"
           kill "$APP_PID"
+
+      # ⚠️ Proves the SIGNATURE, not merely that signing was attempted. A build
+      # that silently came out unsigned is the failure this whole change exists
+      # to prevent, and it looks exactly like a successful one in the log.
+      # `spctl --assess` is the same question Gatekeeper asks when a user opens
+      # a quarantined file, and `stapler validate` proves the notarization
+      # ticket is attached rather than merely issued — an un-stapled app has to
+      # reach Apple to launch, so it fails on an offline machine.
+      - name: Verify the macOS build is signed and notarized
+        if: matrix.os == 'macos-14' && steps.signing.outputs.signed == 'true'
+        run: |
+          APP="release/mac-arm64/Universal PDF.app"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          spctl --assess --type execute --verbose=4 "$APP" 2>&1 | tee /tmp/spctl.txt
+          grep -q "source=Notarized Developer ID" /tmp/spctl.txt
+          xcrun stapler validate "$APP"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
