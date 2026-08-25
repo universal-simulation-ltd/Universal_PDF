@@ -46,11 +46,13 @@ constexpr UINT kMinSizeForStack = 64;
 constexpr double kFanAngleDeg = 3.5;
 constexpr double kFanPivotBelow = 0.55;  // pivot depth under the page, x page height
 
-// The "52 pages" pill. Text has to survive being drawn at thumbnail scale, so
-// it appears later than the fan does, and it carries a white ring: the pill
-// lands wherever the page happens to be dark, and navy on navy is invisible.
-constexpr UINT kMinSizeForCount = 112;
-constexpr double kCountTextFraction = 0.085;
+// The "52 Pgs" pill. It is drawn exactly as tall as the badge and on the same
+// margin, so the two read as a matched pair across the bottom of the page; the
+// text is a fraction of THAT height, not of the page. It carries a white ring
+// because the pill lands wherever the page happens to be dark, and navy on
+// navy is invisible.
+constexpr UINT kMinSizeForCount = 96;
+constexpr double kCountTextFraction = 0.56;
 
 // The navy of the badge tile, so the pill reads as part of the same mark.
 constexpr COLORREF kInk = RGB(17, 26, 46);

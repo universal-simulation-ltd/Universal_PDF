@@ -342,74 +342,60 @@ void DrawPageCount(HBITMAP bitmap, void* bits, UINT width, UINT height,
   const UINT longer = (std::max)(page_w, page_h);
   if (longer < kMinSizeForCount) return;
 
-  const int text_px =
-      (std::max)(11, static_cast<int>(std::lround(longer * kCountTextFraction)));
-  // "pages" rides along at a smaller size than the number. Set at one size the
-  // two together are either too wide to sit beside the badge or too small to
-  // read — this way the count itself stays big and the word is a qualifier.
-  const int word_px = (std::max)(8, static_cast<int>(std::lround(text_px * 0.62)));
-  const int pad_x = (std::max)(3, text_px / 2);
-  const int pad_y = (std::max)(2, text_px / 5);
-  const int gap = (std::max)(2, text_px / 6);
-  const int margin = (std::max)(3, static_cast<int>(std::lround(longer * 0.03)));
+  // The pill is exactly as tall as the badge and sits on the same margin, so
+  // the two read as a matched pair across the bottom of the page rather than
+  // as a big mark and a small note.
+  const int badge = static_cast<int>(BadgeEdge(page));
+  const int margin = static_cast<int>(BadgeMargin(page));
+  const int pill_h = badge;
+  const int text_px = (std::max)(9, static_cast<int>(std::lround(pill_h * kCountTextFraction)));
 
-  // Whatever is left of the page's width once the badge and both margins have
-  // taken theirs. The two cannot both have the width they would like at 256px,
-  // and the badge is the one that must not move.
-  const LONG room = static_cast<LONG>(page_w) - static_cast<LONG>(BadgeEdge(page)) -
-                    2 * static_cast<LONG>(BadgeMargin(page)) - margin;
-
-  wchar_t number[16];
-  wsprintfW(number, L"%d", pages);
-  const wchar_t* word = L"pages";
+  wchar_t label[32];
+  wsprintfW(label, L"%d Pgs", pages);
 
   HDC dc = CreateCompatibleDC(nullptr);
   if (!dc) return;
   HGDIOBJ old_bmp = SelectObject(dc, bitmap);
 
-  HFONT font_big = CreateFontW(-text_px, 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE,
-                               FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
-                               CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
-                               DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
-  HFONT font_small = CreateFontW(-word_px, 0, 0, 0, FW_NORMAL, FALSE, FALSE,
-                                 FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
-                                 CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
-                                 DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
-  HGDIOBJ old_font = SelectObject(dc, font_big);
+  HFONT font = CreateFontW(-text_px, 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE,
+                           DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
+                           CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
+                           DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
+  HGDIOBJ old_font = SelectObject(dc, font);
 
-  SIZE big{};
-  TEXTMETRICW tm_big{}, tm_small{};
-  GetTextExtentPoint32W(dc, number, lstrlenW(number), &big);
-  GetTextMetricsW(dc, &tm_big);
-  SelectObject(dc, font_small);
-  SIZE small{};
-  GetTextExtentPoint32W(dc, word, lstrlenW(word), &small);
-  GetTextMetricsW(dc, &tm_small);
-  SelectObject(dc, font_big);
+  SIZE text{};
+  GetTextExtentPoint32W(dc, label, lstrlenW(label), &text);
+  int pad_x = (std::max)(3, static_cast<int>(std::lround(text_px * 0.55)));
 
-  // The word is dropped rather than shrunk further on a thumbnail with no room
-  // for it: a legible number alone beats two illegible things.
-  bool with_word = big.cx + gap + small.cx + 2 * pad_x <= room;
-  const int content_w = with_word ? big.cx + gap + small.cx : big.cx;
-  if (content_w + 2 * pad_x > room) {
+  // Whatever is left of the page's width once the badge and the margins have
+  // taken theirs. The two cannot both have the width they would like at 256px,
+  // and the badge is the one that must not move.
+  const LONG room = static_cast<LONG>(page_w) - badge - 3 * margin;
+  if (text.cx + 2 * pad_x > room) {
+    // "Pgs" dropped rather than shrunk: a legible number alone beats two
+    // illegible things.
+    wsprintfW(label, L"%d", pages);
+    GetTextExtentPoint32W(dc, label, lstrlenW(label), &text);
+  }
+  if (text.cx + 2 * pad_x > room) {
     SelectObject(dc, old_font);
-    DeleteObject(font_big);
-    DeleteObject(font_small);
+    DeleteObject(font);
     SelectObject(dc, old_bmp);
     DeleteDC(dc);
     return;
   }
 
-  RECT pill{page.left + margin, page.bottom - margin - (big.cy + 2 * pad_y),
-            page.left + margin + content_w + 2 * pad_x, page.bottom - margin};
+  const int pill_w = (std::max)(pill_h, static_cast<int>(text.cx) + 2 * pad_x);
+  RECT pill{page.left + margin, page.bottom - margin - pill_h,
+            page.left + margin + pill_w, page.bottom - margin};
 
   RECT clipped;
   if (ClipToBitmap(pill, width, height, &clipped)) {
-    const int radius = (clipped.bottom - clipped.top);
+    const int radius = pill_h;
     HBRUSH brush = CreateSolidBrush(kInk);
     // A white ring, because the pill lands wherever the page happens to be:
     // navy on a dark page is invisible without one.
-    HPEN ring = CreatePen(PS_SOLID, (std::max)(1, text_px / 7), RGB(255, 255, 255));
+    HPEN ring = CreatePen(PS_SOLID, (std::max)(1, pill_h / 12), RGB(255, 255, 255));
     HGDIOBJ old_brush = SelectObject(dc, brush);
     HGDIOBJ old_pen = SelectObject(dc, ring);
     RoundRect(dc, pill.left, pill.top, pill.right + 1, pill.bottom + 1, radius,
@@ -421,17 +407,9 @@ void DrawPageCount(HBITMAP bitmap, void* bits, UINT width, UINT height,
 
     SetBkMode(dc, TRANSPARENT);
     SetTextColor(dc, RGB(255, 255, 255));
-    const int text_top = pill.top + pad_y;
-    TextOutW(dc, pill.left + pad_x, text_top, number, lstrlenW(number));
-    if (with_word) {
-      SelectObject(dc, font_small);
-      // Aligned on the baseline, not the box: the two sizes otherwise sit at
-      // visibly different heights inside the same pill.
-      const int word_top = text_top + (tm_big.tmAscent - tm_small.tmAscent);
-      TextOutW(dc, pill.left + pad_x + big.cx + gap, word_top, word,
-               lstrlenW(word));
-      SelectObject(dc, font_big);
-    }
+    RECT text_rect{pill.left, pill.top, pill.right, pill.bottom};
+    DrawTextW(dc, label, -1, &text_rect,
+              DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
     GdiFlush();
 
     // ⚠️ GDI writes nothing to the alpha channel of a 32-bit DIB, so every
@@ -446,8 +424,7 @@ void DrawPageCount(HBITMAP bitmap, void* bits, UINT width, UINT height,
   }
 
   SelectObject(dc, old_font);
-  DeleteObject(font_big);
-  DeleteObject(font_small);
+  DeleteObject(font);
   SelectObject(dc, old_bmp);
   DeleteDC(dc);
 }

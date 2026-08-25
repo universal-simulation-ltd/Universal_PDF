@@ -20,7 +20,7 @@ scripts/ build.ps1 (Windows) and build.sh (Git Bash), output staged in dist/
 - **Page 1**, fitted to whatever size the shell asked for, on opaque paper with
   a hairline edge — a white page on a white Explorer background otherwise has no
   edge at all and reads as a hole.
-- **The badge** from `build/pdf-document.ico`, bottom-right, at 28% of the page's
+- **The badge** from `build/pdf-document.ico`, bottom-right, at 24% of the page's
   shorter side and capped at 128px. Dropped below 48px, where it would cover
   most of the page and the shell is really asking for an icon.
 - **A fan**: one sheet behind a two-page document, two for anything longer,
@@ -29,12 +29,12 @@ scripts/ build.ps1 (Windows) and build.sh (Git Bash), output staged in dist/
   GDI+ so the angled edges are antialiased. The fan comes out of the same box
   the shell asked for, so the whole composition is measured first and the page
   fitted to what is left; everything the fan does not cover is transparent.
-- **A "120 pages" pill**, bottom-left, from 112px up, in the badge's navy with
-  a white ring — it lands wherever the page happens to be, and navy on a dark
-  page is invisible without one. The **number is drawn larger than the word**,
-  baseline-aligned: at one size the two together are either too wide to sit
-  beside the badge or too small to read. "pages" is dropped entirely, rather
-  than shrunk further, on a thumbnail with no room for it.
+- **A "120 Pgs" pill**, bottom-left, in the badge's navy with a white ring — it
+  lands wherever the page happens to be, and navy on a dark page is invisible
+  without one. It is drawn **exactly as tall as the badge and on the same
+  margin**, so the two read as a matched pair across the bottom of the page,
+  and the text is sized off the pill rather than the page. "Pgs" is dropped for
+  the bare number, rather than shrunk, when a thumbnail has no room for it.
 - The badge and the pill **share the page's width through one pair of helpers**
   (`BadgeEdge` / `BadgeMargin`). They cannot both have the width they would
   like at 256px, and the badge is the one that must not move.
