@@ -293,8 +293,20 @@ export default function App() {
       )}
       {/* The full navbar is landing-page only. While a doc is open we keep just
           the suite brand strip up top for cross-app visual continuity; profile
-          + changelog move down into the dark tools bar below. */}
-      {(doc || launching) && <UniversalBar />}
+          + changelog move down into the dark tools bar below.
+
+          The strip takes the colour of what it sits ON TOP OF, which here is
+          the slate-900 tools bar — its gradient fades to transparent at both
+          ends precisely so it can sit on either. On the shell's own bg-slate-100
+          it read as a white sliver capping a black bar; on slate-900 the bar
+          starts at the top of the window and the orange pulse is the only thing
+          in it. The landing page keeps the light treatment, because what is
+          under the bar there is a light page. */}
+      {(doc || launching) && (
+        <div className="bg-slate-900">
+          <UniversalBar />
+        </div>
+      )}
       {doc && (
         <div className="bg-slate-900 text-white relative z-[45] overflow-x-auto" style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}>
           {/* No home button on this bar. Leaving an open document is

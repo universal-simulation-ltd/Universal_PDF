@@ -77,7 +77,8 @@
         "name": "UniversalPDF.Document",
         "description": "PDF Document",
         "role": "Editor",
-        "mimeType": "application/pdf"
+        "mimeType": "application/pdf",
+        "icon": "build/pdf-document.ico"
       }
     ],
     "mac": {
