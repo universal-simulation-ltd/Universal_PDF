@@ -17,6 +17,7 @@ import RecentFilesList from '../RecentFiles/RecentFilesList'
 import OcrModal from '../Ocr/OcrModal'
 import TransformPanel from '../Transform/TransformPanel'
 import PdfIllustration from './PdfIllustration'
+import DownloadRow from './DownloadRow'
 import DropRingWatermark from './DropRingWatermark'
 import { DefaultAppBar, DefaultAppPill } from '../Onboarding/DefaultAppOffer'
 import { useDefaultPdfApp } from '../../hooks/useDefaultPdfApp'
@@ -506,7 +507,15 @@ export default function LandingPage() {
               </details>
             </div>
           </div>
+
         </div>
+
+        {/* ⚠️ Outside the grid, not inside it: as a third child of a
+            two-column grid this became a grid ITEM and landed in the left
+            column above the headline. Under the whole hero, never above it —
+            the browser is the product, and nothing here should imply this
+            page is the lesser version. */}
+        <DownloadRow />
       </div>
 
       {compressJob && (
