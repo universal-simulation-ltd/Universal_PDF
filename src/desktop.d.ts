@@ -62,10 +62,40 @@ declare global {
           canSet: boolean
           reason?: string
         }>
-        makeDefault(): Promise<{
+        makeDefault(): Promise<{
+          ok: boolean
+          isDefault: boolean
+          openedSettings?: boolean
+          error?: string
+        }>
+      }
+      /**
+       * Whether PDFs appear in Explorer's preview pane (Alt+P), and turning
+       * that on or off.
+       *
+       * ⚠️ `set` raises a Windows administrator prompt. The key that makes a
+       * preview handler visible to the shell is machine-wide, and a per-user
+       * installer cannot write it — so this is the one elevation in the app,
+       * asked for only by someone who wants the feature. Read `enabled` from
+       * the result, never `ok`: a dismissed prompt is not an error worth
+       * showing, it is simply "still off".
+       *
+       * `incomplete` means the machine-wide half is there but the per-user
+       * half is missing — a broken half-install, not "on".
+       */
+      previewPane: {
+        status(): Promise<{
+          platform: string
+          supported: boolean
+          enabled: boolean
+          incomplete?: boolean
+          needsAdmin?: boolean
+          reason?: string
+        }>
+        set(enable: boolean): Promise<{
           ok: boolean
-          isDefault: boolean
-          openedSettings?: boolean
+          enabled: boolean
+          restartShell?: boolean
           error?: string
         }>
       }

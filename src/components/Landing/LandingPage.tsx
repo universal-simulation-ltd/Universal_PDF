@@ -20,6 +20,8 @@ import PdfIllustration from './PdfIllustration'
 import DropRingWatermark from './DropRingWatermark'
 import { DefaultAppBar, DefaultAppPill } from '../Onboarding/DefaultAppOffer'
 import { useDefaultPdfApp } from '../../hooks/useDefaultPdfApp'
+import { PreviewPanePill } from '../Onboarding/PreviewPaneOffer'
+import { usePreviewPane } from '../../hooks/usePreviewPane'
 import { CONTAINER } from '../../lib/layout'
 
 // Balanced is the default when compressing — 'light' is lossless but usually
@@ -32,6 +34,7 @@ export default function LandingPage() {
   // their own answer, and making the app the default from one would leave the
   // other still offering it.
   const defaultApp = useDefaultPdfApp()
+  const previewPane = usePreviewPane()
   const compressInputRef = useRef<HTMLInputElement>(null)
   const ocrInputRef = useRef<HTMLInputElement>(null)
   const loadFile = usePdfStore((s) => s.loadFile)
@@ -495,6 +498,11 @@ export default function LandingPage() {
                     it renders nothing in the browser, where there is no such
                     thing to set. */}
                 <DefaultAppPill offer={defaultApp} className={`${PILL} ${PILL_IDLE} mt-3`} />
+
+                {/* Windows only, and only where the preview handler shipped
+                    with the app. Not a proactive offer: it costs an
+                    administrator prompt, so it waits to be looked for. */}
+                <PreviewPanePill offer={previewPane} className={`${PILL} ${PILL_IDLE} mt-3`} />
               </details>
             </div>
           </div>

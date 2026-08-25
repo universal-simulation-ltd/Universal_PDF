@@ -61,8 +61,15 @@ contextBridge.exposeInMainWorld('desktop', {
   // Whether this app is the system's default .pdf handler, and the request to
   // become it. Request-response rather than a pushed event: the app asks when
   // it has somewhere to put the answer.
-  defaultApp: {
-    status: () => ipcRenderer.invoke('default-app:status'),
-    makeDefault: () => ipcRenderer.invoke('default-app:set'),
+  defaultApp: {
+    status: () => ipcRenderer.invoke('default-app:status'),
+    makeDefault: () => ipcRenderer.invoke('default-app:set'),
+  },
+  // Whether PDFs show in Explorer's preview pane, and turning it on or off.
+  // ⚠️ `set` raises a Windows administrator prompt: the key that makes a
+  // preview handler visible to the shell is machine-wide.
+  previewPane: {
+    status: () => ipcRenderer.invoke('preview-pane:status'),
+    set: (enable) => ipcRenderer.invoke('preview-pane:set', !!enable),
   },
 })

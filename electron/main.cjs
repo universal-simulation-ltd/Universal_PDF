@@ -2,6 +2,7 @@ const { app, BrowserWindow, dialog, ipcMain, screen, shell } = require('electron
 const path = require('node:path')
 const fs = require('node:fs')
 const defaultApp = require('./defaultApp.cjs')
+const previewPane = require('./previewPane.cjs')
 const { installHubHandoff } = require('@unisim/sdk/electron')
 
 // Set by `npm run electron:dev` to load the live Vite dev server. When unset
@@ -261,8 +262,13 @@ if (!gotLock) {
     }
   })
 
-  ipcMain.handle('default-app:status', () => defaultApp.status())
+  ipcMain.handle('default-app:status', () => defaultApp.status())
   ipcMain.handle('default-app:set', () => defaultApp.makeDefault())
+
+  // The Explorer preview pane. Its last registry key is machine-wide, so
+  // turning it on raises an administrator prompt — see electron/previewPane.cjs.
+  ipcMain.handle('preview-pane:status', () => previewPane.status())
+  ipcMain.handle('preview-pane:set', (_event, enable) => previewPane.setEnabled(!!enable))
 
   app.whenReady().then(() => {
     // Hub pages (profile, account settings) open in a window this app owns,
