@@ -29,6 +29,20 @@ function channel(name) {
   }
 }
 
+// Hub links (View profile, App settings) opened in an app-owned window with
+// this app's session installed for the hub's origin — otherwise Electron hands
+// them to the system browser, which has never seen the session and shows a
+// signed-out page. The main process does the work; see @unisim/sdk/electron.
+//
+// ⚠️ Spelled out rather than required from the SDK on purpose: Electron
+// sandboxes preloads, and a sandboxed `require` resolves only a few built-ins
+// — requiring the package here would throw at load and take the bridge with
+// it. The channel names are the SDK's `PRELOAD_SNIPPET`; keep them in step.
+contextBridge.exposeInMainWorld('unisimDesktop', {
+  openHub: (url, session) => ipcRenderer.invoke('unisim:open-hub', { url, session }),
+  clearHub: () => ipcRenderer.invoke('unisim:clear-hub'),
+})
+
 contextBridge.exposeInMainWorld('desktop', {
   onOpenPdf: channel('open-pdf'),
   onNoPdf: channel('no-pdf'),

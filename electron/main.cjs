@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, screen, shell } = require('electron')
 const path = require('node:path')
 const fs = require('node:fs')
 const defaultApp = require('./defaultApp.cjs')
+const { installHubHandoff } = require('@unisim/sdk/electron')
 
 // Set by `npm run electron:dev` to load the live Vite dev server. When unset
 // (the packaged app), we load the built bundle from disk over `file://`.
@@ -204,6 +205,11 @@ if (!gotLock) {
   ipcMain.handle('default-app:set', () => defaultApp.makeDefault())
 
   app.whenReady().then(() => {
+    // Hub pages (profile, account settings) open in a window this app owns,
+    // signed in as the current user. Without it every hub link lands in the
+    // system browser as a stranger — the desktop app's session lives here and
+    // nowhere else.
+    installHubHandoff({ icon: path.join(__dirname, '..', 'public', 'icon-512.png') })
     createWindow()
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow()
