@@ -9,6 +9,11 @@
 //       the surrogate and the whole handler lookup, so it is what proves the
 //       registration — and it fails exactly the way Explorer would.
 //
+//   thumbtest preview <file.pdf> <out.png> [pagedowns]
+//       Hosts the preview handler the way Explorer's preview pane does — a
+//       parent window, SetRect, DoPreview — and captures what it drew. Optional
+//       page-downs first, to prove paging works.
+//
 //   thumbtest register / thumbtest unregister
 //       Convenience wrappers over the DLL's own HKCU self-registration.
 
@@ -195,6 +200,124 @@ int RenderViaShell(const wchar_t* file, UINT size, const wchar_t* out) {
   return SUCCEEDED(hr) ? 0 : Fail("save png", hr);
 }
 
+const CLSID kPreviewClsid = {
+    0x7a337fc1, 0xf731, 0x4f4f, {0xa3, 0xfb, 0x3e, 0x19, 0x35, 0x24, 0x8d, 0xed}};
+
+// Drains the queue the way a host with a message loop would: the handler's
+// window paints and repaints on its own thread, and nothing appears until
+// those messages have actually run.
+void PumpFor(DWORD ms) {
+  const DWORD until = GetTickCount() + ms;
+  MSG msg;
+  while (GetTickCount() < until) {
+    while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
+      TranslateMessage(&msg);
+      DispatchMessageW(&msg);
+    }
+    Sleep(15);
+  }
+}
+
+int PreviewInHost(const wchar_t* pdf, const wchar_t* out, int page_downs) {
+  IPreviewHandler* preview = nullptr;
+  // INPROC deliberately: this is testing the handler's own code, not the
+  // shell's hosting. Explorer creates it LOCAL_SERVER, which the CLSID's AppID
+  // routes into prevhost.exe.
+  HRESULT hr = CoCreateInstance(kPreviewClsid, nullptr, CLSCTX_INPROC_SERVER,
+                                IID_PPV_ARGS(&preview));
+  if (FAILED(hr)) return Fail("CoCreateInstance(preview)", hr);
+
+  IInitializeWithStream* init = nullptr;
+  hr = preview->QueryInterface(kIidInitializeWithStream,
+                               reinterpret_cast<void**>(&init));
+  if (FAILED(hr)) {
+    preview->Release();
+    return Fail("QI IInitializeWithStream", hr);
+  }
+
+  IStream* stream = nullptr;
+  hr = SHCreateStreamOnFileEx(pdf, STGM_READ | STGM_SHARE_DENY_WRITE, 0, FALSE,
+                              nullptr, &stream);
+  if (SUCCEEDED(hr)) {
+    hr = init->Initialize(stream, 0);
+    stream->Release();
+  }
+  init->Release();
+  if (FAILED(hr)) {
+    preview->Release();
+    return Fail("Initialize", hr);
+  }
+
+  // Placed on-screen but never activated. A window parked entirely outside
+  // every monitor has no composed surface, and PrintWindow then returns TRUE
+  // having drawn nothing — which looks exactly like a handler that painted
+  // black.
+  WNDCLASSEXW wc{};
+  wc.cbSize = sizeof(wc);
+  wc.lpfnWndProc = DefWindowProcW;
+  wc.hInstance = GetModuleHandleW(nullptr);
+  // A visible background, so a capture that came out black says "the handler
+  // drew nothing" rather than "the host window has no brush".
+  wc.hbrBackground = reinterpret_cast<HBRUSH>(GetStockObject(GRAY_BRUSH));
+  wc.lpszClassName = L"UniversalPdfPreviewTestHost";
+  RegisterClassExW(&wc);
+
+  const int host_w = 760, host_h = 900;
+  HWND host = CreateWindowExW(WS_EX_TOOLWINDOW, wc.lpszClassName, L"preview",
+                              WS_POPUP | WS_VISIBLE, 0, 0, host_w,
+                              host_h, nullptr, nullptr, wc.hInstance, nullptr);
+  if (!host) {
+    preview->Release();
+    return Fail("CreateWindow", HRESULT_FROM_WIN32(GetLastError()));
+  }
+
+  RECT rect{0, 0, host_w, host_h};
+  preview->SetWindow(host, &rect);
+  preview->SetRect(&rect);
+  hr = preview->DoPreview();
+  if (FAILED(hr)) {
+    DestroyWindow(host);
+    preview->Release();
+    return Fail("DoPreview", hr);
+  }
+  PumpFor(900);
+
+  for (int i = 0; i < page_downs; ++i) {
+    HWND child = GetWindow(host, GW_CHILD);
+    if (child) SendMessageW(child, WM_KEYDOWN, VK_NEXT, 0);
+    PumpFor(500);
+  }
+
+  // One more settle before the shot: a page turn re-renders, and a capture
+  // taken mid-render is a black rectangle with nothing to explain it.
+  PumpFor(500);
+  std::printf("child window: %s\n", GetWindow(host, GW_CHILD) ? "alive" : "GONE");
+
+  HDC screen = GetDC(nullptr);
+  HDC mem = CreateCompatibleDC(screen);
+  HBITMAP shot = CreateCompatibleBitmap(screen, host_w, host_h);
+  HGDIOBJ old_bmp = SelectObject(mem, shot);
+  // The handler's own window, not the host: PrintWindow on the parent comes
+  // back all black for some documents even though the child is alive and has
+  // painted — it is the child's surface we are actually testing.
+  HWND child = GetWindow(host, GW_CHILD);
+  const BOOL printed =
+      PrintWindow(child ? child : host, mem, 2 /* PW_RENDERFULLCONTENT */);
+  SelectObject(mem, old_bmp);
+  DeleteDC(mem);
+  ReleaseDC(nullptr, screen);
+
+  hr = printed ? SavePng(shot, out) : E_FAIL;
+  DeleteObject(shot);
+
+  preview->Unload();
+  DestroyWindow(host);
+  preview->Release();
+  if (FAILED(hr)) return Fail("capture", hr);
+  std::printf("previewed with %d page-down(s)\n", page_downs);
+  return 0;
+}
+
 int SelfRegister(bool on) {
   wchar_t dll[MAX_PATH];
   if (!SiblingPath(L"UniversalPdfThumb.dll", dll)) {
@@ -220,6 +343,7 @@ int wmain(int argc, wchar_t** argv) {
   if (argc < 2) {
     std::fprintf(stderr,
                  "usage: thumbtest render|shell <file> <size> <out.png>\n"
+                 "       thumbtest preview <file.pdf> <out.png> [pagedowns]\n"
                  "       thumbtest register|unregister\n");
     return 2;
   }
@@ -234,6 +358,8 @@ int wmain(int argc, wchar_t** argv) {
     rc = SelfRegister(false);
   } else if (argc == 5 && _wcsicmp(argv[1], L"render") == 0) {
     rc = RenderDirect(argv[2], static_cast<UINT>(_wtoi(argv[3])), argv[4]);
+  } else if (argc >= 4 && _wcsicmp(argv[1], L"preview") == 0) {
+    rc = PreviewInHost(argv[2], argv[3], argc > 4 ? _wtoi(argv[4]) : 0);
   } else if (argc == 5 && _wcsicmp(argv[1], L"shell") == 0) {
     rc = RenderViaShell(argv[2], static_cast<UINT>(_wtoi(argv[3])), argv[4]);
   } else {

@@ -87,6 +87,7 @@ configure_file(src/UniversalPdfThumb.rc.in "${CMAKE_BINARY_DIR}/UniversalPdfThum
 add_library(UniversalPdfThumb SHARED
   src/dllmain.cpp
   src/ThumbnailProvider.cpp
+  src/PreviewHandler.cpp
   src/Pdfium.cpp
   src/Badge.cpp
   src/Registration.cpp

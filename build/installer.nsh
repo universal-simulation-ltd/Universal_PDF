@@ -54,6 +54,18 @@
     ; the badge the provider already composited, half covering it - two
     ; marks in one corner, neither of them legible.
     WriteRegStr SHELL_CONTEXT "Software\Classes\UniversalPDF.Document" "TypeOverlay" ""
+
+    ; The preview pane (Alt+P), which is a second COM object in the same DLL.
+    ; ⚠️ The AppID is the shell's preview host: without it the handler is
+    ; created in-process instead of in prevhost.exe and the pane stays blank,
+    ; with no error surfaced anywhere. The CLSID must stay identical to
+    ; CLSID_UniversalPdfPreviewHandler in native/win-thumbnail/src/dllmain.cpp.
+    WriteRegStr SHELL_CONTEXT "Software\Classes\CLSID\{7A337FC1-F731-4F4F-A3FB-3E1935248DED}" "" "Universal PDF Preview Handler"
+    WriteRegStr SHELL_CONTEXT "Software\Classes\CLSID\{7A337FC1-F731-4F4F-A3FB-3E1935248DED}" "AppID" "{534A1E02-D58F-44f0-B58B-36CBED287C7C}"
+    WriteRegStr SHELL_CONTEXT "Software\Classes\CLSID\{7A337FC1-F731-4F4F-A3FB-3E1935248DED}\InprocServer32" "" "$INSTDIR\resources\UniversalPdfThumb.dll"
+    WriteRegStr SHELL_CONTEXT "Software\Classes\CLSID\{7A337FC1-F731-4F4F-A3FB-3E1935248DED}\InprocServer32" "ThreadingModel" "Apartment"
+    WriteRegStr SHELL_CONTEXT "Software\Classes\UniversalPDF.Document\ShellEx\{8895b1c6-b41f-4c1c-a562-0d564250836f}" "" "{7A337FC1-F731-4F4F-A3FB-3E1935248DED}"
+    WriteRegStr SHELL_CONTEXT "Software\Microsoft\Windows\CurrentVersion\PreviewHandlers" "{7A337FC1-F731-4F4F-A3FB-3E1935248DED}" "Universal PDF Preview Handler"
   unipdf_no_thumbnail:
 
 !macroend
@@ -64,6 +76,9 @@
   DeleteRegValue SHELL_CONTEXT "Software\Classes\.pdf\OpenWithProgids" "UniversalPDF.Document"
   DeleteRegKey SHELL_CONTEXT "Software\Classes\UniversalPDF.Document\ShellEx\{e357fccd-a995-4576-b01f-234630154e96}"
   DeleteRegValue SHELL_CONTEXT "Software\Classes\UniversalPDF.Document" "TypeOverlay"
+  DeleteRegKey SHELL_CONTEXT "Software\Classes\UniversalPDF.Document\ShellEx\{8895b1c6-b41f-4c1c-a562-0d564250836f}"
+  DeleteRegKey SHELL_CONTEXT "Software\Classes\CLSID\{7A337FC1-F731-4F4F-A3FB-3E1935248DED}"
+  DeleteRegValue SHELL_CONTEXT "Software\Microsoft\Windows\CurrentVersion\PreviewHandlers" "{7A337FC1-F731-4F4F-A3FB-3E1935248DED}"
   DeleteRegKey SHELL_CONTEXT "Software\Classes\CLSID\{9D3AE6B2-939A-47A9-A7F8-D30A6FC4C10F}"
 
   ; The shell keeps a COM surrogate alive for a while after the last thumbnail,

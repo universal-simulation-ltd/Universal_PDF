@@ -7,10 +7,12 @@
 #include <thumbcache.h>
 #include <propsys.h>
 
-// Our COM server. Minted 2026-08-25; it is written into the installer's
-// registry keys, so it must never change once a build has shipped.
+// Our two COM servers. Minted 2026-08-25; they are written into the installer's
+// registry keys, so neither may change once a build has shipped.
 // {9D3AE6B2-939A-47A9-A7F8-D30A6FC4C10F}
 extern const CLSID CLSID_UniversalPdfThumbProvider;
+// {7A337FC1-F731-4F4F-A3FB-3E1935248DED}
+extern const CLSID CLSID_UniversalPdfPreviewHandler;
 
 // Declared locally rather than pulled from libuuid: the two compilers disagree
 // about which import library carries them, and they are fixed constants.
@@ -18,8 +20,14 @@ extern const IID IID_IThumbnailProvider_;      // e357fccd-a995-4576-b01f-234630
 extern const IID IID_IInitializeWithStream_;   // b824b49d-22ac-4161-ac8a-9916e8fa3f7f
 
 // The ShellEx subkey Explorer reads to find a thumbnail handler is the IID of
-// IThumbnailProvider itself.
+// IThumbnailProvider itself; the preview pane's is the IID of IPreviewHandler.
 #define THUMBNAIL_HANDLER_KEY L"{e357fccd-a995-4576-b01f-234630154e96}"
+#define PREVIEW_HANDLER_KEY L"{8895b1c6-b41f-4c1c-a562-0d564250836f}"
+
+// ⚠️ The AppID of the shell's 64-bit preview host. A preview handler that does
+// not carry it is created in-process instead of in prevhost.exe, and the pane
+// stays blank with no error reported anywhere.
+#define PREVIEW_HOST_APPID L"{534A1E02-D58F-44f0-B58B-36CBED287C7C}"
 
 // Must stay identical to build.fileAssociations[0].name in package.json,
 // WIN_PROGID in electron/defaultApp.cjs, and the ProgID in build/installer.nsh.
@@ -66,3 +74,4 @@ constexpr double kCountTextFraction = 0.56;
 constexpr COLORREF kInk = RGB(17, 26, 46);
 
 HRESULT CreateThumbnailProvider(REFIID riid, void** ppv);
+HRESULT CreatePreviewHandler(REFIID riid, void** ppv);

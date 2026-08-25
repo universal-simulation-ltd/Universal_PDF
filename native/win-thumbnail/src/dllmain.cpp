@@ -8,6 +8,9 @@
 // {9D3AE6B2-939A-47A9-A7F8-D30A6FC4C10F}
 const CLSID CLSID_UniversalPdfThumbProvider = {
     0x9d3ae6b2, 0x939a, 0x47a9, {0xa7, 0xf8, 0xd3, 0x0a, 0x6f, 0xc4, 0xc1, 0x0f}};
+// {7A337FC1-F731-4F4F-A3FB-3E1935248DED}
+const CLSID CLSID_UniversalPdfPreviewHandler = {
+    0x7a337fc1, 0xf731, 0x4f4f, {0xa3, 0xfb, 0x3e, 0x19, 0x35, 0x24, 0x8d, 0xed}};
 const IID IID_IThumbnailProvider_ = {
     0xe357fccd, 0xa995, 0x4576, {0xb0, 0x1f, 0x23, 0x46, 0x30, 0x15, 0x4e, 0x96}};
 const IID IID_IInitializeWithStream_ = {
@@ -17,8 +20,16 @@ LONG g_cDllRef = 0;
 
 namespace {
 
+// One factory serving both objects, told at construction which to make: the
+// alternative is two near-identical classes differing by one line.
+using Creator = HRESULT (*)(REFIID, void**);
+
 class ClassFactory final : public IClassFactory {
  public:
+  explicit ClassFactory(Creator create) : create_(create) {
+    InterlockedIncrement(&g_cDllRef);
+  }
+
   IFACEMETHODIMP QueryInterface(REFIID riid, void** ppv) override {
     if (!ppv) return E_POINTER;
     if (IsEqualIID(riid, IID_IUnknown) || IsEqualIID(riid, IID_IClassFactory)) {
@@ -40,7 +51,7 @@ class ClassFactory final : public IClassFactory {
 
   IFACEMETHODIMP CreateInstance(IUnknown* outer, REFIID riid, void** ppv) override {
     if (outer) return CLASS_E_NOAGGREGATION;
-    return CreateThumbnailProvider(riid, ppv);
+    return create_(riid, ppv);
   }
 
   IFACEMETHODIMP LockServer(BOOL lock) override {
@@ -52,10 +63,9 @@ class ClassFactory final : public IClassFactory {
     return S_OK;
   }
 
-  ClassFactory() { InterlockedIncrement(&g_cDllRef); }
-
  private:
   ~ClassFactory() { InterlockedDecrement(&g_cDllRef); }
+  Creator create_ = nullptr;
   LONG ref_ = 1;
 };
 
@@ -72,10 +82,15 @@ extern "C" __declspec(dllexport) HRESULT __stdcall DllGetClassObject(
     REFCLSID rclsid, REFIID riid, void** ppv) {
   if (!ppv) return E_POINTER;
   *ppv = nullptr;
-  if (!IsEqualCLSID(rclsid, CLSID_UniversalPdfThumbProvider)) {
+  Creator create = nullptr;
+  if (IsEqualCLSID(rclsid, CLSID_UniversalPdfThumbProvider)) {
+    create = CreateThumbnailProvider;
+  } else if (IsEqualCLSID(rclsid, CLSID_UniversalPdfPreviewHandler)) {
+    create = CreatePreviewHandler;
+  } else {
     return CLASS_E_CLASSNOTAVAILABLE;
   }
-  auto* factory = new (std::nothrow) ClassFactory();
+  auto* factory = new (std::nothrow) ClassFactory(create);
   if (!factory) return E_OUTOFMEMORY;
   const HRESULT hr = factory->QueryInterface(riid, ppv);
   factory->Release();

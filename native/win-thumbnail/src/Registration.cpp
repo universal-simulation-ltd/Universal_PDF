@@ -74,6 +74,40 @@ HRESULT RegisterProvider() {
                  L"TypeOverlay", L"");
   if (FAILED(hr)) return hr;
 
+  // --- the preview handler ------------------------------------------------
+  wchar_t preview[64];
+  if (StringFromGUID2(CLSID_UniversalPdfPreviewHandler, preview, 64) == 0) {
+    return E_FAIL;
+  }
+
+  wsprintfW(key, L"Software\\Classes\\CLSID\\%s", preview);
+  hr = SetString(HKEY_CURRENT_USER, key, nullptr,
+                 L"Universal PDF Preview Handler");
+  if (FAILED(hr)) return hr;
+  // ⚠️ The AppID of the shell's preview host. Without it the handler is created
+  // in-process instead of in prevhost.exe and the pane stays blank, with no
+  // error surfaced anywhere — the single most common way this silently fails.
+  hr = SetString(HKEY_CURRENT_USER, key, L"AppID", PREVIEW_HOST_APPID);
+  if (FAILED(hr)) return hr;
+
+  wsprintfW(key, L"Software\\Classes\\CLSID\\%s\\InprocServer32", preview);
+  hr = SetString(HKEY_CURRENT_USER, key, nullptr, module_path);
+  if (FAILED(hr)) return hr;
+  hr = SetString(HKEY_CURRENT_USER, key, L"ThreadingModel", L"Apartment");
+  if (FAILED(hr)) return hr;
+
+  wsprintfW(key, L"Software\\Classes\\%s\\ShellEx\\%s", UNIPDF_PROGID,
+            PREVIEW_HANDLER_KEY);
+  hr = SetString(HKEY_CURRENT_USER, key, nullptr, preview);
+  if (FAILED(hr)) return hr;
+
+  // The shell also keeps a flat list of preview handlers, and one that is not
+  // in it is not offered.
+  hr = SetString(HKEY_CURRENT_USER,
+                 L"Software\\Microsoft\\Windows\\CurrentVersion\\PreviewHandlers",
+                 preview, L"Universal PDF Preview Handler");
+  if (FAILED(hr)) return hr;
+
   SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
   return S_OK;
 }
@@ -97,6 +131,24 @@ HRESULT UnregisterProvider() {
 
   wsprintfW(key, L"Software\\Classes\\CLSID\\%s", clsid);
   RegDeleteTreeW(HKEY_CURRENT_USER, key);
+
+  wchar_t preview[64];
+  if (StringFromGUID2(CLSID_UniversalPdfPreviewHandler, preview, 64) != 0) {
+    wsprintfW(key, L"Software\\Classes\\%s\\ShellEx\\%s", UNIPDF_PROGID,
+              PREVIEW_HANDLER_KEY);
+    RegDeleteKeyW(HKEY_CURRENT_USER, key);
+
+    wsprintfW(key, L"Software\\Classes\\CLSID\\%s", preview);
+    RegDeleteTreeW(HKEY_CURRENT_USER, key);
+
+    HKEY handlers = nullptr;
+    if (RegOpenKeyExW(HKEY_CURRENT_USER,
+                      L"Software\\Microsoft\\Windows\\CurrentVersion\\PreviewHandlers",
+                      0, KEY_SET_VALUE, &handlers) == ERROR_SUCCESS) {
+      RegDeleteValueW(handlers, preview);
+      RegCloseKey(handlers);
+    }
+  }
 
   SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
   return S_OK;

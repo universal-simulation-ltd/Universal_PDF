@@ -76,16 +76,11 @@ BOOL CALLBACK InitOnce(PINIT_ONCE, PVOID, PVOID*) {
   return TRUE;
 }
 
-// FPDF_FILEACCESS over the IStream the shell handed us, so a 300 MB PDF is
-// never pulled into the surrogate's address space to thumbnail its first page.
-struct StreamAccess {
-  FPDF_FILEACCESS access{};
-  IStream* stream = nullptr;
-};
-
+// Reads through the IStream the shell handed us, so a 300 MB PDF is never
+// pulled into the surrogate's address space to thumbnail its first page.
 int ReadBlock(void* param, unsigned long position, unsigned char* buf,
               unsigned long size) {
-  auto* self = static_cast<StreamAccess*>(param);
+  auto* self = static_cast<PdfStreamAccess*>(param);
   LARGE_INTEGER move;
   move.QuadPart = static_cast<LONGLONG>(position);
   if (FAILED(self->stream->Seek(move, STREAM_SEEK_SET, nullptr))) return 0;
@@ -147,6 +142,113 @@ const PdfiumApi* GetPdfium() {
   return g_pdfium ? &g_api : nullptr;
 }
 
+HRESULT PdfDocument::Open(IStream* stream) {
+  Close();
+  if (!stream) return E_INVALIDARG;
+
+  const PdfiumApi* pdfium = GetPdfium();
+  if (!pdfium) return E_FAIL;
+
+  STATSTG stat{};
+  HRESULT hr = stream->Stat(&stat, STATFLAG_NONAME);
+  if (FAILED(hr)) return hr;
+  if (stat.cbSize.QuadPart == 0 || stat.cbSize.QuadPart > 0xFFFFFFFFull) {
+    return E_FAIL;
+  }
+
+  access_.stream = stream;
+  access_.stream->AddRef();
+  access_.file.m_FileLen = static_cast<unsigned long>(stat.cbSize.QuadPart);
+  access_.file.m_GetBlock = ReadBlock;
+  access_.file.m_Param = &access_;
+
+  AcquireSRWLockExclusive(&g_render_lock);
+  doc_ = pdfium->LoadCustomDocument(&access_.file, nullptr);
+  pages_ = doc_ ? pdfium->GetPageCount(doc_) : 0;
+  ReleaseSRWLockExclusive(&g_render_lock);
+
+  if (!doc_ || pages_ <= 0) {
+    Close();
+    return E_FAIL;  // includes FPDF_ERR_PASSWORD; there is nowhere to ask
+  }
+  return S_OK;
+}
+
+void PdfDocument::Close() {
+  if (doc_) {
+    const PdfiumApi* pdfium = GetPdfium();
+    if (pdfium) {
+      AcquireSRWLockExclusive(&g_render_lock);
+      pdfium->CloseDocument(doc_);
+      ReleaseSRWLockExclusive(&g_render_lock);
+    }
+    doc_ = nullptr;
+  }
+  if (access_.stream) {
+    access_.stream->Release();
+  }
+  access_ = PdfStreamAccess{};
+  pages_ = 0;
+}
+
+HBITMAP PdfDocument::RenderPage(int index, int max_w, int max_h, int* out_w,
+                                int* out_h) const {
+  if (!doc_ || index < 0 || index >= pages_ || max_w <= 0 || max_h <= 0) {
+    return nullptr;
+  }
+  const PdfiumApi* pdfium = GetPdfium();
+  if (!pdfium) return nullptr;
+
+  AcquireSRWLockExclusive(&g_render_lock);
+  FPDF_PAGE page = pdfium->LoadPage(doc_, index);
+  if (!page) {
+    ReleaseSRWLockExclusive(&g_render_lock);
+    return nullptr;
+  }
+
+  const double pw = pdfium->GetPageWidthF(page);
+  const double ph = pdfium->GetPageHeightF(page);
+  if (!(pw > 0.0) || !(ph > 0.0)) {
+    pdfium->ClosePage(page);
+    ReleaseSRWLockExclusive(&g_render_lock);
+    return nullptr;
+  }
+
+  const double scale = (std::min)(max_w / pw, max_h / ph);
+  const int w = (std::max)(1, static_cast<int>(std::lround(pw * scale)));
+  const int h = (std::max)(1, static_cast<int>(std::lround(ph * scale)));
+
+  BITMAPINFO bmi{};
+  bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+  bmi.bmiHeader.biWidth = w;
+  bmi.bmiHeader.biHeight = -h;
+  bmi.bmiHeader.biPlanes = 1;
+  bmi.bmiHeader.biBitCount = 32;
+  bmi.bmiHeader.biCompression = BI_RGB;
+
+  void* bits = nullptr;
+  HBITMAP dib = CreateDIBSection(nullptr, &bmi, DIB_RGB_COLORS, &bits, nullptr, 0);
+  if (!dib || !bits) {
+    if (dib) DeleteObject(dib);
+    pdfium->ClosePage(page);
+    ReleaseSRWLockExclusive(&g_render_lock);
+    return nullptr;
+  }
+
+  FPDF_BITMAP bmp = pdfium->BitmapCreateEx(w, h, FPDFBitmap_BGRA, bits, w * 4);
+  if (bmp) {
+    pdfium->BitmapFillRect(bmp, 0, 0, w, h, 0xFFFFFFFF);
+    pdfium->RenderPageBitmap(bmp, page, 0, 0, w, h, 0, FPDF_ANNOT);
+    pdfium->BitmapDestroy(bmp);
+  }
+  pdfium->ClosePage(page);
+  ReleaseSRWLockExclusive(&g_render_lock);
+
+  if (out_w) *out_w = w;
+  if (out_h) *out_h = h;
+  return dib;
+}
+
 HRESULT RenderThumbnail(IStream* stream, UINT cx, Thumbnail* out) {
   if (!stream || !out || cx == 0) return E_INVALIDARG;
   *out = Thumbnail{};
@@ -162,14 +264,14 @@ HRESULT RenderThumbnail(IStream* stream, UINT cx, Thumbnail* out) {
     return E_FAIL;
   }
 
-  StreamAccess io;
+  PdfStreamAccess io;
   io.stream = stream;
-  io.access.m_FileLen = static_cast<unsigned long>(stat.cbSize.QuadPart);
-  io.access.m_GetBlock = ReadBlock;
-  io.access.m_Param = &io;
+  io.file.m_FileLen = static_cast<unsigned long>(stat.cbSize.QuadPart);
+  io.file.m_GetBlock = ReadBlock;
+  io.file.m_Param = &io;
 
   AcquireSRWLockExclusive(&g_render_lock);
-  FPDF_DOCUMENT doc = pdfium->LoadCustomDocument(&io.access, nullptr);
+  FPDF_DOCUMENT doc = pdfium->LoadCustomDocument(&io.file, nullptr);
   if (!doc) {
     // Includes FPDF_ERR_PASSWORD. There is no UI in a thumbnail provider and
     // no way to ask, so an encrypted file simply keeps the flat icon.

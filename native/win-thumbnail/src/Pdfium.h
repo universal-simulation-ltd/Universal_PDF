@@ -51,6 +51,44 @@ struct Thumbnail {
   int pages = 0;     // page count, for the "52 pages" pill
 };
 
+// The descriptor PDFium calls back through to read the file. One type shared by
+// both callers, because the callback casts `m_Param` to it.
+//
+// ⚠️ PDFium keeps this pointer for the document's whole life, so it must outlive
+// the FPDF_DOCUMENT — a local in the function that opened the document is a
+// use-after-free waiting for the first render.
+struct PdfStreamAccess {
+  FPDF_FILEACCESS file{};
+  IStream* stream = nullptr;
+};
+
+// A document held open across several renders, for the preview pane — where the
+// same file is drawn again on every resize and every page turn, and re-parsing
+// it each time would be absurd.
+class PdfDocument {
+ public:
+  PdfDocument() = default;
+  ~PdfDocument() { Close(); }
+  PdfDocument(const PdfDocument&) = delete;
+  PdfDocument& operator=(const PdfDocument&) = delete;
+
+  HRESULT Open(IStream* stream);
+  void Close();
+
+  bool IsOpen() const { return doc_ != nullptr; }
+  int PageCount() const { return pages_; }
+
+  // Renders one page fitted inside max_w x max_h onto opaque white. The caller
+  // owns the returned HBITMAP.
+  HBITMAP RenderPage(int index, int max_w, int max_h, int* out_w,
+                     int* out_h) const;
+
+ private:
+  FPDF_DOCUMENT doc_ = nullptr;
+  PdfStreamAccess access_{};
+  int pages_ = 0;
+};
+
 // Renders page 1 of `stream` fitted inside cx x cx, with a sheet or two drawn
 // behind it when the document has more pages. The caller owns the HBITMAP.
 HRESULT RenderThumbnail(IStream* stream, UINT cx, Thumbnail* out);

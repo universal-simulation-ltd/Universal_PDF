@@ -1,4 +1,4 @@
-# Explorer thumbnail provider (Windows)
+# Explorer thumbnail provider and preview handler (Windows)
 
 Makes a `.pdf` in File Explorer show **page 1 of the document** with the app
 badge in the bottom-right corner, the way VLC shows a video frame with its cone.
@@ -10,10 +10,15 @@ native shell extension that ships beside the app and is registered by the
 installer.
 
 ```
-src/     the DLL: COM plumbing, the PDFium render, the badge composite
-test/    thumbtest.exe — drives it with and without the shell
+src/     the DLL: COM plumbing, the PDFium render, the badge composite,
+         and the preview-pane handler
+test/    thumbtest.exe — drives both, with and without the shell
 scripts/ build.ps1 (Windows) and build.sh (Git Bash), output staged in dist/
 ```
+
+The one DLL carries **two** COM objects: the thumbnail provider
+(`{9D3AE6B2-…}`) and the preview handler (`{7A337FC1-…}`), which the class
+factory tells apart by CLSID.
 
 ## What it draws
 
@@ -38,8 +43,6 @@ scripts/ build.ps1 (Windows) and build.sh (Git Bash), output staged in dist/
   different shape then letterboxes onto paper instead of distorting. A page
   that will not render leaves its sheet blank, as do all of them below 256px.
   ⚠️ `DrawImage` needs `WrapModeTileFlipXY`, or bicubic sampling reads past the
-  source edge and leaves a pale halo down the one sliver that is visible.
-  ⚠️  needs , or bicubic sampling reads past the
   source edge and leaves a pale halo down the one sliver that is visible.
 - **A "120 Pgs" pill**, bottom-left, in the badge's navy with a white ring — it
   lands wherever the page happens to be, and navy on a dark page is invisible
@@ -151,6 +154,45 @@ build it, so on ARM64 Windows no thumbnail appears.
 
 **No signature is needed** for the shell to load a shell extension, so this does
 not disturb the ship-unsigned policy.
+
+## The preview pane (`IPreviewHandler`)
+
+`src/PreviewHandler.cpp` is the Windows answer to macOS Quick Look: Alt+P in
+Explorer, the pane on the right. It is **not** the thumbnail provider with a
+bigger bitmap — the shell hands a preview handler a parent window and expects a
+live child window back, so it owns an HWND, a window class, a wndproc and the
+keyboard. Page 1 fills the pane, PageDown/PageUp/arrows/Home/End and the mouse
+wheel turn pages, a resize re-renders rather than stretching a stale bitmap, and
+`IPreviewHandlerVisuals` supplies the pane's own background, text colour and
+font. `PdfDocument` in `Pdfium.cpp` holds the file open across all of it.
+
+```powershell
+.\thumbtest.exe preview some.pdf out.png      # page 1
+.\thumbtest.exe preview some.pdf out.png 2    # after two page-downs
+```
+
+⚠️ **It is registered but not yet reachable, and the reason is not a bug.**
+Windows only offers a preview handler whose CLSID is listed in
+`HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\PreviewHandlers`. Every one of
+the 17 handlers on a stock machine — Word, Excel, the Microsoft PDF previewer,
+Adobe's — is there, **none is registered per-user**, and writing to HKLM needs
+administrator rights, which a `perMachine: false` installer deliberately does
+not have. Registered in HKCU only, the shell starts `prevhost.exe`, never loads
+the DLL into it, and the pane says "This file can't be previewed." Confirmed by
+watching prevhost's module list during a real preview.
+
+So the handler ships, the per-user half of its registration is written, and the
+machine-wide half is a decision about elevation that has not been taken.
+
+⚠️ Two other things that look like failures but are not:
+
+- **A file carrying a mark-of-the-web is refused by the shell before any handler
+  runs** — "The file you are attempting to preview could harm your computer."
+  Anything out of a browser or a synced cloud folder has one, which makes it an
+  easy false negative when testing.
+- **`PrintWindow` on a window parked entirely off every monitor returns TRUE and
+  draws nothing**, because there is no composed surface to copy. The test host
+  therefore sits at 0,0 without being activated.
 
 ## Other platforms
 
