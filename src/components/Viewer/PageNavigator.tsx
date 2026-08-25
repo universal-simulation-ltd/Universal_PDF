@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react'
 import { usePdfStore } from '../../stores/pdfStore'
 
-const THUMB_SCALE = 0.22
+// ── Thumbnails are sized to the pixels they actually occupy ─────────────
+// The pane renders each page into an <img> capped at 180 CSS px wide (see
+// PageThumb). A fixed pdf.js scale can't know that: 0.22 gave A4 ~131px, so
+// the browser stretched it to 180 and the device stretched THAT again on a
+// HiDPI screen — a ~2.7x upscale of a JPEG already at quality 0.6. Render at
+// the CSS width times the device pixel ratio instead, and the image is 1:1
+// with the physical pixels. Capped at 2x: beyond that the file grows faster
+// than anyone can see, and a long document holds one data URL per page.
+const THUMB_CSS_WIDTH = 180
+const THUMB_MAX_DPR = 2
+const THUMB_QUALITY = 0.85
 
 type DropPosition = 'before' | 'after'
 
@@ -50,15 +60,23 @@ export default function PageNavigator() {
         if (cancelled || !doc) return
         try {
           const page = await doc.getPage(i)
-          const viewport = page.getViewport({ scale: THUMB_SCALE })
+          const dpr = Math.min(window.devicePixelRatio || 1, THUMB_MAX_DPR)
+          const unscaled = page.getViewport({ scale: 1 })
+          const viewport = page.getViewport({
+            scale: (THUMB_CSS_WIDTH * dpr) / unscaled.width
+          })
           const canvas = document.createElement('canvas')
-          canvas.width = viewport.width
-          canvas.height = viewport.height
+          canvas.width = Math.round(viewport.width)
+          canvas.height = Math.round(viewport.height)
           const ctx = canvas.getContext('2d')
           if (!ctx) continue
+          // JPEG has no alpha, and an untouched canvas is transparent — a PDF
+          // that draws no background of its own would come out black.
+          ctx.fillStyle = '#ffffff'
+          ctx.fillRect(0, 0, canvas.width, canvas.height)
           await page.render({ canvasContext: ctx, viewport }).promise
           if (cancelled) return
-          acc.push(canvas.toDataURL('image/jpeg', 0.6))
+          acc.push(canvas.toDataURL('image/jpeg', THUMB_QUALITY))
           setThumbs([...acc])
         } catch {
           // ignore individual page failures
