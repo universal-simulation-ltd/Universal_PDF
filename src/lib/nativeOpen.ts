@@ -1,10 +1,14 @@
 // PDFs handed to the app by iOS or Android — "Open In" from the share sheet,
 // or a tap on a PDF where Universal PDF was picked from the chooser.
 //
-// ⚠️ Neither platform lets an app BE the default for a file type; there is no
-// API for it and no user-facing setting on iOS at all. Registering as a handler
-// (ios/App/App/Info.plist, android/.../AndroidManifest.xml) puts the app in the
-// list, and on Android the user's own "Always" is what makes it the default.
+// ⚠️ Neither platform lets an app MAKE ITSELF the default for a file type:
+// there is no API for it on either, so nothing here can offer the one-tap
+// switch the desktop build does. The user can still choose one. Registering as
+// a handler (ios/App/App/Info.plist, android/.../AndroidManifest.xml) puts the
+// app in the list; from there Android's own "Always", and on iOS 26 the Files
+// app's "Open With" menu — which marks one handler as the default — are what
+// make the choice stick. Before iOS 26 there was no per-type default at all,
+// only the share sheet, one document at a time.
 //
 // Everything here is dynamically imported so the Capacitor plugins never reach
 // the web bundle, which has its own path (the File Handling API) and would
