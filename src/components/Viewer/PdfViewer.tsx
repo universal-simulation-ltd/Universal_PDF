@@ -18,6 +18,11 @@ const ZOOM_STEP = 0.1
 const FIT_HEIGHT_MIN_ZOOM = 0.75
 // Quick presets offered when you click the % label while at 100%.
 const ZOOM_PRESETS = [50, 75, 125, 150]
+// How long a zoom waits for the pages to re-lay-out before restoring the
+// anchored scroll position anyway. Long enough for a page to re-rasterize on a
+// slow phone, short enough that a zoom which doesn't move the layout box (or a
+// page that fails to render) can't leave a pinch's transform stuck on screen.
+const LAYOUT_SETTLE_MS = 400
 
 export default function PdfViewer() {
   const doc = usePdfStore((s) => s.doc)
@@ -63,23 +68,185 @@ export default function PdfViewer() {
   }, [zoom])
 
   const scrollRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
 
+  // A committed zoom only reaches the DOM once every page has re-rasterized and
+  // reported its new size, a frame or two after the state changes. Until then
+  // the container still has its old scroll extent, so the scroll that keeps the
+  // zoom anchored waits here rather than being applied early and clamped — that
+  // clamping is what kicks the document sideways when you zoom.
+  const pendingZoom = useRef<{ finish: () => void; cancel: () => void } | null>(null)
+
+  // Where a point of the document sits, in terms that survive a re-render at a
+  // different scale: which page, where inside that page as a fraction of its
+  // box, and where on screen (relative to the scroll container) it should still
+  // be once the zoom lands. Anchoring on the page itself rather than on scroll
+  // arithmetic is what makes the landing exact — the padding, the gaps between
+  // pages and the centring of a page narrower than the window all scale
+  // differently from the pages, and a ratio applied to scrollTop knows about
+  // none of them.
+  interface ZoomAnchor {
+    pageIndex: number
+    fx: number
+    fy: number
+    screenX: number
+    screenY: number
+  }
+
+  function captureAnchor(el: HTMLDivElement, screenX: number, screenY: number): ZoomAnchor | null {
+    const box = el.getBoundingClientRect()
+    const x = box.left + screenX
+    const y = box.top + screenY
+    let best: HTMLElement | null = null
+    let bestDist = Infinity
+    // Nearest page, so an anchor landing in the gap between two pages or in the
+    // margin beside one still has something to hold on to.
+    for (const p of el.querySelectorAll<HTMLElement>('[data-page-index]')) {
+      const r = p.getBoundingClientRect()
+      if (!r.width || !r.height) continue
+      const d = Math.hypot(
+        Math.max(r.left - x, 0, x - r.right),
+        Math.max(r.top - y, 0, y - r.bottom)
+      )
+      if (d < bestDist) {
+        bestDist = d
+        best = p
+      }
+    }
+    if (!best) return null
+    const r = best.getBoundingClientRect()
+    return {
+      pageIndex: Number(best.dataset.pageIndex),
+      fx: (x - r.left) / r.width,
+      fy: (y - r.top) / r.height,
+      screenX,
+      screenY
+    }
+  }
+
+  function restoreAnchor(el: HTMLDivElement, a: ZoomAnchor) {
+    const page = el.querySelector<HTMLElement>(`[data-page-index="${a.pageIndex}"]`)
+    if (!page) return
+    const box = el.getBoundingClientRect()
+    const r = page.getBoundingClientRect()
+    el.scrollLeft += r.left + a.fx * r.width - box.left - a.screenX
+    el.scrollTop += r.top + a.fy * r.height - box.top - a.screenY
+  }
+
+  // Commit a zoom and put the anchored point back under the cursor or the
+  // fingers once the pages have taken their new size, running `done` in that
+  // same frame. ResizeObserver delivers after layout and before the paint, so
+  // the scroll correction and the removal of a pinch's transform land together
+  // and the viewer never paints a half-applied zoom. The timer covers a zoom
+  // too small to move the layout box at all.
+  function commitZoom(newZoom: number, anchor: ZoomAnchor | null, done?: () => void) {
+    pendingZoom.current?.cancel()
+    // Track the zoom here as well as in state so a burst of events inside one
+    // frame compounds instead of each one re-reading a stale zoom.
+    zoomRef.current = newZoom
+    setZoom(newZoom)
+    const el = scrollRef.current
+    const content = contentRef.current
+    if (!el || !content || !anchor) {
+      done?.()
+      return
+    }
+    const startWidth = content.offsetWidth
+    const startHeight = content.offsetHeight
+    let ro: ResizeObserver | null = null
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    const teardown = () => {
+      ro?.disconnect()
+      if (timer) clearTimeout(timer)
+      pendingZoom.current = null
+    }
+    const finish = () => {
+      teardown()
+      // `done` drops the pinch's transform first: the anchor is measured off
+      // the real, committed layout, and both land before this frame paints.
+      done?.()
+      restoreAnchor(el, anchor)
+    }
+
+    ro = new ResizeObserver(() => {
+      // ResizeObserver reports the element's current size as its first
+      // callback; only a size that actually moved means the pages re-laid out.
+      if (content.offsetWidth === startWidth && content.offsetHeight === startHeight) return
+      finish()
+    })
+    ro.observe(content)
+    timer = setTimeout(finish, LAYOUT_SETTLE_MS)
+    pendingZoom.current = { finish, cancel: teardown }
+  }
+
+  // Pinch-to-zoom. While the fingers are down the pages are not re-rendered and
+  // the document is not scrolled — it is only transformed — so the zoom tracks
+  // the fingers at display rate instead of stuttering behind a re-rasterization
+  // of every page, and the committed zoom lands in one step at the end.
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
 
     interface Pinch {
-      initialDist: number
+      // The finger spread this pair is measured from, and the scale the gesture
+      // had already reached when they became the pair — a third finger joining
+      // or leaving re-bases both, so the zoom carries on from where it is
+      // instead of jumping to whatever the new spread would mean from the top.
+      baseDist: number
+      baseRatio: number
       initialZoom: number
-      relX: number
-      relY: number
-      initialScrollLeft: number
-      initialScrollTop: number
+      // Where the fingers' midpoint sat when the gesture began. The zoom stays
+      // anchored there for the whole gesture: the midpoint drifts as fingers
+      // move, and following it pans the document while it scales — two motions
+      // competing for the same pixels, which is what makes a pinch look
+      // jagged. A pinch zooms; it never pans.
+      anchorX: number
+      anchorY: number
+      anchor: ZoomAnchor | null
+      scrollLeft: number
+      scrollTop: number
+      ratio: number
     }
     let pinch: Pinch | null = null
+    let frame = 0
 
     function dist(t1: Touch, t2: Touch) {
       return Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY)
+    }
+
+    function clearTransform() {
+      const content = contentRef.current
+      if (!content) return
+      content.style.transform = ''
+      content.style.transformOrigin = ''
+      content.style.willChange = ''
+    }
+
+    function draw() {
+      frame = 0
+      const content = contentRef.current
+      if (!pinch || !el || !content) return
+      // Put the scroll back where the gesture found it. A scroll the browser
+      // began before the second finger landed can no longer be
+      // preventDefault()ed away, and scaling the content down shrinks the
+      // scrollable area under a container that was scrolled near its end,
+      // which makes the browser clamp — either way the document must not
+      // wander while it is being scaled.
+      if (el.scrollLeft !== pinch.scrollLeft) el.scrollLeft = pinch.scrollLeft
+      if (el.scrollTop !== pinch.scrollTop) el.scrollTop = pinch.scrollTop
+      // Read back what the container would actually accept, and let the
+      // translation absorb the difference: whatever the scroll ends up being,
+      // the anchored point stays exactly under the fingers.
+      //
+      // Scaling about the anchor, with the transform origin at the content's
+      // top-left: the anchored point is (scroll at the start + anchor) in
+      // content coordinates, and this translation is what holds it in place.
+      const anchoredX = pinch.scrollLeft + pinch.anchorX
+      const anchoredY = pinch.scrollTop + pinch.anchorY
+      const tx = pinch.anchorX + el.scrollLeft - pinch.ratio * anchoredX
+      const ty = pinch.anchorY + el.scrollTop - pinch.ratio * anchoredY
+      content.style.transform = `translate(${tx}px, ${ty}px) scale(${pinch.ratio})`
     }
 
     function onStart(e: TouchEvent) {
@@ -88,49 +255,73 @@ export default function PdfViewer() {
       // first finger had started — a two-finger gesture is a zoom and nothing
       // else, never a zoom plus a half-committed drag.
       usePdfStore.getState().setPinching(true)
+      // Land a zoom still waiting on layout so this gesture measures itself
+      // against the document as it really sits.
+      pendingZoom.current?.finish()
       const [t1, t2] = [e.touches[0], e.touches[1]]
       const rect = el.getBoundingClientRect()
+      const anchorX = (t1.clientX + t2.clientX) / 2 - rect.left
+      const anchorY = (t1.clientY + t2.clientY) / 2 - rect.top
       pinch = {
-        initialDist: dist(t1, t2),
+        baseDist: dist(t1, t2),
+        baseRatio: 1,
         initialZoom: zoomRef.current,
-        relX: (t1.clientX + t2.clientX) / 2 - rect.left,
-        relY: (t1.clientY + t2.clientY) / 2 - rect.top,
-        initialScrollLeft: el.scrollLeft,
-        initialScrollTop: el.scrollTop
+        anchorX,
+        anchorY,
+        // The gesture holds this point of the document under the midpoint the
+        // whole way — the transform below scales about it, and the commit
+        // scrolls it back under it once the pages have re-rendered.
+        anchor: captureAnchor(el, anchorX, anchorY),
+        scrollLeft: el.scrollLeft,
+        scrollTop: el.scrollTop,
+        ratio: 1
+      }
+      const content = contentRef.current
+      if (content) {
+        content.style.transformOrigin = '0 0'
+        content.style.willChange = 'transform'
       }
     }
 
     function onMove(e: TouchEvent) {
       if (!pinch || e.touches.length !== 2 || !el) return
-      e.preventDefault()
+      if (e.cancelable) e.preventDefault()
       const [t1, t2] = [e.touches[0], e.touches[1]]
-      const newZoom = Math.max(
-        MIN_ZOOM,
-        Math.min(MAX_ZOOM, pinch.initialZoom * (dist(t1, t2) / pinch.initialDist))
-      )
-      const ratio = newZoom / pinch.initialZoom
-      const rect = el.getBoundingClientRect()
-      const currentRelX = (t1.clientX + t2.clientX) / 2 - rect.left
-      const currentRelY = (t1.clientY + t2.clientY) / 2 - rect.top
-
-      const newScrollLeft = (pinch.initialScrollLeft + pinch.relX) * ratio - currentRelX
-      const newScrollTop = (pinch.initialScrollTop + pinch.relY) * ratio - currentRelY
-
-      setZoom(newZoom)
-      requestAnimationFrame(() => {
-        if (!el) return
-        el.scrollLeft = newScrollLeft
-        el.scrollTop = newScrollTop
-      })
+      const spread = (dist(t1, t2) / pinch.baseDist) * pinch.baseRatio
+      const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, pinch.initialZoom * spread))
+      pinch.ratio = newZoom / pinch.initialZoom
+      // One transform write per frame, however fast the touchmoves arrive.
+      if (!frame) frame = requestAnimationFrame(draw)
     }
 
     function onEnd(e: TouchEvent) {
-      pinch = null
       // Stay in "pinching" until every finger is off the glass. Lifting just
       // one would otherwise hand the remaining finger straight back to the
       // annotation layer mid-gesture, which is exactly the accidental drag
       // this flag exists to prevent.
       if (e.touches.length === 0) usePdfStore.getState().setPinching(false)
+      if (!pinch) return
+      if (e.touches.length >= 2) {
+        // Still a pinch, just with different fingers: carry the scale reached
+        // so far over to the new pair rather than restarting from their spread.
+        pinch.baseRatio = pinch.ratio
+        pinch.baseDist = dist(e.touches[0], e.touches[1])
+        return
+      }
+      const { initialZoom, ratio, anchor } = pinch
+      pinch = null
+      if (frame) {
+        cancelAnimationFrame(frame)
+        frame = 0
+      }
+      if (ratio === 1) {
+        clearTransform()
+        return
+      }
+      // Hold the transform on screen until the pages have re-rendered at the
+      // committed zoom, so the sharp render replaces the scaled one in a single
+      // frame instead of flashing through the un-zoomed layout.
+      commitZoom(initialZoom * ratio, anchor, clearTransform)
     }
 
     el.addEventListener('touchstart', onStart, { passive: true })
@@ -142,6 +333,9 @@ export default function PdfViewer() {
       el.removeEventListener('touchmove', onMove)
       el.removeEventListener('touchend', onEnd)
       el.removeEventListener('touchcancel', onEnd)
+      if (frame) cancelAnimationFrame(frame)
+      pendingZoom.current?.cancel()
+      clearTransform()
       usePdfStore.getState().setPinching(false)
     }
   }, [])
@@ -156,16 +350,11 @@ export default function PdfViewer() {
       e.preventDefault()
       const zoomDelta = -e.deltaY * 0.001
       const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomRef.current * Math.exp(zoomDelta)))
-      const ratio = newZoom / zoomRef.current
+      if (newZoom === zoomRef.current) return
       const rect = el.getBoundingClientRect()
       const relX = e.clientX - rect.left
       const relY = e.clientY - rect.top
-      setZoom(newZoom)
-      requestAnimationFrame(() => {
-        if (!el) return
-        el.scrollLeft = (el.scrollLeft + relX) * ratio - relX
-        el.scrollTop = (el.scrollTop + relY) * ratio - relY
-      })
+      commitZoom(newZoom, captureAnchor(el, relX, relY))
     }
 
     el.addEventListener('wheel', onWheel, { passive: false })
@@ -424,7 +613,7 @@ export default function PdfViewer() {
           className="absolute inset-0 overflow-auto bg-slate-200"
           style={{ cursor: handCursor }}
         >
-          <div className="flex flex-col items-center gap-6 py-6 px-4">
+          <div ref={contentRef} className="flex flex-col items-center gap-6 py-6 px-4">
             {Array.from({ length: numPages }, (_, i) => (
               <PdfPage key={i} doc={doc} pageIndex={i} scale={scale} isXfa={isXfa} />
             ))}
