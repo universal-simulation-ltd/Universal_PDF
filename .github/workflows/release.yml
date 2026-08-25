@@ -163,7 +163,18 @@ jobs:
         # An empty step output is falsy in a GitHub expression, so the two
         # non-mac jobs (where the step above was skipped) fall through to the
         # matrix value untouched.
-        run: npm run ${{ steps.signing.outputs.script || matrix.script }} -- --publish never
+        # ⚠️ An absent secret arrives as an EMPTY environment variable, not an
+        # absent one — and electron-builder reads a DEFINED CSC_LINK as "a
+        # certificate was supplied". It resolves "" against the working
+        # directory and dies with "<repo root> not a file", after announcing
+        # that an empty password will be used. Unsetting the empties is what
+        # keeps the unsigned path actually unsigned.
+        shell: bash
+        run: |
+          for v in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            [ -n "${!v}" ] || unset "$v"
+          done
+          npm run ${{ steps.signing.outputs.script || matrix.script }} -- --publish never
         env:
           # The platform Supabase URL + anon key are required to construct
           # the SDK's Supabase client at boot; without them the renderer
