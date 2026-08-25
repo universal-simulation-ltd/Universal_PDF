@@ -134,6 +134,27 @@ jobs:
             echo "signed=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # The Explorer thumbnail provider is native C++ and cannot be built by
+      # electron-builder, so it is compiled first and staged into
+      # native/win-thumbnail/dist, which package.json picks up as a Windows
+      # extraResources entry. MSVC and CMake are both already on the runner.
+      #
+      # Deliberately NOT a hard failure: if this step breaks, the installer
+      # should still ship — the app is unaffected, Explorer just falls back to
+      # the flat icon it shows today. The warning is what surfaces it.
+      - name: Build the Explorer thumbnail provider
+        if: matrix.os == 'windows-latest'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          try {
+            ./native/win-thumbnail/scripts/build.ps1
+          } catch {
+            Write-Host "::warning::Thumbnail provider build failed - the installer will ship without Explorer thumbnails."
+            Write-Host $_
+            exit 1
+          }
+
       - name: Build installers
         # --publish never: electron-builder otherwise auto-publishes when it
         # sees a tag ref and fails on the missing GH_TOKEN, killing the job

@@ -21,6 +21,7 @@
     "test:handoff": "node e2e/hub-handoff.e2e.mjs",
     "test:names": "node --experimental-strip-types scripts/exportName.test.mjs",
     "electron": "electron .",
+    "thumbnail:build": "powershell -NoProfile -ExecutionPolicy Bypass -File native/win-thumbnail/scripts/build.ps1",
     "dist": "npm run build:desktop && electron-builder",
     "dist:win": "npm run build:desktop && electron-builder --win",
     "dist:mac": "npm run build:desktop && electron-builder --mac",
@@ -120,7 +121,18 @@
       "target": [
         "nsis"
       ],
-      "icon": "public/unisim-icon.png"
+      "icon": "public/unisim-icon.png",
+      "extraResources": [
+        {
+          "from": "native/win-thumbnail/dist",
+          "to": ".",
+          "filter": [
+            "UniversalPdfThumb.dll",
+            "pdfium.dll",
+            "PDFIUM-LICENSE.txt"
+          ]
+        }
+      ]
     },
     "nsis": {
       "include": "build/installer.nsh",

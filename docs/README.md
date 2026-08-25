@@ -277,6 +277,38 @@ pass; the check exists for designs arriving from Universal QR's full studio,
 because baking an unscannable code into an exported PDF is the failure nobody
 notices until the poster is printed.
 
+## Explorer thumbnails (Windows desktop)
+
+On Windows, a `.pdf` shows **page 1 of the document** with the app badge in the
+bottom-right corner instead of a flat icon — the way VLC shows a video frame
+with its cone.
+
+Explorer never asks an application for a thumbnail: it looks up an
+`IThumbnailProvider` COM server registered for the file's class and calls that.
+So this is a native shell extension, `native/win-thumbnail/`, built as
+`UniversalPdfThumb.dll` and shipped in `resources\` beside the app. It
+rasterises page 1 with PDFium and composites `build/pdf-document.ico` into the
+corner. `native/win-thumbnail/README.md` has the full design.
+
+Three things worth knowing here:
+
+- **It appears only when Universal PDF is the default PDF app.** The handler is
+  registered against our own ProgID, never against `.pdf`, because there is one
+  thumbnail handler per file class and claiming the extension would take
+  thumbnails from whichever reader the user actually chose. That is the same
+  line `build/installer.nsh` already takes with `OpenWithProgids`.
+- **It runs in `dllhost.exe`, not `explorer.exe`.** `DisableProcessIsolation` is
+  deliberately unset, so the shell hosts it in a COM surrogate and a crash is a
+  notification rather than a dead desktop.
+- **Windows x64 only.** 64-bit Explorer will not load a 32-bit shell extension,
+  and ARM64 Windows needs its own build, which CI does not produce yet. macOS
+  needs nothing — QuickLook already thumbnails PDFs — and GNOME/KDE thumbnail
+  through poppler.
+
+Build it with `npm run thumbnail:build`; the release workflow does the same on
+the Windows runner. If that build fails the installer still ships, without
+thumbnails.
+
 ## Suite context
 
 This repo is one part of the **Universal Simulation suite** (the open-source
