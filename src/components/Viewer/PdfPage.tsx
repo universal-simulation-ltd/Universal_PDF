@@ -25,8 +25,9 @@ export default function PdfPage({ doc, pageIndex, scale, isXfa }: Props) {
   useEffect(() => {
     let cancelled = false
     let renderTask: { cancel: () => void; promise: Promise<void> } | null = null
+    let retryTimer: ReturnType<typeof setTimeout> | null = null
 
-    async function render() {
+    async function render(attempt = 0) {
       const p = await doc.getPage(pageIndex + 1)
       if (cancelled) return
       setPage(p)
@@ -55,27 +56,57 @@ export default function PdfPage({ doc, pageIndex, scale, isXfa }: Props) {
       const renderViewport = p.getViewport({ scale: scale * effectiveDpr })
       const canvas = canvasRef.current
       if (!canvas) return
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
 
-      canvas.width = renderViewport.width
-      canvas.height = renderViewport.height
+      // Layout takes the page's new size straight away (a committed zoom waits
+      // on exactly that); the old bitmap stretches into it until the new one
+      // is ready.
       canvas.style.width = `${cssViewport.width}px`
       canvas.style.height = `${cssViewport.height}px`
       setSize({ width: cssViewport.width, height: cssViewport.height })
 
-      renderTask = p.render({ canvasContext: ctx, viewport: renderViewport })
+      // Rasterize into an offscreen canvas and blit only when complete. Two
+      // reasons, both learned from a touchpad pinch leaving pages permanently
+      // blank (2026-08-26):
+      //   • the visible canvas is never cleared ahead of a render that may
+      //     still be seconds away — or may fail — so the old bitmap stays up
+      //     until the new one lands whole;
+      //   • every render owns a fresh canvas, so back-to-back zoom commits
+      //     can't trip pdf.js's same-canvas guard while the previous task's
+      //     cancellation is still settling.
+      const off = document.createElement('canvas')
+      off.width = renderViewport.width
+      off.height = renderViewport.height
+      const offCtx = off.getContext('2d')
+      if (!offCtx) return
+
+      renderTask = p.render({ canvasContext: offCtx, viewport: renderViewport })
       try {
         await renderTask.promise
       } catch {
-        // render cancelled; ignore
+        // Cancelled (a newer scale took over — its own render is on the way),
+        // or a real failure such as an allocation refused mid-burst. A real
+        // failure retries once after a beat rather than leaving the page
+        // blank until the next zoom.
+        if (!cancelled && attempt === 0) {
+          retryTimer = setTimeout(() => {
+            void render(1)
+          }, 500)
+        }
+        return
       }
+      if (cancelled) return
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+      canvas.width = off.width
+      canvas.height = off.height
+      ctx.drawImage(off, 0, 0)
     }
 
-    render()
+    void render()
     return () => {
       cancelled = true
       renderTask?.cancel()
+      if (retryTimer) clearTimeout(retryTimer)
     }
   }, [doc, pageIndex, scale, isXfa])
 

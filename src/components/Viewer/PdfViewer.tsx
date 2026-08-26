@@ -371,25 +371,121 @@ export default function PdfViewer() {
     }
   }, [])
 
-  // Ctrl/Cmd+Wheel zooms the PDF instead of the browser page
+  // Ctrl/Cmd+Wheel zooms the PDF instead of the browser page. A touchpad pinch
+  // lands here too — as a stream of ctrl+wheel events, dozens a second — and
+  // committing every tick used to re-rasterize every page per tick, flooding
+  // the main thread for minutes and leaving pages blank mid-burst. So the
+  // stream is treated exactly like the touch pinch above: the document is
+  // scaled with a CSS transform while ticks keep arriving, and the zoom
+  // commits ONCE when they pause.
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
 
+    interface WheelGesture {
+      initialZoom: number
+      ratio: number
+      anchorX: number
+      anchorY: number
+      anchor: ZoomAnchor | null
+      scrollLeft: number
+      scrollTop: number
+    }
+    let gesture: WheelGesture | null = null
+    let frame = 0
+    let settle: ReturnType<typeof setTimeout> | null = null
+    // How long the stream must go quiet before the zoom commits. A touchpad
+    // emits ticks continuously through a pinch, so this is beyond its
+    // inter-event gap — but short enough that a single ctrl+wheel notch on a
+    // mouse still feels immediate.
+    const SETTLE_MS = 120
+
+    function clearTransform() {
+      const content = contentRef.current
+      if (!content) return
+      content.style.transform = ''
+      content.style.transformOrigin = ''
+      content.style.willChange = ''
+    }
+
+    // Same transform arithmetic as the pinch's draw(): pin the scroll where
+    // the gesture found it and hold the anchored point under the cursor.
+    function draw() {
+      frame = 0
+      const content = contentRef.current
+      if (!gesture || !el || !content) return
+      if (el.scrollLeft !== gesture.scrollLeft) el.scrollLeft = gesture.scrollLeft
+      if (el.scrollTop !== gesture.scrollTop) el.scrollTop = gesture.scrollTop
+      const anchoredX = gesture.scrollLeft + gesture.anchorX
+      const anchoredY = gesture.scrollTop + gesture.anchorY
+      const tx = gesture.anchorX + el.scrollLeft - gesture.ratio * anchoredX
+      const ty = gesture.anchorY + el.scrollTop - gesture.ratio * anchoredY
+      content.style.transform = `translate(${tx}px, ${ty}px) scale(${gesture.ratio})`
+    }
+
+    function commit() {
+      settle = null
+      if (!gesture) return
+      const { initialZoom, ratio, anchor } = gesture
+      gesture = null
+      if (frame) {
+        cancelAnimationFrame(frame)
+        frame = 0
+      }
+      if (ratio === 1) {
+        clearTransform()
+        return
+      }
+      // Hold the transform until the pages re-render at the committed zoom, so
+      // the sharp render replaces the scaled one in a single frame.
+      commitZoom(initialZoom * ratio, anchor, clearTransform)
+    }
+
     function onWheel(e: WheelEvent) {
       if (!el || (!e.ctrlKey && !e.metaKey)) return
       e.preventDefault()
+      if (!gesture) {
+        // Land a zoom still waiting on layout so this gesture measures itself
+        // against the document as it really sits.
+        pendingZoom.current?.finish()
+        const rect = el.getBoundingClientRect()
+        const anchorX = e.clientX - rect.left
+        const anchorY = e.clientY - rect.top
+        gesture = {
+          initialZoom: zoomRef.current,
+          ratio: 1,
+          anchorX,
+          anchorY,
+          anchor: captureAnchor(el, anchorX, anchorY),
+          scrollLeft: el.scrollLeft,
+          scrollTop: el.scrollTop
+        }
+        const content = contentRef.current
+        if (content) {
+          content.style.transformOrigin = '0 0'
+          content.style.willChange = 'transform'
+        }
+      }
       const zoomDelta = -e.deltaY * 0.001
-      const newZoom = Math.max(MIN_ZOOM, Math.min(maxZoomRef.current, zoomRef.current * Math.exp(zoomDelta)))
-      if (newZoom === zoomRef.current) return
-      const rect = el.getBoundingClientRect()
-      const relX = e.clientX - rect.left
-      const relY = e.clientY - rect.top
-      commitZoom(newZoom, captureAnchor(el, relX, relY))
+      const target = Math.max(
+        MIN_ZOOM,
+        Math.min(maxZoomRef.current, gesture.initialZoom * gesture.ratio * Math.exp(zoomDelta))
+      )
+      gesture.ratio = target / gesture.initialZoom
+      if (!frame) frame = requestAnimationFrame(draw)
+      if (settle) clearTimeout(settle)
+      settle = setTimeout(commit, SETTLE_MS)
     }
 
     el.addEventListener('wheel', onWheel, { passive: false })
-    return () => el.removeEventListener('wheel', onWheel)
+    return () => {
+      el.removeEventListener('wheel', onWheel)
+      if (settle) clearTimeout(settle)
+      if (frame) cancelAnimationFrame(frame)
+      // Anything mid-gesture commits now, so the transform never outlives the
+      // handler that owns it.
+      commit()
+    }
   }, [])
 
   // Hand-tool drag-to-pan
