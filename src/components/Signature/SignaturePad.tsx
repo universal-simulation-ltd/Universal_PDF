@@ -238,6 +238,29 @@ export default function SignaturePad() {
     showDate: includeDate,
     dateText: dateLine.trim() || undefined
   })
+  // Where the drawn strokes sit in the pad, cropped the way renderInkSignature
+  // crops them (6px of padding) — the preview hangs its labels off this box,
+  // so it sits exactly where the bake will put them.
+  const inkBox = (() => {
+    if (lines.length === 0) return null
+    let minX = Infinity
+    let minY = Infinity
+    let maxX = -Infinity
+    let maxY = -Infinity
+    for (const pts of lines) {
+      for (let i = 0; i + 1 < pts.length; i += 2) {
+        const x = pts[i]
+        const y = pts[i + 1]
+        if (x < minX) minX = x
+        if (x > maxX) maxX = x
+        if (y < minY) minY = y
+        if (y > maxY) maxY = y
+      }
+    }
+    if (!isFinite(minX)) return null
+    const p = 6
+    return { left: minX - p, right: maxX + p, top: minY - p, bottom: maxY + p }
+  })()
   // Ink colour follows the realism toggle (deep blue vs plain near-black).
   const inkColor = inkColorFor(realistic)
 
@@ -537,23 +560,45 @@ export default function SignaturePad() {
           </div>
         ) : (
         <>
-        <div ref={containerRef} className="relative border-2 border-dashed border-slate-300 rounded bg-slate-50 w-full">
-          {/* Live preview of the labels the advanced options will bake beneath
-              the ink — shown in the box with the signature, in the ink colour,
-              left-aligned as the bake will be. Inert: drawing passes straight
-              through it. */}
-          {previewLabels.length > 0 && (
-            <div
-              className="pointer-events-none absolute bottom-2 left-3 select-none"
-              style={{ color: inkColor, opacity: 0.85, fontFamily: 'Helvetica, Arial, sans-serif' }}
-            >
-              {previewLabels.map((l, i) => (
-                <div key={i} style={{ fontSize: 18 * l.scale, lineHeight: 1.3 }}>
-                  {l.text}
+        <div ref={containerRef} className="relative overflow-hidden border-2 border-dashed border-slate-300 rounded bg-slate-50 w-full">
+          {/* Live preview of the labels the advanced options will bake — laid
+              out the way the bake lays them out (composeSignature's layout()):
+              hanging beneath the cropped ink, left-aligned with its edge, at
+              the font size the ink's height implies. Until something is drawn
+              the block waits at the bottom-left. Inert: drawing passes
+              straight through it. */}
+          {previewLabels.length > 0 &&
+            (() => {
+              const sigH = inkBox ? inkBox.bottom - inkBox.top : 0
+              const baseFont = Math.min(28, Math.max(14, sigH * 0.4))
+              const gap = Math.max(4, sigH * 0.08)
+              const pos = inkBox
+                ? { left: Math.max(2, inkBox.left), top: inkBox.bottom + gap }
+                : { left: 12, bottom: 8 }
+              return (
+                <div
+                  className="pointer-events-none absolute select-none whitespace-nowrap"
+                  style={{
+                    ...pos,
+                    color: inkColor,
+                    opacity: 0.85,
+                    fontFamily: 'Helvetica, Arial, sans-serif'
+                  }}
+                >
+                  {previewLabels.map((l, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        fontSize: inkBox ? baseFont * DEFAULT_LABEL_SCALE * l.scale : 18 * l.scale,
+                        lineHeight: 1.3
+                      }}
+                    >
+                      {l.text}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+              )
+            })()}
           <Stage
             ref={stageRef}
             width={padW}
