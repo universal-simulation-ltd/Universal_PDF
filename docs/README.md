@@ -114,6 +114,40 @@ cache) so it works offline afterwards.
   connection or a future self-hosted-assets path (as Images does with
   `VITE_BG_REMOVAL_PATH`).
 
+## What a signature block is made of
+
+A placed signature is never a flat picture: the annotation keeps the untouched
+ink plus a set of label options, and the rendered image is always the two
+composited by `lib/composeSignature.ts`. That is what makes every part of the
+block re-editable after placement — double-tap for the options, the on-canvas
+pill for size and alignment — without the strokes ever being redrawn.
+
+`labelsForOptions()` is the single source of the lines and their order:
+
+1. the **name**, optionally prefixed (`namePrefix`, e.g. "Signed by:")
+2. the **details** — free text, one line per line typed, at 70% of the name
+3. the **date**, optionally prefixed (`datePrefix`, e.g. "Signed on")
+
+so the date stays last however much detail is added above it. Both the pad and
+the re-edit dialog build their labels through that one function, which is why a
+signature looks identical whether it was just drawn or restyled an hour later.
+
+Three deliberate choices:
+
+- **Details have no toggle.** Typing is the decision to show them; emptying the
+  box removes them. `showDetails` exists in the data, but the UI only ever
+  derives it from whether there is text.
+- ⚠️ **Six detail lines maximum** (`MAX_DETAIL_LINES`). A pasted postal address
+  would otherwise produce a composite taller than the page, and since the box is
+  fitted to the page the ink would shrink to nothing to accommodate it.
+- **The wording fields are plain strings, not a `{name}`/`{date}` template.** A
+  mistyped token would bake literal braces into a signed document. If a template
+  is ever wanted, `withPrefix()` is the only place that changes.
+
+Labels start at `DEFAULT_LABEL_SCALE` (70%) — full size competed with the
+signature it was captioning. The pill still spans 50–250%, and a signature saved
+with an explicit scale keeps it.
+
 ## Signature-request boxes ("Sign here")
 
 The **Sign → Request** tab drops a dashed *"Sign here"* box on the page
