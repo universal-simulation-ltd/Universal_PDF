@@ -429,6 +429,33 @@ Tested by `npm run test:exit-guard` (the popup and its answers, in a browser)
 and `npm run test:exit-guard:desktop` (the held window close and the native
 save, driving the real Electron app). Both need the dev server on :5174.
 
+## Zoom and page rendering
+
+Two rules from a 2026-08-26 bug (a page rendered blank white with only its
+AcroForm field boxes visible, after a touchpad zoom):
+
+- ⚠️ **On Windows a touchpad pinch IS ctrl+wheel** — a stream of dozens of
+  events per second, not a mouse notch. Committing a full zoom (re-rasterizing
+  every page) per event is a 60 Hz re-rasterize storm: a reproduced 72-tick
+  burst under 6x CPU throttle at devicePixelRatio 1.5 wedged the main thread
+  for over four minutes. The ctrl+wheel stream therefore rides the
+  touch-pinch machinery in `PdfViewer.tsx`: CSS transform while ticks arrive,
+  ONE `commitZoom` when they go quiet (120 ms settle), anchored under the
+  cursor.
+- ⚠️ **Never clear a visible canvas before its replacement has finished.**
+  `PdfPage.tsx` used to clear up front, re-use the same canvas for the next
+  pdf.js render before the cancelled task had released it (pdf.js's
+  same-canvas guard throws), and swallow the throw in a catch{} meant for
+  cancellations — so a page caught mid-burst stayed permanently white. Every
+  render now rasterizes into a fresh offscreen canvas and blits only on
+  completion (the old bitmap stays up until the new one lands whole;
+  `PresentMode` already worked this way), and a real, non-cancelled failure
+  retries once after 500 ms. A catch{} that assumes "cancelled" also eats
+  real failures — discriminate before swallowing.
+
+Still open here: no windowed rendering for very long documents —
+`renderBudget`'s `MIN_MAX_ZOOM` comment notes it.
+
 ## Suite context
 
 This repo is one part of the **Universal Simulation suite** (the open-source
