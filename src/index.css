@@ -313,11 +313,20 @@ body {
 
    So the fields grow instead. Scoped to coarse pointers, so nothing changes on
    a desktop. Checkboxes, radios, ranges and colour swatches are excluded — they
-   render no text, and a 16px font-size on them changes their box size. */
+   render no text, and a 16px font-size on them changes their box size.
+
+   ⚠️ `!important` is load-bearing, and it is here because of the SDK. Its
+   dialogs are styled with inline `style` objects — <SignInDialog />'s email and
+   password fields carry `fontSize: 14` on the element itself — and an inline
+   declaration outranks any author rule that is not important, however specific.
+   Without the flag this rule covered only the app's own fields: signing in from
+   an iPhone focused the autofocused 14px email field, zoomed the page, and left
+   it zoomed after the dialog closed, with the fixed bottom toolbar then wider
+   than the screen and clipped at both ends. */
 @media (pointer: coarse) {
   input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']),
   select,
   textarea {
-    font-size: 16px;
+    font-size: 16px !important;
   }
 }
