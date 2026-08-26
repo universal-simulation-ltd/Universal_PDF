@@ -4,7 +4,7 @@
 
 Universal PDF is a clean Progressive Web App for **viewing, annotating, and
 signing PDFs in the browser** — free draw, text, shapes, ticks/crosses,
-reusable drawn signatures (including a sign-on-your-phone flow via QR + PIN),
+reusable drawn signatures (including a send-to-sign phone flow via QR + PIN),
 and export with everything baked into the saved file. No upload to a server;
 documents stay on the device.
 
@@ -124,13 +124,15 @@ pill for size and alignment — without the strokes ever being redrawn.
 
 `labelsForOptions()` is the single source of the lines and their order:
 
-1. the **name** — since 2026-08-26 one editable line holding the whole text
-   (e.g. "Signed by: Jane Smith"). `namePrefix` is legacy: the re-edit dialog
-   folds it into `name` on first open, while the pad's advanced options still
-   write the split `namePrefix` + `name` shape — composition is identical
-   either way
+1. the **name** — one editable line holding the whole text (e.g. "Signed by:
+   Jane Smith"), seeded from `NAME_LINE_SEED`. `namePrefix` is legacy-only:
+   both dialogs fold it into `name` on open, and nothing writes it any more
 2. the **details** — free text, one line per line typed, at 70% of the name
-3. the **date**, optionally prefixed (`datePrefix`, e.g. "Signed on")
+3. the **date** — since `fec9518` one editable line too (`dateText`, seeded
+   "Signed on <today>"): what you write is exactly what bakes, so a library
+   signature placed weeks later keeps its written date — requested behaviour,
+   not a bug. Signatures without `dateText` still resolve the date at compose
+   time; `datePrefix` is legacy, folded into the line on edit
 
 so the date stays last however much detail is added above it. Both the pad and
 the re-edit dialog build their labels through that one function, which is why a
@@ -138,14 +140,17 @@ signature looks identical whether it was just drawn or restyled an hour later.
 
 Three deliberate choices:
 
-- **In the re-edit dialog, details have an explicit switch** (`showDetails`,
-  since 2026-08-26) — the dialog is three iOS-style switches (Add name / More
-  details / Add date), each gating the input directly beneath it. Toggling
-  details on empty seeds a "Role: / Email: / Phone: " template; unfilled
-  template labels (a bare "Role:") are dropped at compose time in
-  `detailLines()`, and an untouched "Signed by: " seed is likewise filtered in
-  `labelsForOptions` — seed text is a UI affordance and must never bake into a
-  signed document. In the *pad*, typing is still the decision to show them.
+- **The pad's advanced options and the re-edit dialog are the same three
+  switches** (since 2026-08-26) — "Add your name" / "More details (e.g. role,
+  email, phone)" / "Add date" — each gating the input directly beneath it,
+  seeded on first toggle ("Signed by: ", the "Role: / Email: / Phone: "
+  template, "Signed on <today>"; the seeds are shared constants in
+  `composeSignature.ts`). Unfilled template labels (a bare "Role:") are
+  dropped at compose time in `detailLines()`, and an untouched "Signed by: "
+  seed is filtered via `isUnansweredNameLine` — seed text is a UI affordance
+  and must never bake into a signed document. The pad's top "Signature name
+  (optional)" field only titles the library entry; the name that bakes under
+  the ink lives in the switch's own line.
 - ⚠️ **Six detail lines maximum** (`MAX_DETAIL_LINES`). A pasted postal address
   would otherwise produce a composite taller than the page, and since the box is
   fitted to the page the ink would shrink to nothing to accommodate it.
@@ -163,10 +168,11 @@ the compose defaults, `ensureImageSigData` and the pill's fallback — change it
 in one place only). A signature with a stored alignment keeps it, and the
 on-canvas pill still cycles left/center/right.
 
-One more dialog detail worth keeping: the **date row shows today's real date
-rendered beside the editable wording** ("Signed on") inside the same field, so
-the row reads exactly as it will bake — but the date always resolves at signing
-time; only the wording is stored.
+The re-edit dialog opens **beside the placed signature** (right of it, else
+left, else a centred fallback) with no dimmed backdrop, so edits re-compose the
+signature visibly in real time. ⚠️ The anchor is captured **once at open**,
+from the Konva node's client rect — a live-tracking anchor would make the
+dialog chase the signature as label edits change its size.
 
 ## Signature-request boxes ("Sign here")
 
@@ -201,6 +207,11 @@ no import path into a box to disable. If an upload route is ever added to the
 pad, it must check `requireLive`.
 
 ## Send to sign
+
+⚠️ Since `fec9518` this name is worn by TWO flows: the signature pad's QR + PIN
+mode (formerly "Sign on phone" — the phone draws a signature and sends it back
+to the desktop) and this one, which sends the whole *document* out to a named
+recipient. The rename was directed; keep any future copy distinguishing them.
 
 **Sign → Request → "Send to sign"** stores the flattened PDF online against a
 Universal ID and mints a signing link (`SendToSignDialog`; recipient side is
