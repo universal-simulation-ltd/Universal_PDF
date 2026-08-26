@@ -4,9 +4,13 @@ import type Konva from 'konva'
 import { UnisimQr, useUniversal } from '@unisim/sdk'
 import { useSignatureStore, type SignatureExtras } from '../../stores/signatureStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
-import { formatSigningDate } from '../../lib/signature'
 import { inkColorFor, renderInkSignature } from '../../lib/renderInk'
-import { composeSignatureWithLabels } from '../../lib/composeSignature'
+import {
+  composeSignatureWithLabels,
+  detailLines,
+  labelsForOptions,
+  DEFAULT_LABEL_SCALE
+} from '../../lib/composeSignature'
 import type { SignatureData } from '../../types/annotations'
 import { importImageAsSignature } from '../../lib/imageSignature'
 import {
@@ -44,6 +48,48 @@ function OptionToggle({
   )
 }
 
+// A prefix box for one label line — "Signed by:", "Signed on". Sits beside its
+// toggle and is disabled while that label is off, so it can never be typed into
+// with no effect.
+function PrefixField({
+  value,
+  onChange,
+  enabled,
+  placeholder,
+  suggestion,
+  label
+}: {
+  value: string
+  onChange: (v: string) => void
+  enabled: boolean
+  placeholder: string
+  suggestion: string
+  label: string
+}) {
+  return (
+    <div className={`flex items-center gap-1.5 ${enabled ? '' : 'opacity-50 pointer-events-none'}`}>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        aria-label={label}
+        disabled={!enabled}
+        className="flex-1 min-w-0 px-2 py-1 border border-slate-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
+      />
+      {/* One tap for the wording nearly everyone wants, typing for the rest. */}
+      {value.trim() === '' && (
+        <button
+          type="button"
+          onClick={() => onChange(suggestion)}
+          className="shrink-0 px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-100"
+        >
+          {suggestion}
+        </button>
+      )}
+    </div>
+  )
+}
+
 export default function SignaturePad() {
   const open = useSignatureStore((s) => s.padOpen)
   const closePad = useSignatureStore((s) => s.closePad)
@@ -65,6 +111,12 @@ export default function SignaturePad() {
   // extras are opt-in under "Advanced options".
   const [includeName, setIncludeName] = useState(false)
   const [includeDate, setIncludeDate] = useState(false)
+  // Free text under the name — role, email, company. No toggle of its own:
+  // typing something is the decision to show it.
+  const [details, setDetails] = useState('')
+  // Optional wording in front of the name and date lines.
+  const [namePrefix, setNamePrefix] = useState('')
+  const [datePrefix, setDatePrefix] = useState('')
   // Realistic ink (blue, blemishes, variable width) vs a clean plain-black line.
   const [realistic, setRealistic] = useState(false)
   // false → bake name/date into the signature image (one click places all).
@@ -212,6 +264,9 @@ export default function SignaturePad() {
     setName('')
     setIncludeName(false)
     setIncludeDate(false)
+    setDetails('')
+    setNamePrefix('')
+    setDatePrefix('')
     setSeparatePlacement(false)
     setRealistic(false)
     setAdvancedOpen(false)
@@ -244,9 +299,19 @@ export default function SignaturePad() {
     // adjustable in the pad) decide which labels get baked in.
     const wantName = includeName && !!trimmedName
     const wantDate = includeDate
-    const labels: { text: string; scale: number }[] = []
-    if (wantName) labels.push({ text: trimmedName, scale: 1 })
-    if (wantDate) labels.push({ text: formatSigningDate(), scale: 0.8 })
+    const detail = detailLines(details)
+    const wantDetails = detail.length > 0
+    // Built through the same helper the re-edit path uses, so a signature looks
+    // identical whether it was just drawn or restyled an hour later.
+    const labels = labelsForOptions({
+      name: trimmedName,
+      showName: wantName,
+      details,
+      showDetails: wantDetails,
+      showDate: wantDate,
+      namePrefix,
+      datePrefix
+    })
 
     let src = sig.dataUrl
     let w = sig.width
@@ -265,9 +330,13 @@ export default function SignaturePad() {
       inkHeight: sig.height,
       name: trimmedName || undefined,
       showName: wantName,
+      details: details || undefined,
+      showDetails: wantDetails,
       showDate: wantDate,
+      namePrefix: namePrefix.trim() || undefined,
+      datePrefix: datePrefix.trim() || undefined,
       align: 'center',
-      labelScale: 1,
+      labelScale: DEFAULT_LABEL_SCALE,
       color: inkColor,
       strokes: strokes && strokes.length > 0 ? strokes : undefined,
       realistic
@@ -296,21 +365,32 @@ export default function SignaturePad() {
     const sigName = trimmed || `Signature ${useSignatureStore.getState().signatures.length + 1}`
     const wantName = includeName && !!trimmed
     const wantDate = includeDate
+    const wantDetails = detailLines(details).length > 0
 
     let finalUrl = ink.dataUrl
     let finalW = ink.width
     let finalH = ink.height
     let extras: SignatureExtras | undefined
 
-    if ((wantName || wantDate) && separatePlacement) {
+    // ⚠️ Details are never placed separately, only baked. They are a block that
+    // belongs under the ink, and the separate-placement flow drops ONE text
+    // piece per click — three clicks to land a role and an email is not an
+    // interaction anyone wants.
+    if ((wantName || wantDate) && separatePlacement && !wantDetails) {
       // Image stays ink-only; the name/date are placed by extra clicks. The
       // date is resolved at placement time ("date of signing").
       extras = { name: wantName ? trimmed : undefined, date: wantDate, color: inkColor }
-    } else if (wantName || wantDate) {
-      // Bake the name (and date) beneath the ink so they travel as one image.
-      const labels: { text: string; scale: number }[] = []
-      if (wantName) labels.push({ text: trimmed, scale: 1 })
-      if (wantDate) labels.push({ text: formatSigningDate(), scale: 0.8 })
+    } else if (wantName || wantDate || wantDetails) {
+      // Bake the labels beneath the ink so they travel as one image.
+      const labels = labelsForOptions({
+        name: trimmed,
+        showName: wantName,
+        details,
+        showDetails: wantDetails,
+        showDate: wantDate,
+        namePrefix,
+        datePrefix
+      })
       const composed = await composeSignatureWithLabels(ink.dataUrl, ink.width, ink.height, labels, inkColor)
       finalUrl = composed.dataUrl
       finalW = composed.width
@@ -327,9 +407,13 @@ export default function SignaturePad() {
       inkHeight: ink.height,
       name: wantName ? trimmed : undefined,
       showName: wantName && !separatePlacement,
+      details: details || undefined,
+      showDetails: wantDetails,
       showDate: wantDate && !separatePlacement,
+      namePrefix: namePrefix.trim() || undefined,
+      datePrefix: datePrefix.trim() || undefined,
       align: 'center',
-      labelScale: 1,
+      labelScale: DEFAULT_LABEL_SCALE,
       color: inkColor,
       // Keep the pen path so realism stays a toggle after placement, not a
       // decision frozen at draw time.
@@ -482,6 +566,18 @@ export default function SignaturePad() {
             </button>
           </div>
 
+          {/* Anything else that belongs under the name: a role, an email, a
+              company. Multi-line, because a signature block is lines — each one
+              typed becomes its own line under the signature. */}
+          <textarea
+            value={details}
+            onChange={(e) => setDetails(e.target.value)}
+            rows={2}
+            placeholder="Add your role, email address, etc. (optional)"
+            aria-label="Details to show under the signature"
+            className="w-full px-3 py-2 border border-slate-300 rounded text-sm resize-y focus:outline-none focus:ring-2 focus:ring-orange-500"
+          />
+
           {/* Advanced options — name/date extras and how they're placed. */}
           <div>
             <button
@@ -498,7 +594,23 @@ export default function SignaturePad() {
               <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3">
                 <OptionToggle checked={realistic} onChange={setRealistic} label="Make it look more realistic" />
                 <OptionToggle checked={includeName} onChange={setIncludeName} label="Add name" />
+                <PrefixField
+                  value={namePrefix}
+                  onChange={setNamePrefix}
+                  enabled={includeName}
+                  placeholder="Wording before the name (optional)"
+                  suggestion="Signed by:"
+                  label="Wording before the name"
+                />
                 <OptionToggle checked={includeDate} onChange={setIncludeDate} label="Add date (today)" />
+                <PrefixField
+                  value={datePrefix}
+                  onChange={setDatePrefix}
+                  enabled={includeDate}
+                  placeholder="Wording before the date (optional)"
+                  suggestion="Signed on"
+                  label="Wording before the date"
+                />
 
                 <div className={hasExtras ? '' : 'opacity-50 pointer-events-none'}>
                   <div className="text-xs font-medium text-slate-500 mb-1">When placed</div>

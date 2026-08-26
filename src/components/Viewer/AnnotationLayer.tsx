@@ -20,7 +20,7 @@ import { useImage } from '../../lib/useImage'
 import { layerPixelRatio, pagePixelBudget } from '../../lib/renderBudget'
 import { RedactIcon } from '../icons/RedactIcon'
 import { SIGNATURE_INK, formatSigningDate } from '../../lib/signature'
-import { composeSignature, sigHasLabels } from '../../lib/composeSignature'
+import { composeSignature, sigHasLabels, DEFAULT_LABEL_SCALE } from '../../lib/composeSignature'
 import { inkColorFor, renderInkSignature } from '../../lib/renderInk'
 import { FONT_CSS } from '../../lib/fonts'
 import { effectiveRuns, runFontStyle, runHasStyle, runsToPlainText, runsToHtml, parseRunsFromDom, mergeRuns } from '../../lib/textRuns'
@@ -368,7 +368,7 @@ function ensureImageSigData(a: ImageAnnotation): SignatureData {
       showName: false,
       showDate: false,
       align: 'center',
-      labelScale: 1,
+      labelScale: DEFAULT_LABEL_SCALE,
       color: SIGNATURE_INK
     }
   )
@@ -2658,7 +2658,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         if (by + bh + GAP + CHIP_H <= height) top = by + bh + GAP
         else if (by - CHIP_H - GAP >= 0) top = by - CHIP_H - GAP
         else top = Math.min(Math.max(by + bh + GAP, GAP), Math.max(GAP, height - CHIP_H - GAP))
-        const labelScale = data.labelScale ?? 1
+        const labelScale = data.labelScale ?? DEFAULT_LABEL_SCALE
         const align: SigAlign = data.align ?? 'center'
         const setScale = (v: number) =>
           applySigData(selected.id, { ...data, labelScale: Math.min(2.5, Math.max(0.5, Math.round(v * 100) / 100)) })
@@ -2744,6 +2744,46 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   )
 }
 
+// Wording in front of one label line, with a one-tap suggestion. Disabled while
+// its line is hidden, so it can never be typed into with no visible effect.
+function ModalPrefixField({
+  value,
+  onChange,
+  enabled,
+  placeholder,
+  suggestion,
+  label
+}: {
+  value: string
+  onChange: (v: string) => void
+  enabled: boolean
+  placeholder: string
+  suggestion: string
+  label: string
+}) {
+  return (
+    <div className={`flex items-center gap-1.5 ${enabled ? '' : 'opacity-50 pointer-events-none'}`}>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        aria-label={label}
+        disabled={!enabled}
+        className="flex-1 min-w-0 px-2 py-1 border border-slate-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
+      />
+      {value.trim() === '' && (
+        <button
+          type="button"
+          onClick={() => onChange(suggestion)}
+          className="shrink-0 px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-100"
+        >
+          {suggestion}
+        </button>
+      )}
+    </div>
+  )
+}
+
 // Double-tap options editor for a placed signature. Edits name / add-name /
 // add-date, plus the realistic-ink look when the signature was drawn in-app —
 // size + alignment live on the on-canvas pill. Holds its own draft state so
@@ -2762,6 +2802,9 @@ function SignatureOptionsModal({
   const [name, setName] = useState(data.name ?? '')
   const [showName, setShowName] = useState(!!data.showName)
   const [showDate, setShowDate] = useState(!!data.showDate)
+  const [details, setDetails] = useState(data.details ?? '')
+  const [namePrefix, setNamePrefix] = useState(data.namePrefix ?? '')
+  const [datePrefix, setDatePrefix] = useState(data.datePrefix ?? '')
   const [realistic, setRealistic] = useState(!!data.realistic)
   // Latest base payload (ink + size/alignment) — re-read on every apply so the
   // pill's size/alignment edits aren't clobbered by a name/date change.
@@ -2775,18 +2818,47 @@ function SignatureOptionsModal({
   const strokes = data.strokes
   const canRestyle = !!strokes && strokes.length > 0
 
+  // Every applier sends the whole label set, so changing one field never drops
+  // another that is only held in this draft state.
+  const apply = (patch: Partial<SignatureData>) =>
+    onApply({
+      ...dataRef.current,
+      name,
+      showName,
+      showDate,
+      details,
+      showDetails: !!details.trim(),
+      namePrefix: namePrefix.trim() || undefined,
+      datePrefix: datePrefix.trim() || undefined,
+      ...patch
+    })
+
   const changeName = (v: string) => {
     setName(v)
-    onApply({ ...dataRef.current, name: v, showName: showName || !!v, showDate })
+    apply({ name: v, showName: showName || !!v })
     if (v && !showName) setShowName(true)
   }
   const toggleName = (v: boolean) => {
     setShowName(v)
-    onApply({ ...dataRef.current, name, showName: v, showDate })
+    apply({ showName: v })
   }
   const toggleDate = (v: boolean) => {
     setShowDate(v)
-    onApply({ ...dataRef.current, name, showName, showDate: v })
+    apply({ showDate: v })
+  }
+  // No toggle of its own: typing details is the decision to show them, and
+  // emptying the box is the decision to take them away.
+  const changeDetails = (v: string) => {
+    setDetails(v)
+    apply({ details: v, showDetails: !!v.trim() })
+  }
+  const changeNamePrefix = (v: string) => {
+    setNamePrefix(v)
+    apply({ namePrefix: v.trim() || undefined })
+  }
+  const changeDatePrefix = (v: string) => {
+    setDatePrefix(v)
+    apply({ datePrefix: v.trim() || undefined })
   }
   // Re-render the ink from the original strokes at the new realism setting and
   // swap it in — the labels are then re-composited over it by applySigData.
@@ -2840,6 +2912,14 @@ function SignatureOptionsModal({
             placeholder="Name"
             className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
+          <textarea
+            value={details}
+            onChange={(e) => changeDetails(e.target.value)}
+            rows={2}
+            placeholder="Add your role, email address, etc. (optional)"
+            aria-label="Details to show under the signature"
+            className="w-full px-3 py-2 border border-slate-300 rounded text-sm resize-y focus:outline-none focus:ring-2 focus:ring-orange-500"
+          />
           <label className="flex items-center justify-between gap-2 text-sm text-slate-700 select-none cursor-pointer">
             <span>Add name</span>
             <input
@@ -2850,6 +2930,14 @@ function SignatureOptionsModal({
             />
             <span className="relative w-9 h-5 rounded-full bg-slate-300 transition-colors peer-checked:bg-orange-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:shadow after:transition-transform peer-checked:after:translate-x-4" />
           </label>
+          <ModalPrefixField
+            value={namePrefix}
+            onChange={changeNamePrefix}
+            enabled={showName}
+            placeholder="Wording before the name (optional)"
+            suggestion="Signed by:"
+            label="Wording before the name"
+          />
           <label className="flex items-center justify-between gap-2 text-sm text-slate-700 select-none cursor-pointer">
             <span>Add date (today)</span>
             <input
@@ -2860,6 +2948,14 @@ function SignatureOptionsModal({
             />
             <span className="relative w-9 h-5 rounded-full bg-slate-300 transition-colors peer-checked:bg-orange-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:shadow after:transition-transform peer-checked:after:translate-x-4" />
           </label>
+          <ModalPrefixField
+            value={datePrefix}
+            onChange={changeDatePrefix}
+            enabled={showDate}
+            placeholder="Wording before the date (optional)"
+            suggestion="Signed on"
+            label="Wording before the date"
+          />
           {canRestyle && (
             <label className="flex items-center justify-between gap-2 text-sm text-slate-700 select-none cursor-pointer border-t border-slate-100 pt-3">
               <span>

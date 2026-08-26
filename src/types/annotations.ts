@@ -137,7 +137,20 @@ export type SigAlign = 'left' | 'center' | 'right'
 export type SignatureLabelOptions = {
   name?: string
   showName?: boolean
+  // Free text under the name — a role, an email address, a company. Multi-line
+  // by design: every line typed becomes its own label line, which is why this
+  // is a single string rather than an array. Unlike the name it has no toggle:
+  // it is only ever shown because someone typed it.
+  details?: string
+  showDetails?: boolean
   showDate?: boolean
+  // Optional wording in front of the name and date lines — "Signed by:",
+  // "Signed on". Deliberately two plain strings rather than a template with
+  // {name}/{date} tokens: a mistyped token would bake literal braces into a
+  // signed document, and this dialog is used by people who should not have to
+  // learn a syntax to put two words in front of their own name.
+  namePrefix?: string
+  datePrefix?: string
   align?: SigAlign
   // Multiplier on the base label font size (driven by the size pill).
   labelScale?: number
