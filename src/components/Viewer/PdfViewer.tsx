@@ -5,12 +5,18 @@ import { useSearchStore } from '../../stores/searchStore'
 import FileNameEditor from '../Header/FileNameEditor'
 import FindBar from './FindBar'
 import PdfPage from './PdfPage'
+import { maxZoomForDocument } from '../../lib/renderBudget'
 
 // "100% zoom" in standard PDF viewers means physical paper size on screen.
 // CSS treats 1 inch as 96 px while a PDF point is 1/72 inch, so to render at
 // real-world size we need a base scale of 96/72.
 const BASE_SCALE = 96 / 72
 const MIN_ZOOM = 0.25
+// The ceiling the viewer will never go above. The ceiling it actually uses is
+// usually lower — see `maxZoomForDocument`, which works out what this document
+// can be rasterized at on this device without the web view being killed for
+// holding too much canvas. Pinching, ctrl+wheel and the + button all clamp to
+// that one, not to this.
 const MAX_ZOOM = 4
 const ZOOM_STEP = 0.1
 // Fit-to-height on open never zooms out past this — below 75% body text gets
@@ -44,6 +50,31 @@ export default function PdfViewer() {
   // can read it without re-binding on every change.
   const zoomRef = useRef(zoom)
   zoomRef.current = zoom
+
+  // How far this document can be zoomed on this device before the pages stop
+  // fitting in memory. Pages are all rasterized at once, so it falls as the
+  // document gets longer; it is measured off page 1 and re-measured whenever
+  // pages are added or removed.
+  const [maxZoom, setMaxZoom] = useState(MAX_ZOOM)
+  const maxZoomRef = useRef(maxZoom)
+  maxZoomRef.current = maxZoom
+
+  useEffect(() => {
+    if (!doc) return
+    let cancelled = false
+    doc.getPage(1).then((page) => {
+      if (cancelled) return
+      const { width, height } = page.getViewport({ scale: BASE_SCALE })
+      setMaxZoom(maxZoomForDocument(width, height, numPages, MAX_ZOOM))
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [doc, numPages])
+
+  // Pages added to an already-zoomed document can push the ceiling below where
+  // the zoom already is — come back down rather than sit over budget.
+  useEffect(() => {
+    if (zoomRef.current > maxZoom) setZoom(maxZoom)
+  }, [maxZoom])
 
   // Close the zoom-presets menu on outside-click / Escape, and whenever the
   // zoom leaves 100% (the presets menu only applies at 100%).
@@ -288,7 +319,7 @@ export default function PdfViewer() {
       if (e.cancelable) e.preventDefault()
       const [t1, t2] = [e.touches[0], e.touches[1]]
       const spread = (dist(t1, t2) / pinch.baseDist) * pinch.baseRatio
-      const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, pinch.initialZoom * spread))
+      const newZoom = Math.max(MIN_ZOOM, Math.min(maxZoomRef.current, pinch.initialZoom * spread))
       pinch.ratio = newZoom / pinch.initialZoom
       // One transform write per frame, however fast the touchmoves arrive.
       if (!frame) frame = requestAnimationFrame(draw)
@@ -349,7 +380,7 @@ export default function PdfViewer() {
       if (!el || (!e.ctrlKey && !e.metaKey)) return
       e.preventDefault()
       const zoomDelta = -e.deltaY * 0.001
-      const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomRef.current * Math.exp(zoomDelta)))
+      const newZoom = Math.max(MIN_ZOOM, Math.min(maxZoomRef.current, zoomRef.current * Math.exp(zoomDelta)))
       if (newZoom === zoomRef.current) return
       const rect = el.getBoundingClientRect()
       const relX = e.clientX - rect.left
@@ -511,6 +542,10 @@ export default function PdfViewer() {
   const handCursor = tool === 'hand' ? 'grab' : undefined
   const zoomDisabled = !['select', 'hand', 'form', 'marquee', 'selecttext'].includes(tool)
   const atHundred = Math.round(zoom * 100) === 100
+  // Float tolerance: the + button walks in 10% steps and rounds, so the step
+  // that lands on the ceiling can land a fraction of a percent under it.
+  const atMaxZoom = zoom >= maxZoom - 0.001
+  const zoomInDisabled = zoomDisabled || atMaxZoom
 
   return (
     <div className="flex flex-col h-full">
@@ -579,7 +614,7 @@ export default function PdfViewer() {
                     <button
                       key={p}
                       role="menuitem"
-                      onClick={() => { setZoom(Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, p / 100))); setZoomMenuOpen(false) }}
+                      onClick={() => { setZoom(Math.max(MIN_ZOOM, Math.min(maxZoom, p / 100))); setZoomMenuOpen(false) }}
                       className="w-full text-center tabular-nums px-3 py-1.5 text-sm text-slate-700 hover:bg-orange-50 hover:text-orange-700"
                     >
                       {p}%
@@ -589,9 +624,10 @@ export default function PdfViewer() {
               )}
             </div>
             <button
-              onClick={() => setZoom((z) => Math.min(MAX_ZOOM, +(z + ZOOM_STEP).toFixed(2)))}
-              disabled={zoomDisabled}
-              className={`w-7 h-7 rounded border ${zoomDisabled ? 'border-slate-200 text-slate-300 cursor-not-allowed bg-white' : 'bg-white border-slate-300 hover:bg-slate-50'}`}
+              onClick={() => setZoom((z) => Math.min(maxZoom, +(z + ZOOM_STEP).toFixed(2)))}
+              disabled={zoomInDisabled}
+              title={atMaxZoom ? `Maximum zoom for this document (${Math.round(maxZoom * 100)}%)` : 'Zoom in'}
+              className={`w-7 h-7 rounded border ${zoomInDisabled ? 'border-slate-200 text-slate-300 cursor-not-allowed bg-white' : 'bg-white border-slate-300 hover:bg-slate-50'}`}
               aria-label="Zoom in"
             >
               +

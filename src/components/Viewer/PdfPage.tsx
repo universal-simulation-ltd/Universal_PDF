@@ -5,6 +5,7 @@ import FormFieldLayer from './FormFieldLayer'
 import SearchHighlightLayer from './SearchHighlightLayer'
 import TextSelectLayer from './TextSelectLayer'
 import XfaPage from './XfaPage'
+import { layerPixelRatio, pagePixelBudget } from '../../lib/renderBudget'
 
 interface Props {
   doc: PDFDocumentProxy
@@ -42,15 +43,14 @@ export default function PdfPage({ doc, pageIndex, scale, isXfa }: Props) {
       // physical viewport for the canvas backing store so the bitmap stays
       // crisp on high-DPI screens.
       //
-      // Cap DPR at 2 — no perceptible sharpness gain above 2× for PDF bitmaps —
-      // and further clamp so the canvas never exceeds ~16 M pixels (iOS Safari's
-      // hard limit; crossing it causes the tab to crash and reload).
-      const rawDpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
-      const MAX_CANVAS_PIXELS = 16_000_000
-      const effectiveDpr = Math.min(
-        rawDpr,
-        2,
-        Math.sqrt(MAX_CANVAS_PIXELS / (cssViewport.width * cssViewport.height))
+      // How far above CSS resolution that goes is the document's memory budget
+      // to give — see `renderBudget`. Every page of the document is rasterized
+      // at once, so a zoomed-in page spends its share of the budget on the
+      // bitmap first and gives up sharpness before the zoom itself is capped.
+      const effectiveDpr = layerPixelRatio(
+        cssViewport.width,
+        cssViewport.height,
+        pagePixelBudget(doc.numPages)
       )
       const renderViewport = p.getViewport({ scale: scale * effectiveDpr })
       const canvas = canvasRef.current

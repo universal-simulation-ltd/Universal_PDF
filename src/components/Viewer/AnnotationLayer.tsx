@@ -17,6 +17,7 @@ import { usePdfStore } from '../../stores/pdfStore'
 import { useSignatureStore } from '../../stores/signatureStore'
 import { useCoarsePointer } from '../../hooks/useCoarsePointer'
 import { useImage } from '../../lib/useImage'
+import { layerPixelRatio, pagePixelBudget } from '../../lib/renderBudget'
 import { RedactIcon } from '../icons/RedactIcon'
 import { SIGNATURE_INK, formatSigningDate } from '../../lib/signature'
 import { composeSignature, sigHasLabels } from '../../lib/composeSignature'
@@ -571,6 +572,32 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // this is true the layer starts nothing and finishes nothing — the gesture
   // belongs entirely to the zoom.
   const pinching = usePdfStore((s) => s.pinching)
+
+  // Konva sizes its scene canvas at `devicePixelRatio` by default, and it is
+  // the size of the whole page: at 400% on a 3× phone screen that is half a
+  // gigabyte of backing store PER PAGE, which is what used to kill the web view
+  // mid-pinch. The page's share of the render budget decides how much of that
+  // it can afford — the same call `PdfPage` makes for the bitmap underneath, so
+  // the two stay in step — and `maxZoomForDocument` stops the zoom before even
+  // a CSS-resolution stage would blow the budget.
+  //
+  // ⚠️ Konva has no `pixelRatio` prop on either Stage or Layer; the scene
+  // canvas has to be told imperatively. (Its hit canvas is fixed at 1 and is
+  // counted in the budget as such.)
+  const stageRef = useRef<Konva.Stage>(null)
+  const numPages = usePdfStore((s) => s.numPages)
+  const pixelRatio = layerPixelRatio(width, height, pagePixelBudget(numPages))
+  useEffect(() => {
+    const stage = stageRef.current
+    if (!stage) return
+    for (const layer of stage.getLayers()) {
+      const canvas = layer.getCanvas()
+      if (canvas.getPixelRatio() === pixelRatio) continue
+      // setPixelRatio re-sizes (and so clears) the backing store, hence the redraw.
+      canvas.setPixelRatio(pixelRatio)
+      layer.batchDraw()
+    }
+  }, [pixelRatio, width, height])
 
   const activeSignature = useSignatureStore((s) => {
     const id = s.activeId
@@ -1604,6 +1631,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   return (
     <>
       <Stage
+        ref={stageRef}
         width={width}
         height={height}
         scaleX={scale}

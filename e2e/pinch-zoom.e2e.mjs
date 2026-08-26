@@ -93,7 +93,27 @@ async function testPdf() {
 // 595 pt wide at 96/72 css px per pt is what the viewer calls 100%.
 const HUNDRED_PERCENT_WIDTH = (595 * 96) / 72
 // A phone-shaped window, so a zoomed page is wider than the viewport.
-const PHONE = { hasTouch: true, viewport: { width: 420, height: 780 }, deviceScaleFactor: 2 }
+// ⚠️ `screen` matters as well as `viewport`: the render budget reads it (with
+// maxTouchPoints) to decide whether this is a handheld, and a handheld gets the
+// smaller canvas budget — which is what sets the zoom ceiling asserted below.
+const PHONE = {
+  hasTouch: true,
+  viewport: { width: 420, height: 780 },
+  screen: { width: 420, height: 780 },
+  deviceScaleFactor: 2
+}
+
+// Every canvas the document is holding right now, in backing-store pixels
+// (×4 for bytes). The pages' bitmaps and the Konva annotation stages both
+// count; Konva's hit canvas is offscreen and is not in this total.
+const canvasPixels = (page) =>
+  page.evaluate(() =>
+    [...document.querySelectorAll('canvas')].reduce((n, c) => n + c.width * c.height, 0)
+  )
+
+// The handheld budget from lib/renderBudget — 64 M pixels, halved on a device
+// that admits to under 4 GB of RAM.
+const HANDHELD_BUDGET_PIXELS = 64_000_000
 
 const playwright = await loadPlaywright()
 const browser = await playwright.chromium.launch()
@@ -264,15 +284,37 @@ console.log('\nthe limits, and cleaning up after itself')
   const hair = await readState(page)
   check('a hair-width pinch cleans up its transform', hair.transform === '', `transform="${hair.transform}"`)
 
+  // The ceiling is not the constant 400% it used to be. Every page of the
+  // document is rasterized at once, so what the zoom is really bounded by is
+  // how much canvas the device can hold — `maxZoomForDocument` works that out
+  // per document (see lib/renderBudget), and pinching past it stops there.
+  //
+  // The bug this replaced (2026-08-26): three A4 pages pinched to 400% on a
+  // phone came to ~1.9 GB of backing store, the web view was killed for it, and
+  // the document reloaded itself from scratch mid-gesture.
   for (let i = 0; i < 3; i++) {
     await pinch(touch, { x: 210, y: 400, spread: 44, endSpread: 300, steps: 10 })
     await touch('touchEnd', [])
     await page.waitForTimeout(1200)
   }
   const ceiling = await readState(page)
-  check('pinching past the ceiling stops at 400%', Math.abs(ceiling.cssWidth / HUNDRED_PERCENT_WIDTH - 4) < 0.01,
-    `${Math.round((ceiling.cssWidth / HUNDRED_PERCENT_WIDTH) * 100)}%`)
+  const ceilingZoom = ceiling.cssWidth / HUNDRED_PERCENT_WIDTH
+  const held = await canvasPixels(page)
+  check('pinching past the ceiling stops short of the 400% hard cap', ceilingZoom < 4,
+    `${Math.round(ceilingZoom * 100)}%`)
+  check('the ceiling still leaves a useful amount of zoom', ceilingZoom > 1.5,
+    `${Math.round(ceilingZoom * 100)}%`)
+  check('the canvas held at the ceiling stays inside the budget', held < HANDHELD_BUDGET_PIXELS,
+    `${(held / 1e6).toFixed(1)} M pixels (~${Math.round((held * 4) / 1e6)} MB)`)
   check('no transform survives the clamped pinch', ceiling.transform === '', `transform="${ceiling.transform}"`)
+
+  // Once more from the ceiling: a clamped pinch must not creep past it.
+  await pinch(touch, { x: 210, y: 400, spread: 44, endSpread: 300, steps: 10 })
+  await touch('touchEnd', [])
+  await page.waitForTimeout(1200)
+  const stillCeiling = await readState(page)
+  check('the ceiling holds on a repeat pinch', Math.abs(stillCeiling.cssWidth - ceiling.cssWidth) < 1,
+    `${Math.round((stillCeiling.cssWidth / HUNDRED_PERCENT_WIDTH) * 100)}%`)
 
   for (let i = 0; i < 4; i++) {
     await pinch(touch, { x: 210, y: 400, spread: 380, endSpread: 40, steps: 10 })
