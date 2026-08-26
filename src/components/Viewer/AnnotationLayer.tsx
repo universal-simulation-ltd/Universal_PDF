@@ -20,7 +20,7 @@ import { useImage } from '../../lib/useImage'
 import { layerPixelRatio, pagePixelBudget } from '../../lib/renderBudget'
 import { RedactIcon } from '../icons/RedactIcon'
 import { SIGNATURE_INK, formatSigningDate } from '../../lib/signature'
-import { composeSignature, sigHasLabels, DEFAULT_LABEL_SCALE } from '../../lib/composeSignature'
+import { composeSignature, sigHasLabels, DEFAULT_LABEL_SCALE, DEFAULT_SIG_ALIGN } from '../../lib/composeSignature'
 import { inkColorFor, renderInkSignature } from '../../lib/renderInk'
 import { FONT_CSS } from '../../lib/fonts'
 import { effectiveRuns, runFontStyle, runHasStyle, runsToPlainText, runsToHtml, parseRunsFromDom, mergeRuns } from '../../lib/textRuns'
@@ -367,7 +367,7 @@ function ensureImageSigData(a: ImageAnnotation): SignatureData {
       inkHeight: a.height,
       showName: false,
       showDate: false,
-      align: 'center',
+      align: DEFAULT_SIG_ALIGN,
       labelScale: DEFAULT_LABEL_SCALE,
       color: SIGNATURE_INK
     }
@@ -2659,7 +2659,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         else if (by - CHIP_H - GAP >= 0) top = by - CHIP_H - GAP
         else top = Math.min(Math.max(by + bh + GAP, GAP), Math.max(GAP, height - CHIP_H - GAP))
         const labelScale = data.labelScale ?? DEFAULT_LABEL_SCALE
-        const align: SigAlign = data.align ?? 'center'
+        const align: SigAlign = data.align ?? DEFAULT_SIG_ALIGN
         const setScale = (v: number) =>
           applySigData(selected.id, { ...data, labelScale: Math.min(2.5, Math.max(0.5, Math.round(v * 100) / 100)) })
         const cycleAlign = () => {
@@ -2744,45 +2744,37 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   )
 }
 
-// Wording in front of one label line, with a one-tap suggestion. Disabled while
-// its line is hidden, so it can never be typed into with no visible effect.
-function ModalPrefixField({
-  value,
+// iOS-style switch row used by the options modal: label on the left, switch on
+// the right. Each switch gates the input directly beneath it.
+function ModalToggle({
+  checked,
   onChange,
-  enabled,
-  placeholder,
-  suggestion,
   label
 }: {
-  value: string
-  onChange: (v: string) => void
-  enabled: boolean
-  placeholder: string
-  suggestion: string
+  checked: boolean
+  onChange: (v: boolean) => void
   label: string
 }) {
   return (
-    <div className={`flex items-center gap-1.5 ${enabled ? '' : 'opacity-50 pointer-events-none'}`}>
+    <label className="flex items-center justify-between gap-2 text-sm text-slate-700 select-none cursor-pointer">
+      <span>{label}</span>
       <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        aria-label={label}
-        disabled={!enabled}
-        className="flex-1 min-w-0 px-2 py-1 border border-slate-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="peer sr-only"
       />
-      {value.trim() === '' && (
-        <button
-          type="button"
-          onClick={() => onChange(suggestion)}
-          className="shrink-0 px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-100"
-        >
-          {suggestion}
-        </button>
-      )}
-    </div>
+      <span className="relative shrink-0 w-9 h-5 rounded-full bg-slate-300 transition-colors peer-checked:bg-orange-500 peer-focus-visible:ring-2 peer-focus-visible:ring-orange-400 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:shadow after:transition-transform peer-checked:after:translate-x-4" />
+    </label>
   )
 }
+
+// Seeds for the switch-gated inputs: turning a switch on with nothing typed
+// pre-fills the box so the expected shape is visible. An untouched seed line
+// ("Signed by:", a bare "Role:") never bakes into the signature — the compose
+// helpers drop unanswered prompts.
+const NAME_LINE_SEED = 'Signed by: '
+const DETAILS_SEED = 'Role: \nEmail: \nPhone: '
 
 // Double-tap options editor for a placed signature. Edits name / add-name /
 // add-date, plus the realistic-ink look when the signature was drawn in-app —
@@ -2799,12 +2791,26 @@ function SignatureOptionsModal({
   onRedraw?: () => void
   onClose: () => void
 }) {
-  const [name, setName] = useState(data.name ?? '')
+  // The whole "Signed by: Jane Smith" text is one editable line. Older
+  // signatures stored the wording and the name separately (namePrefix + name);
+  // they merge here on open and re-store as a single name on the next edit —
+  // the composed line is identical either way.
+  const [nameLine, setNameLine] = useState(() => {
+    const n = data.name?.trim() ?? ''
+    const p = data.namePrefix?.trim() ?? ''
+    return p && n ? `${p} ${n}` : p || n
+  })
   const [showName, setShowName] = useState(!!data.showName)
   const [showDate, setShowDate] = useState(!!data.showDate)
   const [details, setDetails] = useState(data.details ?? '')
-  const [namePrefix, setNamePrefix] = useState(data.namePrefix ?? '')
-  const [datePrefix, setDatePrefix] = useState(data.datePrefix ?? '')
+  const [showDetails, setShowDetails] = useState(
+    data.showDetails ?? !!(data.details ?? '').trim()
+  )
+  // A signature already showing an unprefixed date keeps it bare; otherwise the
+  // wording defaults so toggling the date on produces a readable line.
+  const [datePrefix, setDatePrefix] = useState(
+    data.datePrefix ?? (data.showDate ? '' : 'Signed on')
+  )
   const [realistic, setRealistic] = useState(!!data.realistic)
   // Latest base payload (ink + size/alignment) — re-read on every apply so the
   // pill's size/alignment edits aren't clobbered by a name/date change.
@@ -2819,42 +2825,51 @@ function SignatureOptionsModal({
   const canRestyle = !!strokes && strokes.length > 0
 
   // Every applier sends the whole label set, so changing one field never drops
-  // another that is only held in this draft state.
+  // another that is only held in this draft state. The full name line lives in
+  // `name` now — a legacy prefix must never ride along or it would be prepended
+  // a second time.
   const apply = (patch: Partial<SignatureData>) =>
     onApply({
       ...dataRef.current,
-      name,
+      name: nameLine.trim() || undefined,
+      namePrefix: undefined,
       showName,
+      details: details || undefined,
+      showDetails,
       showDate,
-      details,
-      showDetails: !!details.trim(),
-      namePrefix: namePrefix.trim() || undefined,
       datePrefix: datePrefix.trim() || undefined,
       ...patch
     })
 
-  const changeName = (v: string) => {
-    setName(v)
-    apply({ name: v, showName: showName || !!v })
-    if (v && !showName) setShowName(true)
+  const changeNameLine = (v: string) => {
+    setNameLine(v)
+    apply({ name: v.trim() || undefined })
   }
   const toggleName = (v: boolean) => {
     setShowName(v)
-    apply({ showName: v })
+    let line = nameLine
+    if (v && !line.trim()) {
+      line = NAME_LINE_SEED
+      setNameLine(line)
+    }
+    apply({ showName: v, name: line.trim() || undefined })
   }
   const toggleDate = (v: boolean) => {
     setShowDate(v)
     apply({ showDate: v })
   }
-  // No toggle of its own: typing details is the decision to show them, and
-  // emptying the box is the decision to take them away.
   const changeDetails = (v: string) => {
     setDetails(v)
-    apply({ details: v, showDetails: !!v.trim() })
+    apply({ details: v || undefined })
   }
-  const changeNamePrefix = (v: string) => {
-    setNamePrefix(v)
-    apply({ namePrefix: v.trim() || undefined })
+  const toggleDetails = (v: boolean) => {
+    setShowDetails(v)
+    let d = details
+    if (v && !d.trim()) {
+      d = DETAILS_SEED
+      setDetails(d)
+    }
+    apply({ showDetails: v, details: d || undefined })
   }
   const changeDatePrefix = (v: string) => {
     setDatePrefix(v)
@@ -2906,56 +2921,47 @@ function SignatureOptionsModal({
               ? 'Changes the labels and the pen style — the strokes you drew stay exactly as drawn. Use the pill on the signature to resize or align the labels.'
               : 'Changes the name and date only — your signature itself stays exactly as drawn. Use the pill on the signature to resize or align the labels.'}
           </p>
+          <ModalToggle checked={showName} onChange={toggleName} label="Add name" />
           <input
-            value={name}
-            onChange={(e) => changeName(e.target.value)}
-            placeholder="Name"
-            className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+            value={nameLine}
+            onChange={(e) => changeNameLine(e.target.value)}
+            placeholder="Signed by: Your name"
+            aria-label="Name line under the signature"
+            disabled={!showName}
+            className={`w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 ${showName ? '' : 'opacity-50'}`}
+          />
+          <ModalToggle
+            checked={showDetails}
+            onChange={toggleDetails}
+            label="More details (e.g. role, email, phone)"
           />
           <textarea
             value={details}
             onChange={(e) => changeDetails(e.target.value)}
-            rows={2}
-            placeholder="Add your role, email address, etc. (optional)"
+            rows={3}
+            placeholder={DETAILS_SEED}
             aria-label="Details to show under the signature"
-            className="w-full px-3 py-2 border border-slate-300 rounded text-sm resize-y focus:outline-none focus:ring-2 focus:ring-orange-500"
+            disabled={!showDetails}
+            className={`w-full px-3 py-2 border border-slate-300 rounded text-sm resize-y focus:outline-none focus:ring-2 focus:ring-orange-500 ${showDetails ? '' : 'opacity-50'}`}
           />
-          <label className="flex items-center justify-between gap-2 text-sm text-slate-700 select-none cursor-pointer">
-            <span>Add name</span>
+          <ModalToggle checked={showDate} onChange={toggleDate} label="Add date (today)" />
+          {/* The wording is editable; today's date sits beside it so the line
+              reads exactly as it will bake — the date itself is always the day
+              of signing, never typed. */}
+          <div
+            className={`flex items-center gap-1.5 w-full px-3 py-2 border border-slate-300 rounded text-sm bg-white focus-within:ring-2 focus-within:ring-orange-500 ${showDate ? '' : 'opacity-50 pointer-events-none'}`}
+          >
             <input
-              type="checkbox"
-              checked={showName}
-              onChange={(e) => toggleName(e.target.checked)}
-              className="peer sr-only"
+              value={datePrefix}
+              onChange={(e) => changeDatePrefix(e.target.value)}
+              placeholder="Signed on"
+              aria-label="Wording before the date"
+              disabled={!showDate}
+              size={Math.max(datePrefix.length, 9)}
+              className="min-w-0 bg-transparent focus:outline-none"
             />
-            <span className="relative w-9 h-5 rounded-full bg-slate-300 transition-colors peer-checked:bg-orange-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:shadow after:transition-transform peer-checked:after:translate-x-4" />
-          </label>
-          <ModalPrefixField
-            value={namePrefix}
-            onChange={changeNamePrefix}
-            enabled={showName}
-            placeholder="Wording before the name (optional)"
-            suggestion="Signed by:"
-            label="Wording before the name"
-          />
-          <label className="flex items-center justify-between gap-2 text-sm text-slate-700 select-none cursor-pointer">
-            <span>Add date (today)</span>
-            <input
-              type="checkbox"
-              checked={showDate}
-              onChange={(e) => toggleDate(e.target.checked)}
-              className="peer sr-only"
-            />
-            <span className="relative w-9 h-5 rounded-full bg-slate-300 transition-colors peer-checked:bg-orange-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:shadow after:transition-transform peer-checked:after:translate-x-4" />
-          </label>
-          <ModalPrefixField
-            value={datePrefix}
-            onChange={changeDatePrefix}
-            enabled={showDate}
-            placeholder="Wording before the date (optional)"
-            suggestion="Signed on"
-            label="Wording before the date"
-          />
+            <span className="shrink-0 text-slate-500">{formatSigningDate()}</span>
+          </div>
           {canRestyle && (
             <label className="flex items-center justify-between gap-2 text-sm text-slate-700 select-none cursor-pointer border-t border-slate-100 pt-3">
               <span>

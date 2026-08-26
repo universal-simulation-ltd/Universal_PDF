@@ -135,20 +135,26 @@ export type SigAlign = 'left' | 'center' | 'right'
 // re-composes the rendered image from the untouched ink — the strokes are never
 // altered, only the labels beneath them.
 export type SignatureLabelOptions = {
+  // The whole name line as the user wrote it — "Signed by: Jane Smith". The
+  // options modal edits it as one string; the pad still stores the bare name
+  // with any wording in `namePrefix`. Composition merges the two, so both
+  // shapes render identically.
   name?: string
   showName?: boolean
   // Free text under the name — a role, an email address, a company. Multi-line
   // by design: every line typed becomes its own label line, which is why this
-  // is a single string rather than an array. Unlike the name it has no toggle:
-  // it is only ever shown because someone typed it.
+  // is a single string rather than an array. Unfilled template prompts
+  // ("Role:" with nothing after) are dropped at compose time.
   details?: string
   showDetails?: boolean
   showDate?: boolean
   // Optional wording in front of the name and date lines — "Signed by:",
-  // "Signed on". Deliberately two plain strings rather than a template with
+  // "Signed on". Deliberately plain strings rather than a template with
   // {name}/{date} tokens: a mistyped token would bake literal braces into a
   // signed document, and this dialog is used by people who should not have to
-  // learn a syntax to put two words in front of their own name.
+  // learn a syntax to put two words in front of their own name. The options
+  // modal folds `namePrefix` into `name` on edit; `datePrefix` stays separate
+  // because the date itself is always resolved at signing time.
   namePrefix?: string
   datePrefix?: string
   align?: SigAlign

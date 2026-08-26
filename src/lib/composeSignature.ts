@@ -19,6 +19,10 @@ const RS = 2
 // reaches 50-250%, this is only where a new signature begins.
 export const DEFAULT_LABEL_SCALE = 0.7
 
+// New signatures left-align their labels under the ink. A signature block reads
+// like an address block, not a caption — the pill still cycles all three.
+export const DEFAULT_SIG_ALIGN: SigAlign = 'left'
+
 export function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const im = new Image()
@@ -33,14 +37,20 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
 // the ink would shrink to nothing to fit.
 const MAX_DETAIL_LINES = 6
 
-// The detail lines a details string implies: blank lines dropped, so a trailing
-// newline never adds a gap that looks like a rendering fault.
+// The details box opens pre-filled with these label lines; one left with
+// nothing typed after it is an unanswered prompt, not content, so it never
+// bakes into the signature.
+const UNFILLED_TEMPLATE_LINE = /^(role|email|phone):$/i
+
+// The detail lines a details string implies: blank lines and unfilled template
+// labels dropped, so a trailing newline or an untouched "Phone:" never adds a
+// line that looks like a rendering fault.
 export function detailLines(details: string | undefined): string[] {
   if (!details) return []
   return details
     .split(/\r?\n/)
     .map((line) => line.trim())
-    .filter(Boolean)
+    .filter((line) => line && !UNFILLED_TEMPLATE_LINE.test(line))
     .slice(0, MAX_DETAIL_LINES)
 }
 
@@ -58,7 +68,12 @@ function withPrefix(prefix: string | undefined, value: string): string {
 export function labelsForOptions(opts: SignatureLabelOptions): { text: string; scale: number }[] {
   const out: { text: string; scale: number }[] = []
   const name = opts.name?.trim()
-  if (opts.showName && name) out.push({ text: withPrefix(opts.namePrefix, name), scale: 1 })
+  if (opts.showName && name) {
+    const line = withPrefix(opts.namePrefix, name)
+    // The name box opens pre-filled with "Signed by: " — untouched, that line is
+    // an unanswered prompt (same rule as the details template) and stays off.
+    if (!/^signed by:?$/i.test(line)) out.push({ text: line, scale: 1 })
+  }
   if (opts.showDetails) {
     for (const line of detailLines(opts.details)) out.push({ text: line, scale: 0.7 })
   }
@@ -126,7 +141,7 @@ export async function composeSignatureWithLabels(
   sigH: number,
   labels: { text: string; scale: number }[],
   color: string,
-  align: SigAlign = 'center',
+  align: SigAlign = DEFAULT_SIG_ALIGN,
   labelScale = DEFAULT_LABEL_SCALE
 ): Promise<{ dataUrl: string; width: number; height: number }> {
   const img = await loadImage(sigDataUrl)
@@ -169,7 +184,7 @@ export async function composeSignature(
     data.inkHeight,
     labels,
     data.color ?? '#0f172a',
-    data.align ?? 'center',
+    data.align ?? DEFAULT_SIG_ALIGN,
     data.labelScale ?? DEFAULT_LABEL_SCALE
   )
 }

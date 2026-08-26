@@ -9,7 +9,8 @@ import {
   composeSignatureWithLabels,
   detailLines,
   labelsForOptions,
-  DEFAULT_LABEL_SCALE
+  DEFAULT_LABEL_SCALE,
+  DEFAULT_SIG_ALIGN
 } from '../../lib/composeSignature'
 import type { SignatureData } from '../../types/annotations'
 import { importImageAsSignature } from '../../lib/imageSignature'
@@ -335,7 +336,7 @@ export default function SignaturePad() {
       showDate: wantDate,
       namePrefix: namePrefix.trim() || undefined,
       datePrefix: datePrefix.trim() || undefined,
-      align: 'center',
+      align: DEFAULT_SIG_ALIGN,
       labelScale: DEFAULT_LABEL_SCALE,
       color: inkColor,
       strokes: strokes && strokes.length > 0 ? strokes : undefined,
@@ -412,7 +413,7 @@ export default function SignaturePad() {
       showDate: wantDate && !separatePlacement,
       namePrefix: namePrefix.trim() || undefined,
       datePrefix: datePrefix.trim() || undefined,
-      align: 'center',
+      align: DEFAULT_SIG_ALIGN,
       labelScale: DEFAULT_LABEL_SCALE,
       color: inkColor,
       // Keep the pen path so realism stays a toggle after placement, not a
