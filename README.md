@@ -16,7 +16,7 @@ A clean Progressive Web App for viewing, annotating, and signing PDFs — works 
 - **Make searchable (OCR)** — turn a scanned / image-only PDF into a searchable, selectable one *entirely on your device* (no upload). Find, copy and redact-by-search then work. The OCR engine downloads once on first use, then works offline
 - **Annotate** with free draw, text, rectangles, ticks, and crosses, in any of six colours
 - **Sign** by drawing on a pad; signatures are auto-cropped, saved to your device, and re-usable across PDFs
-- **Sign on your phone** — the pad can show a UNI·SIM QR + PIN; scan it, draw on your phone, enter the PIN, and the signature lands on the desktop ready to place (works from the desktop app too)
+- **Send to sign** — the pad can show a UNI·SIM QR + PIN; scan it, draw on your phone, enter the PIN, and the signature lands on the desktop ready to place (works from the desktop app too)
 - **Edit** placed annotations — drag to move, resize handles on shapes and signatures, double-click text to retype, change colour and size of selected text on the fly
 - **Add a QR code** — the QR button in the toolbar generates one from any link or text, in six styles (square, rounded, dots, circle, star…), and drops it on the page like any image. Placed codes keep an ✏️ button: click it (or double-tap the code) to bring the generator back up on that code and change the link, the style or the branding in place. Codes you've saved in [Universal QR](https://opensource.unisim.co.uk/qr) show up in the dialog ready to place, with nothing to sign into
 - **Export** the annotated PDF; all annotations and signatures are baked into the saved file

@@ -104,7 +104,7 @@ export default function SignMobilePage({ token }: { token: string }) {
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-md flex-col gap-4 bg-slate-900 p-5 text-white">
       <div>
-        <h1 className="text-lg font-semibold">Sign on your phone</h1>
+        <h1 className="text-lg font-semibold">Send to sign</h1>
         <p className="mt-1 text-sm text-slate-400">Draw your signature, enter the PIN shown in Universal PDF, then send.</p>
       </div>
 

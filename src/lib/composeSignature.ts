@@ -23,6 +23,25 @@ export const DEFAULT_LABEL_SCALE = 0.7
 // like an address block, not a caption — the pill still cycles all three.
 export const DEFAULT_SIG_ALIGN: SigAlign = 'left'
 
+// Seed text for the switch-gated inputs, shared by the pad's advanced options
+// and the double-tap modal: turning a switch on with nothing typed pre-fills
+// the box so the expected shape is visible. An untouched seed never bakes —
+// see the unanswered-prompt filters below.
+export const NAME_LINE_SEED = 'Signed by: '
+export const DETAILS_SEED = 'Role: \nEmail: \nPhone: '
+// The date line starts as "Signed on <today>" and is thereafter the user's own
+// text, editable in full — the date included.
+export function dateLineSeed(): string {
+  return `Signed on ${formatSigningDate()}`
+}
+
+// True when a name line is still the untouched "Signed by: " seed — an
+// unanswered prompt, not a name. Used both when composing and when deciding
+// whether there is a name to place separately.
+export function isUnansweredNameLine(line: string): boolean {
+  return /^signed by:?$/i.test(line.trim())
+}
+
 export function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const im = new Image()
@@ -72,13 +91,18 @@ export function labelsForOptions(opts: SignatureLabelOptions): { text: string; s
     const line = withPrefix(opts.namePrefix, name)
     // The name box opens pre-filled with "Signed by: " — untouched, that line is
     // an unanswered prompt (same rule as the details template) and stays off.
-    if (!/^signed by:?$/i.test(line)) out.push({ text: line, scale: 1 })
+    if (!isUnansweredNameLine(line)) out.push({ text: line, scale: 1 })
   }
   if (opts.showDetails) {
     for (const line of detailLines(opts.details)) out.push({ text: line, scale: 0.7 })
   }
   if (opts.showDate) {
-    out.push({ text: withPrefix(opts.datePrefix, formatSigningDate()), scale: 0.8 })
+    // `dateText` is the whole line as the user wrote it (date included). Older
+    // signatures stored only the wording and resolve the date on each compose.
+    out.push({
+      text: withPrefix(opts.datePrefix, opts.dateText?.trim() || formatSigningDate()),
+      scale: 0.8
+    })
   }
   return out
 }

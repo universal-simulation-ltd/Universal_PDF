@@ -152,11 +152,17 @@ export type SignatureLabelOptions = {
   // "Signed on". Deliberately plain strings rather than a template with
   // {name}/{date} tokens: a mistyped token would bake literal braces into a
   // signed document, and this dialog is used by people who should not have to
-  // learn a syntax to put two words in front of their own name. The options
-  // modal folds `namePrefix` into `name` on edit; `datePrefix` stays separate
-  // because the date itself is always resolved at signing time.
+  // learn a syntax to put two words in front of their own name. Both dialogs
+  // now edit whole lines and fold the prefixes away (namePrefix into `name`,
+  // datePrefix into `dateText`); the fields remain so older signatures still
+  // compose unchanged.
   namePrefix?: string
   datePrefix?: string
+  // The whole date line as the user wrote it — "Signed on 26 Aug 2026". Seeded
+  // with today's date when the toggle goes on, then editable in full, the date
+  // included. Absent on older signatures, where the date resolves to the day of
+  // compositing instead.
+  dateText?: string
   align?: SigAlign
   // Multiplier on the base label font size (driven by the size pill).
   labelScale?: number

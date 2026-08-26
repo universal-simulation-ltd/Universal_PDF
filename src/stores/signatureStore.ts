@@ -7,6 +7,9 @@ import type { SignatureData } from '../types/annotations'
 export interface SignatureExtras {
   name?: string
   date?: boolean
+  // The date line as the user wrote it in the pad. When absent the date
+  // resolves to the day of placement.
+  dateText?: string
   // Colour for separately-placed name/date text, so it matches the signature.
   color?: string
 }

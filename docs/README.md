@@ -195,7 +195,7 @@ Signing on a phone deliberately still counts: that is drawn ink too, just on a
 better input device.
 
 Note that the only way to fill a `sigfield` is `startSigningField()` → the
-signature pad, which offers **Draw** and **Sign on phone** and no image upload.
+signature pad, which offers **Draw** and **Send to sign** and no image upload.
 So the "no uploads" rule is currently satisfied by the pad's own shape; there is
 no import path into a box to disable. If an upload route is ever added to the
 pad, it must check `requireLive`.
