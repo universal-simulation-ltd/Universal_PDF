@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useOrg, useOrgBranding } from '@unisim/sdk'
+import { useOrg, useOrgBranding, useUniversal, useUser } from '@unisim/sdk'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import {
@@ -16,12 +16,7 @@ import {
 import { imageUrlToDataUrl, PLACEMENT_SIZE, renderQrPng } from '../../lib/qr/render'
 import QrBrandingPanel from './QrBrandingPanel'
 import { copyQrPngToClipboard, downloadQrPng } from '../../lib/qr/download'
-import {
-  loadSavedQrDesigns,
-  readQrBackupFile,
-  UNIVERSAL_QR_URL,
-  type SavedQrDesign
-} from '../../lib/qr/library'
+import { loadSavedQrDesigns, UNIVERSAL_QR_URL, type SavedQrDesign } from '../../lib/qr/library'
 import QrEnlargeModal from './QrEnlargeModal'
 import type { Annotation } from '../../types/annotations'
 
@@ -142,7 +137,12 @@ export default function QrDialog() {
   const [enlarged, setEnlarged] = useState(false)
   const [downloading, setDownloading] = useState(false)
   const [copied, setCopied] = useState<'idle' | 'ok' | 'fail'>('idle')
-  const backupInputRef = useRef<HTMLInputElement>(null)
+  // Whether a real account is signed in (a guest/anonymous session doesn't
+  // count). Gates the saved-codes shelf: for everyone else that section was a
+  // paragraph explaining storage they don't have, which is noise.
+  const { user } = useUser()
+  const { session } = useUniversal()
+  const signedIn = !!user && session?.user?.is_anonymous !== true
 
   // The signed-in company's branding, ready to drop onto a code. Guests and
   // orgs that never set one get nulls, and the panel says so.
@@ -279,7 +279,7 @@ export default function QrDialog() {
     setPresetName(preset.name)
   }
 
-  /** Take a design in from elsewhere — a saved code or a backup file.
+  /** Take a design in from elsewhere — a code saved next door in Universal QR.
    *
    *  Restored whole, so what lands on the page is the code the user designed
    *  next door rather than an approximation of it. Its logo comes in through
@@ -296,18 +296,6 @@ export default function QrDialog() {
       setBrandTouched(true)
       setBrandLogo(incoming.logoDataUrl)
       setBrandColor(incoming.matchCornerColor ? null : incoming.cornerColor)
-    }
-  }
-
-  async function onBackupFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
-    try {
-      const { design: imported } = await readQrBackupFile(file)
-      adoptDesign(imported)
-    } catch (err) {
-      setError((err as Error).message)
     }
   }
 
@@ -546,6 +534,17 @@ export default function QrDialog() {
               </div>
             </div>
 
+            {/* The full studio next door, for anything this simplified dialog
+                can't do. Centred on its own line, just above the branding. */}
+            <a
+              href={UNIVERSAL_QR_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="self-center text-xs text-orange-700 hover:text-orange-800 underline-offset-2 hover:underline"
+            >
+              Design one in Universal QR ↗
+            </a>
+
             <QrBrandingPanel
               on={branded}
               onToggle={setBranded}
@@ -578,23 +577,16 @@ export default function QrDialog() {
           </div>
         </div>
 
-        {/* Your Universal QR codes — read straight out of this browser. */}
-        <div className="px-6 pb-5 border-t border-slate-100 pt-4">
-          <div className="flex items-center justify-between gap-3 mb-2">
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+        {/* Your Universal QR codes — read straight out of this browser. Only
+            for a signed-in user who actually has saved codes; for everyone
+            else the "Design one" link above the branding panel is the whole
+            story. (The backup-file import is gone with it — a code from
+            elsewhere can simply be added as an image.) */}
+        {signedIn && saved.length > 0 && (
+          <div className="px-6 pb-5 border-t border-slate-100 pt-4">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
               Your Universal QR codes
             </div>
-            <a
-              href={UNIVERSAL_QR_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs text-orange-700 hover:text-orange-800 underline-offset-2 hover:underline"
-            >
-              Design one in Universal QR ↗
-            </a>
-          </div>
-
-          {saved.length > 0 ? (
             <div className="flex gap-3 overflow-x-auto pb-1">
               {saved.map((entry) => (
                 <button
@@ -615,29 +607,8 @@ export default function QrDialog() {
                 </button>
               ))}
             </div>
-          ) : (
-            <p className="text-xs text-slate-500">
-              Codes you save in Universal QR on this browser show up here — the two apps share
-              storage on <span className="text-slate-600">opensource.unisim.co.uk</span>. Elsewhere,
-              import the <code className="text-slate-600">.uniqr.json</code> backup it saves.
-            </p>
-          )}
-
-          <button
-            type="button"
-            onClick={() => backupInputRef.current?.click()}
-            className="mt-2 text-xs text-slate-500 hover:text-slate-800 underline-offset-2 hover:underline"
-          >
-            Import a Universal QR backup…
-          </button>
-          <input
-            ref={backupInputRef}
-            type="file"
-            accept=".json,application/json"
-            hidden
-            onChange={onBackupFile}
-          />
-        </div>
+          </div>
+        )}
 
         <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between gap-3">
           <span className="text-xs text-slate-400">

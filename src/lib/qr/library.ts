@@ -22,9 +22,6 @@ import { DEFAULT_DESIGN, type QrDesign } from './design'
  *  in step with that app's `localDesigns.ts` if it ever versions up. */
 const DESIGNS_KEY = 'unisim.qr.designs.v1'
 
-/** Magic string in a Universal QR backup file (its `qrBackup.ts`). */
-const BACKUP_MAGIC = 'universal-qr-backup'
-
 export const UNIVERSAL_QR_URL = 'https://opensource.unisim.co.uk/qr'
 
 export interface SavedQrDesign {
@@ -69,20 +66,3 @@ export function loadSavedQrDesigns(): SavedQrDesign[] {
   }
 }
 
-/** Read a Universal QR `.uniqr.json` backup back into a design. Throws a
- *  user-facing message if the file isn't one. */
-export async function readQrBackupFile(file: File): Promise<{ name: string; design: QrDesign }> {
-  let json: unknown
-  try {
-    json = JSON.parse(await file.text())
-  } catch {
-    throw new Error("That file isn't a Universal QR backup (it isn't valid JSON).")
-  }
-  const payload = json as { app?: unknown; config?: unknown }
-  if (payload?.app !== BACKUP_MAGIC || !payload.config || typeof payload.config !== 'object') {
-    throw new Error("That file isn't a Universal QR backup.")
-  }
-  const design = hydrate(payload.config)
-  if (!design.data) throw new Error('That backup has no code in it.')
-  return { name: design.name.trim() || file.name.replace(/\.(uniqr\.)?json$/i, ''), design }
-}
