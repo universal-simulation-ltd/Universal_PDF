@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useOrg, useOrgBranding, useUniversal, useUser } from '@unisim/sdk'
+import { useHostedUploads, useOrg, useOrgBranding, useUniversal, useUser } from '@unisim/sdk'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import {
@@ -16,7 +16,13 @@ import {
 import { imageUrlToDataUrl, PLACEMENT_SIZE, renderQrPng } from '../../lib/qr/render'
 import QrBrandingPanel from './QrBrandingPanel'
 import { copyQrPngToClipboard, downloadQrPng } from '../../lib/qr/download'
-import { loadSavedQrDesigns, UNIVERSAL_QR_URL, type SavedQrDesign } from '../../lib/qr/library'
+import {
+  loadHostedQrDesigns,
+  loadSavedQrDesigns,
+  UNIVERSAL_QR_URL,
+  type HostedQrDesign,
+  type SavedQrDesign
+} from '../../lib/qr/library'
 import QrEnlargeModal from './QrEnlargeModal'
 import type { Annotation } from '../../types/annotations'
 
@@ -141,8 +147,14 @@ export default function QrDialog() {
   // count). Gates the saved-codes shelf: for everyone else that section was a
   // paragraph explaining storage they don't have, which is noise.
   const { user } = useUser()
-  const { session } = useUniversal()
+  const { session, supabase } = useUniversal()
   const signedIn = !!user && session?.user?.is_anonymous !== true
+
+  // The codes saved to the ACCOUNT in Universal QR (hosted uploads, product
+  // 'qr') — unlike the localStorage shelf these follow the user to any device
+  // they sign in on. Resolved lazily while the dialog is open.
+  const { uploads: qrUploads } = useHostedUploads('qr')
+  const [hosted, setHosted] = useState<HostedQrDesign[]>([])
 
   // The signed-in company's branding, ready to drop onto a code. Guests and
   // orgs that never set one get nulls, and the panel says so.
@@ -196,6 +208,22 @@ export default function QrDialog() {
     setCopied('idle')
     setSaved(loadSavedQrDesigns())
   }, [open, qrEdit])
+
+  // Resolve the account saves (sidecar design or stored PNG per upload) while
+  // the dialog is up. `cancelled` guards the async gap across a close/reopen.
+  useEffect(() => {
+    if (!open || !signedIn || qrUploads.length === 0) {
+      setHosted([])
+      return
+    }
+    let cancelled = false
+    loadHostedQrDesigns(supabase, qrUploads).then((entries) => {
+      if (!cancelled) setHosted(entries)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [open, signedIn, supabase, qrUploads])
 
   // Until the user edits the branding themselves it simply TRACKS the company's
   // — which also covers the mark arriving a moment after the dialog opened,
@@ -307,6 +335,20 @@ export default function QrDialog() {
       base,
       branding: branded ? { logo: brandLogo, color: brandColor } : null,
       presetName
+    }
+  }
+
+  /** Bring in a code saved to the account. With its design sidecar it adopts
+   *  like a local save; a PNG-only legacy save has nothing to edit, so it goes
+   *  straight to the page as a plain image instead (these entries are hidden
+   *  in edit mode — a flat image can't replace an editable placed code). */
+  function applyHostedEntry(entry: HostedQrDesign) {
+    if (entry.design) {
+      adoptDesign(entry.design)
+    } else if (entry.png) {
+      setUploadedImageSrc(entry.png)
+      setTool('image')
+      setOpen(false)
     }
   }
 
@@ -577,38 +619,80 @@ export default function QrDialog() {
           </div>
         </div>
 
-        {/* Your Universal QR codes — read straight out of this browser. Only
-            for a signed-in user who actually has saved codes; for everyone
-            else the "Design one" link above the branding panel is the whole
-            story. (The backup-file import is gone with it — a code from
-            elsewhere can simply be added as an image.) */}
-        {signedIn && saved.length > 0 && (
-          <div className="px-6 pb-5 border-t border-slate-100 pt-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
-              Your Universal QR codes
+        {/* Your Universal QR codes — this browser's saves plus the ones backed
+            up to the signed-in account next door in Universal QR. Only for a
+            signed-in user who actually has codes; for everyone else the
+            "Design one" link above the branding panel is the whole story.
+            Account chips carry a small cloud mark; an account save whose
+            design matches a local one is shown once (the local copy wins —
+            it needed no download). */}
+        {signedIn && (saved.length > 0 || hosted.length > 0) && (() => {
+          const accountEntries = hosted
+            .filter((e) => !qrEdit || e.design) // flat PNGs can't update a placed code
+            .filter(
+              (e) =>
+                !e.design ||
+                !saved.some((s) => s.design.data === e.design!.data && (s.name || '') === (e.name || ''))
+            )
+          if (saved.length === 0 && accountEntries.length === 0) return null
+          return (
+            <div className="px-6 pb-5 border-t border-slate-100 pt-4">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
+                Your Universal QR codes
+              </div>
+              <div className="flex gap-3 overflow-x-auto pb-1">
+                {saved.map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    onClick={() => adoptDesign(entry.design)}
+                    title={`${entry.name || 'Saved code'} — ${entry.design.data}`}
+                    className="shrink-0 w-20 border-2 border-slate-200 rounded-lg p-1.5 hover:border-orange-400 hover:bg-slate-50 transition-colors"
+                  >
+                    {entry.thumbnail ? (
+                      <img src={entry.thumbnail} alt="" className="w-full aspect-square object-contain" />
+                    ) : (
+                      <div className="w-full aspect-square bg-slate-100 rounded" />
+                    )}
+                    <span className="block mt-1 text-[10px] text-slate-500 truncate">
+                      {entry.name || qrDisplayName(entry.design)}
+                    </span>
+                  </button>
+                ))}
+                {accountEntries.map((entry) => (
+                  <button
+                    key={`hosted-${entry.id}`}
+                    type="button"
+                    onClick={() => applyHostedEntry(entry)}
+                    title={
+                      entry.design
+                        ? `${entry.name || 'Saved code'} — ${entry.design.data} (saved to your account)`
+                        : `${entry.name || 'Saved code'} — saved to your account (places as an image)`
+                    }
+                    className="relative shrink-0 w-20 border-2 border-slate-200 rounded-lg p-1.5 hover:border-orange-400 hover:bg-slate-50 transition-colors"
+                  >
+                    {entry.thumbnail ? (
+                      <img src={entry.thumbnail} alt="" className="w-full aspect-square object-contain" />
+                    ) : (
+                      <div className="w-full aspect-square bg-slate-100 rounded" />
+                    )}
+                    <svg
+                      viewBox="0 0 20 20"
+                      className="absolute top-1 right-1 w-3.5 h-3.5 text-slate-400"
+                      fill="currentColor"
+                      aria-label="Saved to your account"
+                    >
+                      <path d="M14.5 8.1a4.5 4.5 0 0 0-8.8-.9A3.5 3.5 0 0 0 6 14h8a3 3 0 0 0 .5-5.9z" />
+                    </svg>
+                    <span className="block mt-1 text-[10px] text-slate-500 truncate">
+                      {entry.name || (entry.design ? qrDisplayName(entry.design) : 'Saved code')}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="flex gap-3 overflow-x-auto pb-1">
-              {saved.map((entry) => (
-                <button
-                  key={entry.id}
-                  type="button"
-                  onClick={() => adoptDesign(entry.design)}
-                  title={`${entry.name || 'Saved code'} — ${entry.design.data}`}
-                  className="shrink-0 w-20 border-2 border-slate-200 rounded-lg p-1.5 hover:border-orange-400 hover:bg-slate-50 transition-colors"
-                >
-                  {entry.thumbnail ? (
-                    <img src={entry.thumbnail} alt="" className="w-full aspect-square object-contain" />
-                  ) : (
-                    <div className="w-full aspect-square bg-slate-100 rounded" />
-                  )}
-                  <span className="block mt-1 text-[10px] text-slate-500 truncate">
-                    {entry.name || qrDisplayName(entry.design)}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+          )
+        })()}
 
         <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between gap-3">
           <span className="text-xs text-slate-400">

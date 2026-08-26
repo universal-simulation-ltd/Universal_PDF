@@ -16,7 +16,9 @@
 // different origins with their own (empty) localStorage — so the dialog also
 // takes Universal QR's `.uniqr.json` backup file, which works anywhere.
 
+import { HOSTED_BUCKET, useUniversal, type HostedUpload } from '@unisim/sdk'
 import { DEFAULT_DESIGN, type QrDesign } from './design'
+import { renderQrPng } from './render'
 
 /** Universal QR's saved-designs key. Matching it is the whole trick — keep it
  *  in step with that app's `localDesigns.ts` if it ever versions up. */
@@ -64,5 +66,84 @@ export function loadSavedQrDesigns(): SavedQrDesign[] {
   } catch {
     return []
   }
+}
+
+// ── Account saves ────────────────────────────────────────────────────────────
+// Universal QR can also save a code to a signed-in Universal ID (its "Back up
+// this QR code" dialog — hosted_uploads, product 'qr'). Each save is a PNG in
+// the hosted bucket, and saves made since 2026-08-26 carry the full design as
+// a `<png-path>.json` sidecar. With the sidecar the code comes in editable,
+// exactly like a local save; without it (older saves) all we have is the
+// rendered PNG, which can still be placed as a plain image.
+
+type Supabase = ReturnType<typeof useUniversal>['supabase']
+
+export interface HostedQrDesign {
+  id: string
+  name: string
+  /** The full design when the save carries its sidecar; null for a PNG-only
+   *  legacy save, which places as a flat image instead. */
+  design: QrDesign | null
+  /** PNG data URL for a design-less save — the image that gets placed. */
+  png: string | null
+  /** Small data URL for the shelf chip (rendered locally when the design is
+   *  known, the stored PNG itself otherwise). */
+  thumbnail: string
+  createdAt: string
+}
+
+const THUMB_SIZE = 160
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader()
+    r.onload = () => resolve(r.result as string)
+    r.onerror = () => reject(r.error ?? new Error('read failed'))
+    r.readAsDataURL(blob)
+  })
+}
+
+/** Resolve the account's saved QR codes into shelf entries. Each upload is
+ *  fetched independently and a failing one is simply dropped — a stale ledger
+ *  row or a missing object must not empty the whole shelf. */
+export async function loadHostedQrDesigns(
+  supabase: Supabase,
+  uploads: HostedUpload[],
+): Promise<HostedQrDesign[]> {
+  const entries = await Promise.all(
+    uploads.map(async (u): Promise<HostedQrDesign | null> => {
+      try {
+        const sidecar = await supabase.storage.from(HOSTED_BUCKET).download(`${u.storage_path}.json`)
+        if (!sidecar.error && sidecar.data) {
+          const design = { ...DEFAULT_DESIGN, ...(JSON.parse(await sidecar.data.text()) as Partial<QrDesign>) }
+          if (design.data) {
+            return {
+              id: u.id,
+              name: design.name || u.file_name || '',
+              design,
+              png: null,
+              thumbnail: await renderQrPng(design, THUMB_SIZE),
+              createdAt: u.created_at,
+            }
+          }
+        }
+        // No (usable) sidecar — fall back to the stored PNG itself.
+        const pngRes = await supabase.storage.from(HOSTED_BUCKET).download(u.storage_path)
+        if (pngRes.error || !pngRes.data) return null
+        const png = await blobToDataUrl(pngRes.data)
+        return {
+          id: u.id,
+          name: (u.file_name ?? '').replace(/\.[^.]+$/, ''),
+          design: null,
+          png,
+          thumbnail: png,
+          createdAt: u.created_at,
+        }
+      } catch {
+        return null
+      }
+    }),
+  )
+  return entries.filter((e): e is HostedQrDesign => e !== null)
 }
 
