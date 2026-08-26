@@ -124,7 +124,11 @@ pill for size and alignment — without the strokes ever being redrawn.
 
 `labelsForOptions()` is the single source of the lines and their order:
 
-1. the **name**, optionally prefixed (`namePrefix`, e.g. "Signed by:")
+1. the **name** — since 2026-08-26 one editable line holding the whole text
+   (e.g. "Signed by: Jane Smith"). `namePrefix` is legacy: the re-edit dialog
+   folds it into `name` on first open, while the pad's advanced options still
+   write the split `namePrefix` + `name` shape — composition is identical
+   either way
 2. the **details** — free text, one line per line typed, at 70% of the name
 3. the **date**, optionally prefixed (`datePrefix`, e.g. "Signed on")
 
@@ -134,9 +138,14 @@ signature looks identical whether it was just drawn or restyled an hour later.
 
 Three deliberate choices:
 
-- **Details have no toggle.** Typing is the decision to show them; emptying the
-  box removes them. `showDetails` exists in the data, but the UI only ever
-  derives it from whether there is text.
+- **In the re-edit dialog, details have an explicit switch** (`showDetails`,
+  since 2026-08-26) — the dialog is three iOS-style switches (Add name / More
+  details / Add date), each gating the input directly beneath it. Toggling
+  details on empty seeds a "Role: / Email: / Phone: " template; unfilled
+  template labels (a bare "Role:") are dropped at compose time in
+  `detailLines()`, and an untouched "Signed by: " seed is likewise filtered in
+  `labelsForOptions` — seed text is a UI affordance and must never bake into a
+  signed document. In the *pad*, typing is still the decision to show them.
 - ⚠️ **Six detail lines maximum** (`MAX_DETAIL_LINES`). A pasted postal address
   would otherwise produce a composite taller than the page, and since the box is
   fitted to the page the ink would shrink to nothing to accommodate it.
@@ -147,6 +156,17 @@ Three deliberate choices:
 Labels start at `DEFAULT_LABEL_SCALE` (70%) — full size competed with the
 signature it was captioning. The pill still spans 50–250%, and a signature saved
 with an explicit scale keeps it.
+
+New signatures **left-align** their labels under the ink by default
+(`DEFAULT_SIG_ALIGN = 'left'` in `lib/composeSignature.ts`, used by the pad,
+the compose defaults, `ensureImageSigData` and the pill's fallback — change it
+in one place only). A signature with a stored alignment keeps it, and the
+on-canvas pill still cycles left/center/right.
+
+One more dialog detail worth keeping: the **date row shows today's real date
+rendered beside the editable wording** ("Signed on") inside the same field, so
+the row reads exactly as it will bake — but the date always resolves at signing
+time; only the wording is stored.
 
 ## Signature-request boxes ("Sign here")
 
