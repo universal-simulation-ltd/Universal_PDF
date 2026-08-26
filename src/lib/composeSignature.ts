@@ -14,6 +14,34 @@ const FONT = 'Helvetica, Arial, sans-serif'
 // 2× supersample so the baked text stays crisp.
 const RS = 2
 
+// Labels start at 70% of the base size. Full size is legible but heavy —
+// it competes with the signature it is captioning. The size pill still
+// reaches 50-250%, this is only where a new signature begins.
+export const DEFAULT_LABEL_SCALE = 0.7
+
+// New signatures left-align their labels under the ink. A signature block reads
+// like an address block, not a caption — the pill still cycles all three.
+export const DEFAULT_SIG_ALIGN: SigAlign = 'left'
+
+// Seed text for the switch-gated inputs, shared by the pad's advanced options
+// and the double-tap modal: turning a switch on with nothing typed pre-fills
+// the box so the expected shape is visible. An untouched seed never bakes —
+// see the unanswered-prompt filters below.
+export const NAME_LINE_SEED = 'Signed by: '
+export const DETAILS_SEED = 'Role: \nEmail: \nPhone: '
+// The date line starts as "Signed on <today>" and is thereafter the user's own
+// text, editable in full — the date included.
+export function dateLineSeed(): string {
+  return `Signed on ${formatSigningDate()}`
+}
+
+// True when a name line is still the untouched "Signed by: " seed — an
+// unanswered prompt, not a name. Used both when composing and when deciding
+// whether there is a name to place separately.
+export function isUnansweredNameLine(line: string): boolean {
+  return /^signed by:?$/i.test(line.trim())
+}
+
 export function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const im = new Image()
@@ -23,19 +51,66 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
   })
 }
 
+// A signature block is at most this many detail lines. Someone pasting a whole
+// address would otherwise get a composite taller than the page it sits on, and
+// the ink would shrink to nothing to fit.
+const MAX_DETAIL_LINES = 6
+
+// The details box opens pre-filled with these label lines; one left with
+// nothing typed after it is an unanswered prompt, not content, so it never
+// bakes into the signature.
+const UNFILLED_TEMPLATE_LINE = /^(role|email|phone):$/i
+
+// The detail lines a details string implies: blank lines and unfilled template
+// labels dropped, so a trailing newline or an untouched "Phone:" never adds a
+// line that looks like a rendering fault.
+export function detailLines(details: string | undefined): string[] {
+  if (!details) return []
+  return details
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !UNFILLED_TEMPLATE_LINE.test(line))
+    .slice(0, MAX_DETAIL_LINES)
+}
+
+// "Signed by:" + "Jane Smith" -> "Signed by: Jane Smith". One space, whatever
+// punctuation the prefix already ends with — the user's wording is not
+// second-guessed.
+function withPrefix(prefix: string | undefined, value: string): string {
+  const p = prefix?.trim()
+  return p ? `${p} ${value}` : value
+}
+
 // The concrete label lines (text + relative scale) implied by a set of options.
-function labelsFor(opts: SignatureLabelOptions): { text: string; scale: number }[] {
+// Order is the one a signature block is read in: who, then what they are, then
+// when — so the date stays last however much detail is added above it.
+export function labelsForOptions(opts: SignatureLabelOptions): { text: string; scale: number }[] {
   const out: { text: string; scale: number }[] = []
   const name = opts.name?.trim()
-  if (opts.showName && name) out.push({ text: name, scale: 1 })
-  if (opts.showDate) out.push({ text: formatSigningDate(), scale: 0.8 })
+  if (opts.showName && name) {
+    const line = withPrefix(opts.namePrefix, name)
+    // The name box opens pre-filled with "Signed by: " — untouched, that line is
+    // an unanswered prompt (same rule as the details template) and stays off.
+    if (!isUnansweredNameLine(line)) out.push({ text: line, scale: 1 })
+  }
+  if (opts.showDetails) {
+    for (const line of detailLines(opts.details)) out.push({ text: line, scale: 0.7 })
+  }
+  if (opts.showDate) {
+    // `dateText` is the whole line as the user wrote it (date included). Older
+    // signatures stored only the wording and resolve the date on each compose.
+    out.push({
+      text: withPrefix(opts.datePrefix, opts.dateText?.trim() || formatSigningDate()),
+      scale: 0.8
+    })
+  }
   return out
 }
 
 // Whether a signature currently shows any name/date labels — gates the
 // size/alignment pill (styling only applies when there's something to style).
 export function sigHasLabels(opts: SignatureLabelOptions): boolean {
-  return labelsFor(opts).length > 0
+  return labelsForOptions(opts).length > 0
 }
 
 // Shared, canvas-free sizing math so the compositor and the (synchronous)
@@ -71,9 +146,14 @@ function layout(
 // Lets callers preserve the ink's on-screen size across option edits (scale the
 // display box by the before/after composite-size ratio).
 export function measureComposite(data: SignatureData): { width: number; height: number } {
-  const labels = labelsFor(data)
+  const labels = labelsForOptions(data)
   if (labels.length === 0) return { width: data.inkWidth, height: data.inkHeight }
-  const { outW, outH } = layout(data.inkWidth, data.inkHeight, labels, data.labelScale ?? 1)
+  const { outW, outH } = layout(
+    data.inkWidth,
+    data.inkHeight,
+    labels,
+    data.labelScale ?? DEFAULT_LABEL_SCALE
+  )
   return { width: outW, height: outH }
 }
 
@@ -85,8 +165,8 @@ export async function composeSignatureWithLabels(
   sigH: number,
   labels: { text: string; scale: number }[],
   color: string,
-  align: SigAlign = 'center',
-  labelScale = 1
+  align: SigAlign = DEFAULT_SIG_ALIGN,
+  labelScale = DEFAULT_LABEL_SCALE
 ): Promise<{ dataUrl: string; width: number; height: number }> {
   const img = await loadImage(sigDataUrl)
   const { baseFont, gap, lineHeights, outW, outH } = layout(sigW, sigH, labels, labelScale)
@@ -118,7 +198,7 @@ export async function composeSignatureWithLabels(
 export async function composeSignature(
   data: SignatureData
 ): Promise<{ dataUrl: string; width: number; height: number }> {
-  const labels = labelsFor(data)
+  const labels = labelsForOptions(data)
   if (labels.length === 0) {
     return { dataUrl: data.ink, width: data.inkWidth, height: data.inkHeight }
   }
@@ -128,7 +208,7 @@ export async function composeSignature(
     data.inkHeight,
     labels,
     data.color ?? '#0f172a',
-    data.align ?? 'center',
-    data.labelScale ?? 1
+    data.align ?? DEFAULT_SIG_ALIGN,
+    data.labelScale ?? DEFAULT_LABEL_SCALE
   )
 }

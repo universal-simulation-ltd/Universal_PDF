@@ -135,9 +135,34 @@ export type SigAlign = 'left' | 'center' | 'right'
 // re-composes the rendered image from the untouched ink — the strokes are never
 // altered, only the labels beneath them.
 export type SignatureLabelOptions = {
+  // The whole name line as the user wrote it — "Signed by: Jane Smith". The
+  // options modal edits it as one string; the pad still stores the bare name
+  // with any wording in `namePrefix`. Composition merges the two, so both
+  // shapes render identically.
   name?: string
   showName?: boolean
+  // Free text under the name — a role, an email address, a company. Multi-line
+  // by design: every line typed becomes its own label line, which is why this
+  // is a single string rather than an array. Unfilled template prompts
+  // ("Role:" with nothing after) are dropped at compose time.
+  details?: string
+  showDetails?: boolean
   showDate?: boolean
+  // Optional wording in front of the name and date lines — "Signed by:",
+  // "Signed on". Deliberately plain strings rather than a template with
+  // {name}/{date} tokens: a mistyped token would bake literal braces into a
+  // signed document, and this dialog is used by people who should not have to
+  // learn a syntax to put two words in front of their own name. Both dialogs
+  // now edit whole lines and fold the prefixes away (namePrefix into `name`,
+  // datePrefix into `dateText`); the fields remain so older signatures still
+  // compose unchanged.
+  namePrefix?: string
+  datePrefix?: string
+  // The whole date line as the user wrote it — "Signed on 26 Aug 2026". Seeded
+  // with today's date when the toggle goes on, then editable in full, the date
+  // included. Absent on older signatures, where the date resolves to the day of
+  // compositing instead.
+  dateText?: string
   align?: SigAlign
   // Multiplier on the base label font size (driven by the size pill).
   labelScale?: number

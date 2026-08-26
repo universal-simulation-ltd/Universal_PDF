@@ -20,7 +20,15 @@ import { useImage } from '../../lib/useImage'
 import { layerPixelRatio, pagePixelBudget } from '../../lib/renderBudget'
 import { RedactIcon } from '../icons/RedactIcon'
 import { SIGNATURE_INK, formatSigningDate } from '../../lib/signature'
-import { composeSignature, sigHasLabels } from '../../lib/composeSignature'
+import {
+  composeSignature,
+  sigHasLabels,
+  DEFAULT_LABEL_SCALE,
+  DEFAULT_SIG_ALIGN,
+  NAME_LINE_SEED,
+  DETAILS_SEED,
+  dateLineSeed
+} from '../../lib/composeSignature'
 import { inkColorFor, renderInkSignature } from '../../lib/renderInk'
 import { FONT_CSS } from '../../lib/fonts'
 import { effectiveRuns, runFontStyle, runHasStyle, runsToPlainText, runsToHtml, parseRunsFromDom, mergeRuns } from '../../lib/textRuns'
@@ -367,8 +375,8 @@ function ensureImageSigData(a: ImageAnnotation): SignatureData {
       inkHeight: a.height,
       showName: false,
       showDate: false,
-      align: 'center',
-      labelScale: 1,
+      align: DEFAULT_SIG_ALIGN,
+      labelScale: DEFAULT_LABEL_SCALE,
       color: SIGNATURE_INK
     }
   )
@@ -674,6 +682,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // double-tap editor. The editor only ever changes labels/styling — it
   // re-composes from the untouched ink, never the strokes.
   const [sigEditId, setSigEditId] = useState<string | null>(null)
+  // Where that signature sat on screen when the editor opened — the modal
+  // positions itself beside it (captured once, so the dialog doesn't chase the
+  // signature as label edits change its size).
+  const [sigEditAnchor, setSigEditAnchor] = useState<SigEditAnchor | null>(null)
   // Coarse pointer (touch) needs bigger Transformer anchors + a longer rotate
   // arm to be grabbable with a finger — the 9px desktop anchors are fiddly on
   // mobile. The handles themselves render on every device (the Transformer is
@@ -961,7 +973,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         const inkColor = extras?.color ?? SIGNATURE_INK
         const queue: { kind: 'name' | 'date'; text: string; color: string }[] = []
         if (extras?.name) queue.push({ kind: 'name', text: extras.name, color: inkColor })
-        if (extras?.date) queue.push({ kind: 'date', text: formatSigningDate(), color: inkColor })
+        if (extras?.date) queue.push({ kind: 'date', text: extras.dateText?.trim() || formatSigningDate(), color: inkColor })
         if (queue.length > 0) {
           sigState.setPendingExtras(queue)
         } else {
@@ -1269,6 +1281,21 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     }
     if (!isEditableSignature(ann)) return
     setSelected(id)
+    // Capture the signature's viewport rect so the modal can sit beside it.
+    let anchor: SigEditAnchor | null = null
+    const node = shapeRefs.current.get(id)
+    const stage = node?.getStage()
+    if (node && stage) {
+      const c = stage.container().getBoundingClientRect()
+      const b = node.getClientRect()
+      anchor = {
+        left: c.left + b.x,
+        top: c.top + b.y,
+        right: c.left + b.x + b.width,
+        bottom: c.top + b.y + b.height
+      }
+    }
+    setSigEditAnchor(anchor)
     setSigEditId(id)
   }
 
@@ -2658,8 +2685,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         if (by + bh + GAP + CHIP_H <= height) top = by + bh + GAP
         else if (by - CHIP_H - GAP >= 0) top = by - CHIP_H - GAP
         else top = Math.min(Math.max(by + bh + GAP, GAP), Math.max(GAP, height - CHIP_H - GAP))
-        const labelScale = data.labelScale ?? 1
-        const align: SigAlign = data.align ?? 'center'
+        const labelScale = data.labelScale ?? DEFAULT_LABEL_SCALE
+        const align: SigAlign = data.align ?? DEFAULT_SIG_ALIGN
         const setScale = (v: number) =>
           applySigData(selected.id, { ...data, labelScale: Math.min(2.5, Math.max(0.5, Math.round(v * 100) / 100)) })
         const cycleAlign = () => {
@@ -2730,6 +2757,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         return (
           <SignatureOptionsModal
             data={data}
+            anchor={sigEditAnchor}
             onApply={(next) => { void applySigData(sigEditId, next) }}
             onRedraw={
               target.type === 'sigfield'
@@ -2744,25 +2772,107 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   )
 }
 
+// iOS-style switch row used by the options modal: label on the left, switch on
+// the right. Each switch gates the input directly beneath it.
+function ModalToggle({
+  checked,
+  onChange,
+  label
+}: {
+  checked: boolean
+  onChange: (v: boolean) => void
+  label: string
+}) {
+  return (
+    <label className="flex items-center justify-between gap-2 text-sm text-slate-700 select-none cursor-pointer">
+      <span>{label}</span>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="peer sr-only"
+      />
+      <span className="relative shrink-0 w-9 h-5 rounded-full bg-slate-300 transition-colors peer-checked:bg-orange-500 peer-focus-visible:ring-2 peer-focus-visible:ring-orange-400 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:shadow after:transition-transform peer-checked:after:translate-x-4" />
+    </label>
+  )
+}
+
+// The signature's on-screen rectangle at the moment its options modal opened,
+// in viewport pixels — the modal parks itself beside it so every edit is
+// visible on the page in real time while typing.
+type SigEditAnchor = { left: number; top: number; right: number; bottom: number }
+
 // Double-tap options editor for a placed signature. Edits name / add-name /
 // add-date, plus the realistic-ink look when the signature was drawn in-app —
 // size + alignment live on the on-canvas pill. Holds its own draft state so
 // typing stays smooth while each change re-composes the image from the ink.
 function SignatureOptionsModal({
   data,
+  anchor,
   onApply,
   onRedraw,
   onClose
 }: {
   data: SignatureData
+  anchor: SigEditAnchor | null
   onApply: (next: SignatureData) => void
   onRedraw?: () => void
   onClose: () => void
 }) {
-  const [name, setName] = useState(data.name ?? '')
+  // The whole "Signed by: Jane Smith" text is one editable line. Older
+  // signatures stored the wording and the name separately (namePrefix + name);
+  // they merge here on open and re-store as a single name on the next edit —
+  // the composed line is identical either way.
+  const [nameLine, setNameLine] = useState(() => {
+    const n = data.name?.trim() ?? ''
+    const p = data.namePrefix?.trim() ?? ''
+    return p && n ? `${p} ${n}` : p || n
+  })
   const [showName, setShowName] = useState(!!data.showName)
   const [showDate, setShowDate] = useState(!!data.showDate)
+  const [details, setDetails] = useState(data.details ?? '')
+  const [showDetails, setShowDetails] = useState(
+    data.showDetails ?? !!(data.details ?? '').trim()
+  )
+  // The whole date line is one editable string too — seeded "Signed on
+  // <today>" and thereafter exactly what the user typed, the date included.
+  // Older signatures stored only the wording (datePrefix); the date part seeds
+  // as today and the merged line re-stores as dateText on the next edit.
+  const [dateLine, setDateLine] = useState(() => {
+    const t = data.dateText?.trim()
+    if (t) return t
+    const p = data.datePrefix?.trim() ?? (data.showDate ? '' : 'Signed on')
+    const d = formatSigningDate()
+    return p ? `${p} ${d}` : d
+  })
   const [realistic, setRealistic] = useState(!!data.realistic)
+  // Park the card beside the signature so edits are visible in real time —
+  // right of it when there's room, else left, else the centred fallback.
+  const cardRef = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
+  useLayoutEffect(() => {
+    const place = () => {
+      const el = cardRef.current
+      if (!el || !anchor) {
+        setPos(null)
+        return
+      }
+      const gap = 16
+      const w = el.offsetWidth
+      const h = el.offsetHeight
+      let left = anchor.right + gap
+      if (left + w > window.innerWidth - 8) left = anchor.left - w - gap
+      if (left < 8) {
+        setPos(null)
+        return
+      }
+      const top = Math.min(Math.max(anchor.top, 8), Math.max(8, window.innerHeight - h - 8))
+      setPos({ left, top })
+    }
+    place()
+    window.addEventListener('resize', place)
+    return () => window.removeEventListener('resize', place)
+  }, [anchor])
   // Latest base payload (ink + size/alignment) — re-read on every apply so the
   // pill's size/alignment edits aren't clobbered by a name/date change.
   const dataRef = useRef(data)
@@ -2775,18 +2885,62 @@ function SignatureOptionsModal({
   const strokes = data.strokes
   const canRestyle = !!strokes && strokes.length > 0
 
-  const changeName = (v: string) => {
-    setName(v)
-    onApply({ ...dataRef.current, name: v, showName: showName || !!v, showDate })
-    if (v && !showName) setShowName(true)
+  // Every applier sends the whole label set, so changing one field never drops
+  // another that is only held in this draft state. The full name and date lines
+  // live in `name` / `dateText` now — a legacy prefix must never ride along or
+  // it would be prepended a second time.
+  const apply = (patch: Partial<SignatureData>) =>
+    onApply({
+      ...dataRef.current,
+      name: nameLine.trim() || undefined,
+      namePrefix: undefined,
+      showName,
+      details: details || undefined,
+      showDetails,
+      showDate,
+      dateText: dateLine.trim() || undefined,
+      datePrefix: undefined,
+      ...patch
+    })
+
+  const changeNameLine = (v: string) => {
+    setNameLine(v)
+    apply({ name: v.trim() || undefined })
   }
   const toggleName = (v: boolean) => {
     setShowName(v)
-    onApply({ ...dataRef.current, name, showName: v, showDate })
+    let line = nameLine
+    if (v && !line.trim()) {
+      line = NAME_LINE_SEED
+      setNameLine(line)
+    }
+    apply({ showName: v, name: line.trim() || undefined })
   }
   const toggleDate = (v: boolean) => {
     setShowDate(v)
-    onApply({ ...dataRef.current, name, showName, showDate: v })
+    let line = dateLine
+    if (v && !line.trim()) {
+      line = dateLineSeed()
+      setDateLine(line)
+    }
+    apply({ showDate: v, dateText: line.trim() || undefined })
+  }
+  const changeDetails = (v: string) => {
+    setDetails(v)
+    apply({ details: v || undefined })
+  }
+  const toggleDetails = (v: boolean) => {
+    setShowDetails(v)
+    let d = details
+    if (v && !d.trim()) {
+      d = DETAILS_SEED
+      setDetails(d)
+    }
+    apply({ showDetails: v, details: d || undefined })
+  }
+  const changeDateLine = (v: string) => {
+    setDateLine(v)
+    apply({ dateText: v.trim() || undefined })
   }
   // Re-render the ink from the original strokes at the new realism setting and
   // swap it in — the labels are then re-composited over it by applySigData.
@@ -2809,12 +2963,17 @@ function SignatureOptionsModal({
   }
 
   return createPortal(
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-      onMouseDown={onClose}
-    >
+    // No dimmed backdrop: the card sits beside the signature and every change
+    // re-composes it live, so the page must stay visible while editing.
+    <div className="fixed inset-0 z-[100]" onMouseDown={onClose}>
       <div
-        className="w-full max-w-sm rounded-xl bg-white shadow-2xl overflow-hidden"
+        ref={cardRef}
+        className="fixed w-[min(24rem,calc(100vw-2rem))] max-h-[calc(100vh-2rem)] overflow-y-auto rounded-xl bg-white border border-slate-200 shadow-2xl"
+        style={
+          pos
+            ? { left: pos.left, top: pos.top }
+            : { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }
+        }
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 pt-4 pb-2">
@@ -2834,32 +2993,40 @@ function SignatureOptionsModal({
               ? 'Changes the labels and the pen style — the strokes you drew stay exactly as drawn. Use the pill on the signature to resize or align the labels.'
               : 'Changes the name and date only — your signature itself stays exactly as drawn. Use the pill on the signature to resize or align the labels.'}
           </p>
+          <ModalToggle checked={showName} onChange={toggleName} label="Add your name" />
           <input
-            value={name}
-            onChange={(e) => changeName(e.target.value)}
-            placeholder="Name"
-            className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+            value={nameLine}
+            onChange={(e) => changeNameLine(e.target.value)}
+            placeholder="Signed by: Your name"
+            aria-label="Name line under the signature"
+            disabled={!showName}
+            className={`w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 ${showName ? '' : 'opacity-50'}`}
           />
-          <label className="flex items-center justify-between gap-2 text-sm text-slate-700 select-none cursor-pointer">
-            <span>Add name</span>
-            <input
-              type="checkbox"
-              checked={showName}
-              onChange={(e) => toggleName(e.target.checked)}
-              className="peer sr-only"
-            />
-            <span className="relative w-9 h-5 rounded-full bg-slate-300 transition-colors peer-checked:bg-orange-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:shadow after:transition-transform peer-checked:after:translate-x-4" />
-          </label>
-          <label className="flex items-center justify-between gap-2 text-sm text-slate-700 select-none cursor-pointer">
-            <span>Add date (today)</span>
-            <input
-              type="checkbox"
-              checked={showDate}
-              onChange={(e) => toggleDate(e.target.checked)}
-              className="peer sr-only"
-            />
-            <span className="relative w-9 h-5 rounded-full bg-slate-300 transition-colors peer-checked:bg-orange-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:shadow after:transition-transform peer-checked:after:translate-x-4" />
-          </label>
+          <ModalToggle
+            checked={showDetails}
+            onChange={toggleDetails}
+            label="More details (e.g. role, email, phone)"
+          />
+          <textarea
+            value={details}
+            onChange={(e) => changeDetails(e.target.value)}
+            rows={3}
+            placeholder={DETAILS_SEED}
+            aria-label="Details to show under the signature"
+            disabled={!showDetails}
+            className={`w-full px-3 py-2 border border-slate-300 rounded text-sm resize-y focus:outline-none focus:ring-2 focus:ring-orange-500 ${showDetails ? '' : 'opacity-50'}`}
+          />
+          <ModalToggle checked={showDate} onChange={toggleDate} label="Add date" />
+          {/* Seeded with today's date, then the whole line is the user's to
+              edit — wording and date alike. */}
+          <input
+            value={dateLine}
+            onChange={(e) => changeDateLine(e.target.value)}
+            placeholder={dateLineSeed()}
+            aria-label="Date line under the signature"
+            disabled={!showDate}
+            className={`w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 ${showDate ? '' : 'opacity-50'}`}
+          />
           {canRestyle && (
             <label className="flex items-center justify-between gap-2 text-sm text-slate-700 select-none cursor-pointer border-t border-slate-100 pt-3">
               <span>
