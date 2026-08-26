@@ -158,9 +158,18 @@ Three deliberate choices:
   mistyped token would bake literal braces into a signed document. If a template
   is ever wanted, `withPrefix()` is the only place that changes.
 
-Labels start at `DEFAULT_LABEL_SCALE` (70%) — full size competed with the
-signature it was captioning. The pill still spans 50–250%, and a signature saved
-with an explicit scale keeps it.
+Labels start at `DEFAULT_LABEL_SCALE` — **85% since `c300333`**; the original
+70% ran too small (James, 2026-08-26), and before that full size competed with
+the signature it was captioning. The pill still spans 50–250%, and a signature
+saved with an explicit scale keeps it — the default moves only signatures that
+never chose one.
+
+The pad also **previews the label lines live in the dashed drawing box**
+(bottom-left, in the ink colour), built through the same `labelsForOptions()`
+as the bake — untouched seeds are as invisible in the preview as in the baked
+output, and the overlay is `pointer-events: none` so drawing passes through
+it. ⚠️ Faithful in *content*, not exact geometry: the bake composes beneath
+the cropped ink bounding box, the preview pins to the box corner.
 
 New signatures **left-align** their labels under the ink by default
 (`DEFAULT_SIG_ALIGN = 'left'` in `lib/composeSignature.ts`, used by the pad,
