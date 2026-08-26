@@ -226,6 +226,18 @@ export default function SignaturePad() {
   const effectiveName = isUnansweredNameLine(nameLine) ? '' : nameLine.trim()
   // Whether there's anything to place separately (gates the placement control).
   const hasExtras = (includeName && !!effectiveName) || includeDate
+  // The label lines the advanced options will produce, previewed live inside
+  // the drawing box. Built through the same helper the bake uses, so what the
+  // preview shows is exactly what ships — untouched seeds stay invisible here
+  // for the same reason they never bake.
+  const previewLabels = labelsForOptions({
+    name: effectiveName,
+    showName: includeName && !!effectiveName,
+    details,
+    showDetails: includeDetails,
+    showDate: includeDate,
+    dateText: dateLine.trim() || undefined
+  })
   // Ink colour follows the realism toggle (deep blue vs plain near-black).
   const inkColor = inkColorFor(realistic)
 
@@ -525,7 +537,23 @@ export default function SignaturePad() {
           </div>
         ) : (
         <>
-        <div ref={containerRef} className="border-2 border-dashed border-slate-300 rounded bg-slate-50 w-full">
+        <div ref={containerRef} className="relative border-2 border-dashed border-slate-300 rounded bg-slate-50 w-full">
+          {/* Live preview of the labels the advanced options will bake beneath
+              the ink — shown in the box with the signature, in the ink colour,
+              left-aligned as the bake will be. Inert: drawing passes straight
+              through it. */}
+          {previewLabels.length > 0 && (
+            <div
+              className="pointer-events-none absolute bottom-2 left-3 select-none"
+              style={{ color: inkColor, opacity: 0.85, fontFamily: 'Helvetica, Arial, sans-serif' }}
+            >
+              {previewLabels.map((l, i) => (
+                <div key={i} style={{ fontSize: 18 * l.scale, lineHeight: 1.3 }}>
+                  {l.text}
+                </div>
+              ))}
+            </div>
+          )}
           <Stage
             ref={stageRef}
             width={padW}

@@ -14,10 +14,11 @@ const FONT = 'Helvetica, Arial, sans-serif'
 // 2× supersample so the baked text stays crisp.
 const RS = 2
 
-// Labels start at 70% of the base size. Full size is legible but heavy —
-// it competes with the signature it is captioning. The size pill still
-// reaches 50-250%, this is only where a new signature begins.
-export const DEFAULT_LABEL_SCALE = 0.7
+// Labels start at 85% of the base size. Full size is legible but heavy —
+// it competes with the signature it is captioning — while the original 70%
+// ran too small (raised 2026-08-26). The size pill still reaches 50-250%,
+// this is only where a new signature begins.
+export const DEFAULT_LABEL_SCALE = 0.85
 
 // New signatures left-align their labels under the ink. A signature block reads
 // like an address block, not a caption — the pill still cycles all three.
