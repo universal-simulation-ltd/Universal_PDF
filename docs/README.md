@@ -172,9 +172,12 @@ the overlay is `pointer-events: none` so drawing passes through it. Since
 hangs directly beneath the strokes' cropped box (the same 6px crop
 `renderInkSignature` applies), left-aligned with the ink's edge, at the bake's
 own font size (`baseFont = min(28, max(14, sigH*0.4))` × the label scale, 1.3
-line height); before anything is drawn it waits at the bottom-left. ⚠️ The box
-clips overflow, so ink drawn at the very bottom hides the labels the
-composite will still have below it — the bake produces them regardless.
+line height); before anything is drawn it waits at the bottom-left. Ink drawn
+down to the bottom edge would push the block under the pane (the box clips
+overflow), so since `b875368` the block **clamps upward to stay fully
+visible**, overlapping the ink's tail when it must — the bake composes the
+labels exactly there, below the cropped ink, so the overlap is honest and a
+half-clipped line is not.
 
 New signatures **left-align** their labels under the ink by default
 (`DEFAULT_SIG_ALIGN = 'left'` in `lib/composeSignature.ts`, used by the pad,
@@ -331,21 +334,37 @@ downscaled by the browser).
 shape. A silhouette is only ever the *plate* the code sits on — the code is
 rendered smaller and centred in the largest square that fits. See `frames.ts`.
 
-### Your saved codes, with no backend
+### Your saved codes — this browser's, and your account's
 
-Universal QR keeps designs in `localStorage` under `unisim.qr.designs.v1`, and
-in production the two apps are the **same origin** — `opensource.unisim.co.uk/pdf`
-and `/qr`, both behind the opensource-portal Worker — so that store is simply
-readable from here. Open the dialog and the codes designed next door are already
-listed; clicking one restores it whole (its link, colours, plate and any uploaded
-logo). No account, no API, no round trip.
+The "Your Universal QR codes" shelf (shown only when it has something to show)
+lists two sources side by side:
 
-`src/lib/qr/library.ts` is **read-only** by design: it is another app's store,
-capped at 12 entries, and evicting someone's saved design because they added a
-QR to a PDF would be a bad trade. The origin is also not guaranteed —
-`pdf.unisim.co.uk` and the Electron build are separate origins with their own
-empty storage — so the dialog also imports Universal QR's `.uniqr.json` backup,
-which works anywhere.
+**This browser.** Universal QR keeps designs in `localStorage` under
+`unisim.qr.designs.v1`, and in production the two apps are the **same origin** —
+`opensource.unisim.co.uk/pdf` and `/qr`, both behind the opensource-portal
+Worker — so that store is simply readable from here. Clicking one restores it
+whole (its link, colours, plate and any uploaded logo). No account, no API, no
+round trip.
+
+**The signed-in Universal ID** (since `e379292`). Codes backed up in Universal
+QR's "Back up this QR code" dialog are hosted uploads (product `'qr'`), so
+`loadHostedQrDesigns()` in `src/lib/qr/library.ts` lists them here too and a
+saved code follows the user cross-device. Since 2026-08-26 Universal QR uploads
+the full design as a `<png-path>.json` **sidecar** beside the PNG; a
+sidecar-carrying save adopts as a fully editable design (thumbnail rendered
+locally), while an older PNG-only save places as a plain image — it is hidden
+in edit mode, since there is no design to re-open. Account chips carry a small
+cloud mark, and an account save duplicating a local design (same data + name)
+shows once.
+
+`src/lib/qr/library.ts` stays **read-only** by design: the localStorage half is
+another app's store, capped at 12 entries, and evicting someone's saved design
+because they added a QR to a PDF would be a bad trade; the hosted half belongs
+to Universal QR's dialog to manage. The `.uniqr.json` backup-file import that
+used to cover the separate-origin case (`pdf.unisim.co.uk`, Electron) was
+removed with Universal QR's backup-file tier (`c9f313d`) — on a separate origin
+the account shelf is now the cross-origin answer, and a code from elsewhere can
+simply be added to the page as an image.
 
 ### Colours
 
