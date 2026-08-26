@@ -572,8 +572,20 @@ export default function SignaturePad() {
               const sigH = inkBox ? inkBox.bottom - inkBox.top : 0
               const baseFont = Math.min(28, Math.max(14, sigH * 0.4))
               const gap = Math.max(4, sigH * 0.08)
+              // Never let the block leave the pane: ink drawn low in the box
+              // would push it under the bottom edge and clip the text
+              // mid-glyph. Clamp it up instead — overlapping the ink's tail is
+              // honest (the bake will sit exactly there, below the crop), a
+              // half-visible line just looks broken.
+              const blockH = previewLabels.reduce(
+                (a, l) => a + baseFont * DEFAULT_LABEL_SCALE * l.scale * 1.3,
+                0
+              )
               const pos = inkBox
-                ? { left: Math.max(2, inkBox.left), top: inkBox.bottom + gap }
+                ? {
+                    left: Math.max(2, inkBox.left),
+                    top: Math.max(2, Math.min(inkBox.bottom + gap, padH - blockH - 4))
+                  }
                 : { left: 12, bottom: 8 }
               return (
                 <div
