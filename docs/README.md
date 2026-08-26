@@ -164,12 +164,17 @@ the signature it was captioning. The pill still spans 50–250%, and a signature
 saved with an explicit scale keeps it — the default moves only signatures that
 never chose one.
 
-The pad also **previews the label lines live in the dashed drawing box**
-(bottom-left, in the ink colour), built through the same `labelsForOptions()`
-as the bake — untouched seeds are as invisible in the preview as in the baked
-output, and the overlay is `pointer-events: none` so drawing passes through
-it. ⚠️ Faithful in *content*, not exact geometry: the bake composes beneath
-the cropped ink bounding box, the preview pins to the box corner.
+The pad also **previews the label lines live in the dashed drawing box**, in
+the ink colour, built through the same `labelsForOptions()` as the bake —
+untouched seeds are as invisible in the preview as in the baked output, and
+the overlay is `pointer-events: none` so drawing passes through it. Since
+`eec26cd` it is **geometry-faithful too**, mirroring `layout()`: the block
+hangs directly beneath the strokes' cropped box (the same 6px crop
+`renderInkSignature` applies), left-aligned with the ink's edge, at the bake's
+own font size (`baseFont = min(28, max(14, sigH*0.4))` × the label scale, 1.3
+line height); before anything is drawn it waits at the bottom-left. ⚠️ The box
+clips overflow, so ink drawn at the very bottom hides the labels the
+composite will still have below it — the bake produces them regardless.
 
 New signatures **left-align** their labels under the ink by default
 (`DEFAULT_SIG_ALIGN = 'left'` in `lib/composeSignature.ts`, used by the pad,
