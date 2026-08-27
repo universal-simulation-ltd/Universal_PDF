@@ -119,6 +119,8 @@ export function useDefaultPdfApp() {
     /** False where the app cannot make the change itself (Windows). */
     canSet: !!status?.canSet,
     isDefault: !!status?.isDefault,
+    /** What currently opens PDFs instead of us, where the OS will say. */
+    currentName: status?.currentName,
     reason: status?.reason,
     platform: status?.platform,
     busy,

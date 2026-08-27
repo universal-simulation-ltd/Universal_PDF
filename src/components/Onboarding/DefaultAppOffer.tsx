@@ -87,6 +87,20 @@ export function DefaultAppPill({ offer, className }: { offer: Offer; className: 
           ? 'Set as default PDF app — open .pdf files here'
           : 'Set as default PDF app — opens Windows Settings'}
       </button>
+      {/* ⚠️ Naming what currently holds .pdf is what stops this reading as a
+          nag. The offer showing at all means the association is not ours; said
+          plainly, that is information rather than a question being asked twice.
+          Investigated 2026-08-27 as "the detection never confirms" — it always
+          confirmed correctly, the association simply had not changed, and
+          nothing on screen said so. Note some readers re-claim the type later
+          on their own, so this can go back to naming them without warning. */}
+      {offer.currentName && (
+        <p className="mt-1 px-1 text-[13px] text-slate-500">
+          PDFs currently open in <strong className="font-medium">{offer.currentName}</strong>.
+          Windows needs you to pick <code className="font-mono">.pdf</code> there and press
+          Set&nbsp;default.
+        </p>
+      )}
       {offer.outcome && offer.outcome.kind === 'error' && (
         <p className="mt-1 px-1 text-[13px] text-red-700">{offer.outcome.message}</p>
       )}

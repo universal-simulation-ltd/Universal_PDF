@@ -60,14 +60,19 @@ declare global {
           supported: boolean
           isDefault: boolean
           canSet: boolean
+          /**
+           * What holds `.pdf` today, when it isn't us — "Adobe Acrobat
+           * Document". Windows only, and absent once we are the default.
+           */
+          currentName?: string
           reason?: string
         }>
-        makeDefault(): Promise<{
-          ok: boolean
-          isDefault: boolean
-          openedSettings?: boolean
-          error?: string
-        }>
+        makeDefault(): Promise<{
+          ok: boolean
+          isDefault: boolean
+          openedSettings?: boolean
+          error?: string
+        }>
       }
       /**
        * Whether PDFs appear in Explorer's preview pane (Alt+P), and turning

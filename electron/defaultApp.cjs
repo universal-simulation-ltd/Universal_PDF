@@ -167,6 +167,25 @@ async function windowsCurrent() {
   return match ? match[1].trim() : null
 }
 
+// The human name behind a ProgID — `HKCR\<ProgId>`'s default value, e.g.
+// "Adobe Acrobat Document".
+//
+// ⚠️ This exists because the offer looked broken without it. Detection was
+// investigated on 2026-08-27 as "never confirms on Windows" and turned out to
+// be correct all along: the association simply had not changed, so the app kept
+// asking and appeared to be ignoring the answer. Naming what currently holds
+// `.pdf` turns a nag into a statement of fact the user can act on — and it is
+// worth knowing that Acrobat re-claims the type on its own schedule, so
+// "I set it yesterday" and "it is not set now" are both true surprisingly often.
+async function windowsCurrentName(progId) {
+  if (!progId) return null
+  const { ok, stdout } = await run('reg', ['query', `HKCR\\${progId}`, '/ve'])
+  if (!ok) return null
+  const match = stdout.match(/\(Default\)\s+REG_\w+\s+(.+)/)
+  const name = match ? match[1].trim() : ''
+  return name || null
+}
+
 // ----------------------------------------------------------------- API ------
 
 /**
@@ -203,9 +222,17 @@ async function status() {
 
   if (process.platform === 'win32') {
     const current = await windowsCurrent()
+    const isDefault = sameId(current, WIN_PROGID)
     // `canSet` stays FALSE on Windows even though `makeDefault` does something:
     // it opens Settings. The UI says so rather than promising a switch.
-    return { ...base, supported: true, isDefault: sameId(current, WIN_PROGID), reason: 'settings-only' }
+    return {
+      ...base,
+      supported: true,
+      isDefault,
+      // Only when we are NOT it: naming ourselves back to the user is noise.
+      currentName: isDefault ? undefined : await windowsCurrentName(current),
+      reason: 'settings-only',
+    }
   }
 
   return { ...base, reason: 'unsupported-platform' }
