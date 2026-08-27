@@ -155,6 +155,38 @@ jobs:
             exit 1
           }
 
+      # Register the freshly built DLL for this user and activate the preview
+      # handler THROUGH THE SHELL'S SURROGATE, which is the only way to prove
+      # the CLSID's AppID names the 64-bit prevhost.exe. Compiling proves
+      # nothing about that one registry value: v0.6.4/v0.6.5 shipped naming the
+      # 32-bit host, so 64-bit Explorer could never load the handler and the
+      # pane stayed empty with no error anywhere.
+      #
+      # Also continue-on-error, for the same reason as the build above — a
+      # broken preview pane must not hold back an otherwise good installer —
+      # so the warning is again what surfaces it. Read the annotations.
+      - name: Check the preview handler activates in the shell's host
+        if: matrix.os == 'windows-latest'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $test = Get-ChildItem ./native/win-thumbnail -Recurse -Filter thumbtest.exe |
+            Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $test) {
+            Write-Host "::warning::thumbtest.exe not found - skipping the hosted-activation check."
+            exit 1
+          }
+          & $test.FullName register
+          try {
+            & $test.FullName hosted
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "::warning::The preview handler does not activate in the shell's surrogate - the installer will ship with a preview pane that never renders."
+              exit 1
+            }
+          } finally {
+            & $test.FullName unregister
+          }
+
       - name: Build installers
         # --publish never: electron-builder otherwise auto-publishes when it
         # sees a tag ref and fails on the missing GH_TOKEN, killing the job

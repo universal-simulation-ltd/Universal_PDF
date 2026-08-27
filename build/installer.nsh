@@ -60,8 +60,12 @@
     ; created in-process instead of in prevhost.exe and the pane stays blank,
     ; with no error surfaced anywhere. The CLSID must stay identical to
     ; CLSID_UniversalPdfPreviewHandler in native/win-thumbnail/src/dllmain.cpp.
+    ; ⚠️⚠️ {6d2b5079-...} is the 64-BIT host (system32\prevhost.exe); the
+    ; similar-looking {534A1E02-...} is the 32-bit one (SysWOW64) and asking it
+    ; to load our x64 DLL fails silently. Keep this in step with
+    ; PREVIEW_HOST_APPID in native/win-thumbnail/src/Common.h.
     WriteRegStr SHELL_CONTEXT "Software\Classes\CLSID\{7A337FC1-F731-4F4F-A3FB-3E1935248DED}" "" "Universal PDF Preview Handler"
-    WriteRegStr SHELL_CONTEXT "Software\Classes\CLSID\{7A337FC1-F731-4F4F-A3FB-3E1935248DED}" "AppID" "{534A1E02-D58F-44f0-B58B-36CBED287C7C}"
+    WriteRegStr SHELL_CONTEXT "Software\Classes\CLSID\{7A337FC1-F731-4F4F-A3FB-3E1935248DED}" "AppID" "{6d2b5079-2f0b-48dd-ab7f-97cec514d30b}"
     WriteRegStr SHELL_CONTEXT "Software\Classes\CLSID\{7A337FC1-F731-4F4F-A3FB-3E1935248DED}\InprocServer32" "" "$INSTDIR\resources\UniversalPdfThumb.dll"
     WriteRegStr SHELL_CONTEXT "Software\Classes\CLSID\{7A337FC1-F731-4F4F-A3FB-3E1935248DED}\InprocServer32" "ThreadingModel" "Apartment"
     WriteRegStr SHELL_CONTEXT "Software\Classes\UniversalPDF.Document\ShellEx\{8895b1c6-b41f-4c1c-a562-0d564250836f}" "" "{7A337FC1-F731-4F4F-A3FB-3E1935248DED}"

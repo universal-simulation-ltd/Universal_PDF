@@ -318,6 +318,35 @@ int PreviewInHost(const wchar_t* pdf, const wchar_t* out, int page_downs) {
   return 0;
 }
 
+// Activate the preview handler the way EXPLORER does: out-of-process, through
+// whichever prevhost.exe the CLSID's AppID names.
+//
+// ⚠️ This is the check `preview` cannot make. That mode uses INPROC on purpose
+// (it is testing our drawing code), which loads the DLL straight into this
+// process and never consults the AppID at all — so it passed happily while the
+// CLSID pointed at the 32-BIT surrogate and 64-bit Explorer could never load
+// the handler. A wrong AppID fails HERE and nowhere else.
+int PreviewHosted() {
+  IUnknown* unk = nullptr;
+  const HRESULT hr =
+      CoCreateInstance(kPreviewClsid, nullptr, CLSCTX_LOCAL_SERVER,
+                       IID_PPV_ARGS(&unk));
+  if (FAILED(hr)) {
+    std::fprintf(stderr,
+                 "the surrogate could not create the handler — check the "
+                 "CLSID's AppID names the 64-bit preview host "
+                 "{6d2b5079-2f0b-48dd-ab7f-97cec514d30b}\n");
+    return Fail("CoCreateInstance(LOCAL_SERVER)", hr);
+  }
+  IPreviewHandler* preview = nullptr;
+  const HRESULT qi = unk->QueryInterface(IID_PPV_ARGS(&preview));
+  unk->Release();
+  if (FAILED(qi)) return Fail("QI IPreviewHandler (hosted)", qi);
+  preview->Release();
+  std::printf("hosted activation ok — the shell's surrogate loaded the DLL\n");
+  return 0;
+}
+
 int SelfRegister(bool on) {
   wchar_t dll[MAX_PATH];
   if (!SiblingPath(L"UniversalPdfThumb.dll", dll)) {
@@ -344,6 +373,7 @@ int wmain(int argc, wchar_t** argv) {
     std::fprintf(stderr,
                  "usage: thumbtest render|shell <file> <size> <out.png>\n"
                  "       thumbtest preview <file.pdf> <out.png> [pagedowns]\n"
+                 "       thumbtest hosted\n"
                  "       thumbtest register|unregister\n");
     return 2;
   }
@@ -352,7 +382,9 @@ int wmain(int argc, wchar_t** argv) {
   if (FAILED(hr)) return Fail("CoInitializeEx", hr);
 
   int rc = 2;
-  if (_wcsicmp(argv[1], L"register") == 0) {
+  if (_wcsicmp(argv[1], L"hosted") == 0) {
+    rc = PreviewHosted();
+  } else if (_wcsicmp(argv[1], L"register") == 0) {
     rc = SelfRegister(true);
   } else if (_wcsicmp(argv[1], L"unregister") == 0) {
     rc = SelfRegister(false);

@@ -24,10 +24,19 @@ extern const IID IID_IInitializeWithStream_;   // b824b49d-22ac-4161-ac8a-9916e8
 #define THUMBNAIL_HANDLER_KEY L"{e357fccd-a995-4576-b01f-234630154e96}"
 #define PREVIEW_HANDLER_KEY L"{8895b1c6-b41f-4c1c-a562-0d564250836f}"
 
-// ⚠️ The AppID of the shell's 64-bit preview host. A preview handler that does
-// not carry it is created in-process instead of in prevhost.exe, and the pane
+// ⚠️ The AppID of the shell's preview host. A preview handler that does not
+// carry it is created in-process instead of in prevhost.exe, and the pane
 // stays blank with no error reported anywhere.
-#define PREVIEW_HOST_APPID L"{534A1E02-D58F-44f0-B58B-36CBED287C7C}"
+//
+// ⚠️⚠️ There are TWO of these and they are not interchangeable:
+//   {6d2b5079-2f0b-48dd-ab7f-97cec514d30b}  system32\prevhost.exe   — 64-bit
+//   {534A1E02-D58F-44f0-B58B-36CBED287C7C}  SysWOW64\prevhost.exe   — 32-bit
+// This DLL is x64 (a 32-bit shell extension is never loaded by 64-bit
+// Explorer — see CMakeLists.txt), so it must name the 64-bit host. Naming the
+// 32-bit one asks a 32-bit process to load a 64-bit DLL: the surrogate starts,
+// the load fails, and the pane reports nothing at all. Shipped that way
+// through v0.6.5.
+#define PREVIEW_HOST_APPID L"{6d2b5079-2f0b-48dd-ab7f-97cec514d30b}"
 
 // Must stay identical to build.fileAssociations[0].name in package.json,
 // WIN_PROGID in electron/defaultApp.cjs, and the ProgID in build/installer.nsh.
