@@ -140,17 +140,26 @@ signature looks identical whether it was just drawn or restyled an hour later.
 
 Three deliberate choices:
 
-- **The pad's advanced options and the re-edit dialog are the same three
-  switches** (since 2026-08-26) — "Add your name" / "More details (e.g. role,
-  email, phone)" / "Add date" — each gating the input directly beneath it,
-  seeded on first toggle ("Signed by: ", the "Role: / Email: / Phone: "
-  template, "Signed on <today>"; the seeds are shared constants in
-  `composeSignature.ts`). Unfilled template labels (a bare "Role:") are
-  dropped at compose time in `detailLines()`, and an untouched "Signed by: "
-  seed is filtered via `isUnansweredNameLine` — seed text is a UI affordance
-  and must never bake into a signed document. The pad's top "Signature name
-  (optional)" field only titles the library entry; the name that bakes under
-  the ink lives in the switch's own line.
+- **The pad's advanced options and the re-edit dialog are the same two
+  switches** — **"Add your details"** and **"Add date"** — each gating the input
+  directly beneath it, seeded on first toggle (`DETAIL_BLOCK_SEED`, i.e.
+  "Signed by: " over the "Role: / Email: / Phone: " template; "Signed on
+  <today>"; all shared constants in `composeSignature.ts`). Until 2026-08-27
+  the details were **two** switches, "Add your name" and "More details" — one
+  thing to the person filling them in, so James asked for one box. Every line
+  typed becomes a line, and the first is set larger because it is almost always
+  the name.
+  ⚠️ **The stored shape did not change**: an annotation still carries `name`
+  and `details` separately, and the box is split/rejoined in exactly one place
+  — `splitDetailBlock()` / `joinDetailBlock()` — which is the only reason
+  signatures saved before the merge still re-open correctly. Do not let a
+  second splitter grow anywhere else.
+  Unfilled template labels (a bare "Role:") are dropped at compose time in
+  `detailLines()`, and an untouched "Signed by: " seed is filtered via
+  `isUnansweredNameLine` — seed text is a UI affordance and must never bake into
+  a signed document. The pad's top "Signature name (optional)" field only titles
+  the library entry; the name that bakes under the ink is the first line of the
+  details box.
 - ⚠️ **Six detail lines maximum** (`MAX_DETAIL_LINES`). A pasted postal address
   would otherwise produce a composite taller than the page, and since the box is
   fitted to the page the ink would shrink to nothing to accommodate it.
@@ -172,12 +181,17 @@ the overlay is `pointer-events: none` so drawing passes through it. Since
 hangs directly beneath the strokes' cropped box (the same 6px crop
 `renderInkSignature` applies), left-aligned with the ink's edge, at the bake's
 own font size (`baseFont = min(28, max(14, sigH*0.4))` × the label scale, 1.3
-line height); before anything is drawn it waits at the bottom-left. Ink drawn
-down to the bottom edge would push the block under the pane (the box clips
-overflow), so since `b875368` the block **clamps upward to stay fully
-visible**, overlapping the ink's tail when it must — the bake composes the
-labels exactly there, below the cropped ink, so the overlap is honest and a
-half-clipped line is not.
+line height); before anything is drawn it waits at the bottom-left.
+
+Ink drawn down to the bottom edge would push the block under the pane (the box
+clips overflow). `b875368` answered that by **clamping the block upward**, over
+the ink's tail — and it was wrong, for one afternoon: ⚠️ **the bake never
+overlaps, so a preview that does is not a preview.** Since `cd331e2` the
+**drawing box grows instead** (`previewHeight` = at least the ink's bottom plus
+the gap plus the measured label block, animated via `transition-[height]`), so
+the labels always sit below the ink, exactly where the composite puts them.
+Keep that direction if this is ever touched: give the caption room rather than
+moving it somewhere the export will not.
 
 New signatures **left-align** their labels under the ink by default
 (`DEFAULT_SIG_ALIGN = 'left'` in `lib/composeSignature.ts`, used by the pad,
@@ -413,6 +427,33 @@ Three things worth knowing here:
   needs nothing — QuickLook already thumbnails PDFs — and GNOME/KDE thumbnail
   through poppler.
 
+### ⚠️ Never read the shell's `IStream` lazily — it deadlocks Explorer
+
+The single most important rule in this folder, learned the hard way in v0.6.8
+(`19b6e63`). Both the thumbnail provider and the preview handler are handed an
+`IStream` by the shell. **That stream is a COM proxy marshalled back into the
+calling process.** PDFium used to read the document through it *lazily*, which
+means the reads happen inside `LoadPage` / `RenderPageBitmap` — i.e. inside
+`WM_PAINT`. A repaint therefore made an outbound COM call into Explorer while
+Explorer was blocked waiting on us, and the desktop froze on every click of a
+PDF. Windows logged it as `explorer.exe` **`AppHangXProcB1`** — the *X* is
+cross-process, and it says the hung process was waiting on someone else, which
+is what points at your own outbound call rather than at your rendering.
+
+So: `Pdfium.cpp` **copies the whole stream into memory once, on the shell's own
+call thread**, drops the stream, and serves every later read with `memcpy`.
+⚠️ Documents over **256 MB** are refused rather than buffered — a blank preview
+pane is something a user recovers from; a hung Explorer is not.
+
+⚠️ **`thumbtest sealed` is the regression test, and it only works on a
+MULTI-PAGE document.** It hands the handler a stream that fails every read the
+moment `DoPreview` returns, then **turns the page**. The first version of it
+passed with *and without* the fix, because PDFium reads a small file greedily
+while parsing, so re-rendering page one touches the stream not at all — a
+vacuous test that looked green. The release workflow generates an **8-page** PDF
+with pdf-lib and runs it there: 8 reads after sealing without the fix, 0 with
+it. If this test is ever changed, prove it still fails on a reverted `Pdfium.cpp`.
+
 The same DLL also hosts the **`IPreviewHandler`**
 (`native/win-thumbnail/src/PreviewHandler.cpp`), so with Universal PDF as the
 default the Explorer preview pane (Alt+P) shows the document itself — toggled
@@ -444,6 +485,14 @@ drawing code, so it never consults the AppID and passed on every broken build.
 does; the release workflow registers the freshly built DLL and runs it. Keep
 both: one tests the rendering, the other tests the plumbing.
 
+⚠️⚠️ **`CoCreateInstance` resolves through the REGISTRY, so `hosted` and
+`preview` test whatever DLL is registered on the machine — not the one you just
+built.** Several runs during the v0.6.8 work were meaningless for this reason:
+they were exercising the *installed* build while the fix sat unregistered in
+`native/win-thumbnail/build/`. Register the dev build explicitly (or run the
+release workflow's own register step) before believing a result. Every COM test
+harness has this hole by default, and nothing about a passing run reveals it.
+
 ⚠️ **The default PDF app does not gate the preview handler.** That was blamed
 once and was wrong;
 `AssocQueryString(ASSOCSTR_SHELLEXTENSION, ".pdf", IID_IPreviewHandler)`
@@ -467,6 +516,82 @@ friends plain STDAPI; defining them `extern "C" __declspec(dllexport)` is a
 linkage mismatch MSVC refuses (C2375) and MinGW accepts — so a clean local
 (MinGW) build proves nothing about the (MSVC) release build. Fixed in
 `4b4f42c`; v0.6.4 was the first installer since v0.6.2 to carry the DLL.
+
+## Desktop icons — three silhouettes, all generated
+
+Since v0.6.9 the desktop artwork comes from the canonical mark pipeline, not
+from hand-drawn files. The generator lives in the platform repo —
+`backoffice/universal-platform/scripts/app-marks/desktop-icons.mjs` — and is run
+per app:
+
+```sh
+cd backoffice/universal-platform
+node scripts/app-marks/desktop-icons.mjs Universal_PDF
+```
+
+It writes three things into `build/`, and `package.json`'s `build` block points
+at them:
+
+| File | Used as | Why it looks like that |
+|---|---|---|
+| `app-icon.png` (1024px) | `win.icon` / `mac.icon` / `linux.icon` | the mark on its tile — the app itself |
+| `document-icon.ico` **and** `.icns` | `fileAssociations[].icon` | a **page**: portrait, notched corner, the mark small in the corner. A different *outline* from the app, which is the point — a file and a program must not read as the same kind of thing |
+| `installer-icon.ico` | `nsis.installerIcon` / `uninstallerIcon` | the mark with the real UNI·SIM globe as a corner seal: which app first, whose suite second |
+
+⚠️ **`document-icon.icns` is not optional even though we build the Windows
+association.** electron-builder resolves a `fileAssociations` icon by **swapping
+the extension per platform**, so naming a `.ico` obliges a matching `.icns` and
+there is no way to name one file for both. v0.6.9 shipped with the mac jobs dead
+(`cannot find specified resource "build/document-icon.icns"`) while Windows and
+Linux went green; v0.6.10 (`8221206`) exists solely to restore the DMGs. On a
+release, **read all four platform jobs** — the asset count is the cheapest tell
+(5 where 9 is expected).
+
+⚠️ **`build/pdf-document.ico` is a different file and must stay.** It is the
+badge the native thumbnail provider composites into the rendered page
+(`BADGE_ICO_PATH` in `native/win-thumbnail/CMakeLists.txt`), not a
+file-association icon. Deleting it as a duplicate breaks the thumbnails.
+
+## Being the default PDF app, and saying what currently is
+
+`electron/defaultApp.cjs` reads the UserChoice ProgId for `.pdf` and compares it
+with ours. ⚠️ **The detection was never broken** — a long-standing backlog item
+claimed it "never confirms on Windows", and replaying the exact code path showed
+it reading `Acrobat.Document.DC` correctly, comparing correctly, with the app
+properly registered (`RegisteredApplications`, `Capabilities`,
+`.pdf\OpenWithProgids` all present). The association simply had not changed:
+**Windows 11 requires `.pdf` to be picked inside the app's own Settings page
+with `Set default` pressed**, and Acrobat reclaims the type on its own schedule,
+so "I set it yesterday" and "it is not set now" are both true more often than
+expected.
+
+The real defect was **silence**: a correct "no" looked like a broken check. So
+since `8477349` the offer pill names the incumbent — "PDFs currently open in
+Adobe Acrobat Document", read from `HKCR\<ProgId>`'s default value — and says
+which button Windows is waiting for. Worth remembering generally: a bug report
+about detection is often a report about silence.
+
+## Which build am I running
+
+⚠️ **The changelog panel cannot answer this.** Its version chip is the *feed's*
+latest release, fetched live from `changelog.unisim.co.uk` with
+`cache: 'no-cache'`, so a desktop app three versions behind shows today's
+entries under today's chip. `__APP_VERSION__` was compiled into the bundle and
+displayed nowhere at all, and an afternoon on 2026-08-27 went on establishing
+which build was installed on a user's machine.
+
+The landing footer now shows `v0.6.x`, with `APP_BUILD_LABEL` (top of
+`src/App.tsx`) as its `title`: **"Universal PDF 0.6.10 · Windows desktop"**. The
+platform is half the answer — the same bundle is the website, the installed
+desktop app and the phone PWA, and they update on entirely different schedules,
+so the version alone does not identify the copy in front of you.
+
+⏳ **Still to wire:** `@unisim/sdk`'s `ChangelogMenu` takes an optional
+`appVersion` prop (added in `universal-platform@5bff64c`, shipped in SDK
+0.112.0) that renders the same label in the changelog panel's footer — where
+James asked for it. `App.tsx` carries a ⏳ comment at the exact spot; it needs
+the `@unisim/sdk` dependency bumped to `^0.112.0` first, or CI fails to build on
+an unknown prop.
 
 ## Leaving a document with amendments
 
