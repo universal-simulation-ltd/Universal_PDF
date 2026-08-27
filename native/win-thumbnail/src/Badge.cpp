@@ -82,11 +82,17 @@ void BlendEdge(Pixel& p) {
 // The badge's size and margin, in one place: the pill has to keep out of its
 // way, and two independent formulas would drift apart the moment either moved.
 UINT BadgeEdge(const RECT& page) {
-  const UINT shorter = (std::min)(static_cast<UINT>(page.right - page.left),
-                                  static_cast<UINT>(page.bottom - page.top));
+  const double shorter = (std::min)(static_cast<double>(page.right - page.left),
+                                    static_cast<double>(page.bottom - page.top));
+  const double longer = (std::max)(static_cast<double>(page.right - page.left),
+                                   static_cast<double>(page.bottom - page.top));
+  // The basis a square page would have had, so a landscape page stops being
+  // penalised for being short — see kBadgeBasisFromLonger.
+  const double basis = (std::max)(shorter, longer * kBadgeBasisFromLonger);
+  const double edge = (std::min)(basis * kBadgeFraction,
+                                 shorter * kBadgeMaxOfShorter);
   return (std::min)(kBadgeMaxPx,
-                    (std::max)(16u, static_cast<UINT>(
-                                        std::lround(shorter * kBadgeFraction))));
+                    (std::max)(16u, static_cast<UINT>(std::lround(edge))));
 }
 
 UINT BadgeMargin(const RECT& page) {

@@ -54,6 +54,20 @@ constexpr double kBadgeFraction = 0.24;
 constexpr UINT kBadgeMaxPx = 128;
 constexpr double kBadgeMarginFraction = 0.03;
 
+// ⚠️ Orientation must not decide how big the badge looks. Sized off the
+// shorter side alone, a landscape page — whose shorter side is its height — got a
+// badge and pill about a quarter smaller than a portrait page in the same box,
+// which is what made a slide deck's mark look like an afterthought. So the
+// basis is lifted towards the longer side before the fraction is applied. The
+// pill takes its height from the badge, so this moves the matched pair
+// together. (kMinSizeForCount already measures the LONGER side for the same
+// reason — see the note there.)
+constexpr double kBadgeBasisFromLonger = 0.72;
+// ...but never so large that a genuinely narrow page (a receipt, a ticket)
+// gets a sticker across it: the badge stays within this share of the page's
+// short edge whatever the lift above suggests.
+constexpr double kBadgeMaxOfShorter = 0.38;
+
 // The sheets fanned out behind page 1 on a multi-page document: one at two
 // pages, two beyond that, none at one. Below kMinSizeForStack the fan is
 // smaller than the page's own edge line, so it is dropped rather than drawn as
