@@ -23,6 +23,7 @@
     "test:handoff": "node e2e/hub-handoff.e2e.mjs",
     "test:pinch": "node e2e/pinch-zoom.e2e.mjs",
     "test:names": "node --experimental-strip-types scripts/exportName.test.mjs",
+    "test:hosted-paths": "node --experimental-strip-types scripts/hostedPath.test.mjs",
     "electron": "electron .",
     "thumbnail:build": "powershell -NoProfile -ExecutionPolicy Bypass -File native/win-thumbnail/scripts/build.ps1",
     "dist": "npm run build:desktop && electron-builder",

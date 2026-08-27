@@ -237,6 +237,73 @@ So the "no uploads" rule is currently satisfied by the pad's own shape; there is
 no import path into a box to disable. If an upload route is ever added to the
 pad, it must check `requireLive`.
 
+## Hosted backups — and the `pending` path that broke every one of them
+
+**Back up → "Hosted by UNI·SIM"** keeps a flattened PDF in the private
+`hosted-uploads` bucket against the user's Universal ID for one token, refunded
+on delete. `src/lib/hostedStore.ts` does the work; `src/lib/hostedPaths.ts` owns
+the object names.
+
+### ⚠️ `hosted_uploads` grants members SELECT and nothing else
+
+Migration 0041 enables RLS on `public.hosted_uploads` and creates exactly two
+policies: `hosted_uploads_member_read` (`for select`) and a platform-admin
+`for all`. There is **no member UPDATE policy in 0041–0127**, on purpose — the
+consume/refund RPCs are meant to be the only writers.
+
+The store flow ignored that and was written in three steps:
+
+1. `consumeHostedUpload({ storagePath: 'pending' })` — reserve the token,
+2. upload the bytes to `<org_id>/pdf/<upload_id>-<stem>.pdf`,
+3. `UPDATE hosted_uploads SET storage_path = <the real path>`.
+
+**Step 3 matched zero rows on every account that isn't the platform admin**, and
+PostgREST reports that as a perfectly ordinary success — no error, just `0`.
+The call site never looked at the result. So the ledger kept saying `pending`
+for every hosted PDF ever stored, which produced the bug report:
+
+> *"Desktop app shows I have a backed-up PDF with my Universal ID but when I
+> click open it says object not found."*
+
+The list is read from the ledger, so the backup appears; opening it asked
+storage for an object literally named `pending`, which does not exist and never
+did — while the real file sat safely in the bucket the whole time. `pending`
+also has no org-id first segment, so it fails the bucket's read policy
+(`storage.foldername(name)[1]`) as well as being absent: two independent
+reasons for the same "Object not found".
+
+**Blast radius beyond the Open button.** The `pdf-sign-request` Edge Function
+mints its recipient signed URL from the same column, so "Send to sign" was
+handing out links to `pending` too.
+
+### What the fix does
+
+* **Name the object before reserving the token.** `hostedPdfPath(orgId,
+  newObjectId(), fileName)` is computed first and passed to
+  `consumeHostedUpload`, so the RPC's own insert records the truth and the
+  update that RLS was blocking no longer exists.
+* **Recover the rows already filed as `pending`.** The old path was fully
+  determined by data still on the row — `<org_id>/pdf/<id>-<safeStem(file_name)>.pdf`
+  — so `hostedPdfPathCandidates()` rebuilds it and `openHostedPdf` tries each
+  candidate in turn. Existing broken backups open; nothing has to be migrated,
+  re-uploaded or apologised for. ⚠️ **This is why `safeStem` must never drift.**
+  It is pinned by `npm run test:hosted-paths`.
+* **Fail honestly when there really is nothing there.** Only then does
+  `openHostedPdf` throw `HostedObjectMissingError`, and `HostedStoreDialog`
+  answers it against the row itself: which file, that the upload never
+  finished, and one button to clear the entry and take the token back. A
+  network or session failure is deliberately NOT reported that way — inviting
+  someone to delete a document that is fine would be worse than the original
+  bug.
+* **Delete every candidate.** `deleteHostedPdf` removes all of them, so
+  refunding a legacy row cannot orphan its real object in the bucket.
+
+⚠️ **The same three-step flow is copied verbatim into Universal Images, QR,
+Exports and Recorder** (`src/lib/hostedStore.ts` / `hostedRecordings.ts` in
+each). They have the identical bug and are untouched by this repo's fix. The
+alternative, one-line server fix — a member UPDATE policy on `hosted_uploads`
+— would repair all five at once but needs a migration in `universal-platform`.
+
 ## Send to sign
 
 ⚠️ Since `fec9518` this name is worn by TWO flows: the signature pad's QR + PIN

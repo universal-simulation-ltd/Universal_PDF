@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useUniversal, useUser, useCredits, useHostedUploads, useAppFreeToken, type HostedUpload } from '@unisim/sdk'
 import { usePdfStore } from '../stores/pdfStore'
-import { storeCurrentPdf, deleteHostedPdf, openHostedPdf } from '../lib/hostedStore'
+import { storeCurrentPdf, deleteHostedPdf, openHostedPdf, HostedObjectMissingError } from '../lib/hostedStore'
 import { downloadBackup, importBackup } from '../lib/pdfBackup'
 
 const SIGNIN_URL = 'https://app.unisim.co.uk/login'
@@ -29,6 +29,11 @@ export default function HostedStoreDialog() {
   const [justStored, setJustStored] = useState(false)
   const [importBusy, setImportBusy] = useState(false)
   const [importErr, setImportErr] = useState<string | null>(null)
+  // The id of a backup whose file turned out not to exist. Held per-row rather
+  // than in `error` so the explanation and the "Remove it" button sit against
+  // the entry they are about — there can be several in the list, and a message
+  // at the bottom of the panel would not say which one it meant.
+  const [missingId, setMissingId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   if (!open) return null
@@ -42,6 +47,7 @@ export default function HostedStoreDialog() {
     setError(null)
     setJustStored(false)
     setImportErr(null)
+    setMissingId(null)
   }
 
   function onDownloadBackup() {
@@ -93,11 +99,18 @@ export default function HostedStoreDialog() {
     if (busy) return
     setBusy(true)
     setError(null)
+    setMissingId(null)
     try {
       await openHostedPdf(supabase, upload)
       close()
     } catch (e) {
-      setError((e as Error).message)
+      // A genuinely absent file is not an error to shrug at the user — it is a
+      // dead entry, and the only useful thing to say is which one and what to
+      // do about it. Anything else (offline, session expired) still surfaces as
+      // an ordinary message, because deleting the backup would be the wrong
+      // advice.
+      if (e instanceof HostedObjectMissingError) setMissingId(upload.id)
+      else setError((e as Error).message)
     } finally {
       setBusy(false)
     }
@@ -111,6 +124,7 @@ export default function HostedStoreDialog() {
       const res = await deleteHostedPdf(supabase, upload)
       if (!res.ok) setError(res.error ?? 'Could not delete this PDF.')
       else {
+        setMissingId((id) => (id === upload.id ? null : id))
         refreshCredits()
         refreshFreeToken()
         refreshList()
@@ -255,13 +269,44 @@ export default function HostedStoreDialog() {
                   ) : (
                     <ul className="space-y-2">
                       {uploads.map((u) => (
-                        <li key={u.id} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-xs font-medium text-slate-700">{u.file_name || 'document.pdf'}</span>
-                            <span className="block text-[10px] text-slate-400">{new Date(u.created_at).toLocaleDateString()}</span>
-                          </span>
-                          <button onClick={() => onOpen(u)} disabled={busy} className="shrink-0 rounded-md bg-orange-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-800 disabled:opacity-50">Open</button>
-                          <button onClick={() => onDelete(u)} disabled={busy} className="shrink-0 rounded-md px-2 py-1.5 text-xs font-medium text-slate-400 hover:text-rose-600 disabled:opacity-50" title="Delete and refund the token">Delete</button>
+                        <li key={u.id} className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+                          <div className="flex items-center gap-2">
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-xs font-medium text-slate-700">{u.file_name || 'document.pdf'}</span>
+                              <span className="block text-[10px] text-slate-400">{new Date(u.created_at).toLocaleDateString()}</span>
+                            </span>
+                            <button onClick={() => onOpen(u)} disabled={busy} className="shrink-0 rounded-md bg-orange-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-800 disabled:opacity-50">Open</button>
+                            <button onClick={() => onDelete(u)} disabled={busy} className="shrink-0 rounded-md px-2 py-1.5 text-xs font-medium text-slate-400 hover:text-rose-600 disabled:opacity-50" title="Delete and refund the token">Delete</button>
+                          </div>
+
+                          {/* A backup with nothing behind it. Say which file,
+                              say plainly that the upload never finished, and
+                              make clearing it up one click — the token comes
+                              back with it, so there is nothing to lose by
+                              tidying. This replaces storage's bare "Object not
+                              found", which read like the app had mislaid the
+                              user's document. */}
+                          {missingId === u.id && (
+                            <div
+                              role="alert"
+                              data-testid="hosted-missing"
+                              className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2"
+                            >
+                              <p className="text-[11px] leading-snug text-amber-900">
+                                <strong className="font-semibold">{u.file_name || 'document.pdf'}</strong> is listed here,
+                                but there is no file behind it — this upload never finished, so nothing was ever stored.
+                                Your token is still being held for it.
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => onDelete(u)}
+                                disabled={busy}
+                                className="mt-2 inline-flex rounded-md bg-amber-700 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-amber-800 disabled:opacity-50"
+                              >
+                                Remove this entry and get the token back
+                              </button>
+                            </div>
+                          )}
                         </li>
                       ))}
                     </ul>
