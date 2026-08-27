@@ -102,13 +102,18 @@ async function setEnabled(enable) {
     return { ok: false, enabled: false, error: 'This build does not include the preview handler.' }
   }
 
-  const args = enable
-    ? `'add','${HANDLERS_KEY}','/v','${PREVIEW_CLSID}','/t','REG_SZ','/d','${PREVIEW_NAME}','/f'`
-    : `'delete','${HANDLERS_KEY}','/v','${PREVIEW_CLSID}','/f'`
+  // ⚠️ ONE string, values double-quoted, passed to -ArgumentList whole.
+  // Windows PowerShell's Start-Process joins an ArgumentList ARRAY with spaces
+  // and NO quoting, so a per-element list turned the spaced display name into
+  // three bare words, reg.exe rejected the command, and the switch reported
+  // "declined" to people who had just accepted the UAC prompt (v0.6.4).
+  const regArgs = enable
+    ? `add "${HANDLERS_KEY}" /v "${PREVIEW_CLSID}" /t REG_SZ /d "${PREVIEW_NAME}" /f`
+    : `delete "${HANDLERS_KEY}" /v "${PREVIEW_CLSID}" /f`
 
   const script =
     `$ErrorActionPreference='Stop'; ` +
-    `try { Start-Process -FilePath reg.exe -ArgumentList ${args} ` +
+    `try { Start-Process -FilePath reg.exe -ArgumentList '${regArgs}' ` +
     `-Verb RunAs -WindowStyle Hidden -Wait } catch { exit 1 }`
 
   await run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script])
