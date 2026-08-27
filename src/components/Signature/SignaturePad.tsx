@@ -13,7 +13,8 @@ import {
   DEFAULT_LABEL_SCALE,
   DEFAULT_SIG_ALIGN,
   NAME_LINE_SEED,
-  DETAILS_SEED,
+  DETAIL_BLOCK_SEED,
+  splitDetailBlock,
   dateLineSeed
 } from '../../lib/composeSignature'
 import type { SignatureData } from '../../types/annotations'
@@ -104,14 +105,12 @@ export default function SignaturePad() {
   // them start OFF — a fresh pad produces exactly what the user drew, and the
   // extras are opt-in under "Advanced options". Same switch-gates-its-input
   // pattern as the double-tap options modal, so the two dialogs read alike.
-  const [includeName, setIncludeName] = useState(false)
   const [includeDetails, setIncludeDetails] = useState(false)
   const [includeDate, setIncludeDate] = useState(false)
-  // Whole lines, as the user wrote them: "Signed by: Jane Smith", the details
-  // block, "Signed on 26 Aug 2026" (fully editable, date included). Each seeds
-  // when its toggle first goes on; untouched seeds never bake.
-  const [nameLine, setNameLine] = useState('')
-  const [details, setDetails] = useState('')
+  // ONE box for the lines under the signature — the name is simply its first
+  // line, set larger. The date stays its own field: it is the one line the app
+  // fills in for you, so it gets its own switch.
+  const [detailBlock, setDetailBlock] = useState('')
   const [dateLine, setDateLine] = useState('')
   // Realistic ink (blue, blemishes, variable width) vs a clean plain-black line.
   const [realistic, setRealistic] = useState(false)
@@ -155,8 +154,8 @@ export default function SignaturePad() {
       .getState()
       .annotations.find((a) => a.id === signingFieldId)
     if (ann?.type !== 'sigfield') return
-    setIncludeName(!!ann.requireName)
-    if (ann.requireName) setNameLine((l) => (l.trim() ? l : NAME_LINE_SEED))
+    setIncludeDetails(!!ann.requireName)
+    if (ann.requireName) setDetailBlock((b) => (b.trim() ? b : NAME_LINE_SEED))
     setIncludeDate(!!ann.requireDate)
     if (ann.requireDate) setDateLine((l) => (l.trim() ? l : dateLineSeed()))
     setFieldRequiresLive(!!ann.requireLive)
@@ -221,18 +220,22 @@ export default function SignaturePad() {
   }, [open, mode])
 
   const padH = Math.round((padW / PAD_W) * PAD_H)
+  // The details box is one string; the compose layer still wants a name and the
+  // smaller lines separately, so it is split here and nowhere else.
+  const { name: rawName, details } = splitDetailBlock(detailBlock)
   // The name that would actually bake or place: the typed line, unless it's
   // still the untouched "Signed by: " seed (an unanswered prompt, not a name).
-  const effectiveName = isUnansweredNameLine(nameLine) ? '' : nameLine.trim()
+  const effectiveName = isUnansweredNameLine(rawName) ? '' : rawName.trim()
+  const includeName = includeDetails
   // Whether there's anything to place separately (gates the placement control).
-  const hasExtras = (includeName && !!effectiveName) || includeDate
+  const hasExtras = (includeDetails && !!effectiveName) || includeDate
   // The label lines the advanced options will produce, previewed live inside
   // the drawing box. Built through the same helper the bake uses, so what the
   // preview shows is exactly what ships — untouched seeds stay invisible here
   // for the same reason they never bake.
   const previewLabels = labelsForOptions({
     name: effectiveName,
-    showName: includeName && !!effectiveName,
+    showName: includeDetails && !!effectiveName,
     details,
     showDetails: includeDetails,
     showDate: includeDate,
@@ -261,6 +264,24 @@ export default function SignaturePad() {
     const p = 6
     return { left: minX - p, right: maxX + p, top: minY - p, bottom: maxY + p }
   })()
+
+  // The bake's own numbers (composeSignature's layout()), so the preview is
+  // the same block at the same size — not something that merely resembles it.
+  const inkH = inkBox ? inkBox.bottom - inkBox.top : 0
+  const labelBaseFont = Math.min(28, Math.max(14, inkH * 0.4))
+  const labelGap = Math.max(4, inkH * 0.08)
+  const labelBlockH = previewLabels.reduce(
+    (a, l) => a + labelBaseFont * DEFAULT_LABEL_SCALE * l.scale * 1.3,
+    0
+  )
+  // The drawing box stretches so the labels always fit BELOW the ink. A
+  // signature drawn at the bottom of the pad pushes its own caption past the
+  // original frame, and the frame follows rather than cropping it — which is
+  // also what the composite does on the page.
+  const previewHeight =
+    previewLabels.length > 0
+      ? Math.max(padH, (inkBox ? inkBox.bottom : padH) + labelGap + labelBlockH + 10)
+      : padH
   // Ink colour follows the realism toggle (deep blue vs plain near-black).
   const inkColor = inkColorFor(realistic)
 
@@ -298,11 +319,9 @@ export default function SignaturePad() {
   function resetForm() {
     setLines([])
     setTitle('')
-    setIncludeName(false)
     setIncludeDetails(false)
     setIncludeDate(false)
-    setNameLine('')
-    setDetails('')
+    setDetailBlock('')
     setDateLine('')
     setSeparatePlacement(false)
     setRealistic(false)
@@ -311,13 +330,9 @@ export default function SignaturePad() {
 
   // Toggling an extra on with nothing typed seeds its box so the expected
   // shape is visible; the text then belongs entirely to the user.
-  const toggleIncludeName = (v: boolean) => {
-    setIncludeName(v)
-    if (v && !nameLine.trim()) setNameLine(NAME_LINE_SEED)
-  }
   const toggleIncludeDetails = (v: boolean) => {
     setIncludeDetails(v)
-    if (v && !details.trim()) setDetails(DETAILS_SEED)
+    if (v && !detailBlock.trim()) setDetailBlock(DETAIL_BLOCK_SEED)
   }
   const toggleIncludeDate = (v: boolean) => {
     setIncludeDate(v)
@@ -560,33 +575,27 @@ export default function SignaturePad() {
           </div>
         ) : (
         <>
-        <div ref={containerRef} className="relative overflow-hidden border-2 border-dashed border-slate-300 rounded bg-slate-50 w-full">
+        <div
+          ref={containerRef}
+          className="relative border-2 border-dashed border-slate-300 rounded bg-slate-50 w-full transition-[height] duration-200"
+          style={{ height: previewHeight }}
+        >
           {/* Live preview of the labels the advanced options will bake — laid
               out the way the bake lays them out (composeSignature's layout()):
               hanging beneath the cropped ink, left-aligned with its edge, at
               the font size the ink's height implies. Until something is drawn
               the block waits at the bottom-left. Inert: drawing passes
-              straight through it. */}
+              straight through it.
+              ⚠️ The labels NEVER overlap the ink, even when the signature is
+              drawn at the very bottom of the pad — the box grows instead (see
+              previewHeight). An earlier version clamped the block upward and
+              let it sit over the strokes, which is not what the bake does and
+              read as a collision rather than a caption. */}
           {previewLabels.length > 0 &&
             (() => {
-              const sigH = inkBox ? inkBox.bottom - inkBox.top : 0
-              const baseFont = Math.min(28, Math.max(14, sigH * 0.4))
-              const gap = Math.max(4, sigH * 0.08)
-              // Never let the block leave the pane: ink drawn low in the box
-              // would push it under the bottom edge and clip the text
-              // mid-glyph. Clamp it up instead — overlapping the ink's tail is
-              // honest (the bake will sit exactly there, below the crop), a
-              // half-visible line just looks broken.
-              const blockH = previewLabels.reduce(
-                (a, l) => a + baseFont * DEFAULT_LABEL_SCALE * l.scale * 1.3,
-                0
-              )
               const pos = inkBox
-                ? {
-                    left: Math.max(2, inkBox.left),
-                    top: Math.max(2, Math.min(inkBox.bottom + gap, padH - blockH - 4))
-                  }
-                : { left: 12, bottom: 8 }
+                ? { left: Math.max(2, inkBox.left), top: inkBox.bottom + labelGap }
+                : { left: 12, top: padH + labelGap }
               return (
                 <div
                   className="pointer-events-none absolute select-none whitespace-nowrap"
@@ -601,7 +610,7 @@ export default function SignaturePad() {
                     <div
                       key={i}
                       style={{
-                        fontSize: inkBox ? baseFont * DEFAULT_LABEL_SCALE * l.scale : 18 * l.scale,
+                        fontSize: labelBaseFont * DEFAULT_LABEL_SCALE * l.scale,
                         lineHeight: 1.3
                       }}
                     >
@@ -682,24 +691,19 @@ export default function SignaturePad() {
             {advancedOpen && (
               <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3">
                 <OptionToggle checked={realistic} onChange={setRealistic} label="Make it look more realistic" />
-                <OptionToggle checked={includeName} onChange={toggleIncludeName} label="Add your name" />
-                <GatedInput
-                  value={nameLine}
-                  onChange={setNameLine}
-                  enabled={includeName}
-                  placeholder="Signed by: Your name"
-                  label="Name line under the signature"
-                />
+                {/* One box, one switch. Every line typed becomes a line under
+                    the signature; the first is set larger, because it is
+                    almost always the name. */}
                 <OptionToggle
                   checked={includeDetails}
                   onChange={toggleIncludeDetails}
-                  label="More details (e.g. role, email, phone)"
+                  label="Add your details"
                 />
                 <textarea
-                  value={details}
-                  onChange={(e) => setDetails(e.target.value)}
-                  rows={3}
-                  placeholder={DETAILS_SEED}
+                  value={detailBlock}
+                  onChange={(e) => setDetailBlock(e.target.value)}
+                  rows={4}
+                  placeholder={DETAIL_BLOCK_SEED}
                   aria-label="Details to show under the signature"
                   disabled={!includeDetails}
                   className={`w-full px-3 py-2 border border-slate-300 rounded text-sm bg-white resize-y focus:outline-none focus:ring-2 focus:ring-orange-500 ${includeDetails ? '' : 'opacity-50'}`}

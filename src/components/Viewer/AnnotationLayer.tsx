@@ -25,8 +25,9 @@ import {
   sigHasLabels,
   DEFAULT_LABEL_SCALE,
   DEFAULT_SIG_ALIGN,
-  NAME_LINE_SEED,
-  DETAILS_SEED,
+  DETAIL_BLOCK_SEED,
+  splitDetailBlock,
+  joinDetailBlock,
   dateLineSeed
 } from '../../lib/composeSignature'
 import { inkColorFor, renderInkSignature } from '../../lib/renderInk'
@@ -2819,21 +2820,20 @@ function SignatureOptionsModal({
   onRedraw?: () => void
   onClose: () => void
 }) {
-  // The whole "Signed by: Jane Smith" text is one editable line. Older
-  // signatures stored the wording and the name separately (namePrefix + name);
-  // they merge here on open and re-store as a single name on the next edit —
-  // the composed line is identical either way.
-  const [nameLine, setNameLine] = useState(() => {
+  // ONE box for every line under the signature, the name simply being the
+  // first — the same "Add your details" the pad offers. Older signatures stored
+  // the name's wording separately (namePrefix); it merges in here on open and
+  // re-stores folded into the name on the next edit, so the composed lines are
+  // identical either way.
+  const [detailBlock, setDetailBlock] = useState(() => {
     const n = data.name?.trim() ?? ''
     const p = data.namePrefix?.trim() ?? ''
-    return p && n ? `${p} ${n}` : p || n
+    return joinDetailBlock(p && n ? `${p} ${n}` : p || n, data.details)
   })
-  const [showName, setShowName] = useState(!!data.showName)
-  const [showDate, setShowDate] = useState(!!data.showDate)
-  const [details, setDetails] = useState(data.details ?? '')
   const [showDetails, setShowDetails] = useState(
-    data.showDetails ?? !!(data.details ?? '').trim()
+    () => !!data.showName || (data.showDetails ?? !!(data.details ?? '').trim())
   )
+  const [showDate, setShowDate] = useState(!!data.showDate)
   // The whole date line is one editable string too — seeded "Signed on
   // <today>" and thereafter exactly what the user typed, the date included.
   // Older signatures stored only the wording (datePrefix); the date part seeds
@@ -2889,12 +2889,13 @@ function SignatureOptionsModal({
   // another that is only held in this draft state. The full name and date lines
   // live in `name` / `dateText` now — a legacy prefix must never ride along or
   // it would be prepended a second time.
-  const apply = (patch: Partial<SignatureData>) =>
+  const apply = (patch: Partial<SignatureData>) => {
+    const { name, details } = splitDetailBlock(detailBlock)
     onApply({
       ...dataRef.current,
-      name: nameLine.trim() || undefined,
+      name: name.trim() || undefined,
       namePrefix: undefined,
-      showName,
+      showName: showDetails,
       details: details || undefined,
       showDetails,
       showDate,
@@ -2902,19 +2903,31 @@ function SignatureOptionsModal({
       datePrefix: undefined,
       ...patch
     })
-
-  const changeNameLine = (v: string) => {
-    setNameLine(v)
-    apply({ name: v.trim() || undefined })
   }
-  const toggleName = (v: boolean) => {
-    setShowName(v)
-    let line = nameLine
-    if (v && !line.trim()) {
-      line = NAME_LINE_SEED
-      setNameLine(line)
+
+  // One box, so one applier: split it and send both halves every time.
+  const sendBlock = (block: string, shown: boolean) => {
+    const { name, details } = splitDetailBlock(block)
+    apply({
+      showName: shown,
+      showDetails: shown,
+      name: name.trim() || undefined,
+      details: details || undefined
+    })
+  }
+
+  const changeDetailBlock = (v: string) => {
+    setDetailBlock(v)
+    sendBlock(v, showDetails)
+  }
+  const toggleDetails = (v: boolean) => {
+    setShowDetails(v)
+    let block = detailBlock
+    if (v && !block.trim()) {
+      block = DETAIL_BLOCK_SEED
+      setDetailBlock(block)
     }
-    apply({ showName: v, name: line.trim() || undefined })
+    sendBlock(block, v)
   }
   const toggleDate = (v: boolean) => {
     setShowDate(v)
@@ -2924,19 +2937,6 @@ function SignatureOptionsModal({
       setDateLine(line)
     }
     apply({ showDate: v, dateText: line.trim() || undefined })
-  }
-  const changeDetails = (v: string) => {
-    setDetails(v)
-    apply({ details: v || undefined })
-  }
-  const toggleDetails = (v: boolean) => {
-    setShowDetails(v)
-    let d = details
-    if (v && !d.trim()) {
-      d = DETAILS_SEED
-      setDetails(d)
-    }
-    apply({ showDetails: v, details: d || undefined })
   }
   const changeDateLine = (v: string) => {
     setDateLine(v)
@@ -2993,25 +2993,14 @@ function SignatureOptionsModal({
               ? 'Changes the labels and the pen style — the strokes you drew stay exactly as drawn. Use the pill on the signature to resize or align the labels.'
               : 'Changes the name and date only — your signature itself stays exactly as drawn. Use the pill on the signature to resize or align the labels.'}
           </p>
-          <ModalToggle checked={showName} onChange={toggleName} label="Add your name" />
-          <input
-            value={nameLine}
-            onChange={(e) => changeNameLine(e.target.value)}
-            placeholder="Signed by: Your name"
-            aria-label="Name line under the signature"
-            disabled={!showName}
-            className={`w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 ${showName ? '' : 'opacity-50'}`}
-          />
-          <ModalToggle
-            checked={showDetails}
-            onChange={toggleDetails}
-            label="More details (e.g. role, email, phone)"
-          />
+          {/* One box for every line under the signature — the first is set
+              larger, being almost always the name. Same control as the pad. */}
+          <ModalToggle checked={showDetails} onChange={toggleDetails} label="Add your details" />
           <textarea
-            value={details}
-            onChange={(e) => changeDetails(e.target.value)}
-            rows={3}
-            placeholder={DETAILS_SEED}
+            value={detailBlock}
+            onChange={(e) => changeDetailBlock(e.target.value)}
+            rows={4}
+            placeholder={DETAIL_BLOCK_SEED}
             aria-label="Details to show under the signature"
             disabled={!showDetails}
             className={`w-full px-3 py-2 border border-slate-300 rounded text-sm resize-y focus:outline-none focus:ring-2 focus:ring-orange-500 ${showDetails ? '' : 'opacity-50'}`}

@@ -30,6 +30,28 @@ export const DEFAULT_SIG_ALIGN: SigAlign = 'left'
 // see the unanswered-prompt filters below.
 export const NAME_LINE_SEED = 'Signed by: '
 export const DETAILS_SEED = 'Role: \nEmail: \nPhone: '
+
+// Name and details are ONE box in both dialogs — "Add your details" — because
+// they are one thing to the person filling them in: the lines under their
+// signature. The split below is a rendering detail, kept only because the first
+// line is set larger than the rest.
+export const DETAIL_BLOCK_SEED = `${NAME_LINE_SEED}\n${DETAILS_SEED}`
+
+/** The first line is the name; everything after it is the smaller detail lines. */
+export function splitDetailBlock(block: string | undefined): {
+  name: string
+  details: string
+} {
+  const lines = (block ?? '').split(/\r?\n/)
+  return { name: lines[0] ?? '', details: lines.slice(1).join('\n') }
+}
+
+/** The inverse, for opening the box on a signature stored as name + details. */
+export function joinDetailBlock(name?: string, details?: string): string {
+  const rest = details ?? ''
+  const first = name ?? ''
+  return rest ? `${first}\n${rest}` : first
+}
 // The date line starts as "Signed on <today>" and is thereafter the user's own
 // text, editable in full — the date included.
 export function dateLineSeed(): string {
