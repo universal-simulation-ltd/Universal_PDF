@@ -17,6 +17,7 @@
 // takes Universal QR's `.uniqr.json` backup file, which works anywhere.
 
 import { HOSTED_BUCKET, useUniversal, type HostedUpload } from '@unisim/sdk'
+import { hostedQrPathCandidates, qrSidecarPath } from '../hostedQrPaths'
 import { DEFAULT_DESIGN, type QrDesign } from './design'
 import { renderQrPng } from './render'
 
@@ -113,32 +114,50 @@ export async function loadHostedQrDesigns(
   const entries = await Promise.all(
     uploads.map(async (u): Promise<HostedQrDesign | null> => {
       try {
-        const sidecar = await supabase.storage.from(HOSTED_BUCKET).download(`${u.storage_path}.json`)
-        if (!sidecar.error && sidecar.data) {
-          const design = { ...DEFAULT_DESIGN, ...(JSON.parse(await sidecar.data.text()) as Partial<QrDesign>) }
-          if (design.data) {
-            return {
-              id: u.id,
-              name: design.name || u.file_name || '',
-              design,
-              png: null,
-              thumbnail: await renderQrPng(design, THUMB_SIZE),
-              createdAt: u.created_at,
+        // ⚠️ Not `u.storage_path` directly. Saves made before 2026-08-27 have
+        // `storage_path = 'pending'` on the row — an UPDATE that RLS silently
+        // refused, see hostedQrPaths.ts — while the bytes sit in the bucket
+        // under a name derivable from the row itself. Asking for the recorded
+        // path alone made every one of those saves vanish from this shelf, and
+        // vanish QUIETLY: the catch below drops an upload it cannot fetch, so
+        // there was no error to notice, just a code that was never listed.
+        const candidates = hostedQrPathCandidates(u)
+
+        for (const path of candidates) {
+          const sidecar = await supabase.storage.from(HOSTED_BUCKET).download(qrSidecarPath(path))
+          if (!sidecar.error && sidecar.data) {
+            const design = { ...DEFAULT_DESIGN, ...(JSON.parse(await sidecar.data.text()) as Partial<QrDesign>) }
+            if (design.data) {
+              return {
+                id: u.id,
+                name: design.name || u.file_name || '',
+                design,
+                png: null,
+                thumbnail: await renderQrPng(design, THUMB_SIZE),
+                createdAt: u.created_at,
+              }
             }
           }
         }
-        // No (usable) sidecar — fall back to the stored PNG itself.
-        const pngRes = await supabase.storage.from(HOSTED_BUCKET).download(u.storage_path)
-        if (pngRes.error || !pngRes.data) return null
-        const png = await blobToDataUrl(pngRes.data)
-        return {
-          id: u.id,
-          name: (u.file_name ?? '').replace(/\.[^.]+$/, ''),
-          design: null,
-          png,
-          thumbnail: png,
-          createdAt: u.created_at,
+
+        // No (usable) sidecar anywhere — fall back to the stored PNG itself.
+        // Tried across the same candidates: a legacy row has no usable sidecar
+        // AND no usable PNG at the recorded path, so giving up here would lose
+        // exactly the saves this is meant to recover.
+        for (const path of candidates) {
+          const pngRes = await supabase.storage.from(HOSTED_BUCKET).download(path)
+          if (pngRes.error || !pngRes.data) continue
+          const png = await blobToDataUrl(pngRes.data)
+          return {
+            id: u.id,
+            name: (u.file_name ?? '').replace(/\.[^.]+$/, ''),
+            design: null,
+            png,
+            thumbnail: png,
+            createdAt: u.created_at,
+          }
         }
+        return null
       } catch {
         return null
       }

@@ -32,6 +32,9 @@ import {
   safeStem,
   PENDING_PATH,
 } from '../src/lib/hostedPaths.ts'
+import {
+  hostedQrPathCandidates, qrSidecarPath, qrStemOf,
+} from '../src/lib/hostedQrPaths.ts'
 
 let pass = 0
 let fail = 0
@@ -109,6 +112,41 @@ const idB = newObjectId()
 eq(typeof idA === 'string' && idA.length >= 16, true, 'long enough to be unique')
 eq(idA === idB, false, 'two calls differ')
 eq(/^[a-z0-9-]+$/.test(idA), true, 'safe in an object name')
+
+console.log('')
+console.log("Universal QR saves, as read from THIS app's QR shelf:")
+// The paths below are named by Universal QR, not by this app, so the formula
+// must match `Universal_QR/src/lib/hostedPaths.ts` byte for byte. The stem is
+// the filename with its extension dropped and NOTHING ELSE -- it is NOT
+// `safeStem`, which lowercases and slugs. Getting it wrong rebuilds a path
+// that never existed, and the repair then silently does nothing: the shelf
+// loader drops an upload it cannot fetch, so a wrong formula shows up as a
+// missing QR code and never as an error.
+eq(
+  hostedQrPathCandidates({ id: UPLOAD, org_id: ORG, storage_path: 'pending', file_name: 'my-code.png' }),
+  [`${ORG}/qr/${UPLOAD}-my-code.png`],
+  "a legacy 'pending' QR row is rebuilt from the row itself",
+)
+eq(qrStemOf('My Code.png'), 'My Code',
+  'the QR stem keeps case and spaces -- it is NOT slugged like a PDF backup')
+eq(safeStem('My Code.pdf') === qrStemOf('My Code.png'), false,
+  'and it is demonstrably a different function from safeStem')
+eq(qrStemOf(null), 'qr-code', 'a nameless QR row still resolves')
+eq(
+  hostedQrPathCandidates({ id: UPLOAD, org_id: ORG, storage_path: `${ORG}/qr/${UPLOAD}-my-code.png`, file_name: 'my-code.png' }).length,
+  1,
+  'a healthy QR row yields exactly one candidate',
+)
+eq(
+  qrSidecarPath(`${ORG}/qr/${UPLOAD}-my-code.png`),
+  `${ORG}/qr/${UPLOAD}-my-code.png.json`,
+  'the design sidecar follows the candidate, so an adopted save stays EDITABLE',
+)
+eq(
+  hostedQrPathCandidates({ id: UPLOAD, org_id: ORG, storage_path: 'pending', file_name: 'my-code.png' }).map(qrSidecarPath),
+  [`${ORG}/qr/${UPLOAD}-my-code.png.json`],
+  'including for a legacy row, which is the whole point',
+)
 
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

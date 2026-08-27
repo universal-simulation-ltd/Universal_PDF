@@ -373,6 +373,32 @@ handing out links to `pending` too.
 * **Delete every candidate.** `deleteHostedPdf` removes all of them, so
   refunding a legacy row cannot orphan its real object in the bucket.
 
+### The same bug reached this app through ANOTHER app's saves
+
+`src/lib/qr/library.ts` lists the QR codes you saved in **Universal QR**, so it
+reads `hosted_uploads` rows this app never wrote — and it read `storage_path`
+raw. Every legacy `pending` QR row therefore missed both its `.json` design
+sidecar and its PNG.
+
+⚠️ **And it failed SILENTLY.** `loadHostedQrDesigns` drops an upload it cannot
+fetch, deliberately, so that one stale row cannot empty the whole shelf. The
+result was not an error message: it was a QR code that simply was not in the
+list. Nothing to report, nothing to search for.
+
+`src/lib/hostedQrPaths.ts` rebuilds those paths, and both the sidecar lookup and
+the PNG fallback now walk every candidate.
+
+⚠️⚠️ **It does NOT reuse `safeStem`, and must not.** Universal QR's stem is the
+filename with its extension dropped and nothing else; `safeStem` lowercases and
+slugs. `My Code.png` becomes `My Code` there and would become `my-code` here —
+a path that never existed. Because the loader swallows a miss, that mistake
+would look exactly like "the fix didn't help" rather than like a bug. The two
+functions are asserted to be *different* in `npm run test:hosted-paths`, and the
+slugging version is one of the three sabotages that suite is proven against.
+
+⚠️ **This file mirrors `Universal_QR/src/lib/hostedPaths.ts` and must not drift
+from it.** Universal QR names these objects; this app only reads them.
+
 ⚠️ **The same three-step flow is copied verbatim into Universal Images, QR,
 Exports and Recorder** (`src/lib/hostedStore.ts` / `hostedRecordings.ts` in
 each). They have the identical bug and are untouched by this repo's fix. The
