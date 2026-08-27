@@ -501,8 +501,19 @@ export default function LandingPage() {
                   things that change how this MACHINE treats PDFs rather than
                   what happens to one file. Desktop-only in practice — both
                   pills render nothing in the browser — so the whole section
-                  hides where it would be empty. */}
-              {(defaultApp.available || previewPane.available) && (
+                  hides where it would be empty. The title names the OS
+                  ("[Windows] System options") because every switch inside is
+                  a promise about this machine, not about the app. */}
+              {(defaultApp.available || previewPane.available) && (() => {
+                const os =
+                  defaultApp.platform === 'win32' || previewPane.available
+                    ? 'Windows'
+                    : defaultApp.platform === 'darwin'
+                      ? 'macOS'
+                      : defaultApp.platform === 'linux'
+                        ? 'Linux'
+                        : null
+                return (
                 <details
                   className="group mt-3"
                   onToggle={(e) => {
@@ -514,7 +525,7 @@ export default function LandingPage() {
                   }}
                 >
                   <summary className="flex items-center gap-2 cursor-pointer select-none list-none px-1 py-1 text-xs uppercase tracking-wide font-medium text-slate-500 hover:text-slate-700 transition-colors">
-                    <span>System options</span>
+                    <span>{os ? `[${os}] ` : ''}System options</span>
                     <span
                       className="ml-auto text-base text-slate-400 transition-transform group-open:rotate-180"
                       aria-hidden="true"
@@ -532,7 +543,8 @@ export default function LandingPage() {
                       administrator prompt, so it waits to be looked for. */}
                   <PreviewPanePill offer={previewPane} className={`${PILL} ${PILL_IDLE} mt-3`} />
                 </details>
-              )}
+                )
+              })()}
             </div>
           </div>
 
