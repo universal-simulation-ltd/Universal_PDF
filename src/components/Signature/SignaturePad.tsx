@@ -186,7 +186,9 @@ export default function SignaturePad() {
             // into it after a beat, so the "received ✓" tick is visible.
             const fieldId = useSignatureStore.getState().signingFieldId
             if (fieldId) {
-              setTimeout(() => { fillField(fieldId, res, nameLine.trim()) }, 700)
+              setTimeout(() => {
+                fillField(fieldId, res, splitDetailBlock(detailBlock).name.trim())
+              }, 700)
               return
             }
             const count = useSignatureStore.getState().signatures.length
