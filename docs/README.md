@@ -413,9 +413,24 @@ Three things worth knowing here:
   needs nothing — QuickLook already thumbnails PDFs — and GNOME/KDE thumbnail
   through poppler.
 
+The same DLL also hosts the **`IPreviewHandler`**
+(`native/win-thumbnail/src/PreviewHandler.cpp`), so with Universal PDF as the
+default the Explorer preview pane (Alt+P) shows the document itself — toggled
+from home → System options, one UAC prompt.
+
 Build it with `npm run thumbnail:build`; the release workflow does the same on
 the Windows runner. If that build fails the installer still ships, without
-thumbnails.
+thumbnails — ⚠️ and that fallback is exactly how **v0.6.3 shipped without the
+DLL**: the CI step failed with MSVC C2375, the workflow carried on by design,
+and its warning annotation went unread until a user asked where the feature
+had gone. Check the Windows job's warnings on every release.
+
+⚠️ **The four COM exports must be declared STDAPI and exported via
+`src/exports.def`.** combaseapi.h/olectl.h declare `DllGetClassObject` and
+friends plain STDAPI; defining them `extern "C" __declspec(dllexport)` is a
+linkage mismatch MSVC refuses (C2375) and MinGW accepts — so a clean local
+(MinGW) build proves nothing about the (MSVC) release build. Fixed in
+`4b4f42c`; v0.6.4 was the first installer since v0.6.2 to carry the DLL.
 
 ## Leaving a document with amendments
 
