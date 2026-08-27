@@ -83,7 +83,7 @@
         "description": "PDF Document",
         "role": "Editor",
         "mimeType": "application/pdf",
-        "icon": "build/pdf-document.ico"
+        "icon": "build/document-icon.ico"
       }
     ],
     "mac": {
@@ -96,7 +96,7 @@
           ]
         }
       ],
-      "icon": "public/unisim-icon.png",
+      "icon": "build/app-icon.png",
       "category": "public.app-category.productivity",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
@@ -110,7 +110,7 @@
         "AppImage",
         "deb"
       ],
-      "icon": "public/unisim-icon.png",
+      "icon": "build/app-icon.png",
       "category": "Office",
       "synopsis": "Free and open-source PDF viewer and editor",
       "desktop": {
@@ -124,7 +124,7 @@
       "target": [
         "nsis"
       ],
-      "icon": "public/unisim-icon.png",
+      "icon": "build/app-icon.png",
       "extraResources": [
         {
           "from": "native/win-thumbnail/dist",
@@ -142,6 +142,8 @@
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
+      "installerIcon": "build/installer-icon.ico",
+      "uninstallerIcon": "build/installer-icon.ico",
       "artifactName": "Universal-PDF-Setup-${version}.${ext}"
     }
   }
