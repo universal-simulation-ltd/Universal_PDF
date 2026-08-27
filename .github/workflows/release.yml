@@ -173,9 +173,15 @@ jobs:
           $test = Get-ChildItem ./native/win-thumbnail -Recurse -Filter thumbtest.exe |
             Sort-Object LastWriteTime -Descending | Select-Object -First 1
           if (-not $test) {
-            Write-Host "::warning::thumbtest.exe not found - skipping the hosted-activation check."
+            Write-Host "::warning::thumbtest.exe not found - skipping the shell-integration checks."
             exit 1
           }
+
+          # A multi-page document, because the sealed-stream check below is
+          # vacuous on a one-pager: PDFium reads a small file greedily while
+          # parsing it, so only turning the page forces a genuinely new read.
+          node -e "const {PDFDocument}=require('pdf-lib');(async()=>{const d=await PDFDocument.create();for(let i=0;i<8;i++){const p=d.addPage([595,842]);p.drawText('Page '+(i+1),{x:60,y:760,size:36});}require('fs').writeFileSync('multipage.pdf',await d.save());})()"
+
           & $test.FullName register
           try {
             & $test.FullName hosted
@@ -183,8 +189,18 @@ jobs:
               Write-Host "::warning::The preview handler does not activate in the shell's surrogate - the installer will ship with a preview pane that never renders."
               exit 1
             }
+            # The handler must never read the shell's stream after the opening
+            # call returns. Against Explorer's marshalled proxy that read is an
+            # outbound call into a process already blocked on us, which is the
+            # hang Windows logs as AppHangXProcB1 (2026-08-27).
+            & $test.FullName sealed multipage.pdf
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "::warning::The preview handler reads the shell's stream lazily - this is the Explorer deadlock; the installer will ship with a preview pane that can hang Explorer."
+              exit 1
+            }
           } finally {
             & $test.FullName unregister
+            Remove-Item multipage.pdf -ErrorAction SilentlyContinue
           }
 
       - name: Build installers

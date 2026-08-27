@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 #include "Badge.h"
 
@@ -76,23 +77,15 @@ BOOL CALLBACK InitOnce(PINIT_ONCE, PVOID, PVOID*) {
   return TRUE;
 }
 
-// Reads through the IStream the shell handed us, so a 300 MB PDF is never
-// pulled into the surrogate's address space to thumbnail its first page.
+// Serves PDFium's lazy reads out of the copy we already hold. Never touches
+// the shell's IStream — see the warning on PdfStreamAccess for why that is the
+// whole point rather than a detail.
 int ReadBlock(void* param, unsigned long position, unsigned char* buf,
               unsigned long size) {
   auto* self = static_cast<PdfStreamAccess*>(param);
-  LARGE_INTEGER move;
-  move.QuadPart = static_cast<LONGLONG>(position);
-  if (FAILED(self->stream->Seek(move, STREAM_SEEK_SET, nullptr))) return 0;
-
-  unsigned long done = 0;
-  while (done < size) {
-    ULONG got = 0;
-    if (FAILED(self->stream->Read(buf + done, size - done, &got)) || got == 0) {
-      return 0;
-    }
-    done += got;
-  }
+  const size_t have = self->bytes.size();
+  if (position > have || size > have - position) return 0;
+  if (size) std::memcpy(buf, self->bytes.data() + position, size);
   return 1;
 }
 
@@ -142,6 +135,43 @@ const PdfiumApi* GetPdfium() {
   return g_pdfium ? &g_api : nullptr;
 }
 
+// 256 MB. FPDF_FILEACCESS::m_FileLen is a 32-bit unsigned long on Windows
+// anyway, so nothing above 4 GB was ever openable; this is the point where
+// buffering stops being reasonable in a shell surrogate.
+static constexpr unsigned long long kMaxDocumentBytes = 256ull * 1024 * 1024;
+
+HRESULT SlurpStream(IStream* stream, std::vector<unsigned char>* out) {
+  if (!stream || !out) return E_INVALIDARG;
+  out->clear();
+
+  STATSTG stat{};
+  HRESULT hr = stream->Stat(&stat, STATFLAG_NONAME);
+  if (FAILED(hr)) return hr;
+  const unsigned long long size = stat.cbSize.QuadPart;
+  if (size == 0 || size > kMaxDocumentBytes) return E_FAIL;
+
+  LARGE_INTEGER start{};
+  hr = stream->Seek(start, STREAM_SEEK_SET, nullptr);
+  if (FAILED(hr)) return hr;
+
+  out->resize(static_cast<size_t>(size));
+  size_t done = 0;
+  while (done < out->size()) {
+    // One ULONG-sized bite at a time: Read takes a 32-bit count, and a short
+    // read is normal rather than an error — loop until the file is in.
+    const ULONG want = static_cast<ULONG>(
+        (std::min)(out->size() - done, static_cast<size_t>(1u << 20)));
+    ULONG got = 0;
+    hr = stream->Read(out->data() + done, want, &got);
+    if (FAILED(hr) || got == 0) {
+      out->clear();
+      return FAILED(hr) ? hr : E_FAIL;
+    }
+    done += got;
+  }
+  return S_OK;
+}
+
 HRESULT PdfDocument::Open(IStream* stream) {
   Close();
   if (!stream) return E_INVALIDARG;
@@ -149,16 +179,14 @@ HRESULT PdfDocument::Open(IStream* stream) {
   const PdfiumApi* pdfium = GetPdfium();
   if (!pdfium) return E_FAIL;
 
-  STATSTG stat{};
-  HRESULT hr = stream->Stat(&stat, STATFLAG_NONAME);
+  // Copied here, on the shell's own call thread, and the stream is not kept:
+  // every later read is served from memory. This is the preview pane, where
+  // "later" means inside WM_PAINT — the one place a read may not travel back
+  // to Explorer. See PdfStreamAccess.
+  HRESULT hr = SlurpStream(stream, &access_.bytes);
   if (FAILED(hr)) return hr;
-  if (stat.cbSize.QuadPart == 0 || stat.cbSize.QuadPart > 0xFFFFFFFFull) {
-    return E_FAIL;
-  }
 
-  access_.stream = stream;
-  access_.stream->AddRef();
-  access_.file.m_FileLen = static_cast<unsigned long>(stat.cbSize.QuadPart);
+  access_.file.m_FileLen = static_cast<unsigned long>(access_.bytes.size());
   access_.file.m_GetBlock = ReadBlock;
   access_.file.m_Param = &access_;
 
@@ -183,9 +211,6 @@ void PdfDocument::Close() {
       ReleaseSRWLockExclusive(&g_render_lock);
     }
     doc_ = nullptr;
-  }
-  if (access_.stream) {
-    access_.stream->Release();
   }
   access_ = PdfStreamAccess{};
   pages_ = 0;
@@ -256,17 +281,15 @@ HRESULT RenderThumbnail(IStream* stream, UINT cx, Thumbnail* out) {
   const PdfiumApi* pdfium = GetPdfium();
   if (!pdfium) return E_FAIL;
 
-  STATSTG stat{};
-  HRESULT hr = stream->Stat(&stat, STATFLAG_NONAME);
-  if (FAILED(hr)) return hr;
-  // FPDF_FILEACCESS::m_FileLen is an unsigned long — 32 bits on Windows.
-  if (stat.cbSize.QuadPart == 0 || stat.cbSize.QuadPart > 0xFFFFFFFFull) {
-    return E_FAIL;
-  }
-
+  // Buffered like the preview pane's, and for the same reason. A thumbnail
+  // does all its reading inside this one call, so it was the less exposed of
+  // the two — but dllhost.exe was logged hanging on 2026-08-27 as well, and
+  // one rule for both callers is easier to keep than a rule with an exception.
   PdfStreamAccess io;
-  io.stream = stream;
-  io.file.m_FileLen = static_cast<unsigned long>(stat.cbSize.QuadPart);
+  HRESULT hr = SlurpStream(stream, &io.bytes);
+  if (FAILED(hr)) return hr;
+
+  io.file.m_FileLen = static_cast<unsigned long>(io.bytes.size());
   io.file.m_GetBlock = ReadBlock;
   io.file.m_Param = &io;
 

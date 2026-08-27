@@ -10,6 +10,8 @@
 //     source building under MinGW on the dev box and MSVC in CI.
 #pragma once
 
+#include <vector>
+
 #include "Common.h"
 
 // PDFium is a C API and this header only declares it; taking decltype of a
@@ -57,10 +59,25 @@ struct Thumbnail {
 // ⚠️ PDFium keeps this pointer for the document's whole life, so it must outlive
 // the FPDF_DOCUMENT — a local in the function that opened the document is a
 // use-after-free waiting for the first render.
+//
+// ⚠️⚠️ It holds BYTES, not the shell's IStream, and that is not an optimisation
+// — it is what stops Explorer hanging. The IStream a shell extension is handed
+// is a proxy marshalled back to the calling process, and PDFium reads through
+// this descriptor LAZILY: during LoadPage and RenderPageBitmap, long after the
+// call that opened the document returned. In the preview handler those renders
+// happen in WM_PAINT, so every lazy read became an outbound COM call into
+// Explorer while Explorer was blocked waiting on us — the deadlock Windows
+// logs as AppHangXProcB1 (2026-08-27). Copy the file in once, on the thread
+// the shell called us on, then never touch the stream again.
 struct PdfStreamAccess {
   FPDF_FILEACCESS file{};
-  IStream* stream = nullptr;
+  std::vector<unsigned char> bytes;
 };
+
+// Read a whole stream into memory, refusing anything absurd. `cap` is a
+// ceiling, not a promise of virtue: a preview that declines a 400 MB file is a
+// blank pane, which is recoverable; one that streams it is a hung Explorer.
+HRESULT SlurpStream(IStream* stream, std::vector<unsigned char>* out);
 
 // A document held open across several renders, for the preview pane — where the
 // same file is drawn again on every resize and every page turn, and re-parsing

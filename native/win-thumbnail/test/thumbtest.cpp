@@ -27,9 +27,97 @@
 #include <wincodec.h>
 
 #include <cstdio>
+#include <cstring>
 #include <cwchar>
+#include <vector>
 
 namespace {
+
+// An IStream that can be SEALED: after that, every Read and Seek fails and is
+// counted. It stands in for the shell's marshalled stream proxy, which is not
+// safe to touch once the opening call has returned — reading it from WM_PAINT
+// is what deadlocked Explorer (AppHangXProcB1, 2026-08-27).
+class SealedStream final : public IStream {
+ public:
+  explicit SealedStream(std::vector<unsigned char> bytes)
+      : bytes_(std::move(bytes)) {}
+
+  void Seal() { sealed_ = true; }
+  int BlockedReads() const { return blocked_; }
+
+  IFACEMETHODIMP QueryInterface(REFIID riid, void** ppv) override {
+    if (!ppv) return E_POINTER;
+    if (IsEqualIID(riid, IID_IUnknown) || IsEqualIID(riid, IID_ISequentialStream) ||
+        IsEqualIID(riid, IID_IStream)) {
+      *ppv = static_cast<IStream*>(this);
+      AddRef();
+      return S_OK;
+    }
+    *ppv = nullptr;
+    return E_NOINTERFACE;
+  }
+  IFACEMETHODIMP_(ULONG) AddRef() override { return ++ref_; }
+  IFACEMETHODIMP_(ULONG) Release() override {
+    const ULONG n = --ref_;
+    if (n == 0) delete this;
+    return n;
+  }
+
+  IFACEMETHODIMP Read(void* out, ULONG want, ULONG* got) override {
+    if (sealed_) {
+      ++blocked_;
+      return E_FAIL;
+    }
+    const size_t left = bytes_.size() - (std::min)(pos_, bytes_.size());
+    const ULONG n = static_cast<ULONG>((std::min)(static_cast<size_t>(want), left));
+    if (n) std::memcpy(out, bytes_.data() + pos_, n);
+    pos_ += n;
+    if (got) *got = n;
+    return n ? S_OK : S_FALSE;
+  }
+
+  IFACEMETHODIMP Seek(LARGE_INTEGER move, DWORD origin,
+                      ULARGE_INTEGER* out) override {
+    if (sealed_) {
+      ++blocked_;
+      return E_FAIL;
+    }
+    long long base = origin == STREAM_SEEK_CUR ? static_cast<long long>(pos_)
+                     : origin == STREAM_SEEK_END
+                         ? static_cast<long long>(bytes_.size())
+                         : 0;
+    long long target = base + move.QuadPart;
+    if (target < 0) return E_FAIL;
+    pos_ = static_cast<size_t>(target);
+    if (out) out->QuadPart = pos_;
+    return S_OK;
+  }
+
+  IFACEMETHODIMP Stat(STATSTG* stat, DWORD) override {
+    if (!stat) return E_POINTER;
+    ZeroMemory(stat, sizeof(*stat));
+    stat->cbSize.QuadPart = bytes_.size();
+    stat->type = STGTY_STREAM;
+    return S_OK;
+  }
+
+  IFACEMETHODIMP Write(const void*, ULONG, ULONG*) override { return E_NOTIMPL; }
+  IFACEMETHODIMP SetSize(ULARGE_INTEGER) override { return E_NOTIMPL; }
+  IFACEMETHODIMP CopyTo(IStream*, ULARGE_INTEGER, ULARGE_INTEGER*,
+                        ULARGE_INTEGER*) override { return E_NOTIMPL; }
+  IFACEMETHODIMP Commit(DWORD) override { return E_NOTIMPL; }
+  IFACEMETHODIMP Revert() override { return E_NOTIMPL; }
+  IFACEMETHODIMP LockRegion(ULARGE_INTEGER, ULARGE_INTEGER, DWORD) override { return E_NOTIMPL; }
+  IFACEMETHODIMP UnlockRegion(ULARGE_INTEGER, ULARGE_INTEGER, DWORD) override { return E_NOTIMPL; }
+  IFACEMETHODIMP Clone(IStream**) override { return E_NOTIMPL; }
+
+ private:
+  std::vector<unsigned char> bytes_;
+  size_t pos_ = 0;
+  bool sealed_ = false;
+  int blocked_ = 0;
+  ULONG ref_ = 1;
+};
 
 const CLSID kProviderClsid = {
     0x9d3ae6b2, 0x939a, 0x47a9, {0xa7, 0xf8, 0xd3, 0x0a, 0x6f, 0xc4, 0xc1, 0x0f}};
@@ -347,6 +435,111 @@ int PreviewHosted() {
   return 0;
 }
 
+// Open a document, then take the stream away and make it render again.
+//
+// A handler that copied the file up front does not notice. One that reads
+// lazily — as this did until 2026-08-27 — reaches back through a stream it no
+// longer owns, which against the shell's real proxy means an outbound COM call
+// into a process already blocked waiting on us.
+int PreviewSealed(const wchar_t* pdf) {
+  HANDLE fh = CreateFileW(pdf, GENERIC_READ, FILE_SHARE_READ, nullptr,
+                          OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+  if (fh == INVALID_HANDLE_VALUE) {
+    return Fail("open file", HRESULT_FROM_WIN32(GetLastError()));
+  }
+  LARGE_INTEGER size{};
+  GetFileSizeEx(fh, &size);
+  std::vector<unsigned char> bytes(static_cast<size_t>(size.QuadPart));
+  DWORD read = 0;
+  ReadFile(fh, bytes.data(), static_cast<DWORD>(bytes.size()), &read, nullptr);
+  CloseHandle(fh);
+  if (read != bytes.size()) return Fail("read file", E_FAIL);
+
+  auto* stream = new SealedStream(std::move(bytes));
+
+  IPreviewHandler* preview = nullptr;
+  HRESULT hr = CoCreateInstance(kPreviewClsid, nullptr, CLSCTX_INPROC_SERVER,
+                                IID_PPV_ARGS(&preview));
+  if (FAILED(hr)) {
+    stream->Release();
+    return Fail("CoCreateInstance(preview)", hr);
+  }
+
+  IInitializeWithStream* init = nullptr;
+  hr = preview->QueryInterface(kIidInitializeWithStream,
+                               reinterpret_cast<void**>(&init));
+  if (SUCCEEDED(hr)) {
+    hr = init->Initialize(stream, 0);
+    init->Release();
+  }
+  if (FAILED(hr)) {
+    preview->Release();
+    stream->Release();
+    return Fail("Initialize", hr);
+  }
+
+  WNDCLASSEXW wc{};
+  wc.cbSize = sizeof(wc);
+  wc.lpfnWndProc = DefWindowProcW;
+  wc.hInstance = GetModuleHandleW(nullptr);
+  wc.hbrBackground = reinterpret_cast<HBRUSH>(GetStockObject(GRAY_BRUSH));
+  wc.lpszClassName = L"UniversalPdfSealedTestHost";
+  RegisterClassExW(&wc);
+  HWND host = CreateWindowExW(WS_EX_TOOLWINDOW, wc.lpszClassName, L"sealed",
+                              WS_POPUP | WS_VISIBLE, 0, 0, 600, 760, nullptr,
+                              nullptr, wc.hInstance, nullptr);
+
+  RECT rect{0, 0, 600, 760};
+  preview->SetWindow(host, &rect);
+  preview->SetRect(&rect);
+  hr = preview->DoPreview();
+  if (FAILED(hr)) {
+    DestroyWindow(host);
+    preview->Release();
+    stream->Release();
+    return Fail("DoPreview", hr);
+  }
+  PumpFor(700);
+
+  // Everything above is what the shell does while it is still on the call. From
+  // here the stream is off limits.
+  stream->Seal();
+
+  // A resize alone is not enough to prove anything: PDFium reads a small
+  // document greedily while parsing it, so re-rendering PAGE ONE touches the
+  // stream not at all even when the handler is streaming. Turning the page is
+  // what forces a genuinely new read — later pages are exactly what a lazy
+  // reader has not fetched yet. Use a multi-page PDF or this check is vacuous.
+  RECT smaller{0, 0, 520, 660};
+  preview->SetRect(&smaller);
+  SetWindowPos(host, nullptr, 0, 0, 520, 660, SWP_NOZORDER | SWP_NOACTIVATE);
+  PumpFor(400);
+
+  for (int i = 0; i < 4; ++i) {
+    HWND child = GetWindow(host, GW_CHILD);
+    if (child) SendMessageW(child, WM_KEYDOWN, VK_NEXT, 0);
+    PumpFor(400);
+  }
+
+  const int blocked = stream->BlockedReads();
+  std::printf("reads attempted after the stream was sealed: %d\n", blocked);
+
+  preview->Unload();
+  DestroyWindow(host);
+  preview->Release();
+  stream->Release();
+
+  if (blocked != 0) {
+    std::fprintf(stderr,
+                 "the handler read the shell's stream after its opening call "
+                 "returned — against a real marshalled proxy that is the "
+                 "Explorer deadlock\n");
+    return 1;
+  }
+  std::printf("sealed-stream check ok — the document was buffered up front\n");
+  return 0;
+}
+
 int SelfRegister(bool on) {
   wchar_t dll[MAX_PATH];
   if (!SiblingPath(L"UniversalPdfThumb.dll", dll)) {
@@ -374,6 +567,7 @@ int wmain(int argc, wchar_t** argv) {
                  "usage: thumbtest render|shell <file> <size> <out.png>\n"
                  "       thumbtest preview <file.pdf> <out.png> [pagedowns]\n"
                  "       thumbtest hosted\n"
+                 "       thumbtest sealed <file.pdf>\n"
                  "       thumbtest register|unregister\n");
     return 2;
   }
@@ -384,6 +578,8 @@ int wmain(int argc, wchar_t** argv) {
   int rc = 2;
   if (_wcsicmp(argv[1], L"hosted") == 0) {
     rc = PreviewHosted();
+  } else if (argc == 3 && _wcsicmp(argv[1], L"sealed") == 0) {
+    rc = PreviewSealed(argv[2]);
   } else if (_wcsicmp(argv[1], L"register") == 0) {
     rc = SelfRegister(true);
   } else if (_wcsicmp(argv[1], L"unregister") == 0) {
