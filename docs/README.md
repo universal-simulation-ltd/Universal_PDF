@@ -427,6 +427,33 @@ user's UAC choice. `electron/previewPane.cjs` carries the correct form (fixed
 in `416039e`, shipped v0.6.5). The switch verifies by re-reading the registry
 value afterwards — keep that; it is why this bug was visible at all.
 
+⚠️ **The DLL must name the 64-BIT preview surrogate**
+`{6d2b5079-2f0b-48dd-ab7f-97cec514d30b}` (`system32\prevhost.exe`) as its
+AppID — not `{534A1E02-D58F-44f0-B58B-36CBED287C7C}`, which is the 32-bit host
+in `SysWOW64`. 64-bit Explorer starts whichever surrogate the AppID names, a
+32-bit process cannot load our x64 DLL, and **nothing is reported anywhere**:
+the pane just stays as it was. Every build through v0.6.5 shipped the 32-bit
+GUID — in `Common.h` *and* `build/installer.nsh`, under a comment claiming it
+was the 64-bit one. When a shell extension does nothing at all, check the
+AppID's bitness first. Fixed in `0df333a`, shipped v0.6.6.
+
+⚠️ **`thumbtest preview` cannot catch that, by design** — it activates
+`CLSCTX_INPROC_SERVER`, loading the DLL into the test process to exercise the
+drawing code, so it never consults the AppID and passed on every broken build.
+**`thumbtest hosted`** activates `CLSCTX_LOCAL_SERVER` exactly as Explorer
+does; the release workflow registers the freshly built DLL and runs it. Keep
+both: one tests the rendering, the other tests the plumbing.
+
+⚠️ **The default PDF app does not gate the preview handler.** That was blamed
+once and was wrong;
+`AssocQueryString(ASSOCSTR_SHELLEXTENSION, ".pdf", IID_IPreviewHandler)`
+returns our CLSID regardless of which reader owns the association.
+
+⚠️ **Windows will not preview a file carrying MOTW** (`Zone.Identifier` — i.e.
+anything downloaded) whatever the handler does: Explorer shows "The file you
+are attempting to preview could harm your computer". Unblock it in the file's
+Properties before concluding the handler is broken.
+
 Build it with `npm run thumbnail:build`; the release workflow does the same on
 the Windows runner. If that build fails the installer still ships, without
 thumbnails — ⚠️ and that fallback is exactly how **v0.6.3 shipped without the
