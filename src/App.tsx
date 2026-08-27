@@ -27,6 +27,33 @@ import MobileWelcomeToast from './components/Onboarding/MobileWelcomeToast'
 import UnsavedChangesDialog from './components/Exit/UnsavedChangesDialog'
 import { UniversalAppsNavBar, UniversalBar, ChangelogMenu, DropAnywhere, useFileDrop } from '@unisim/sdk'
 
+// What this copy of the app is, for the changelog panel's footer and the
+// landing footer. Support's first question is "which build are you on?", and
+// the changelog's own version chip cannot answer it — that one is the live
+// feed's latest release, identical on every install however old.
+//
+// The platform is half the answer: the same bundle is the website, the
+// installed desktop app and the phone PWA, and they update on entirely
+// different schedules.
+const APP_BUILD_LABEL = (() => {
+  const version = `Universal PDF ${__APP_VERSION__}`
+  if (typeof window === 'undefined') return version
+  const desktop = !!window.desktop
+  const ua = navigator.userAgent
+  const os = /Windows/i.test(ua)
+    ? 'Windows'
+    : /Mac OS X|Macintosh/i.test(ua)
+      ? 'macOS'
+      : /Android/i.test(ua)
+        ? 'Android'
+        : /iPhone|iPad/i.test(ua)
+          ? 'iOS'
+          : /Linux/i.test(ua)
+            ? 'Linux'
+            : ''
+  return `${version} · ${[os, desktop ? 'desktop' : 'web'].filter(Boolean).join(' ')}`
+})()
+
 // Apply the saved language to <html lang> on first mount.
 import { persistLang, readSavedLang } from './lib/lang'
 if (typeof document !== 'undefined') {
@@ -467,6 +494,12 @@ export default function App() {
                 style={{ width: DOC_RIGHT_MARGIN }}
               >
                 <ToolbarUserProfile actions={<FileMenu variant="rows" />} />
+                {/* ⏳ `appVersion={APP_BUILD_LABEL}` goes here — verified
+                    rendering in the panel footer on 2026-08-27 — as soon as
+                    @unisim/sdk 0.112.0 reaches npm. It cannot be passed yet:
+                    0.112.0 carries the prop but is stuck behind the release
+                    job's NPM_TOKEN, and CI installs 0.111.0, which would fail
+                    to build on an unknown prop. */}
                 <ChangelogMenu
                   iconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
                   productFilter="pdf"
@@ -529,6 +562,15 @@ export default function App() {
                 <a href="https://www.unisim.co.uk" target="_blank" rel="noreferrer" className="text-slate-700 hover:text-orange-700 underline-offset-2 hover:underline">
                   UNISIM.co.uk
                 </a>
+              </span>
+              {/* The build you are actually running. The changelog cannot tell
+                  you this: the SDK fetches it live from changelog.unisim.co.uk,
+                  so a desktop app three versions behind still lists today's
+                  entries. Diagnosing a stale install otherwise means Windows
+                  Settings or the exe's properties — see how long it took to
+                  establish which build was installed on 2026-08-27. */}
+              <span className="text-slate-400 tabular-nums" title={APP_BUILD_LABEL}>
+                v{__APP_VERSION__}
               </span>
             </div>
             <div className="ml-auto flex items-center gap-3">
