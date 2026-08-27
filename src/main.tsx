@@ -30,11 +30,25 @@ if (import.meta.env.DEV) {
 // 'production') still rides the shared .unisim.co.uk cookie.
 const isDesktop = import.meta.env.MODE === 'desktop'
 
+// `?mockauth=1` in a DEV build only: the SDK serves its offline fixture world
+// (james@unisim.co.uk / KyJam91, org "UNI·SIM Demo") instead of the real
+// Supabase project, so the signed-in chrome — the profile dropdown, the company
+// badge, the hosted-backup gate — can be opened and driven with no network and
+// no real account. `e2e/actions-menu.e2e.mjs` runs on it.
+//
+// ⚠️ Deliberately opt-in per page load AND fenced behind `import.meta.env.DEV`,
+// which is statically false in every shipped build, so the flag cannot be typed
+// into a URL in the packaged desktop app or on the website. The SDK adds a
+// second guard of its own (mockAuth is ignored whenever `cookieDomain` is set).
+const mockAuth =
+  import.meta.env.DEV && new URLSearchParams(window.location.search).has('mockauth')
+
 const universalConfig = {
   supabaseUrl: import.meta.env.VITE_PLATFORM_SUPABASE_URL,
   supabaseAnonKey: import.meta.env.VITE_PLATFORM_SUPABASE_ANON_KEY,
   product: 'pdf' as const,
   cookieDomain: !isDesktop && import.meta.env.PROD ? '.unisim.co.uk' : undefined,
+  mockAuth,
 }
 
 // `?sign=<token>` is the phone-side of the sign-on-mobile handoff (opened by

@@ -1,4 +1,4 @@
-import { useState, type ComponentProps, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import {
   UserProfile,
   SignInDialog,
@@ -7,6 +7,7 @@ import {
   useUniversal,
   useSubscription,
 } from '@unisim/sdk'
+import CompanyBadge from './CompanyBadge'
 
 // Same default the UniversalAppsNavBar uses for the profile "Sign in" item.
 const HUB_LOGIN_HREF = 'https://app.unisim.co.uk/login'
@@ -69,10 +70,70 @@ function initialsFor(displayName: string | null | undefined, email: string | nul
  */
 export default function ToolbarUserProfile({ actions }: { actions?: ReactNode }) {
   const { user, loading: userLoading } = useUser()
-  const { profile, loading: profileLoading } = useProfile()
+  const { profile, loading: profileLoading, refresh: refreshProfile } = useProfile()
   const { supabase, session } = useUniversal()
   const { subscription } = useSubscription()
   const [signInOpen, setSignInOpen] = useState(false)
+
+  // ⚠️ WHY THE NAME WENT STALE, and why this is a refresh rather than a
+  // subscription. `useProfile()` is a hook with its OWN `useState` per call
+  // site, not a shared store. The dialog that edits the display name is the
+  // SDK's <ProfileDialog>, rendered inside <UserProfile>, and it calls
+  // `useProfile()` for itself — so saving refreshed THAT copy and this one,
+  // which is the copy feeding the `name` below, was never told. The dropdown
+  // (and the initials on the pill) went on showing the old name until the app
+  // was reloaded.
+  //
+  // The SDK publishes no event for the save, so the fix is to re-read the row
+  // at the moments the answer could have changed:
+  //
+  //   • the pointer reaching this control — the pill is the only way to the
+  //     profile editor, so this covers "edited it, closed the dialog, went back
+  //     to the menu". ⚠️ It must be ENTER as well as DOWN: <UserProfile /> opens
+  //     on hover, so a pointerdown-only refresh would miss every user who never
+  //     clicks the pill at all; and
+  //   • the window regaining focus — the web build's "View profile" is a link
+  //     to the hub, so there the edit happens in another tab entirely.
+  //
+  // One `profiles` select per menu-open is cheap; a polling loop or a realtime
+  // channel for a row that changes once a year would not be.
+  // ⚠️ Held in a ref, not listed as a dependency. `useProfile().refresh` is a
+  // fresh arrow function on every render, so `[refreshProfile]` would tear the
+  // listeners down and put them back on every single render — the same
+  // unstable-identity trap the SDK's own `useUser` carries a warning about.
+  const refreshRef = useRef(refreshProfile)
+  refreshRef.current = refreshProfile
+
+  // Mouse enter fires again every time the pointer crosses the pill's edge, and
+  // the panel sits right underneath it — so without a floor, wandering over the
+  // control is a burst of identical selects.
+  //
+  // ⚠️ Keep this floor SHORT. At a second and a half it swallowed the very case
+  // it exists to serve: close the profile dialog, go straight back to the menu,
+  // and the re-read was thrown away as a duplicate — the name stayed stale and
+  // the fix looked like it had not worked. Half a second still collapses a
+  // pointer skating over the edge, and is under the time it takes to move a
+  // hand back to the pill.
+  const lastRefreshAt = useRef(0)
+  function rereadProfileSoon() {
+    const now = Date.now()
+    if (now - lastRefreshAt.current < 500) return
+    lastRefreshAt.current = now
+    refreshRef.current()
+  }
+
+  useEffect(() => {
+    function reread() {
+      if (document.visibilityState === 'hidden') return
+      refreshRef.current()
+    }
+    window.addEventListener('focus', reread)
+    document.addEventListener('visibilitychange', reread)
+    return () => {
+      window.removeEventListener('focus', reread)
+      document.removeEventListener('visibilitychange', reread)
+    }
+  }, [])
 
   const isAnonymous = session?.user?.is_anonymous === true
   const resolvedUser: ComponentProps<typeof UserProfile> =
@@ -102,15 +163,37 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
 
   return (
     <>
-      <UserProfile
-        {...resolvedUser}
-        menuAlign="right"
-        tier={subscription?.tier}
-        actions={actions}
-        // The bar this sits in is slate-900, so the pill takes the dark
-        // treatment — otherwise it reads as a white chip punched into it.
-        pillTheme="dark"
-      />
+      {/* Capture phase, and on the WRAPPER rather than the pill: <UserProfile />
+          owns its trigger and gives no onOpen, so this is the one place that
+          sees the pointer before the panel is drawn. */}
+      <span
+        // ⚠️ `onPointerEnter` has no Capture twin in React — enter/leave do not
+        // bubble, so there is no capture phase to hook. It is on the wrapper, so
+        // it fires as the pointer arrives, which is the same moment
+        // <UserProfile /> opens the panel on hover.
+        onPointerEnter={rereadProfileSoon}
+        onPointerDownCapture={rereadProfileSoon}
+      >
+        <UserProfile
+          {...resolvedUser}
+          menuAlign="right"
+          tier={subscription?.tier}
+          actions={actions}
+          // The org's mark and name, from whatever My Company → Branding
+          // already holds. `extras` sits with the account rows (profile, app
+          // settings, language) and above the sign-out divider, which is where
+          // "who am I signed in as" belongs — not up among the app's actions.
+          //
+          // ⚠️ Styled LIGHT deliberately. The SDK renders `extras` as-is and
+          // does not theme it, and `theme` is left at its default here (a dark
+          // pill over a light panel — see pillTheme below), so a dark treatment
+          // would be white text on white.
+          extras={<CompanyBadge />}
+          // The bar this sits in is slate-900, so the pill takes the dark
+          // treatment — otherwise it reads as a white chip punched into it.
+          pillTheme="dark"
+        />
+      </span>
       <SignInDialog
         open={signInOpen}
         onClose={() => setSignInOpen(false)}

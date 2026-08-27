@@ -237,6 +237,81 @@ So the "no uploads" rule is currently satisfied by the pad's own shape; there is
 no import path into a box to disable. If an upload route is ever added to the
 pad, it must check `requireLive`.
 
+## The Actions dropdown, and who it says you are
+
+The app's Actions menu has no panel of its own. `App.tsx` passes
+`<FileMenu variant="rows" />` into the SDK's `<UserProfile actions=…>`, so the
+app's rows and the account rows share one pill and one dropdown. Three things
+follow from that, and each has bitten:
+
+* **The pill opens on hover as well as on click.** A Playwright `click()` opens
+  it on the way in and toggles it straight back shut; the e2e specs `hover()`.
+* **Its accessible name is `"Actions · Profile"`**, not `"Profile"` —
+  `<UserProfile />` invents the pill label itself once an app passes `actions`.
+  Selectors must match on the suffix.
+* **`actions` and `extras` are rendered as-is and are NOT themed by the SDK.**
+  This app deliberately splits pill from panel (a dark pill in the slate-900
+  toolbar over the ordinary light menu), so anything slotted in must be styled
+  light.
+
+### One category open at a time
+
+`FileMenu` keeps a single `openSection` value, not one boolean per category.
+It used to be six booleans, and every category you had ever opened stayed
+open — by the time you had looked in File, View and Advanced the panel was a
+thirty-row scroll with the row you wanted off the bottom. Opening View now
+closes Advanced (owner, 2026-08-27). Clicking the open category still collapses
+it, so a header is still its own toggle.
+
+⚠️ Keep it as ONE piece of state. Six booleans kept in step by hand means a
+"close the others" line that gets forgotten the day a seventh category is
+added. Pinned by `npm run test:actions`.
+
+### The company badge
+
+`CompanyBadge` renders the org's mark and name at the bottom of the profile
+dropdown, via the SDK's `extras` slot. Both reads are existing SDK org hooks
+(`useOrg` for the name, `useOrgBranding` for the images — the latter is
+literally `useOrg()` narrowed to the branding columns), so whatever an admin
+has already set under My Company → Branding is what shows. `icon_url` wins over
+`logo_url` because the square mark is the one meant for compact chrome; an
+initials tile in the org's brand colour is the last resort, and no org at all
+renders nothing.
+
+### ⚠️ `useProfile()` is per-call-site state, so the display name went stale
+
+`useProfile()` is a hook with its own `useState`, not a shared store. The
+display-name editor is the SDK's `<ProfileDialog>` — mounted inside
+`<UserProfile>` on desktop, where "View profile" cannot be a link to the hub —
+and it calls `useProfile()` for **itself**. So saving refreshed the dialog's
+copy and never `ToolbarUserProfile`'s, which is the copy feeding the `name` the
+dropdown prints. The name (and the pill's initials) stayed wrong until the app
+was reloaded.
+
+There is no SDK event for the save, so `ToolbarUserProfile` re-reads the row as
+the pointer reaches the pill (`onPointerEnter` **and** `onPointerDownCapture` —
+hover-open would miss a pointerdown-only refresh) and on window focus, for the
+web build where the edit happens in a hub tab.
+
+⚠️ Two traps in that handler. `useProfile().refresh` is a **new arrow function
+every render**, so it is held in a ref rather than listed as an effect
+dependency — otherwise the focus listeners are torn down and rebuilt on every
+render. And the burst-throttle is **half a second**: at a second and a half it
+swallowed the very case it exists for (close the dialog, go straight back to
+the menu) and the fix looked like it had never worked. Pinned by
+`npm run test:profile`.
+
+### `?mockauth=1` — a signed-in app with no account
+
+A **dev build only** (`import.meta.env.DEV`, statically false in anything
+shipped) accepts `?mockauth=1`, which hands the SDK its offline fixture world:
+signed in as james@unisim.co.uk in org "UNI·SIM Demo", no network. Useful for
+eyeballing the signed-in chrome; `e2e/actions-menu.e2e.mjs` runs on it.
+
+⚠️ It cannot express a row **changing** — its `profiles` select returns one
+frozen object — which is why `e2e/profile-identity.e2e.mjs` seeds a session
+into `universal-suite-auth` and stubs `/rest/v1/*` itself instead.
+
 ## Hosted backups — and the `pending` path that broke every one of them
 
 **Back up → "Hosted by UNI·SIM"** keeps a flattened PDF in the private
