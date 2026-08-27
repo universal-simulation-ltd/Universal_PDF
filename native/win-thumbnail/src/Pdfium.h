@@ -32,6 +32,11 @@ struct PdfiumApi {
   decltype(&FPDFBitmap_FillRect) BitmapFillRect = nullptr;
   decltype(&FPDFBitmap_Destroy) BitmapDestroy = nullptr;
   decltype(&FPDF_GetLastError) GetLastErrorCode = nullptr;
+  // Page dimensions WITHOUT parsing the page. Bound optionally: the preview
+  // pane measures every page up front to lay out a scrolling stack, and
+  // FPDF_LoadPage on each one turns opening a 500-page document into a stall.
+  // Null on an older pdfium, where PageSize() falls back to loading the page.
+  decltype(&FPDF_GetPageSizeByIndexF) GetPageSizeByIndexF = nullptr;
 };
 
 // Loads pdfium.dll from this module's directory and calls FPDF_InitLibrary
@@ -94,6 +99,9 @@ class PdfDocument {
 
   bool IsOpen() const { return doc_ != nullptr; }
   int PageCount() const { return pages_; }
+
+  /** One page's size in PDF points. False if the index is out of range. */
+  bool PageSize(int index, double* out_w, double* out_h) const;
 
   // Renders one page fitted inside max_w x max_h onto opaque white. The caller
   // owns the returned HBITMAP.

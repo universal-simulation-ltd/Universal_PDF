@@ -73,6 +73,9 @@ BOOL CALLBACK InitOnce(PINIT_ONCE, PVOID, PVOID*) {
     return TRUE;
   }
 
+  // Optional: absent on older builds, and PageSize() copes without it.
+  Bind(g_api.GetPageSizeByIndexF, "FPDF_GetPageSizeByIndexF");
+
   g_api.InitLibrary();
   return TRUE;
 }
@@ -214,6 +217,35 @@ void PdfDocument::Close() {
   }
   access_ = PdfStreamAccess{};
   pages_ = 0;
+}
+
+bool PdfDocument::PageSize(int index, double* out_w, double* out_h) const {
+  if (!doc_ || index < 0 || index >= pages_ || !out_w || !out_h) return false;
+  const PdfiumApi* pdfium = GetPdfium();
+  if (!pdfium) return false;
+
+  AcquireSRWLockExclusive(&g_render_lock);
+  bool ok = false;
+  if (pdfium->GetPageSizeByIndexF) {
+    FS_SIZEF size{};
+    if (pdfium->GetPageSizeByIndexF(doc_, index, &size) && size.width > 0 &&
+        size.height > 0) {
+      *out_w = size.width;
+      *out_h = size.height;
+      ok = true;
+    }
+  } else if (FPDF_PAGE page = pdfium->LoadPage(doc_, index)) {
+    const double w = pdfium->GetPageWidthF(page);
+    const double h = pdfium->GetPageHeightF(page);
+    pdfium->ClosePage(page);
+    if (w > 0.0 && h > 0.0) {
+      *out_w = w;
+      *out_h = h;
+      ok = true;
+    }
+  }
+  ReleaseSRWLockExclusive(&g_render_lock);
+  return ok;
 }
 
 HBITMAP PdfDocument::RenderPage(int index, int max_w, int max_h, int* out_w,
