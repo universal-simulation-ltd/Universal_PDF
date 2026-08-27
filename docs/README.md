@@ -418,6 +418,15 @@ The same DLL also hosts the **`IPreviewHandler`**
 default the Explorer preview pane (Alt+P) shows the document itself — toggled
 from home → System options, one UAC prompt.
 
+⚠️ The elevated half of that switch goes Node `execFile` → `powershell
+Start-Process -Verb RunAs reg.exe`, and **`-ArgumentList` must be ONE
+pre-quoted string**: Windows PowerShell joins an argument *array* with spaces
+and no quoting, so the spaced handler name reached reg.exe as three bare words
+— `reg add` refused while Start-Process exited 0, and the switch blamed the
+user's UAC choice. `electron/previewPane.cjs` carries the correct form (fixed
+in `416039e`, shipped v0.6.5). The switch verifies by re-reading the registry
+value afterwards — keep that; it is why this bug was visible at all.
+
 Build it with `npm run thumbnail:build`; the release workflow does the same on
 the Windows runner. If that build fails the installer still ships, without
 thumbnails — ⚠️ and that fallback is exactly how **v0.6.3 shipped without the
