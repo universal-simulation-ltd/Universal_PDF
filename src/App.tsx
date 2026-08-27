@@ -494,15 +494,15 @@ export default function App() {
                 style={{ width: DOC_RIGHT_MARGIN }}
               >
                 <ToolbarUserProfile actions={<FileMenu variant="rows" />} />
-                {/* ⏳ `appVersion={APP_BUILD_LABEL}` goes here — verified
-                    rendering in the panel footer on 2026-08-27 — as soon as
-                    @unisim/sdk 0.112.0 reaches npm. It cannot be passed yet:
-                    0.112.0 carries the prop but is stuck behind the release
-                    job's NPM_TOKEN, and CI installs 0.111.0, which would fail
-                    to build on an unknown prop. */}
+                {/* The build this actually is, in the one panel that is
+                    reachable with a document open. ⚠️ NOT the version chip in
+                    the panel's header — that is the changelog FEED's latest
+                    release, fetched live, and identical on every install
+                    however old. */}
                 <ChangelogMenu
                   iconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
                   productFilter="pdf"
+                  appVersion={APP_BUILD_LABEL}
                 />
               </div>
             </div>
