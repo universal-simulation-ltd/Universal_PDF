@@ -52,6 +52,20 @@ export function PreviewPanePill({ offer, className }: { offer: Offer; className:
         </p>
       )}
       <OutcomeLine offer={offer} />
+      {/* ⚠️ The caveat that makes a working preview pane look broken. Windows
+          refuses to preview a file carrying the "downloaded from the internet"
+          mark and shows a safety message INSTEAD of asking any handler — so the
+          first PDF someone tries, straight out of their downloads folder, shows
+          nothing and the switch looks like it did nothing. Said here, while the
+          switch is on, because that is where the disappointment happens; it
+          cost an afternoon to work out from the other side. */}
+      {offer.enabled && (
+        <p className="mt-1 px-1 text-[13px] text-slate-500">
+          A PDF saved from the internet shows a Windows safety message instead of
+          a preview — that is Windows, not this app. Right-click the file →
+          Properties → tick <strong className="font-medium">Unblock</strong>.
+        </p>
+      )}
     </>
   )
 }
