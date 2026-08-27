@@ -78,8 +78,13 @@ extern "C" BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID) {
   return TRUE;
 }
 
-extern "C" __declspec(dllexport) HRESULT __stdcall DllGetClassObject(
-    REFCLSID rclsid, REFIID riid, void** ppv) {
+// ⚠️ Defined as STDAPI — exactly the linkage combaseapi.h/olectl.h already
+// declare these four with — and exported through src/exports.def, which both
+// linkers consume. Adding __declspec(dllexport) here instead is C2375
+// ("redefinition; different linkage") under MSVC: MinGW shrugs it off, which
+// is how a broken export style built clean locally and then failed the CI
+// release build (v0.6.3 shipped without this DLL because of it).
+STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, void** ppv) {
   if (!ppv) return E_POINTER;
   *ppv = nullptr;
   Creator create = nullptr;
@@ -97,14 +102,14 @@ extern "C" __declspec(dllexport) HRESULT __stdcall DllGetClassObject(
   return hr;
 }
 
-extern "C" __declspec(dllexport) HRESULT __stdcall DllCanUnloadNow() {
+STDAPI DllCanUnloadNow() {
   return g_cDllRef > 0 ? S_FALSE : S_OK;
 }
 
-extern "C" __declspec(dllexport) HRESULT __stdcall DllRegisterServer() {
+STDAPI DllRegisterServer() {
   return RegisterProvider();
 }
 
-extern "C" __declspec(dllexport) HRESULT __stdcall DllUnregisterServer() {
+STDAPI DllUnregisterServer() {
   return UnregisterProvider();
 }
