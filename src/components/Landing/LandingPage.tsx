@@ -19,7 +19,7 @@ import TransformPanel from '../Transform/TransformPanel'
 import PdfIllustration from './PdfIllustration'
 import DownloadRow from './DownloadRow'
 import DropRingWatermark from './DropRingWatermark'
-import { DefaultAppBar, DefaultAppPill } from '../Onboarding/DefaultAppOffer'
+import { DefaultAppPill } from '../Onboarding/DefaultAppOffer'
 import { useDefaultPdfApp } from '../../hooks/useDefaultPdfApp'
 import { PreviewPanePill } from '../Onboarding/PreviewPaneOffer'
 import { usePreviewPane } from '../../hooks/usePreviewPane'
@@ -31,9 +31,8 @@ import { CONTAINER } from '../../lib/layout'
 const DEFAULT_COMPRESS_QUALITY: CompressQuality = 'balanced'
 
 export default function LandingPage() {
-  // One instance for both the bar and the pill below it: two would each hold
-  // their own answer, and making the app the default from one would leave the
-  // other still offering it.
+  // The default-app offer, now surfaced only as the "System options" pill —
+  // the top-of-page bar it used to share this with is gone (2026-08-27).
   const defaultApp = useDefaultPdfApp()
   const previewPane = usePreviewPane()
   const compressInputRef = useRef<HTMLInputElement>(null)
@@ -229,7 +228,9 @@ export default function LandingPage() {
   return (
     <div className="min-h-full flex items-center">
       <div className={`${CONTAINER} py-8 lg:py-14`}>
-        <DefaultAppBar offer={defaultApp} />
+        {/* No top banners for now (James, 2026-08-27): the default-app bar
+            kept showing after the answer was given, so the offer lives only
+            in "System options" below until the detection is trustworthy. */}
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           {/* Left: animated PDF illustration */}
           {/* Desktop keeps the illustration as its own column. On a phone it
@@ -437,7 +438,7 @@ export default function LandingPage() {
                 }}
               >
                 <summary className="flex items-center gap-2 cursor-pointer select-none list-none px-1 py-1 text-xs uppercase tracking-wide font-medium text-slate-500 hover:text-slate-700 transition-colors">
-                  <span>More options</span>
+                  <span>Advanced options</span>
                   <span
                     className="ml-auto text-base text-slate-400 transition-transform group-open:rotate-180"
                     aria-hidden="true"
@@ -494,17 +495,44 @@ export default function LandingPage() {
                   <span aria-hidden="true">✎</span>
                   Transform text into a PDF — paste Markdown
                 </button>
-
-                {/* Desktop only, and only while it isn't already the default —
-                    it renders nothing in the browser, where there is no such
-                    thing to set. */}
-                <DefaultAppPill offer={defaultApp} className={`${PILL} ${PILL_IDLE} mt-3`} />
-
-                {/* Windows only, and only where the preview handler shipped
-                    with the app. Not a proactive offer: it costs an
-                    administrator prompt, so it waits to be looked for. */}
-                <PreviewPanePill offer={previewPane} className={`${PILL} ${PILL_IDLE} mt-3`} />
               </details>
+
+              {/* OS-integration switches, apart from the document tools:
+                  things that change how this MACHINE treats PDFs rather than
+                  what happens to one file. Desktop-only in practice — both
+                  pills render nothing in the browser — so the whole section
+                  hides where it would be empty. */}
+              {(defaultApp.available || previewPane.available) && (
+                <details
+                  className="group mt-3"
+                  onToggle={(e) => {
+                    if (!e.currentTarget.open) return
+                    const el = e.currentTarget
+                    requestAnimationFrame(() =>
+                      el.scrollIntoView({ behavior: 'smooth', block: 'end' })
+                    )
+                  }}
+                >
+                  <summary className="flex items-center gap-2 cursor-pointer select-none list-none px-1 py-1 text-xs uppercase tracking-wide font-medium text-slate-500 hover:text-slate-700 transition-colors">
+                    <span>System options</span>
+                    <span
+                      className="ml-auto text-base text-slate-400 transition-transform group-open:rotate-180"
+                      aria-hidden="true"
+                    >
+                      ⌄
+                    </span>
+                  </summary>
+
+                  {/* Desktop only, and only while it isn't already the
+                      default. */}
+                  <DefaultAppPill offer={defaultApp} className={`${PILL} ${PILL_IDLE} mt-3`} />
+
+                  {/* Windows only, and only where the preview handler shipped
+                      with the app. Not a proactive offer: it costs an
+                      administrator prompt, so it waits to be looked for. */}
+                  <PreviewPanePill offer={previewPane} className={`${PILL} ${PILL_IDLE} mt-3`} />
+                </details>
+              )}
             </div>
           </div>
 
