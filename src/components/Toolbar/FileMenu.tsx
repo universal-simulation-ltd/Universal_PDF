@@ -9,6 +9,12 @@ import { OfficeImportError, PDF_OR_OFFICE_ACCEPT, toViewablePdf } from '../../li
 import { RedactIcon } from '../icons/RedactIcon'
 import { useCloseAppMenu } from '@unisim/sdk'
 
+/**
+ * The one category the dropdown has expanded, or `null` for all collapsed.
+ * See the state declaration for why this is a single value.
+ */
+type MenuSection = 'file' | 'view' | 'advanced' | 'redact' | 'edit' | 'lang' | null
+
 interface Props {
   /**
    * `toolbar` (default) and `header` own their trigger and panel — the dark
@@ -168,12 +174,16 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const hasViewItems = showPages || showPresent || showFind
 
   const [open, setOpen] = useState(false)
-  const [langSubOpen, setLangSubOpen] = useState(false)
-  const [redactSubOpen, setRedactSubOpen] = useState(false)
-  const [editSubOpen, setEditSubOpen] = useState(false)
-  const [fileSubOpen, setFileSubOpen] = useState(false)
-  const [viewSubOpen, setViewSubOpen] = useState(false)
-  const [advancedSubOpen, setAdvancedSubOpen] = useState(false)
+  // ⚠️ ONE section at a time, which is why this is a single value and not six
+  // booleans. It used to be six, and every category you had ever opened stayed
+  // open: by the time you had looked in File and View and Advanced the panel
+  // was a thirty-row scroll and the thing you actually wanted was off the
+  // bottom of the screen. Opening View now closes Advanced (owner, 2026-08-27).
+  //
+  // Keep it as one piece of state rather than six kept in step by hand — the
+  // second copy of "close the others" is the one that gets forgotten when a
+  // seventh category is added.
+  const [openSection, setOpenSection] = useState<MenuSection>(null)
   const [renameOpen, setRenameOpen] = useState(false)
   // Where the rename editor is drawn: the "Current file" header (clicking
   // the name) or the File submenu's Rename row. One editor, two homes —
@@ -190,6 +200,20 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
 
   const currentLangOpt = LANGS.find((l) => l.code === currentLang) ?? LANGS[0]
 
+  // Read-side aliases so each group's markup still asks a plain question.
+  const fileSubOpen = openSection === 'file'
+  const viewSubOpen = openSection === 'view'
+  const advancedSubOpen = openSection === 'advanced'
+  const redactSubOpen = openSection === 'redact'
+  const editSubOpen = openSection === 'edit'
+  const langSubOpen = openSection === 'lang'
+
+  /** Open a category, closing whichever one was open; clicking the open one
+   *  collapses it, so a category header is still its own toggle. */
+  function toggleSection(section: Exclude<MenuSection, null>) {
+    setOpenSection((current) => (current === section ? null : section))
+  }
+
   function pickLang(code: LangCode) {
     if (code === 'other') {
       setShowOtherHint(true)
@@ -198,7 +222,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
     setCurrentLang(code)
     persistLang(code)
     setShowOtherHint(false)
-    setLangSubOpen(false)
+    setOpenSection(null)
     closeMenu()
   }
 
@@ -247,12 +271,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
         return
       }
       closeMenu()
-      setLangSubOpen(false)
-      setRedactSubOpen(false)
-      setEditSubOpen(false)
-      setFileSubOpen(false)
-      setViewSubOpen(false)
-      setAdvancedSubOpen(false)
+      setOpenSection(null)
       setRenameOpen(false)
       setShowOtherHint(false)
     }
@@ -261,7 +280,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
         if (renameOpen) {
           setRenameOpen(false)
         } else if (langSubOpen) {
-          setLangSubOpen(false)
+          setOpenSection(null)
           setShowOtherHint(false)
         } else {
           closeMenu()
@@ -343,7 +362,10 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   function startRename(fromHeader = false) {
     if (!fileName) return
     setRenameDraft(fileName)
-    setLangSubOpen(false)
+    // Renaming from the "Current file" header collapses whatever was open;
+    // renaming from the File submenu must LEAVE File open, because that is
+    // where the editor is about to be drawn.
+    setOpenSection(fromHeader ? null : 'file')
     setShowOtherHint(false)
     setRenameInHeader(fromHeader)
     setRenameOpen(true)
@@ -497,7 +519,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
 
           {/* File — open / close / backup / rename, grouped into a secondary submenu. */}
           <button
-            onClick={() => { setFileSubOpen((v) => !v) }}
+            onClick={() => { toggleSection('file') }}
             className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
             aria-haspopup="true"
             aria-expanded={fileSubOpen}
@@ -560,7 +582,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
           {hasViewItems && (
             <>
               <button
-                onClick={() => { setViewSubOpen((v) => !v) }}
+                onClick={() => { toggleSection('view') }}
                 className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
                 aria-haspopup="true"
                 aria-expanded={viewSubOpen}
@@ -614,7 +636,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
           {doc && (
             <>
               <button
-                onClick={() => { setAdvancedSubOpen((v) => !v) }}
+                onClick={() => { toggleSection('advanced') }}
                 className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
                 aria-haspopup="true"
                 aria-expanded={advancedSubOpen}
@@ -662,7 +684,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
           {doc && (
             <>
               <button
-                onClick={() => { setRedactSubOpen((v) => !v) }}
+                onClick={() => { toggleSection('redact') }}
                 className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
                 aria-haspopup="true"
                 aria-expanded={redactSubOpen}
@@ -719,7 +741,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
           {doc && (
             <>
               <button
-                onClick={() => { setEditSubOpen((v) => !v) }}
+                onClick={() => { toggleSection('edit') }}
                 className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
                 aria-haspopup="true"
                 aria-expanded={editSubOpen}
@@ -770,7 +792,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
               both live in this one dropdown. Two rows called "Language" in one
               panel is a coin toss for the user. */}
           <button
-            onClick={() => { setLangSubOpen((v) => !v); setShowOtherHint(false) }}
+            onClick={() => { toggleSection('lang'); setShowOtherHint(false) }}
             className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
             aria-haspopup="true"
             aria-expanded={langSubOpen}
