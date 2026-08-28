@@ -157,7 +157,65 @@ async function linuxCurrent() {
 
 // -------------------------------------------------------------- Windows -----
 
-async function windowsCurrent() {
+// What Windows will ACTUALLY open a .pdf with.
+//
+// ⚠️ This is not the same question as "what does UserChoice say", which is what
+// this used to read — and the difference is not theoretical. On the dev box
+// (2026-08-28) `HKCU\...\FileExts\.pdf\UserChoice\ProgId` still named
+// `Acrobat.Document.DC` from 2025-11-04, while Windows itself opened PDFs with
+// Universal PDF: the installer had written `HKCU\Software\Classes\.pdf`, and
+// the shell was no longer honouring that stale UserChoice. The app told the
+// user "PDFs currently open in Adobe Acrobat Document" while Settings showed
+// Universal PDF holding `.pdf`, which reads as the app being broken.
+//
+// IApplicationAssociationRegistration::QueryCurrentDefault at AL_EFFECTIVE is
+// the shell's own answer to the question, so ask that. There is no way to
+// reach a COM interface with no IDispatch from Node, hence PowerShell — the
+// registry read stays as the fallback for when that cannot run.
+const WIN_EFFECTIVE_DEFAULT_PS = `
+$ErrorActionPreference = 'Stop'
+Add-Type -Language CSharp -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public static class Assoc {
+  [ComImport, Guid("4e530b0a-e611-4c77-a3ac-9031d022281b"),
+   InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+  public interface IApplicationAssociationRegistration {
+    void QueryCurrentDefault([MarshalAs(UnmanagedType.LPWStr)] string query,
+      int type, int level, [MarshalAs(UnmanagedType.LPWStr)] out string result);
+  }
+  [ComImport, Guid("591209c7-767b-42b2-9fba-44ee4615f2c7")]
+  public class ApplicationAssociationRegistration { }
+  public static string Pdf() {
+    var reg = (IApplicationAssociationRegistration)(new ApplicationAssociationRegistration());
+    string progId;
+    // AT_FILEEXTENSION = 1, AL_EFFECTIVE = 1.
+    reg.QueryCurrentDefault(".pdf", 1, 1, out progId);
+    return progId;
+  }
+}
+"@
+[Assoc]::Pdf()
+`
+
+async function windowsEffectiveProgId() {
+  // -EncodedCommand rather than -Command: the script embeds a C# here-string
+  // full of double quotes, and handing that to powershell.exe as a command
+  // line is a quoting minefield that fails silently — as a blank answer, which
+  // this function cannot tell from "no association".
+  const encoded = Buffer.from(WIN_EFFECTIVE_DEFAULT_PS, 'utf16le').toString('base64')
+  const { ok, stdout } = await run(
+    'powershell',
+    ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded],
+    20_000
+  )
+  if (!ok) return null
+  const progId = stdout.trim().split(/\r?\n/).pop().trim()
+  return progId || null
+}
+
+// The stale-but-present key, kept only as the fallback described above.
+async function windowsUserChoice() {
   const key =
     'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.pdf\\UserChoice'
   const { ok, stdout } = await run('reg', ['query', key, '/v', 'ProgId'])
@@ -165,6 +223,10 @@ async function windowsCurrent() {
   // `    ProgId    REG_SZ    AppXd4nrz8ff68srnhf9t5a8sbjyar1cr723`
   const match = stdout.match(/ProgId\s+REG_\w+\s+(.+)/)
   return match ? match[1].trim() : null
+}
+
+async function windowsCurrent() {
+  return (await windowsEffectiveProgId()) || (await windowsUserChoice())
 }
 
 // The human name behind a ProgID — `HKCR\<ProgId>`'s default value, e.g.
