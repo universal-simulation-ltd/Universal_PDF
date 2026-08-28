@@ -182,6 +182,12 @@ jobs:
           # parsing it, so only turning the page forces a genuinely new read.
           node -e "const {PDFDocument}=require('pdf-lib');(async()=>{const d=await PDFDocument.create();for(let i=0;i<8;i++){const p=d.addPage([595,842]);p.drawText('Page '+(i+1),{x:60,y:760,size:36});}require('fs').writeFileSync('multipage.pdf',await d.save());})()"
 
+          # And a LANDSCAPE deck for the stack check. It has to be landscape:
+          # a portrait page fitted to the width of the test host is taller than
+          # the host, so only one page is visible and the check cannot tell a
+          # stacked pane from the old one-page-per-pane behaviour.
+          node -e "const {PDFDocument}=require('pdf-lib');(async()=>{const d=await PDFDocument.create();for(let i=0;i<6;i++){const p=d.addPage([960,540]);p.drawText('Slide '+(i+1),{x:60,y:440,size:48});}require('fs').writeFileSync('deck.pdf',await d.save());})()"
+
           & $test.FullName register
           try {
             & $test.FullName hosted
@@ -198,9 +204,17 @@ jobs:
               Write-Host "::warning::The preview handler reads the shell's stream lazily - this is the Explorer deadlock; the installer will ship with a preview pane that can hang Explorer."
               exit 1
             }
+            # The pane must STACK its pages, fitted to its width. Fitting one
+            # page to the whole pane instead leaves two thirds of a tall pane
+            # empty on a landscape deck (v0.6.15).
+            & $test.FullName stack deck.pdf
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "::warning::The preview pane is not stacking its pages - a landscape deck will show one slide in an empty pane."
+              exit 1
+            }
           } finally {
             & $test.FullName unregister
-            Remove-Item multipage.pdf -ErrorAction SilentlyContinue
+            Remove-Item multipage.pdf, deck.pdf -ErrorAction SilentlyContinue
           }
 
       - name: Build installers
