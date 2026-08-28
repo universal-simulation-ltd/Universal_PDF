@@ -1,19 +1,8 @@
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
+import { useIllustrationClock } from '@unisim/sdk'
 
 /** One sweep of the loop, frame 0 → frame 10, in ms. It runs straight back down. */
 const SWEEP_MS = 4600
-/** The glide back to frame 0 when the pointer arrives. */
-const RETURN_MS = 480
-
-/** Ease in and out. Used on the clock, and again per element inside the CSS. */
-const smoothstep = (x: number) => x * x * (3 - 2 * x)
-
-/**
- * Its exact inverse — needed when the pointer leaves mid-glide. The clock is
- * the thing that keeps running, so resuming means asking "which clock position
- * shows the frame currently on screen?"; without it the illustration snaps.
- */
-const unSmoothstep = (y: number) => 0.5 - Math.sin(Math.asin(1 - 2 * y) / 3)
 
 /**
  * The signature stroke, written once and drawn three times — the ink, and the
@@ -65,90 +54,7 @@ const SIGNATURE_D_LOCAL =
  */
 export default function PdfIllustration() {
   const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const set = (t: number) => el.style.setProperty('--t', t.toFixed(4))
-
-    // ⚠️ Reduced motion gets the FINISHED frame, not frame 0 and not a slower
-    // loop. An infinite animation has no honest "reduced" version, and frame 0
-    // is a blank document — the least useful still of the set.
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      set(1)
-      return
-    }
-
-    let raf = 0
-    let clock = 0 // 0 → 2. 0–1 draws the document, 1–2 undraws it.
-    let shown = 0 // the eased value last written, so a mid-glide exit can resume from it
-    let last = 0
-    let hovering = false
-    let from = 0 // where the glide back to frame 0 started
-    let since = 0 // ms into that glide
-
-    function frame(now: number) {
-      // A backgrounded tab stops firing rAF entirely; the first frame back
-      // would otherwise carry the whole gap and jump the loop forward.
-      const dt = Math.min(now - last, 100)
-      last = now
-
-      if (hovering) {
-        since += dt
-        shown = from * (1 - smoothstep(Math.min(since / RETURN_MS, 1)))
-        set(shown)
-        // Parked on frame 0 — stop asking for frames until the pointer leaves.
-        if (since >= RETURN_MS) {
-          raf = 0
-          return
-        }
-      } else {
-        clock = (clock + dt / SWEEP_MS) % 2
-        shown = smoothstep(clock <= 1 ? clock : 2 - clock)
-        set(shown)
-      }
-      raf = requestAnimationFrame(frame)
-    }
-
-    function start() {
-      if (raf) return
-      last = performance.now()
-      raf = requestAnimationFrame(frame)
-    }
-
-    function onEnter() {
-      if (hovering) return
-      hovering = true
-      from = shown
-      since = 0
-      start()
-    }
-
-    function onLeave() {
-      if (!hovering) return
-      hovering = false
-      // Pick up the clock wherever the glide left the picture, on the way up.
-      clock = unSmoothstep(Math.min(Math.max(shown, 0), 1))
-      start()
-    }
-
-    // Only on a real pointer. On a touch screen `pointerenter` fires on a tap
-    // and there is no matching leave, which would park the loop for good.
-    const canHover = window.matchMedia('(hover: hover)').matches
-    if (canHover) {
-      el.addEventListener('pointerenter', onEnter)
-      el.addEventListener('pointerleave', onLeave)
-    }
-    start()
-
-    return () => {
-      if (raf) cancelAnimationFrame(raf)
-      if (canHover) {
-        el.removeEventListener('pointerenter', onEnter)
-        el.removeEventListener('pointerleave', onLeave)
-      }
-    }
-  }, [])
+  useIllustrationClock(ref, { sweepMs: SWEEP_MS })
 
   return (
     <div ref={ref} className="pdf-illu group relative w-full max-w-[480px] aspect-[5/6] select-none">
