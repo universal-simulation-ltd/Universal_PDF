@@ -161,15 +161,41 @@ not disturb the ship-unsigned policy.
 Explorer, the pane on the right. It is **not** the thumbnail provider with a
 bigger bitmap — the shell hands a preview handler a parent window and expects a
 live child window back, so it owns an HWND, a window class, a wndproc and the
-keyboard. Page 1 fills the pane, PageDown/PageUp/arrows/Home/End and the mouse
-wheel turn pages, a resize re-renders rather than stretching a stale bitmap, and
-`IPreviewHandlerVisuals` supplies the pane's own background, text colour and
-font. `PdfDocument` in `Pdfium.cpp` holds the file open across all of it.
+keyboard. `IPreviewHandlerVisuals` supplies the pane's own background, text
+colour and font, and `PdfDocument` in `Pdfium.cpp` holds the file open across
+all of it.
+
+**The pages are STACKED, fitted to the pane's WIDTH, with a continuous scroll**
+(v0.6.15). It used to draw exactly one page fitted to the *whole* pane, which
+is fine for a portrait document and wastes two thirds of a tall pane on a
+landscape slide — the complaint that changed it. So the handler keeps a scroll
+offset rather than a page index:
+
+- Every page is **measured** up front by `PdfDocument::PageSize()`, which reads
+  the page dictionary through `FPDF_GetPageSizeByIndexF` **without parsing the
+  page**. That is what makes it affordable: a 500-page document lays out in the
+  same time a 6-page one does (measured, 1.50 s either way).
+- Only the pages **actually on screen** are rendered, and each bitmap is thrown
+  away as it scrolls off — 500 pages must never mean 500 bitmaps.
+- Painting is **double-buffered**, because scrolling repaints the whole pane.
+- PageUp/PageDown still **jump** page to page; the arrows nudge; Home/End go to
+  the ends; the wheel scrolls, accumulating sub-notch deltas so a precision
+  touchpad is not ignored. There is a real scrollbar, kept visible even when
+  the document fits (`SIF_DISABLENOSCROLL`) so the client width never changes
+  underneath a layout that was measured for it.
 
 ```powershell
-.\thumbtest.exe preview some.pdf out.png      # page 1
+.\thumbtest.exe preview some.pdf out.png      # what the pane draws
 .\thumbtest.exe preview some.pdf out.png 2    # after two page-downs
+.\thumbtest.exe stack landscape-deck.pdf      # asserts the stack
 ```
+
+`stack` is the regression test for the above: more than one page on screen
+wherever the page shape allows one, somewhere to scroll, and PageDown/End/Home
+moving it. It is **self-calibrating** — if page one is taller than the pane it
+says so rather than failing, so a portrait document does not read as a bug. It
+fails against the pre-v0.6.15 handler with *"page one ends 474 px above the
+bottom of the pane and nothing follows it"*.
 
 ⚠️ **It is registered but not yet reachable, and the reason is not a bug.**
 Windows only offers a preview handler whose CLSID is listed in

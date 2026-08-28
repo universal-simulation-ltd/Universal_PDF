@@ -627,6 +627,14 @@ The same DLL also hosts the **`IPreviewHandler`**
 default the Explorer preview pane (Alt+P) shows the document itself — toggled
 from home → System options, one UAC prompt.
 
+Since **v0.6.15** the pane **stacks its pages**, fitted to the pane's WIDTH and
+scrolled continuously, instead of drawing one page fitted to the whole pane —
+which left two thirds of a tall pane empty on a landscape deck. Only the visible
+pages are rendered and their bitmaps are dropped as they scroll off, and the
+layout is measured with `PdfDocument::PageSize()` (the page dictionary, not a
+parsed page), so a 500-page document opens as fast as a 6-page one. `thumbtest
+stack` is its regression test; the detail is in `native/win-thumbnail/README.md`.
+
 ⚠️ The elevated half of that switch goes Node `execFile` → `powershell
 Start-Process -Verb RunAs reg.exe`, and **`-ArgumentList` must be ONE
 pre-quoted string**: Windows PowerShell joins an argument *array* with spaces
@@ -722,16 +730,37 @@ file-association icon. Deleting it as a duplicate breaks the thumbnails.
 
 ## Being the default PDF app, and saying what currently is
 
-`electron/defaultApp.cjs` reads the UserChoice ProgId for `.pdf` and compares it
-with ours. ⚠️ **The detection was never broken** — a long-standing backlog item
-claimed it "never confirms on Windows", and replaying the exact code path showed
-it reading `Acrobat.Document.DC` correctly, comparing correctly, with the app
-properly registered (`RegisteredApplications`, `Capabilities`,
-`.pdf\OpenWithProgids` all present). The association simply had not changed:
-**Windows 11 requires `.pdf` to be picked inside the app's own Settings page
-with `Set default` pressed**, and Acrobat reclaims the type on its own schedule,
-so "I set it yesterday" and "it is not set now" are both true more often than
-expected.
+`electron/defaultApp.cjs` asks the shell what will actually open a `.pdf` and
+compares it with our ProgId.
+
+⚠️⚠️ **`HKCU\...\FileExts\.pdf\UserChoice\ProgId` is NOT the answer to that
+question, and reading it is the bug this had until v0.6.15.** On 2026-08-28 the
+app said *"PDFs currently open in Adobe Acrobat Document"* while Windows
+Settings showed Universal PDF holding `.pdf` — and **Settings was right**. That
+UserChoice value still named `Acrobat.Document.DC`, written 2025-11-04, and the
+shell had stopped honouring it: the installer writes `HKCU\Software\Classes\.pdf`
+(which wins the `HKCR` merge), and both
+`IApplicationAssociationRegistration::QueryCurrentDefault` at **`AL_EFFECTIVE`**
+and `AssocQueryString(ASSOCSTR_EXECUTABLE)` resolved `.pdf` to
+`Universal PDF.exe`. A stale UserChoice is invisible: nothing prunes it, and it
+reads as a perfectly good answer.
+
+So the probe is now `QueryCurrentDefault(".pdf", AT_FILEEXTENSION, AL_EFFECTIVE)`,
+with the registry read kept only as a fallback. It is a COM interface with no
+`IDispatch`, which Node cannot reach, so it goes out through `powershell
+-EncodedCommand` (encoded because the C# it carries is full of double quotes and
+a mangled command line would come back as a *blank* answer, indistinguishable
+from "no association"). Measured at **419 ms**.
+
+⚠️ The earlier verdict in this file — *"the detection was never broken"*, from
+the 2026-08-27 investigation of a backlog item claiming it "never confirms on
+Windows" — was right about its own evidence and wrong as a conclusion. The
+comparison was sound and the registration complete (`RegisteredApplications`,
+`Capabilities`, `.pdf\OpenWithProgids` all present); the check was simply
+**asking the wrong registry key**, and only a machine where UserChoice and the
+effective default disagreed could show it. It stays true that **Windows 11
+requires `.pdf` to be picked inside the app's own Settings page with `Set
+default` pressed**, and that Acrobat reclaims the type on its own schedule.
 
 The real defect was **silence**: a correct "no" looked like a broken check. So
 since `8477349` the offer pill names the incumbent — "PDFs currently open in
