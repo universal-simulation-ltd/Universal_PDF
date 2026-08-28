@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { DropAnywhere, DropRing, useFileDrop } from '@unisim/sdk'
+import { DropAnywhere, DropRing, PrivacyNote, useFileDrop } from '@unisim/sdk'
 import { usePdfStore } from '../../stores/pdfStore'
 import { createExamplePdfFile } from '../../lib/examplePdf'
 import { compressPdf, type CompressQuality, type CompressResult } from '../../lib/export'
@@ -19,7 +19,6 @@ import TransformPanel from '../Transform/TransformPanel'
 import PdfIllustration from './PdfIllustration'
 import DownloadRow from './DownloadRow'
 import DropRingWatermark from './DropRingWatermark'
-import PrivacyNote from './PrivacyNote'
 import { DefaultAppPill } from '../Onboarding/DefaultAppOffer'
 import { useDefaultPdfApp } from '../../hooks/useDefaultPdfApp'
 import { PreviewPanePill } from '../Onboarding/PreviewPaneOffer'
@@ -549,7 +548,12 @@ export default function LandingPage() {
                 about the panel above it rather than one more row of the
                 panel's own furniture. It sits in the always-visible column,
                 so unlike the illustration side it needs no breakpoint twin. */}
-            <PrivacyNote className="mt-4" />
+            <PrivacyNote
+              className="mt-4"
+              repo="https://github.com/universal-simulation-ltd/Universal_PDF"
+              subject="Your PDF"
+              except="backup and signing"
+            />
           </div>
 
         </div>
