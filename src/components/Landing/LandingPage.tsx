@@ -551,6 +551,7 @@ export default function LandingPage() {
             <PrivacyNote
               className="mt-4"
               repo="https://github.com/universal-simulation-ltd/Universal_PDF"
+              proof="https://github.com/universal-simulation-ltd/Universal_PDF/blob/main/PRIVACY.md"
               subject="Your PDF"
               except="backup and send-to-sign"
             />
