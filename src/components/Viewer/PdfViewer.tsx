@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { useSearchStore } from '../../stores/searchStore'
@@ -164,14 +164,57 @@ export default function PdfViewer() {
     el.scrollTop += r.top + a.fy * r.height - box.top - a.screenY
   }
 
+  // Pages report a new box size here, from a LAYOUT effect — synchronously
+  // after React writes it and before the browser paints. A settling zoom
+  // listens; see `commitZoom`.
+  const sizeListeners = useRef(new Set<() => void>())
+  const notifySized = useCallback(() => {
+    // Copy first: a listener that finishes removes itself mid-iteration.
+    for (const fn of [...sizeListeners.current]) fn()
+  }, [])
+
   // Commit a zoom and put the anchored point back under the cursor or the
   // fingers once the pages have taken their new size, running `done` in that
-  // same frame. ResizeObserver delivers after layout and before the paint, so
-  // the scroll correction and the removal of a pinch's transform land together
-  // and the viewer never paints a half-applied zoom. The timer covers a zoom
-  // too small to move the layout box at all.
+  // same frame — so the viewer never paints a half-applied zoom. The timer
+  // covers a zoom too small to move the layout box at all.
+  //
+  // ── ⚠️ WHY THIS IS NOT A ResizeObserver ANY MORE ────────────────────────────
+  //
+  // It was, and it flashed. A trackpad pinch released at 1.7× painted one frame
+  // **1.716× too big** before settling — captured per-frame, because polling at
+  // 25–40 ms misses it entirely and reports a clean pass:
+  //
+  //     t=886   seen 1445  layout 1756  scale(1.716)   the gesture, correct
+  //     t=1046  seen 2479  layout 2962  scale(1.716)   layout landed, still scaled
+  //     t=1059  seen 1445  layout 2962  none           settled
+  //
+  // ResizeObserver delivers after layout and before paint *of the frame it
+  // notices in* — but a page's size is set from `doc.getPage()`'s promise,
+  // which resolves at an arbitrary point in a frame and routinely lands AFTER
+  // that frame's observer-delivery step. The frame then paints the grown layout
+  // still wearing the gesture's transform, and the observer reports a frame
+  // late. Nothing scheduled from the observer can be early enough, because the
+  // bad paint already happened.
+  //
+  // A `requestAnimationFrame` loop has the same defect for the same reason: rAF
+  // runs before the mutation, not after it.
+  //
+  // The one callback that runs inside the same commit as the size write is a
+  // LAYOUT EFFECT in the page itself, which is what `onSized` is.
+  //
+  // ── ⚠️ AND WHY IT COMPENSATES RATHER THAN JUST FINISHING ────────────────────
+  //
+  // Pages do not all resize in one commit. An earlier attempt at this dropped
+  // the transform on the first report and snapped the document small, because
+  // the layout was still on its way — measured mid-flight at 1159px of an
+  // eventual 1435px. So each report re-measures and asks how much of the growth
+  // has actually arrived: the residual `k` is the scale still needed to keep
+  // what is on screen the same size. `k` starts at the gesture's own ratio and
+  // reaches 1 exactly when the layout has finished. Every intermediate paint is
+  // therefore correct rather than merely brief.
   function commitZoom(newZoom: number, anchor: ZoomAnchor | null, done?: () => void) {
     pendingZoom.current?.cancel()
+    const prevZoom = zoomRef.current
     // Track the zoom here as well as in state so a burst of events inside one
     // frame compounds instead of each one re-reading a stale zoom.
     zoomRef.current = newZoom
@@ -182,31 +225,80 @@ export default function PdfViewer() {
       done?.()
       return
     }
-    const startWidth = content.offsetWidth
     const startHeight = content.offsetHeight
-    let ro: ResizeObserver | null = null
-    let timer: ReturnType<typeof setTimeout> | null = null
+    const startWidth = content.offsetWidth
+    const growth = prevZoom > 0 ? newZoom / prevZoom : 1
 
+    // ⚠️ MEASURE A PAGE, NOT THE CONTENT WRAPPER. A page's box comes straight
+    // from `getViewport({ scale })`, so it really is proportional to the zoom
+    // and "where it is heading" is exactly `startPageHeight * growth`. The
+    // wrapper is not: it also carries the padding and the fixed gaps between
+    // pages, which do not scale. Predicting from the wrapper left a residual
+    // `scale(1.017)` sitting on the document — small enough to look settled in
+    // a screenshot, and it hung there for the full 400 ms timeout because the
+    // arithmetic could never reach 1.
+    const pageEl = () =>
+      el.querySelector<HTMLElement>(`[data-page-index="${anchor.pageIndex}"]`)
+    const startPageHeight = pageEl()?.offsetHeight ?? 0
+    const targetPageHeight = startPageHeight * growth
+
+    let timer: ReturnType<typeof setTimeout> | null = null
     const teardown = () => {
-      ro?.disconnect()
+      sizeListeners.current.delete(onSized)
       if (timer) clearTimeout(timer)
       pendingZoom.current = null
     }
     const finish = () => {
       teardown()
-      // `done` drops the pinch's transform first: the anchor is measured off
+      // `done` drops the gesture's transform first: the anchor is measured off
       // the real, committed layout, and both land before this frame paints.
       done?.()
       restoreAnchor(el, anchor)
     }
 
-    ro = new ResizeObserver(() => {
-      // ResizeObserver reports the element's current size as its first
-      // callback; only a size that actually moved means the pages re-laid out.
-      if (content.offsetWidth === startWidth && content.offsetHeight === startHeight) return
-      finish()
-    })
-    ro.observe(content)
+    // The last page height acted on, so a report that changes nothing can be
+    // told apart from one that has stopped changing.
+    let lastPageHeight = startPageHeight
+
+    function onSized() {
+      // Nothing has moved yet — the first report can be a page re-reporting the
+      // size it already had.
+      if (
+        content!.offsetHeight === startHeight &&
+        content!.offsetWidth === startWidth
+      ) {
+        return
+      }
+      const ph = pageEl()?.offsetHeight ?? 0
+      // No page to measure (a document that failed to render) — the wrapper
+      // moved, so the layout is in as far as anything here can tell.
+      if (!ph || !targetPageHeight) {
+        finish()
+        return
+      }
+      // The layout has stopped moving without reaching the prediction. Trust
+      // the measurement over the arithmetic and settle, rather than holding a
+      // compensating transform until the timeout.
+      const stalled = ph === lastPageHeight
+      lastPageHeight = ph
+      const k = targetPageHeight / ph
+      // Close enough that a compensating transform would be sub-pixel: the
+      // layout has arrived, so hand over to the real thing.
+      if (stalled || (!(k > 1.002) && !(k < 0.998))) {
+        finish()
+        return
+      }
+      // Still growing. Hold the picture at the size the gesture left it by
+      // scaling about the anchored point — with the origin ON that point, no
+      // translate is needed and the anchor cannot drift as the layout shifts
+      // underneath it.
+      done?.()
+      restoreAnchor(el!, anchor!)
+      content!.style.transformOrigin = `${el!.scrollLeft + anchor!.screenX}px ${el!.scrollTop + anchor!.screenY}px`
+      content!.style.transform = `scale(${k})`
+    }
+
+    sizeListeners.current.add(onSized)
     timer = setTimeout(finish, LAYOUT_SETTLE_MS)
     pendingZoom.current = { finish, cancel: teardown }
   }
@@ -747,7 +839,7 @@ export default function PdfViewer() {
         >
           <div ref={contentRef} className="flex flex-col items-center gap-6 py-6 px-4">
             {Array.from({ length: numPages }, (_, i) => (
-              <PdfPage key={i} doc={doc} pageIndex={i} scale={scale} isXfa={isXfa} />
+              <PdfPage key={i} doc={doc} pageIndex={i} scale={scale} isXfa={isXfa} onSized={notifySized} />
             ))}
           </div>
         </div>

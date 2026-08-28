@@ -387,6 +387,72 @@ console.log('\nctrl+wheel, the desktop zoom on the same machinery')
   await context.close()
 }
 
+console.log('\nreleasing a trackpad pinch — the frame nobody could see')
+{
+  // ⚠️ THIS ONE CANNOT BE CHECKED BY POLLING. The bug was a single frame, and
+  // reading state from Playwright every 25–40 ms steps straight over it and
+  // reports a clean pass. The sampler has to run in the page, on rAF.
+  //
+  // What went wrong: a page's box size is set from `doc.getPage()`'s promise,
+  // which resolves at an arbitrary point in a frame — routinely after that
+  // frame's ResizeObserver delivery step. The browser painted the grown layout
+  // still wearing the gesture's transform, and the observer said so a frame
+  // late. Captured at 1.716x too big for one frame, which is the gesture's own
+  // scale sitting on a layout that had already grown to match it.
+  const { context, page } = await openViewer({ viewport: { width: 1200, height: 900 } })
+
+  await page.evaluate(() => {
+    window.__frames = []
+    const tick = () => {
+      const p = document.querySelector('[data-page-index="0"]')
+      // getBoundingClientRect INCLUDES the transform — this is what the eye sees.
+      if (p) window.__frames.push(Math.round(p.getBoundingClientRect().height))
+      window.__raf = requestAnimationFrame(tick)
+    }
+    window.__raf = requestAnimationFrame(tick)
+  })
+
+  // A trackpad pinch arrives as a burst of ctrl+wheel ticks, not one notch.
+  const cdp = await context.newCDPSession(page)
+  const at = await page.evaluate(() => {
+    const r = document.querySelector('.overflow-auto').getBoundingClientRect()
+    return { x: r.left + 600, y: r.top + 400 }
+  })
+  for (let i = 0; i < 18; i++) {
+    await cdp.send('Input.dispatchMouseEvent', {
+      type: 'mouseWheel', x: at.x, y: at.y, deltaX: 0, deltaY: -30, modifiers: 2
+    })
+    await page.waitForTimeout(16)
+  }
+  await page.waitForTimeout(1400)
+
+  const frames = await page.evaluate(() => {
+    cancelAnimationFrame(window.__raf)
+    return window.__frames
+  })
+  const settled = frames[frames.length - 1]
+  const peak = Math.max(...frames)
+  // The release must never paint the page BIGGER than where it settles. The
+  // gesture itself only ever grows towards that size, so a peak above it can
+  // only be the transform and the new layout stacking.
+  check(
+    'no frame is painted larger than the zoom it settles at',
+    peak <= settled + 2,
+    `peak ${peak}px vs settled ${settled}px (${(peak / settled).toFixed(3)}x over ${frames.length} frames)`
+  )
+  // …and it must not snap SMALL either, which is how the first attempt at this
+  // failed: dropping the transform on the first size report, while the layout
+  // was still mid-flight at 1159px of an eventual 1435px.
+  const afterGesture = frames.slice(Math.floor(frames.length * 0.6))
+  const trough = Math.min(...afterGesture)
+  check(
+    'and none is painted smaller, which is how the first fix failed',
+    trough >= settled - 2,
+    `trough ${trough}px vs settled ${settled}px`
+  )
+  await context.close()
+}
+
 await browser.close()
 console.log(failures.length ? `\n${failures.length} FAILED` : '\nall checks passed')
 process.exit(failures.length ? 1 : 0)

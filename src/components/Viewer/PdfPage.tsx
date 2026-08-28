@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { PDFDocumentProxy, PDFPageProxy } from '../../lib/pdfjs'
 import AnnotationLayer from './AnnotationLayer'
 import FormFieldLayer from './FormFieldLayer'
@@ -15,9 +15,24 @@ interface Props {
   // rasterizing the page to canvas (whose only content is the "upgrade your PDF
   // viewer" placeholder Adobe bakes into the static stream).
   isXfa: boolean
+  /**
+   * Called when this page has just taken a new box size, from a LAYOUT effect —
+   * synchronously after React writes the size to the DOM and before the browser
+   * paints.
+   *
+   * ⚠️ That timing is the entire point, and a ResizeObserver cannot replace it.
+   * The size below is set from `doc.getPage()`'s promise, which resolves at an
+   * arbitrary moment in a frame — routinely after that frame's ResizeObserver
+   * delivery step. The browser then paints the new layout while the zoom
+   * gesture's CSS transform is still on it, and the observer only says so a
+   * frame later. That one frame is the release flash: measured at **1.716×
+   * too big** for a frame, which is exactly the gesture's own scale applied on
+   * top of a layout that had already grown to match it.
+   */
+  onSized?: () => void
 }
 
-export default function PdfPage({ doc, pageIndex, scale, isXfa }: Props) {
+export default function PdfPage({ doc, pageIndex, scale, isXfa, onSized }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [size, setSize] = useState<{ width: number; height: number } | null>(null)
   const [page, setPage] = useState<PDFPageProxy | null>(null)
@@ -109,6 +124,16 @@ export default function PdfPage({ doc, pageIndex, scale, isXfa }: Props) {
       if (retryTimer) clearTimeout(retryTimer)
     }
   }, [doc, pageIndex, scale, isXfa])
+
+  // Layout effect, not effect: this has to run in the same commit that wrote
+  // the new width/height, before the paint. See `onSized`.
+  const sized = useRef<string>('')
+  useLayoutEffect(() => {
+    const key = size ? `${size.width}x${size.height}` : ''
+    if (key === sized.current) return
+    sized.current = key
+    if (key) onSized?.()
+  })
 
   return (
     <div
