@@ -272,6 +272,11 @@ export default function LandingPage() {
                 panel — Universal Images keeps everything in a single card and
                 this now matches it. */}
             <div className="mt-7 bg-white border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6">
+              {/* Above the circle, not below it: read top-to-bottom the answer
+                  arrives before the question does, so nobody has to hand over a
+                  document and then go looking for what happens to it. */}
+              <PrivacyNote className="mb-5" />
+
               {/* Open existing — primary action, wearing the suite's shared
                   drop circle (`DropRing` + `useFileDrop` from @unisim/sdk)
                   rather than a copy, so it is the same front door Universal
@@ -324,11 +329,6 @@ export default function LandingPage() {
                 </div>
                 <input {...drop.inputProps} className="hidden" />
               </div>
-
-              {/* Directly under the circle, before any of the actions: this is
-                  the moment someone decides whether to hand a document to a
-                  web page, so it is where the answer belongs. */}
-              <PrivacyNote className="mt-5" />
 
               {/* This slot is the same pill either way — it says "Recent files"
                   and opens the list once you have some, and "Try with example
