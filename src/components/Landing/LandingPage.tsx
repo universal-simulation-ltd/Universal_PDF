@@ -241,6 +241,8 @@ export default function LandingPage() {
               screen. */}
           <div className="hidden lg:flex flex-col items-center lg:items-start gap-4 order-2 lg:order-1 min-w-0">
             <PdfIllustration />
+            {/* VARIANT: under the illustration. */}
+            <PrivacyNote className="w-full" />
           </div>
 
           {/* ⚠️ min-w-0 is load-bearing, not tidying. A grid item defaults to
@@ -263,7 +265,7 @@ export default function LandingPage() {
               PDFs that <span className="text-orange-600">just work</span>.
             </h1>
             <p className="mt-3 text-slate-600 max-w-md">
-              View, annotate, sign and export — all of it inside this page.
+              View, annotate, sign and export.
             </p>
 
             {/* One box, read top to bottom: upload → recent → compress →
@@ -272,10 +274,10 @@ export default function LandingPage() {
                 panel — Universal Images keeps everything in a single card and
                 this now matches it. */}
             <div className="mt-7 bg-white border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6">
-              {/* Above the circle, not below it: read top-to-bottom the answer
-                  arrives before the question does, so nobody has to hand over a
-                  document and then go looking for what happens to it. */}
-              <PrivacyNote className="mb-5" />
+              {/* ⚠️ The left column is `hidden lg:flex`, so the note that lives
+                  beside the illustration does not exist on a phone. This is its
+                  mobile home — not a duplicate on screen, ever. */}
+              <PrivacyNote className="mb-5 lg:hidden" />
 
               {/* Open existing — primary action, wearing the suite's shared
                   drop circle (`DropRing` + `useFileDrop` from @unisim/sdk)
