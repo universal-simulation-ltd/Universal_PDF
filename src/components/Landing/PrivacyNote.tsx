@@ -9,37 +9,41 @@ const REPO = 'https://github.com/universal-simulation-ltd/Universal_PDF'
  * 1. **It names the alternative.** "Everything stays on your device" was
  *    already on this page three times over (the lead, the ring, the download
  *    row) and read as boilerplate, because every upload-and-scrape site says
- *    something similar. Naming what the other tools do is what makes the
- *    sentence carry information.
+ *    something similar. Naming what the other tools do — and *why* they do it,
+ *    which is to view your file on their server and mine what is in it — is
+ *    what makes the sentence carry information.
  *
  * 2. **"Guaranteed" is the link, not a badge.** A trust seal you cannot click
  *    is a claim about a claim. This one opens the source the page is running,
  *    which is the only guarantee anybody can actually check — so the word that
  *    makes the promise is the word that hands over the evidence.
  *
- * 3. ⚠️ **The exception line is not optional.** This app CAN send a file off
- *    the device — "Store with UNI·SIM" (hosted uploads, one token) and "Send
- *    to sign" both do, by design. An unqualified "nothing ever leaves" would
- *    be false, and false in the exact place the Guaranteed link invites people
- *    to go and look. The third line is what keeps the first two true. Do not
- *    drop it to save a line when porting this to another app — check what that
- *    app can send instead, and say so.
+ * 3. ⚠️ **`except` is what keeps the sentence true.** This app CAN send a file
+ *    off the device — "Store with UNI·SIM" (hosted backup) and "Send to sign"
+ *    both do, by design. An unqualified "never leaves this computer" would be
+ *    false, and false in the exact place the Guaranteed link invites people to
+ *    go and look. It used to be a separate line below a hairline; folding it
+ *    into the sentence is James's call (2026-08-28) and is better — a caveat
+ *    set apart in smaller grey type reads as the bit you are meant to skip,
+ *    which is the opposite of what an honest exception should look like.
  *
- * Props, not hardcoding, because this is the prototype for the same note on
- * the other Universal Apps: only `repo`, `what` and `sends` change per app.
+ *    When porting this to another app: work out what THAT app can send and
+ *    write it here. Pass `except={null}` only for an app that genuinely never
+ *    sends anything — then the claim is unqualified because it is unqualified,
+ *    not because the caveat was inconvenient.
  */
 export default function PrivacyNote({
   repo = REPO,
-  what = 'Your PDF is opened right here',
-  sends = 'Unless you choose to (a) backup a PDF online, or (b) send it online to be signed.',
+  subject = 'Your PDF',
+  except = 'backup and signing',
   className = '',
 }: {
   /** The app's own source, opened by "Guaranteed". */
   repo?: string
-  /** Middle line — what happens to the file this app takes. */
-  what?: string
-  /** ⚠️ The honest exception. See note 3 above before changing it. */
-  sends?: string
+  /** What this app is handed — "Your PDF", "Your images", "Your video". */
+  subject?: string
+  /** ⚠️ The ways this app can send a file. `null` = it never can. See note 3. */
+  except?: string | null
   className?: string
 }) {
   return (
@@ -68,10 +72,11 @@ export default function PrivacyNote({
             paragraph it read as small print, which is the one thing a claim
             like this cannot afford to look like. */}
         <p className="font-semibold text-slate-900">
-          Other companies upload your files and scrape your data.
+          Other companies upload your files to view them and scrape your data.
         </p>
         <p className="mt-0.5 text-slate-600">
-          We don&rsquo;t. {what} and never leaves this computer.{' '}
+          We don&rsquo;t. {subject} never leaves this computer
+          {except ? ` unless you choose it to (e.g. ${except})` : ''}.{' '}
           <a
             href={repo}
             target="_blank"
@@ -93,9 +98,6 @@ export default function PrivacyNote({
               <path d="M7 17 17 7M9 7h8v8" />
             </svg>
           </a>
-        </p>
-        <p className="mt-1.5 border-t border-slate-200/80 pt-1.5 text-[11px] leading-snug text-slate-400">
-          {sends}
         </p>
       </div>
     </div>
