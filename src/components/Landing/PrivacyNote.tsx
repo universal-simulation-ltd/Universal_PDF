@@ -31,7 +31,7 @@ const REPO = 'https://github.com/universal-simulation-ltd/Universal_PDF'
 export default function PrivacyNote({
   repo = REPO,
   what = 'Your PDF is opened right here',
-  sends = 'The only exceptions are ones you choose: storing a PDF with UNI·SIM, or sending one to be signed.',
+  sends = 'Unless you choose to (a) backup a PDF online, or (b) send it online to be signed.',
   className = '',
 }: {
   /** The app's own source, opened by "Guaranteed". */
