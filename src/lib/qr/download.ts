@@ -7,7 +7,7 @@
 // page" would have stamped in. A second renderer for "the downloaded one" is
 // how the two would quietly drift apart.
 
-import { qrDisplayName, type QrDesign } from './design'
+import { qrDisplayName, type QrDesign } from '@unisim/qr'
 import { PLACEMENT_SIZE, renderQrPng } from './render'
 
 /** Slugify a design's display name into a safe filename stem — the same rule as

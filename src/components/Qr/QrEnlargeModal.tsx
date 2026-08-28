@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { qrDisplayName, type QrDesign } from '../../lib/qr/design'
+import { qrDisplayName, type QrDesign } from '@unisim/qr'
 import { renderQrPng } from '../../lib/qr/render'
 
 // The 224 px preview in the dialog is there to show you what the code LOOKS

@@ -91,6 +91,20 @@ export default defineConfig(({ mode }) => {
         workbox: {
           // SPA navigations under the base path fall back to the prefixed shell.
           navigateFallback: `${BASE_PATH}index.html`,
+          // Workbox refuses to precache a file over 2 MiB, and refuses the BUILD
+          // with it. The app's own bundle sat at 2.02 MiB and went over when the
+          // QR design model moved to @unisim/qr, which inlines the UNI·SIM mark
+          // as a data URI (~64 kB) instead of fetching it — the price of the two
+          // apps rendering the identical picture, and it is paid once at install
+          // rather than per code.
+          //
+          // Raised rather than worked around because the alternative is worse:
+          // leaving the main bundle un-precached would take the app offline on
+          // the one file it cannot start without. 4 MiB is headroom, not a
+          // target — this is a PDF editor carrying pdf.js, pdf-lib and konva,
+          // and it ships gzipped at ~700 kB. The QR editor is the obvious thing
+          // to code-split out of the first load if this needs to come down.
+          maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
           // The on-device OCR runtime (Tesseract.js WASM core + English model)
           // is large (~15 MB) and only fetched from the Tesseract CDN when the
           // optional "Make searchable (OCR)" tool is used. Keep it OUT of the

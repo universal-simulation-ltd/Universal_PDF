@@ -18,7 +18,7 @@
 
 import { HOSTED_BUCKET, useUniversal, type HostedUpload } from '@unisim/sdk'
 import { hostedQrPathCandidates, qrSidecarPath } from '../hostedQrPaths'
-import { DEFAULT_DESIGN, type QrDesign } from './design'
+import { DEFAULT_DESIGN, type QrDesign } from '@unisim/qr'
 import { renderQrPng } from './render'
 
 /** Universal QR's saved-designs key. Matching it is the whole trick — keep it

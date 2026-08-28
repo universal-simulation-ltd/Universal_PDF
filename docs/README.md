@@ -495,47 +495,55 @@ pixel-for-pixel the image "Add to page" would have stamped in. Two notes:
 
 ### Sharing a design model with Universal QR
 
-`src/lib/qr/` is a port of Universal QR's renderer, kept deliberately faithful:
+`QrDesign`, the six presets, the shaped-plate geometry, the decoration and the
+canvas/SVG composites all live in **[@unisim/qr](https://www.npmjs.com/package/@unisim/qr)**
+(`universal-platform/packages/qr`), shared with Universal QR. What is left in
+`src/lib/qr/` is this app's own layer:
 
-| File | From | Notes |
-|---|---|---|
-| `design.ts` | its `lib/qr.ts` | `QrDesign` is a field-for-field copy of its `QrConfig`; the six presets are its `PRESETS` verbatim |
-| `frames.ts` | its `lib/frames.ts` | shaped plates (circle/star/hexagon/…), canvas path only |
-| `decor.ts` | its `lib/decor.ts` | the burst/scatter marks a shaped plate is filled with |
-| `render.ts` | its `lib/compose.ts` | one canvas composite for plain and shaped codes alike |
+| File | What it is |
+|---|---|
+| `design.ts` | placing a code on a page (`QrPlacement`), tenant branding as an overlay (`withBranding`), and the preset chips' captions |
+| `render.ts` | `renderQrPng` — the package's composite at this app's placement size — and pulling a company mark into a data URI |
+| `download.ts` | saving the rendered code as a file |
+| `library.ts` | reading the codes you saved in Universal QR (this browser's, and your account's) |
 
-The *editor* is what is simplified, not the format — because a design imported
-from Universal QR is restored whole, and a code that rendered differently in the
-two apps would be the version of this feature nobody trusts. Verified by
-rendering all six presets through both apps' pipelines and diffing the pixels:
-**identical**, the sole delta being the centre mark's antialiasing (Universal QR
-inlines a 256 px data URI of the icon; here the shipped `unisim-icon.png` is
-downscaled by the browser).
+⚠️⚠️ **THIS USED TO BE A COPY, AND THE COPY DRIFTED.** Until 2026-08-29 this
+directory held a hand-taken port of Universal QR's whole model, "kept
+deliberately faithful" and verified pixel-identical on the day it was taken.
+Universal QR added `starPlacement` and `starColor` on 2026-08-24; the port got
+them on 2026-08-28. For four days a star designed there rendered here as a
+different picture — a small black-and-white code on a white plate instead of
+an orange star with the code in front.
 
-⚠️⚠️ **THIS PORT DRIFTS SILENTLY, AND IT HAS.** A copy is only faithful on the
-day it is taken. Universal QR added `starPlacement` and `starColor` on
-2026-08-24 (the star moved BEHIND the code); this copy did not get them until
-2026-08-28, and in between an imported star rendered in the superseded
-arrangement — a small code inside a white plate instead of an orange star with
-the code in front. Nothing failed: `hydrate()` merges an incoming design over
-`DEFAULT_DESIGN`, so a field this app has never heard of is dropped without a
-word, and what the user gets is simply a different picture from the one they
-saved.
-
-So: **when you touch either app's design model, diff the two type definitions**
-— `Universal_QR/src/lib/qr.ts` `QrConfig` against `design.ts` `QrDesign`, which
-must stay field-for-field — and re-check the presets, which drift the same way.
-`npm run test:qr-star` pins the arrangement that broke: it renders a
-Universal-QR-authored design through this app and measures the pixels (star
-colour present, ink coverage, corner alpha), so the next silent drop of a field
-has at least one place to fail loudly.
+It failed **silently**, and that is the part worth remembering: an incoming
+design is merged over `DEFAULT_DESIGN`, so a field the reader has never heard
+of is dropped without a word. There is no error, no warning, nothing in a
+console — the user simply gets a different code from the one they saved. One
+package is the fix; do not start a second copy.
 
 ⚠️ The one rule the geometry keeps: **the code itself is never clipped** to a
 shape. A silhouette is only ever the *plate* the code sits on — the code is
 rendered smaller and centred in the largest square that fits. The single
 exception is `starPlacement: 'behind'`, which keeps the rule from the other
 side: the star is drawn UNDER a code that overlaps its notches, so the code is
-whole and the star is what gets covered. See `frames.ts`.
+whole and the star is what gets covered.
+
+**Policy this app keeps for itself.** It renders EVERY design through the one
+composite (`renderQrCanvas`), square codes included, so the plate, the
+decoration and the corner stamp cannot drift apart; Universal QR keeps a plain
+path for square codes and only shapes reach the composite. Different entry
+point, same drawing code.
+
+**Bundle cost.** The package inlines the UNI·SIM mark as a data URI (~64 kB)
+rather than fetching it, which is what makes the two apps' output identical
+rather than merely similar — this app used to load `unisim-icon.png` from
+`BASE_URL`. That pushed the main chunk past workbox's 2 MiB precache ceiling,
+so `maximumFileSizeToCacheInBytes` is raised in `vite.config.ts`. The QR editor
+is the obvious thing to code-split out of the first load if that needs to come
+down; it is reached only from `<QrDialog />` in `App.tsx`.
+
+Pinned by `npm run test:qr-star`, which renders a Universal-QR-authored design
+through a real browser and measures the pixels.
 
 ### Your saved codes — this browser's, and your account's
 

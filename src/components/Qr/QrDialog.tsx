@@ -4,17 +4,20 @@ import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import {
   DEFAULT_DESIGN,
-  isSafeQrAccent,
-  QR_PRESETS,
+  STAR_BEHIND_CODE_SCALE,
   qrContrastIssue,
   qrDisplayName,
+  starIsBehind,
+  type QrDesign
+} from '@unisim/qr'
+import {
+  isSafeQrAccent,
+  QR_PRESETS,
   withBranding,
-  type QrDesign,
   type QrPlacement,
   type QrPreset
 } from '../../lib/qr/design'
 import { imageUrlToDataUrl, PLACEMENT_SIZE, renderQrPng } from '../../lib/qr/render'
-import { STAR_BEHIND_CODE_SCALE, starIsBehind } from '../../lib/qr/frames'
 import QrBrandingPanel from './QrBrandingPanel'
 import { copyQrPngToClipboard, downloadQrPng } from '../../lib/qr/download'
 import {
