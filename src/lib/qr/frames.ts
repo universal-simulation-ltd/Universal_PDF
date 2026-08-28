@@ -6,13 +6,40 @@
 //
 // ⚠️ The one rule this file exists to keep: **the code itself is never
 // clipped.** A QR is only readable if every module and its quiet zone are
-// present, so the shape can only ever be the *plate the code sits on*. The
+// present, so the shape can only ever be drawn *around or behind* the code. The
 // code is rendered smaller and centred inside the largest square that fits
 // within the shape; the shape is what gets drawn around it. Anything that
 // trims the silhouette out of the modules produces a picture of a QR code, not
 // a QR code.
+//
+// The one arrangement that is not a plate is `StarPlacement: 'behind'`, and it
+// keeps the same rule from the other side: the star is drawn UNDER a code that
+// covers its notches, so the code is complete and the star is what gets
+// overlapped. Nothing is clipped there either.
 
 export type FrameShape = 'square' | 'rounded' | 'circle' | 'squircle' | 'hexagon' | 'star'
+
+/** Where the code sits relative to the star.
+ *
+ *  'inside' is the plate rule every other shape follows: the code is shrunk to
+ *  the largest square that fits WITHIN the silhouette. For a star that square
+ *  is tiny — 47% of the plate, and 37% once decoration takes its ring — because
+ *  the star's five inward notches cut into every side of it.
+ *
+ *  'behind' turns the arrangement around: the star stops being the plate and
+ *  becomes a backdrop, with the code drawn in front of it at 72% of the image.
+ *  The code overlaps the notches, so only the five points show around it. */
+export type StarPlacement = 'inside' | 'behind'
+
+/** Side of the code, as a fraction of the image, when the star is behind it.
+ *
+ *  Bounded by the star's own points rather than picked to taste: the side
+ *  points sit at x = 0.976 and the bottom two at y = 0.905, so a centred square
+ *  wider than 0.81 swallows the bottom points and one wider than 0.95 swallows
+ *  the sides. 0.72 clears the nearest of those (the bottom points) by 4.5% of
+ *  the image, and still leaves the code half again as big as the inscribed
+ *  square it replaces. */
+export const STAR_BEHIND_CODE_SCALE = 0.72
 
 /** A closed polygon in the unit square [0,1]², y down (canvas convention). */
 type UnitPolygon = [number, number][]
@@ -171,10 +198,23 @@ const INSCRIBED: Record<FrameShape, number> = {
 export function frameGeometry(
   shape: FrameShape,
   size: number,
-  decorScale = 1
+  decorScale = 1,
+  placement: StarPlacement = 'inside'
 ): { inner: number; offset: number } {
-  const inner = Math.max(64, Math.round(size * INSCRIBED[shape] * decorScale))
+  // A star BEHIND the code is not a plate, so the inscribed square does not
+  // apply and neither does decoration's ring — there is no ring, the code
+  // covers the middle of the star. Both are ignored here rather than at the
+  // call sites, so nothing can compute a size the renderer does not draw.
+  const scale = starIsBehind(shape, placement) ? STAR_BEHIND_CODE_SCALE : INSCRIBED[shape] * decorScale
+  const inner = Math.max(64, Math.round(size * scale))
   return { inner, offset: Math.round((size - inner) / 2) }
+}
+
+/** True when this shape/placement pair puts the star behind the code. One
+ *  helper, because the geometry and the renderer have to agree — and 'behind'
+ *  means nothing on any shape but the star. */
+export function starIsBehind(shape: FrameShape, placement: StarPlacement): boolean {
+  return shape === 'star' && placement === 'behind'
 }
 
 /** The shape's outline at a given plate size, in device pixels. */

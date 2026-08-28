@@ -14,6 +14,7 @@ import {
   type QrPreset
 } from '../../lib/qr/design'
 import { imageUrlToDataUrl, PLACEMENT_SIZE, renderQrPng } from '../../lib/qr/render'
+import { STAR_BEHIND_CODE_SCALE, starIsBehind } from '../../lib/qr/frames'
 import QrBrandingPanel from './QrBrandingPanel'
 import { copyQrPngToClipboard, downloadQrPng } from '../../lib/qr/download'
 import {
@@ -53,26 +54,35 @@ function PresetGlyph({ preset }: { preset: QrPreset }) {
   const p = { ...DEFAULT_DESIGN, ...preset.patch }
   const eye = p.matchCornerColor ? p.fgColor : p.cornerColor
   const shaped = p.frameShape !== 'square'
+  // A star BEHIND the code is not a plate: the code sits IN FRONT of it and is
+  // bigger than any inscribed square, so the glyph has to follow the renderer's
+  // layering here too or the chip advertises a design the preset does not draw.
+  const behind = starIsBehind(p.frameShape, p.starPlacement)
   // Shaped plates hold a smaller code, the same way the renderer does.
-  const s = shaped ? 0.66 : 1
+  const s = behind ? STAR_BEHIND_CODE_SCALE : shaped ? 0.66 : 1
   const o = (1 - s) / 2
   const u = (v: number) => (o + v * s) * 32
 
-  const plate =
-    p.frameShape === 'circle' ? (
-      <circle cx={16} cy={16} r={16} fill={p.bgColor} />
-    ) : p.frameShape === 'star' ? (
-      <polygon
-        points={Array.from({ length: 10 }, (_, i) => {
-          const r = i % 2 === 0 ? 16 : 16 * 0.62
-          const a = -Math.PI / 2 + (i * Math.PI) / 5
-          return `${16 + r * Math.cos(a)},${16 + r * Math.sin(a)}`
-        }).join(' ')}
-        fill={p.bgColor}
-      />
-    ) : (
-      <rect width={32} height={32} rx={p.dotType === 'square' ? 0 : 3} fill={p.bgColor} />
-    )
+  const starPoints = Array.from({ length: 10 }, (_, i) => {
+    const r = i % 2 === 0 ? 16 : 16 * 0.62
+    const a = -Math.PI / 2 + (i * Math.PI) / 5
+    return `${16 + r * Math.cos(a)},${16 + r * Math.sin(a)}`
+  }).join(' ')
+
+  const plate = behind ? (
+    // Ground first, then the star on top of it in its own colour — the code is
+    // drawn over both by the markup below.
+    <>
+      <rect width={32} height={32} fill={p.bgColor} />
+      <polygon points={starPoints} fill={p.starColor} />
+    </>
+  ) : p.frameShape === 'circle' ? (
+    <circle cx={16} cy={16} r={16} fill={p.bgColor} />
+  ) : p.frameShape === 'star' ? (
+    <polygon points={starPoints} fill={p.bgColor} />
+  ) : (
+    <rect width={32} height={32} rx={p.dotType === 'square' ? 0 : 3} fill={p.bgColor} />
+  )
 
   // Module rounding follows the preset's dot style, so Classic reads square and
   // Dots reads round at a glance.

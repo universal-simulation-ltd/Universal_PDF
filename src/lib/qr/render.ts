@@ -14,7 +14,7 @@ import {
   unisimMarkUrl,
   type QrDesign
 } from './design'
-import { frameGeometry, traceFrame } from './frames'
+import { frameGeometry, starIsBehind, traceFrame } from './frames'
 import { DECOR_CODE_SCALE, drawDecor } from './decor'
 
 /** The size a QR is rendered at when it goes onto a page. Generous on purpose:
@@ -64,8 +64,18 @@ export async function imageUrlToDataUrl(src: string, max = 512): Promise<string>
   return canvas.toDataURL('image/png')
 }
 
+/** True when this design puts the star behind the code rather than under it as
+ *  a plate. Decoration is off in that arrangement — there is no ring to fill,
+ *  the code covers the middle of the star — and it is switched off HERE rather
+ *  than by clearing the design's decorStyle, so switching back to 'inside' gets
+ *  the burst back rather than a design quietly stripped of it. */
+function starBehind(design: QrDesign): boolean {
+  return starIsBehind(design.frameShape, design.starPlacement)
+}
+
 /** The scale the code is drawn at — 1 unless decoration needs room. */
 function decorScaleOf(design: QrDesign): number {
+  if (starBehind(design)) return 1
   return design.decorStyle && design.decorStyle !== 'none' ? DECOR_CODE_SCALE : 1
 }
 
@@ -139,7 +149,12 @@ export async function renderQrPng(design: QrDesign, size = PLACEMENT_SIZE): Prom
   // Decoration only exists on a shaped plate — a square one has no space around
   // the code to fill — so a square design never gives up room for it, however
   // its `decorStyle` happens to be set.
-  const { inner, offset } = frameGeometry(design.frameShape, size, shaped ? decorScaleOf(design) : 1)
+  const { inner, offset } = frameGeometry(
+    design.frameShape,
+    size,
+    shaped ? decorScaleOf(design) : 1,
+    design.starPlacement
+  )
 
   // Inside a plate the code's own background is switched off so the plate shows
   // through; a plain square code keeps whatever background it was designed with.
@@ -151,7 +166,26 @@ export async function renderQrPng(design: QrDesign, size = PLACEMENT_SIZE): Prom
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('Canvas is not available in this browser.')
 
-  if (shaped && !design.bgTransparent) {
+  // A star BEHIND the code inverts the layering: the background is the whole
+  // square (the code overhangs the star, so the silhouette cannot be the thing
+  // that carries it), and the star is painted on top of that as a backdrop in
+  // its own colour. Everything else — code, stamp — is unchanged.
+  if (starBehind(design)) {
+    if (!design.bgTransparent) {
+      ctx.fillStyle = design.bgColor
+      ctx.fillRect(0, 0, size, size)
+    }
+    // Drawn even on a transparent background: it is the picture, not the plate,
+    // so knocking the background out should leave a star-backed code on
+    // transparency rather than nothing at all.
+    ctx.save()
+    traceFrame(ctx, design.frameShape, size)
+    ctx.fillStyle = design.starColor
+    ctx.fill()
+    ctx.restore()
+  }
+
+  if (shaped && !design.bgTransparent && !starBehind(design)) {
     // With a transparent background the plate is skipped entirely, which gives
     // the genuinely useful result: a circular (or star, or hexagon) sticker on
     // transparency rather than a shape you cannot see.
@@ -163,7 +197,7 @@ export async function renderQrPng(design: QrDesign, size = PLACEMENT_SIZE): Prom
     ctx.restore()
   }
 
-  if (shaped && design.decorStyle !== 'none') {
+  if (shaped && design.decorStyle !== 'none' && !starBehind(design)) {
     // Decoration goes UNDER the code and is clipped to the silhouette, so the
     // same marks fill a circle, a hexagon or a star without decor.ts knowing
     // which.

@@ -13,7 +13,7 @@ import type {
   CornerDotType,
   ErrorCorrectionLevel
 } from 'qr-code-styling'
-import type { FrameShape } from './frames'
+import type { FrameShape, StarPlacement } from './frames'
 import type { DecorStyle } from './decor'
 
 export type { DotType, CornerSquareType, CornerDotType, ErrorCorrectionLevel }
@@ -58,6 +58,15 @@ export interface QrDesign {
    *  the usual square. This shapes the PLATE the code sits on; the code itself
    *  is rendered smaller and centred inside it, never clipped (see frames.ts). */
   frameShape: FrameShape
+
+  /** Where the code sits relative to a STAR: inside it as a plate, or in front
+   *  of it with the star as a backdrop. Ignored on every other shape. */
+  starPlacement: StarPlacement
+  /** The star's own colour when it stands behind the code. It needs its own
+   *  field because that arrangement uses two colours where a plate uses one:
+   *  `bgColor` becomes the ground the code and its quiet zone sit on, and this
+   *  is the star painted on top of it. */
+  starColor: string
 
   /** Marks filling the space a shaped plate leaves around the code. Turning it
    *  on SHRINKS the code to make room (see decor.ts), and it does nothing at
@@ -117,6 +126,8 @@ export const DEFAULT_DESIGN: QrDesign = {
   cornerSquareType: 'extra-rounded',
   cornerDotType: 'dot',
   frameShape: 'square',
+  starPlacement: 'inside',
+  starColor: '#e05504',
   decorStyle: 'none',
   matchDecorColor: true,
   decorColor: '#e05504',
@@ -164,7 +175,9 @@ export const QR_PRESETS: QrPreset[] = [
       gradientRotation: 45,
       matchCornerColor: true,
       logoSize: 0.28,
-      frameShape: 'square'
+      frameShape: 'square',
+      starPlacement: 'inside',
+      starColor: '#e05504'
     }
   },
   {
@@ -184,7 +197,9 @@ export const QR_PRESETS: QrPreset[] = [
       gradientRotation: 45,
       matchCornerColor: true,
       logoSize: 0.28,
-      frameShape: 'square'
+      frameShape: 'square',
+      starPlacement: 'inside',
+      starColor: '#e05504'
     }
   },
   {
@@ -205,7 +220,9 @@ export const QR_PRESETS: QrPreset[] = [
       matchCornerColor: false,
       cornerColor: '#e05504',
       logoSize: 0.28,
-      frameShape: 'square'
+      frameShape: 'square',
+      starPlacement: 'inside',
+      starColor: '#e05504'
     }
   },
   {
@@ -228,7 +245,9 @@ export const QR_PRESETS: QrPreset[] = [
       bgTransparent: false,
       matchCornerColor: true,
       logoSize: 0.28,
-      frameShape: 'square'
+      frameShape: 'square',
+      starPlacement: 'inside',
+      starColor: '#e05504'
     }
   },
   {
@@ -251,14 +270,31 @@ export const QR_PRESETS: QrPreset[] = [
       matchCornerColor: false,
       cornerColor: '#e05504',
       frameShape: 'circle',
+      starPlacement: 'inside',
+      starColor: '#e05504',
       decorStyle: 'burst',
       logoSize: 0.3,
       hideBackgroundDots: true
     }
   },
   {
-    // BLACK on orange, not white on orange — white modules on an orange plate
-    // is an inverted code. Black on #e05504 is 5.5:1 with the dark side down.
+    // The star stands BEHIND the code (Universal QR, 2026-08-24): the code goes
+    // from 37% of the image to 72%, and the star reads as a mark rather than as
+    // a square code dropped on a spiky background.
+    //
+    // The palette moves with it, because 'behind' needs two colours where the
+    // plate needed one: white is now the GROUND the code and its quiet zone sit
+    // on, and the brand orange moves to `starColor`. Black modules therefore
+    // meet two backgrounds and clear both — 5.5:1 on the orange, 21:1 on the
+    // white.
+    //
+    // BLACK modules, not white. White on orange is an INVERTED code, which
+    // strict readers reject outright.
+    //
+    // `decorStyle: 'burst'` is pinned even though decoration is not drawn in
+    // this arrangement: it is what the design becomes if the placement goes
+    // back to 'inside', and pinning it stops another preset's choice following
+    // you there.
     name: 'Star',
     shape: 'Star',
     patch: {
@@ -268,14 +304,16 @@ export const QR_PRESETS: QrPreset[] = [
       cornerSquareType: 'extra-rounded',
       cornerDotType: 'dot',
       fgColor: '#000000',
-      bgColor: '#e05504',
+      bgColor: '#ffffff',
       bgTransparent: false,
       useGradient: false,
       gradientColor: '#e05504',
       gradientRotation: 45,
       matchCornerColor: true,
       logoSize: 0.28,
-      frameShape: 'star'
+      frameShape: 'star',
+      starPlacement: 'behind',
+      starColor: '#e05504'
     }
   }
 ]
