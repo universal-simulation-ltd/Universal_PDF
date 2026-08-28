@@ -241,8 +241,6 @@ export default function LandingPage() {
               screen. */}
           <div className="hidden lg:flex flex-col items-center lg:items-start gap-4 order-2 lg:order-1 min-w-0">
             <PdfIllustration />
-            {/* VARIANT: under the illustration. */}
-            <PrivacyNote className="w-full" />
           </div>
 
           {/* ⚠️ min-w-0 is load-bearing, not tidying. A grid item defaults to
@@ -274,11 +272,6 @@ export default function LandingPage() {
                 panel — Universal Images keeps everything in a single card and
                 this now matches it. */}
             <div className="mt-7 bg-white border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6">
-              {/* ⚠️ The left column is `hidden lg:flex`, so the note that lives
-                  beside the illustration does not exist on a phone. This is its
-                  mobile home — not a duplicate on screen, ever. */}
-              <PrivacyNote className="mb-5 lg:hidden" />
-
               {/* Open existing — primary action, wearing the suite's shared
                   drop circle (`DropRing` + `useFileDrop` from @unisim/sdk)
                   rather than a copy, so it is the same front door Universal
@@ -551,6 +544,12 @@ export default function LandingPage() {
                 )
               })()}
             </div>
+
+            {/* Under the card, outside the box: a statement the page makes
+                about the panel above it rather than one more row of the
+                panel's own furniture. It sits in the always-visible column,
+                so unlike the illustration side it needs no breakpoint twin. */}
+            <PrivacyNote className="mt-4" />
           </div>
 
         </div>
