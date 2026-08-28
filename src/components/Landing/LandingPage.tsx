@@ -552,7 +552,7 @@ export default function LandingPage() {
               className="mt-4"
               repo="https://github.com/universal-simulation-ltd/Universal_PDF"
               subject="Your PDF"
-              except="backup and signing"
+              except="backup and send-to-sign"
               badge="on-device · works offline"
             />
           </div>
