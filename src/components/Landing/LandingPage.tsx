@@ -19,6 +19,7 @@ import TransformPanel from '../Transform/TransformPanel'
 import PdfIllustration from './PdfIllustration'
 import DownloadRow from './DownloadRow'
 import DropRingWatermark from './DropRingWatermark'
+import PrivacyNote from './PrivacyNote'
 import { DefaultAppPill } from '../Onboarding/DefaultAppOffer'
 import { useDefaultPdfApp } from '../../hooks/useDefaultPdfApp'
 import { PreviewPanePill } from '../Onboarding/PreviewPaneOffer'
@@ -262,7 +263,7 @@ export default function LandingPage() {
               PDFs that <span className="text-orange-600">just work</span>.
             </h1>
             <p className="mt-3 text-slate-600 max-w-md">
-              View, annotate, sign and export — everything stays on your device.
+              View, annotate, sign and export — all of it inside this page.
             </p>
 
             {/* One box, read top to bottom: upload → recent → compress →
@@ -313,9 +314,6 @@ export default function LandingPage() {
                     <span className="text-[15px] font-bold text-slate-900">
                       {converting ? 'Converting…' : over ? 'Drop to open' : 'Drop a PDF here'}
                     </span>
-                    <span className="text-[11.5px] leading-relaxed text-slate-500">
-                      it stays on your device
-                    </span>
                     {/* Word and OpenDocument files are converted here rather
                         than turned away, so the circle has to say so — nobody
                         drops a .docx on a thing labelled "PDF" to find out. */}
@@ -326,6 +324,11 @@ export default function LandingPage() {
                 </div>
                 <input {...drop.inputProps} className="hidden" />
               </div>
+
+              {/* Directly under the circle, before any of the actions: this is
+                  the moment someone decides whether to hand a document to a
+                  web page, so it is where the answer belongs. */}
+              <PrivacyNote className="mt-5" />
 
               {/* This slot is the same pill either way — it says "Recent files"
                   and opens the list once you have some, and "Try with example
