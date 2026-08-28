@@ -285,6 +285,34 @@ jobs:
           grep -q "source=Notarized Developer ID" /tmp/spctl.txt
           xcrun stapler validate "$APP"
 
+      # ⚠️ electron-builder notarizes and staples the .app, then wraps it in a
+      # DMG that carries NO ticket of its own — verified on a local signed build
+      # on 2026-08-28, where `stapler validate` reported "does not have a ticket
+      # stapled to it" for both DMGs while the app inside validated fine.
+      #
+      # It matters because the DMG is the thing people download. Un-stapled, the
+      # first mount has to reach Apple to clear Gatekeeper, so a tester who is
+      # offline — or behind a firewall that blocks the OCSP endpoint — gets a
+      # scary dialog for an app that is in fact perfectly notarized. Submitting
+      # the DMG is quick: its contents are already known-good to the notary.
+      - name: Staple the notarization ticket to the DMGs
+        if: matrix.os == 'macos-14' && steps.signing.outputs.signed == 'true'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          for dmg in release/*.dmg; do
+            echo "Notarizing $dmg"
+            xcrun notarytool submit "$dmg" \
+              --apple-id "$APPLE_ID" \
+              --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+              --team-id "$APPLE_TEAM_ID" --wait
+            xcrun stapler staple "$dmg"
+            xcrun stapler validate "$dmg"
+          done
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
