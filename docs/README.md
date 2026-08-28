@@ -512,9 +512,30 @@ rendering all six presets through both apps' pipelines and diffing the pixels:
 inlines a 256 px data URI of the icon; here the shipped `unisim-icon.png` is
 downscaled by the browser).
 
+⚠️⚠️ **THIS PORT DRIFTS SILENTLY, AND IT HAS.** A copy is only faithful on the
+day it is taken. Universal QR added `starPlacement` and `starColor` on
+2026-08-24 (the star moved BEHIND the code); this copy did not get them until
+2026-08-28, and in between an imported star rendered in the superseded
+arrangement — a small code inside a white plate instead of an orange star with
+the code in front. Nothing failed: `hydrate()` merges an incoming design over
+`DEFAULT_DESIGN`, so a field this app has never heard of is dropped without a
+word, and what the user gets is simply a different picture from the one they
+saved.
+
+So: **when you touch either app's design model, diff the two type definitions**
+— `Universal_QR/src/lib/qr.ts` `QrConfig` against `design.ts` `QrDesign`, which
+must stay field-for-field — and re-check the presets, which drift the same way.
+`npm run test:qr-star` pins the arrangement that broke: it renders a
+Universal-QR-authored design through this app and measures the pixels (star
+colour present, ink coverage, corner alpha), so the next silent drop of a field
+has at least one place to fail loudly.
+
 ⚠️ The one rule the geometry keeps: **the code itself is never clipped** to a
 shape. A silhouette is only ever the *plate* the code sits on — the code is
-rendered smaller and centred in the largest square that fits. See `frames.ts`.
+rendered smaller and centred in the largest square that fits. The single
+exception is `starPlacement: 'behind'`, which keeps the rule from the other
+side: the star is drawn UNDER a code that overlaps its notches, so the code is
+whole and the star is what gets covered. See `frames.ts`.
 
 ### Your saved codes — this browser's, and your account's
 
@@ -538,6 +559,16 @@ locally), while an older PNG-only save places as a plain image — it is hidden
 in edit mode, since there is no design to re-open. Account chips carry a small
 cloud mark, and an account save duplicating a local design (same data + name)
 shows once.
+
+⚠️ **No sidecar was ever actually stored until 2026-08-28.** The
+`hosted-uploads` bucket carries a MIME allow-list (platform migrations 0041,
+restated in 0095) that had no `application/json` on it, so storage refused
+every sidecar — silently, because `upload()` reports a refusal in `error`
+rather than throwing and Universal QR's best-effort `.catch()` never looked.
+Every account save was therefore PNG-only, and placing one here gave a flat
+picture whose double-tap opened *Signature options* (what any plain image
+gets). Migration **0128** widens the allow-list; saves made before it stay
+PNG-only, because a design cannot be recovered from a rendered code.
 
 `src/lib/qr/library.ts` stays **read-only** by design: the localStorage half is
 another app's store, capped at 12 entries, and evicting someone's saved design
