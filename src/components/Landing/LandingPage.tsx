@@ -553,7 +553,6 @@ export default function LandingPage() {
               repo="https://github.com/universal-simulation-ltd/Universal_PDF"
               subject="Your PDF"
               except="backup and send-to-sign"
-              badge="on-device · works offline"
             />
           </div>
 
