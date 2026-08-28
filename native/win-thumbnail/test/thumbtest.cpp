@@ -14,8 +14,18 @@
 //       parent window, SetRect, DoPreview — and captures what it drew. Optional
 //       page-downs first, to prove paging works.
 //
+//   thumbtest stack <landscape-multipage.pdf>
+//       Asserts the pane STACKS: more than one page on screen, somewhere to
+//       scroll, and PageDown/End/Home moving it. Needs a landscape deck.
+//
 //   thumbtest register / thumbtest unregister
 //       Convenience wrappers over the DLL's own HKCU self-registration.
+//
+// ⚠️ Every mode that goes through CoCreateInstance loads whichever DLL the
+// CLSID names in the registry — which after an INSTALL is the one under
+// %LOCALAPPDATA%\Programs, NOT the one you just built beside this exe. Run
+// `thumbtest register` first or you will be testing the shipped build and
+// wondering why your change did nothing.
 
 #include <windows.h>
 #include <objbase.h>
@@ -540,6 +550,214 @@ int PreviewSealed(const wchar_t* pdf) {
   return 0;
 }
 
+// The preview pane stacks its pages — the check the eye was doing until now.
+//
+// Landscape is the case that mattered: a slide fitted to a TALL pane's height
+// left two thirds of the pane empty (James, 2026-08-27), which is what fitting
+// to the pane's WIDTH and stacking replaced. So this asserts two things a
+// single-page pane cannot satisfy — that more than one page is on screen at
+// once, and that the pane scrolls — and then that the keys move it.
+//
+// ⚠️ Give it a LANDSCAPE, multi-page PDF. A portrait page fitted to the width
+// of a wide test host is taller than the host, so only one page is visible and
+// the count below is vacuously the same as the old behaviour's.
+int PreviewStack(const wchar_t* pdf) {
+  IPreviewHandler* preview = nullptr;
+  HRESULT hr = CoCreateInstance(kPreviewClsid, nullptr, CLSCTX_INPROC_SERVER,
+                                IID_PPV_ARGS(&preview));
+  if (FAILED(hr)) return Fail("CoCreateInstance(preview)", hr);
+
+  IStream* stream = nullptr;
+  hr = SHCreateStreamOnFileEx(pdf, STGM_READ | STGM_SHARE_DENY_WRITE,
+                              FILE_ATTRIBUTE_NORMAL, FALSE, nullptr, &stream);
+  if (FAILED(hr)) {
+    preview->Release();
+    return Fail("open file", hr);
+  }
+  IInitializeWithStream* init = nullptr;
+  hr = preview->QueryInterface(kIidInitializeWithStream,
+                               reinterpret_cast<void**>(&init));
+  if (SUCCEEDED(hr)) {
+    hr = init->Initialize(stream, 0);
+    init->Release();
+  }
+  stream->Release();
+  if (FAILED(hr)) {
+    preview->Release();
+    return Fail("Initialize", hr);
+  }
+
+  WNDCLASSEXW wc{};
+  wc.cbSize = sizeof(wc);
+  wc.lpfnWndProc = DefWindowProcW;
+  wc.hInstance = GetModuleHandleW(nullptr);
+  wc.hbrBackground = reinterpret_cast<HBRUSH>(GetStockObject(GRAY_BRUSH));
+  wc.lpszClassName = L"UniversalPdfStackTestHost";
+  RegisterClassExW(&wc);
+
+  const int host_w = 760, host_h = 900;
+  HWND host = CreateWindowExW(WS_EX_TOOLWINDOW, wc.lpszClassName, L"stack",
+                              WS_POPUP | WS_VISIBLE, 0, 0, host_w, host_h,
+                              nullptr, nullptr, wc.hInstance, nullptr);
+  RECT rect{0, 0, host_w, host_h};
+  preview->SetWindow(host, &rect);
+  preview->SetRect(&rect);
+  hr = preview->DoPreview();
+  if (FAILED(hr)) {
+    DestroyWindow(host);
+    preview->Release();
+    return Fail("DoPreview", hr);
+  }
+  PumpFor(900);
+
+  HWND child = GetWindow(host, GW_CHILD);
+  if (!child) {
+    DestroyWindow(host);
+    preview->Release();
+    return Fail("no child window", E_FAIL);
+  }
+
+  int rc = 0;
+
+  // 1. There is somewhere to scroll to. A pane that fits one page per screenful
+  //    had no scrollbar at all, so this is the check that holds for ANY
+  //    multi-page document, whatever shape its pages are.
+  SCROLLINFO si{};
+  si.cbSize = sizeof(si);
+  si.fMask = SIF_RANGE | SIF_PAGE | SIF_POS;
+  // The whole child window until the handler says otherwise — a pane with no
+  // scroll information at all is the OLD behaviour, and the stack check below
+  // must still be able to judge it rather than quietly reading a zero.
+  RECT whole{};
+  GetClientRect(child, &whole);
+  int viewport = whole.bottom - whole.top;
+  int max_pos = 0;
+  if (!GetScrollInfo(child, SB_VERT, &si)) {
+    std::fprintf(stderr, "the pane has no vertical scroll information\n");
+    rc = 1;
+  } else {
+    const int span = si.nMax - si.nMin + 1;
+    viewport = static_cast<int>(si.nPage);
+    max_pos = span - viewport;
+    std::printf("document %d px tall, viewport %d px, so %d px to scroll\n",
+                span, viewport, max_pos);
+    if (max_pos <= 0) {
+      std::fprintf(stderr,
+                   "a multi-page document that does not scroll is a document "
+                   "whose pages are not stacked\n");
+      rc = 1;
+    }
+  }
+
+  // 2. The pages are STACKED, read off the hairline the handler draws round
+  //    every sheet — page and pane are both white, so that border is the only
+  //    thing saying where one page ends and the next begins.
+  //
+  //    Self-calibrating rather than "expect N pages": whether a second page
+  //    fits depends on the page shape. If page one's bottom edge is on screen
+  //    with room to spare, a second page's top edge MUST follow it — leaving
+  //    that space empty is exactly the bug (a landscape slide fitted to a tall
+  //    pane's height, two thirds of the pane wasted). If page one already
+  //    fills the pane, this document cannot exercise the stack and says so.
+  RECT client{};
+  GetClientRect(child, &client);
+  const int cw = client.right - client.left, ch = client.bottom - client.top;
+  HDC screen = GetDC(nullptr);
+  HDC mem = CreateCompatibleDC(screen);
+  BITMAPINFO bmi{};
+  bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+  bmi.bmiHeader.biWidth = cw;
+  bmi.bmiHeader.biHeight = -ch;
+  bmi.bmiHeader.biPlanes = 1;
+  bmi.bmiHeader.biBitCount = 32;
+  bmi.bmiHeader.biCompression = BI_RGB;
+  void* bits = nullptr;
+  HBITMAP shot = CreateDIBSection(nullptr, &bmi, DIB_RGB_COLORS, &bits, nullptr, 0);
+  HGDIOBJ old = SelectObject(mem, shot);
+  const BOOL printed = PrintWindow(child, mem, 2 /* PW_RENDERFULLCONTENT */);
+  SelectObject(mem, old);
+  DeleteDC(mem);
+  ReleaseDC(nullptr, screen);
+
+  std::vector<int> edges;
+  if (printed && bits) {
+    const auto* px = static_cast<const unsigned char*>(bits);
+    for (int y = 0; y < ch; ++y) {
+      const unsigned char* row = px + static_cast<size_t>(y) * cw * 4 + (cw / 2) * 4;
+      // The hairline is RGB(0x9A,0x9A,0x9A), drawn by CreatePen with no
+      // antialiasing, so an exact match is the right test.
+      if (row[0] == 0x9A && row[1] == 0x9A && row[2] == 0x9A) edges.push_back(y);
+    }
+  }
+  DeleteObject(shot);
+  std::printf("page edges down the middle of the pane: %d\n",
+              static_cast<int>(edges.size()));
+
+  // Room enough for another page's top border, the air above it, and the page
+  // counter's strip — which is inside the window but outside the viewport, and
+  // is not subtracted when the fallback above had to use the whole window.
+  const int kStackSlack = 48;
+  if (edges.empty()) {
+    std::fprintf(stderr, "no page border found — the pane drew nothing\n");
+    rc = 1;
+  } else if (edges.size() == 1) {
+    std::printf(
+        "page one is taller than the pane, so this document cannot show two "
+        "pages at once — the stack is not exercised by it\n");
+  } else if (viewport - edges[1] > kStackSlack) {
+    if (edges.size() < 3) {
+      std::fprintf(stderr,
+                   "page one ends %d px above the bottom of the pane and "
+                   "nothing follows it — pages are being fitted to the pane's "
+                   "HEIGHT again instead of stacked at its WIDTH\n",
+                   viewport - edges[1]);
+      rc = 1;
+    }
+  } else {
+    std::printf("page one fills the pane; the stack is not exercised by it\n");
+  }
+
+  // 3. The keys move the stack.
+  {
+    SendMessageW(child, WM_KEYDOWN, VK_NEXT, 0);
+    PumpFor(300);
+    si.fMask = SIF_POS;
+    GetScrollInfo(child, SB_VERT, &si);
+    const int after_page_down = si.nPos;
+
+    SendMessageW(child, WM_KEYDOWN, VK_END, 0);
+    PumpFor(300);
+    GetScrollInfo(child, SB_VERT, &si);
+    const int at_end = si.nPos;
+
+    SendMessageW(child, WM_KEYDOWN, VK_HOME, 0);
+    PumpFor(300);
+    GetScrollInfo(child, SB_VERT, &si);
+    const int at_home = si.nPos;
+
+    std::printf("PageDown -> %d, End -> %d (of %d), Home -> %d\n",
+                after_page_down, at_end, max_pos, at_home);
+    if (after_page_down <= 0) {
+      std::fprintf(stderr, "PageDown did not move the pane\n");
+      rc = 1;
+    }
+    if (at_end != max_pos) {
+      std::fprintf(stderr, "End did not land on the bottom of the document\n");
+      rc = 1;
+    }
+    if (at_home != 0) {
+      std::fprintf(stderr, "Home did not return to the first page\n");
+      rc = 1;
+    }
+  }
+
+  preview->Unload();
+  DestroyWindow(host);
+  preview->Release();
+  if (rc == 0) std::printf("stack check ok\n");
+  return rc;
+}
+
 int SelfRegister(bool on) {
   wchar_t dll[MAX_PATH];
   if (!SiblingPath(L"UniversalPdfThumb.dll", dll)) {
@@ -568,6 +786,7 @@ int wmain(int argc, wchar_t** argv) {
                  "       thumbtest preview <file.pdf> <out.png> [pagedowns]\n"
                  "       thumbtest hosted\n"
                  "       thumbtest sealed <file.pdf>\n"
+                 "       thumbtest stack <landscape-multipage.pdf>\n"
                  "       thumbtest register|unregister\n");
     return 2;
   }
@@ -580,6 +799,8 @@ int wmain(int argc, wchar_t** argv) {
     rc = PreviewHosted();
   } else if (argc == 3 && _wcsicmp(argv[1], L"sealed") == 0) {
     rc = PreviewSealed(argv[2]);
+  } else if (argc == 3 && _wcsicmp(argv[1], L"stack") == 0) {
+    rc = PreviewStack(argv[2]);
   } else if (_wcsicmp(argv[1], L"register") == 0) {
     rc = SelfRegister(true);
   } else if (_wcsicmp(argv[1], L"unregister") == 0) {
