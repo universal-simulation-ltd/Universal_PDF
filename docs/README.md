@@ -427,6 +427,86 @@ it is equally a point of no return for redactions. Any future surface that
 launches the dialog inherits the gate for free, which is the point of it living
 on the action rather than the launcher.
 
+## Selected-object affordances (🗑 and ✓)
+
+Anything selected gets a **bin** just off its top-right corner and, beside it, a
+**tick** — *keep this and deselect*. Contextual buttons stack *beneath* the bin
+rather than extending that row (the QR ✏️, the Fill 🪣, the ⬛ Redact), so an
+object against the right margin of a narrow screen doesn't push them off the page.
+
+⚠️ **The tick shows on every selection** (James, 2026-08-29). It used to be gated
+on `PLACEMENT_TOOLS.has(tool)` — visible only while a tool that stays armed after
+placing was still armed — which meant the pair of buttons came and went for
+reasons invisible from the screen, and a plain selection offered exactly one
+visible outcome: delete. It still only calls `setTool('select')` when a tool was
+actually armed; with Select active there is nothing to go back to.
+
+## Redaction
+
+A **redaction** is a `RedactAnnotation` — a rectangle whose page is *rasterised*
+on export, so the text underneath is destroyed rather than covered. That makes it
+the one annotation type that is not reversible once the file is written, which is
+why the typed **REDACT** gate exists (see
+["Leaving a document with amendments"](#leaving-a-document-with-amendments)).
+
+**Three doors, one tool.** Actions → Redact → *Free draw*; Actions → Redact →
+*Find and redact* (search, then box every match); and the landing page's
+**"Redact text — make portions unreadable to humans and machines"**, under the
+chevron beside *1 Click Compress*. The landing door opens the PDF **and arms the
+tool** — `LandingPage.onRedactFile` waits on `openFiles()`, which returns whether
+a document actually opened, so a failed load can't leave the tool armed over
+nothing.
+
+### The box says what it is
+
+While you are editing, a redaction wide enough to hold it renders
+**"This will be redacted on export"** across itself. Without it a black rectangle
+is indistinguishable from a `rect` you have filled in, and the difference between
+those two is the entire point — one hides pixels, the other deletes text.
+
+⚠️ **It can never reach an exported file, structurally.** The hint is a Konva
+`Text` drawn by `AnnotationLayer`; the export path is
+`export.ts` → `rasterizePageWithRedacts`, which re-renders the page through pdf.js
+and paints the block *and nothing else*. `PresentMode` doesn't use
+`AnnotationLayer` either, so presenting is clean too. Don't "helpfully" move the
+hint into the annotation model — that is what would leak it.
+
+The hint is a sibling of the `Rect`, not a `Group` wrapping both: `common` carries
+the Transformer ref and the resize handler reads `width()` / `height()` off that
+node, which a Group does not report.
+
+### The fill colour is the toolbar's colour
+
+`RedactAnnotation.fill` is a **hex string**, taken from the same swatches that
+colour everything else. There is no separate redaction palette any more (2026-08-29):
+
+- `annotationStore.setColor` writes `fill` for a redaction and `color` for
+  everything else. That branch is the *only* place that knows the difference.
+- ⚠️ **Boxes drawn before this stored the WORDS `'black'` / `'white'`**, and an
+  old `.unipdf` backup still carries them. Every reader — the canvas, the export
+  bake, the bucket — goes through **`redactFillHex()`** in `lib/redactGate.ts`.
+  Never test `fill === 'white'` yourself.
+- A pale fill gets an editor-only 1px outline and a slate hint, via `isPaleFill()`
+  — a white box on white paper is otherwise invisible until it is exported.
+- `FindBar`'s two swatches *set* the shared colour rather than storing a second
+  copy, and show a third read-only chip when the armed colour is neither.
+
+### Converting between a redaction and a shape
+
+Both directions are one button, in the same slot, each offering the other state
+(`AnnotationLayer`, beneath the Delete affordance):
+
+| Selected | Button | Becomes |
+|---|---|---|
+| `rect` / `ellipse` | ⬛ *Redact this area* | a `redact` over the same box |
+| `redact` | 🪣 *Turn into a filled shape* | a filled `rect` keeping the colour |
+
+Neither destroys anything — export is the point of no return — so both stay
+frictionless and undoable. The ⬛ direction *adds* protection and is silent; the
+🪣 direction *removes* it and says so in its tooltip. The one-way `rect → redact`
+prompt ("the text is still readable, redact instead?") is a separate thing: it
+fires when you FILL a shape, not when you convert one.
+
 ## QR codes (Add QR code)
 
 The **QR button** in the toolbar (desktop: beside the image button; mobile:
