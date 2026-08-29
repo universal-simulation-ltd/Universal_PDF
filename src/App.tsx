@@ -85,11 +85,12 @@ const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_PDF'
 //   • `--doc-scrollbar-width` — the page is centred inside the viewer's scroll
 //     box, which is narrower than the window by its scrollbar. The bar carries
 //     the same padding for the same reason.
-//   • `0.75rem` is the row's own `px-3`, and `0.5rem` the `gap-2` between
-//     Export and the cluster that follows it. Both sit between Export's right
-//     edge and the margin being measured, so both come off.
+//   • `0.75rem` is the row's own `px-3`, which sits between the strip's right
+//     edge and the window, so it comes off. Nothing else does: the strip now
+//     STARTS at the page's edge and holds Export itself, so no gap between
+//     Export and what follows it is in the measurement any more.
 const DOC_WIDTH = 'clamp(600px, var(--doc-display-width, 80rem), 80rem)'
-const DOC_RIGHT_MARGIN = `max(0px, calc((100vw - var(--doc-scrollbar-width, 0px) - ${DOC_WIDTH}) / 2 - 0.75rem - 0.5rem))`
+const DOC_RIGHT_STRIP = `max(0px, calc((100vw - var(--doc-scrollbar-width, 0px) - ${DOC_WIDTH}) / 2 - 0.75rem))`
 
 
 export default function App() {
@@ -463,47 +464,55 @@ export default function App() {
                 cell they cannot overlap anything, and the width they take is
                 also what sizes the empty column that centres the tools. */}
             <div className="col-start-3 flex items-center gap-2 [&>*]:shrink-0">
-              {/* Export ENDS ON THE DOCUMENT'S RIGHT EDGE (owner, 2026-08-25:
-                  a box drawn just inside the page edge, "try export on this
-                  side"). It used to float in the middle of whatever the centred
-                  tools left over, which put it just PAST that edge, out in the
-                  grey.
+              {/* Export STARTS ON THE DOCUMENT'S RIGHT EDGE — it sits in the
+                  grey strip beside the page rather than inside it (owner,
+                  2026-08-29: a box drawn on the empty bar right of Export,
+                  "just to the right of the alignment with the pdf edge").
 
-                  The alignment is done by giving the profile cluster a box the
-                  width of the page's right margin rather than by positioning
-                  Export: everything to the right of Export then adds up to that
-                  margin, so Export's right edge is the page's right edge at
-                  every zoom, and the profile and the changelog icon stay pinned
-                  to the window's right where they were.
+                  It ENDED on that edge from 2026-08-25 until then, and before
+                  that it floated in the middle of whatever the centred tools
+                  left over. Same line, other side of it.
+
+                  The anchor is still a sized box rather than any positioning of
+                  Export: this strip is the page's right margin, so its LEFT
+                  edge is the page's right edge at every zoom. Export leads the
+                  strip; `ml-auto` on the profile cluster keeps that pinned to
+                  the window's right where it has always been, and `pl-2` is the
+                  "just to the right" — flush against the edge reads as a
+                  misalignment rather than a decision.
 
                   ⚠️ `min-w-max` is the collision guard, and it is why this can
                   be anchored at all — the previous version refused to anchor
                   because a page as wide as the window would drive Export into
                   the profile pill. It cannot: the box never gets narrower than
-                  the two controls inside it, so once the margin runs out the
-                  box stops shrinking and the `flex-1` spacer gives up its space
+                  the controls inside it, so once the margin runs out the box
+                  stops shrinking and the `flex-1` spacer gives up its space
                   instead. Nothing overlaps; Export just stops moving right.
+                  ⚠️ Export is INSIDE the box now, so it is inside that guard —
+                  keep it there.
 
                   ⚠️ This cell must stay STRETCHED (no `justify-self`) — it
                   spans the whole right-hand `1fr`, which is also what keeps the
                   tool cluster on the window's centre line. */}
               <div aria-hidden="true" className="flex-1" />
-              <ToolbarDesktopActions />
               <div
-                className="flex min-w-max items-center justify-end gap-2"
-                style={{ width: DOC_RIGHT_MARGIN }}
+                className="flex min-w-max items-center gap-2 pl-2"
+                style={{ width: DOC_RIGHT_STRIP }}
               >
-                <ToolbarUserProfile actions={<FileMenu variant="rows" />} />
-                {/* The build this actually is, in the one panel that is
-                    reachable with a document open. ⚠️ NOT the version chip in
-                    the panel's header — that is the changelog FEED's latest
-                    release, fetched live, and identical on every install
-                    however old. */}
-                <ChangelogMenu
-                  iconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
-                  productFilter="pdf"
-                  appVersion={APP_BUILD_LABEL}
-                />
+                <ToolbarDesktopActions />
+                <div className="ml-auto flex items-center gap-2 [&>*]:shrink-0">
+                  <ToolbarUserProfile actions={<FileMenu variant="rows" />} />
+                  {/* The build this actually is, in the one panel that is
+                      reachable with a document open. ⚠️ NOT the version chip in
+                      the panel's header — that is the changelog FEED's latest
+                      release, fetched live, and identical on every install
+                      however old. */}
+                  <ChangelogMenu
+                    iconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
+                    productFilter="pdf"
+                    appVersion={APP_BUILD_LABEL}
+                  />
+                </div>
               </div>
             </div>
           </div>
