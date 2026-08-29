@@ -15,6 +15,11 @@
 // The origin is not guaranteed — pdf.unisim.co.uk and the Electron build are
 // different origins with their own (empty) localStorage — so the dialog also
 // takes Universal QR's `.uniqr.json` backup file, which works anywhere.
+//
+// Three shelves come out of this file, and they are three different stores:
+// this device's localStorage (above), the signed-in account's hosted uploads,
+// and the account's DYNAMIC codes — the re-pointable, scan-counted ones, which
+// are rows in `qr_dynamic_codes` and appear in neither of the other two.
 
 import { HOSTED_BUCKET, useUniversal, type HostedUpload } from '@unisim/sdk'
 import { hostedQrPathCandidates, qrSidecarPath } from '../hostedQrPaths'
@@ -166,3 +171,93 @@ export async function loadHostedQrDesigns(
   return entries.filter((e): e is HostedQrDesign => e !== null)
 }
 
+
+// ── Dynamic codes ────────────────────────────────────────────────────────────
+// Universal QR's Dynamic tab mints codes that encode a short redirect —
+// opensource.unisim.co.uk/qr/r/<code> — which the owner can re-point later,
+// and every scan is counted (migration 0061). They are NOT hosted uploads and
+// never appear in `hosted_uploads`: they live in `qr_dynamic_codes`, one row
+// per code, readable by any member of the org through RLS. So they need their
+// own loader, and they were simply missing from this dialog until now — you
+// could put a static code from the account shelf into a PDF but not the one
+// code the account can actually re-point after the PDF is sent out.
+//
+// Since migration 0129 each row carries the design it was created wearing, so a
+// dynamic code lands here looking exactly as it does in Universal QR. A row
+// from before that has none; it falls back to the app default, which is the
+// same thing Universal QR does for it.
+
+/**
+ * The production base for a dynamic redirect.
+ *
+ * Duplicated from Universal QR's `dynamicCodes.ts` rather than shared, and safe
+ * to duplicate for one specific reason: it is baked into the PIXELS of codes
+ * that are already printed. It cannot be changed without invalidating them, so
+ * there is no version of this where the two copies drift apart.
+ */
+export const DYNAMIC_BASE = 'https://opensource.unisim.co.uk/qr/r/'
+
+export interface DynamicQrDesign {
+  id: string
+  name: string
+  /** Ready to place — the payload is the redirect, never the target. */
+  design: QrDesign
+  thumbnail: string
+  /** Where it currently sends people, for the chip's tooltip. */
+  targetUrl: string
+  scanCount: number
+  createdAt: string
+}
+
+/** Best-effort hostname for a compact label (falls back to the raw string). */
+function targetLabel(url: string): string {
+  try {
+    return new URL(/^[a-z][a-z0-9+.-]*:/i.test(url.trim()) ? url.trim() : `https://${url.trim()}`)
+      .hostname.replace(/^www\./, '')
+  } catch {
+    return url
+  }
+}
+
+/**
+ * The signed-in organisation's dynamic QR codes, newest first.
+ *
+ * Returns an empty list rather than throwing on any failure — no session, no
+ * org, the table unreachable. A shelf that quietly shows fewer codes is a much
+ * better outcome here than a dialog that will not open.
+ */
+export async function loadDynamicQrDesigns(supabase: Supabase): Promise<DynamicQrDesign[]> {
+  try {
+    const { data, error } = await supabase
+      .from('qr_dynamic_codes')
+      .select('id, code, target_url, name, design, scan_count, created_at')
+      .order('created_at', { ascending: false })
+    if (error || !data) return []
+
+    return await Promise.all(
+      (data as Array<Record<string, unknown>>).map(async (row) => {
+        const label = String(row.name ?? '').trim() || targetLabel(String(row.target_url ?? ''))
+        // ⚠️ `design.data` / `design.name` are deliberately empty on the row —
+        // the payload is the redirect and the label is the row's `name`, so
+        // both are set HERE. A renamed or re-pointed code must not keep drawing
+        // a stale copy of either. See migration 0129.
+        const design: QrDesign = {
+          ...hydrate(row.design),
+          data: `${DYNAMIC_BASE}${String(row.code ?? '')}`,
+          name: label || 'dynamic-qr'
+        }
+        return {
+          id: String(row.id),
+          name: label,
+          design,
+          thumbnail: await renderQrPng(design, THUMB_SIZE).catch(() => ''),
+          targetUrl: String(row.target_url ?? ''),
+          scanCount: Number(row.scan_count ?? 0),
+          createdAt: String(row.created_at ?? '')
+        }
+      })
+    )
+  } catch {
+    return []
+  }
+}

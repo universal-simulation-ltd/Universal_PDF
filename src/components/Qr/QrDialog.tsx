@@ -21,9 +21,11 @@ import { imageUrlToDataUrl, PLACEMENT_SIZE, renderQrPng } from '../../lib/qr/ren
 import QrBrandingPanel from './QrBrandingPanel'
 import { copyQrPngToClipboard, downloadQrPng } from '../../lib/qr/download'
 import {
+  loadDynamicQrDesigns,
   loadHostedQrDesigns,
   loadSavedQrDesigns,
   UNIVERSAL_QR_URL,
+  type DynamicQrDesign,
   type HostedQrDesign,
   type SavedQrDesign
 } from '../../lib/qr/library'
@@ -169,6 +171,14 @@ export default function QrDialog() {
   const { uploads: qrUploads } = useHostedUploads('qr')
   const [hosted, setHosted] = useState<HostedQrDesign[]>([])
 
+  // The account's DYNAMIC codes — the re-pointable, scan-counted ones from
+  // Universal QR's Dynamic tab. A third store, not a filter over the other two:
+  // they are rows in `qr_dynamic_codes` and have never been hosted uploads, so
+  // until now the one kind of code you would most want in a printed document —
+  // the kind you can re-aim after the document is out — was the only kind this
+  // dialog could not offer.
+  const [dynamic, setDynamic] = useState<DynamicQrDesign[]>([])
+
   // The signed-in company's branding, ready to drop onto a code. Guests and
   // orgs that never set one get nulls, and the panel says so.
   const { org } = useOrg()
@@ -237,6 +247,22 @@ export default function QrDialog() {
       cancelled = true
     }
   }, [open, signedIn, supabase, qrUploads])
+
+  // The dynamic codes, on their own effect: they hang off no upload ledger, so
+  // an account with zero hosted saves can still have codes to list here.
+  useEffect(() => {
+    if (!open || !signedIn) {
+      setDynamic([])
+      return
+    }
+    let cancelled = false
+    loadDynamicQrDesigns(supabase).then((entries) => {
+      if (!cancelled) setDynamic(entries)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [open, signedIn, supabase])
 
   // Until the user edits the branding themselves it simply TRACKS the company's
   // — which also covers the mark arriving a moment after the dialog opened,
@@ -638,8 +664,11 @@ export default function QrDialog() {
             "Design one" link above the branding panel is the whole story.
             Account chips carry a small cloud mark; an account save whose
             design matches a local one is shown once (the local copy wins —
-            it needed no download). */}
-        {signedIn && (saved.length > 0 || hosted.length > 0) && (() => {
+            it needed no download). Dynamic codes carry a ↻ instead: the code
+            on the page is a redirect the owner can re-aim afterwards, and its
+            scans are counted — a genuinely different object from a static code
+            that means whatever was baked into it. */}
+        {signedIn && (saved.length > 0 || hosted.length > 0 || dynamic.length > 0) && (() => {
           const accountEntries = hosted
             .filter((e) => !qrEdit || e.design) // flat PNGs can't update a placed code
             .filter(
@@ -647,13 +676,43 @@ export default function QrDialog() {
                 !e.design ||
                 !saved.some((s) => s.design.data === e.design!.data && (s.name || '') === (e.name || ''))
             )
-          if (saved.length === 0 && accountEntries.length === 0) return null
+          if (saved.length === 0 && accountEntries.length === 0 && dynamic.length === 0) return null
           return (
             <div className="px-6 pb-5 border-t border-slate-100 pt-4">
               <div className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
                 Your Universal QR codes
               </div>
               <div className="flex gap-3 overflow-x-auto pb-1">
+                {/* Dynamic first — they are the ones worth reaching for in a
+                    document that will be printed or sent out. */}
+                {dynamic.map((entry) => (
+                  <button
+                    key={`dynamic-${entry.id}`}
+                    type="button"
+                    onClick={() => adoptDesign(entry.design)}
+                    title={`${entry.name || 'Dynamic code'} — dynamic: currently sends people to ${entry.targetUrl}, and you can change that later without reprinting. ${entry.scanCount.toLocaleString()} scan${entry.scanCount === 1 ? '' : 's'} so far.`}
+                    className="relative shrink-0 w-20 border-2 border-orange-200 rounded-lg p-1.5 hover:border-orange-400 hover:bg-orange-50/50 transition-colors"
+                  >
+                    {entry.thumbnail ? (
+                      <img src={entry.thumbnail} alt="" className="w-full aspect-square object-contain" />
+                    ) : (
+                      <div className="w-full aspect-square bg-slate-100 rounded" />
+                    )}
+                    {/* ↻ — re-pointable and counted. Deliberately not the cloud
+                        used for an account save: both live on the account, but
+                        only this one keeps changing after it is on the page. */}
+                    <span
+                      className="absolute top-0.5 right-0.5 flex items-center justify-center w-4 h-4 rounded-full bg-orange-600 text-white text-[9px] font-bold leading-none"
+                      aria-label="Dynamic code — re-pointable, scans counted"
+                      title="Dynamic code — re-pointable, scans counted"
+                    >
+                      ↻
+                    </span>
+                    <span className="block mt-1 text-[10px] text-slate-500 truncate">
+                      {entry.name || qrDisplayName(entry.design)}
+                    </span>
+                  </button>
+                ))}
                 {saved.map((entry) => (
                   <button
                     key={entry.id}
