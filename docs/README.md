@@ -439,6 +439,36 @@ tool, so the code is placed, moved, resized, undone and baked into the export
 by machinery that already existed. Placed at the default ~200 pt that works out
 around 360 dpi, so the code still scans off a printed page.
 
+### The shelf: your Universal QR codes
+
+Under the controls, a signed-in user gets a strip of the codes they already
+have. **Three stores, not one filter** (`src/lib/qr/library.ts`):
+
+| Shelf | Where it lives | Marked with |
+|---|---|---|
+| This device's saves | Universal QR's `localStorage`, readable because both apps are served from the same origin in production | nothing |
+| Account saves | `hosted_uploads` (product `'qr'`) + a `.json` design sidecar | a small cloud |
+| **Dynamic codes** | rows in `qr_dynamic_codes`, read through that table's member RLS | an orange **↻** |
+
+Dynamic codes were added on 2026-08-29 and are listed **first**: they encode a
+redirect the owner can re-aim after the document is printed, and they count
+their scans, so they are the ones worth reaching for in something going out.
+They are not hosted uploads and never were, which is why they appeared in
+neither of the other two shelves and nothing surfaced the gap.
+
+⚠️ **The ↻ is deliberately not the cloud.** Both live on the account; only a
+dynamic code keeps changing after it is on the page.
+
+Since migration **0129** each row carries the design it was created wearing, so
+a dynamic code lands here looking as it does in Universal QR; a row from before
+that falls back to `DEFAULT_DESIGN`, which is what Universal QR does for it too.
+⚠️ **`design.data` and `design.name` are empty on the row by contract** — the
+payload is the redirect and the label is the row's `name`, both set here on the
+way out. A renamed or re-pointed code must not arrive drawing a stale copy of
+either. `DYNAMIC_BASE` is duplicated from Universal QR rather than shared, and
+safe to duplicate for one reason: it is baked into the pixels of codes already
+printed, so it cannot change.
+
 ### Editing a code that's already on the page
 
 A placed code carries the state it was generated from — `QrPlacement` on
