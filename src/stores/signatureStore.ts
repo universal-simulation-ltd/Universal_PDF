@@ -6,11 +6,16 @@ import type { SignatureData } from '../types/annotations'
 // rather than baking into the image. Absent when everything is baked in.
 export interface SignatureExtras {
   name?: string
+  // The detail lines under the name — role, email, phone — already filtered by
+  // `detailLines` (blanks and untouched "Role:" prompts dropped). One piece per
+  // line, because the whole point of placing separately is dropping each into a
+  // form's own field, and a form field holds one line.
+  details?: string[]
   date?: boolean
   // The date line as the user wrote it in the pad. When absent the date
   // resolves to the day of placement.
   dateText?: string
-  // Colour for separately-placed name/date text, so it matches the signature.
+  // Colour for separately-placed label text, so it matches the signature.
   color?: string
 }
 
@@ -32,7 +37,7 @@ export interface Signature {
 // Queue of extra text pieces awaiting placement after a "separate" signature is
 // dropped — each consumed by one click on the page.
 export interface PendingExtra {
-  kind: 'name' | 'date'
+  kind: 'name' | 'details' | 'date'
   text: string
   color: string
 }

@@ -14,7 +14,7 @@ import {
 import type Konva from 'konva'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { usePdfStore } from '../../stores/pdfStore'
-import { useSignatureStore } from '../../stores/signatureStore'
+import { useSignatureStore, type PendingExtra } from '../../stores/signatureStore'
 import { useCoarsePointer } from '../../hooks/useCoarsePointer'
 import { useImage } from '../../lib/useImage'
 import { layerPixelRatio, pagePixelBudget } from '../../lib/renderBudget'
@@ -920,6 +920,15 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       })
       useSignatureStore.getState().consumePendingExtra()
       if (pendingExtras.length <= 1) useAnnotationStore.getState().setTool('select')
+      // ⚠️ Mid-sequence, the piece just dropped must NOT stay selected. `add`
+      // selects what it adds, which puts a Transformer over it — and the very
+      // next click, aimed a line below, lands on that Transformer instead of
+      // the stage, where `isTransformerTarget` returns before any placement can
+      // happen. The click does nothing at all, which is indistinguishable from
+      // the feature being broken (and is half of what it was reported as).
+      // Only the LAST piece is left selected, where there is no next click to
+      // eat and the tool has already gone back to Select.
+      else setSelected(null)
       return
     }
     if (tool === 'text') {
@@ -968,15 +977,30 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           // name/date can be changed (double-tap) / restyled (pill) later.
           sig: active.sig,
         })
-        // If this signature carries separate name/date pieces, arm them for
+        // If this signature carries separate label pieces, arm them for
         // click-placement instead of dropping straight into Select.
+        //
+        // ⚠️ The order is `labelsForOptions`' reading order — who, then what
+        // they are, then when — so the queue a user clicks through is the same
+        // block they would have got baked, top to bottom. The date stays LAST
+        // however many detail lines sit above it.
         const extras = active.extras
         const inkColor = extras?.color ?? SIGNATURE_INK
-        const queue: { kind: 'name' | 'date'; text: string; color: string }[] = []
+        const queue: PendingExtra[] = []
         if (extras?.name) queue.push({ kind: 'name', text: extras.name, color: inkColor })
+        for (const line of extras?.details ?? []) queue.push({ kind: 'details', text: line, color: inkColor })
+        // ⚠️ The date resolves HERE, not when the signature was saved — a
+        // library signature placed a week later must date itself the day it is
+        // used. `dateText` is the only part frozen in the pad (the user's own
+        // wording), and an older signature saved without one still gets today.
         if (extras?.date) queue.push({ kind: 'date', text: extras.dateText?.trim() || formatSigningDate(), color: inkColor })
         if (queue.length > 0) {
           sigState.setPendingExtras(queue)
+          // Same reason as the mid-sequence deselect below: the signature image
+          // has just been added and is therefore selected, and its Transformer
+          // is bigger than any of the text pieces — left standing it eats the
+          // first extra click of every sequence.
+          setSelected(null)
         } else {
           useAnnotationStore.getState().setTool('select')
         }

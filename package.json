@@ -23,6 +23,7 @@
     "test:handoff": "node e2e/hub-handoff.e2e.mjs",
     "test:pinch": "node e2e/pinch-zoom.e2e.mjs",
     "test:actions": "node e2e/actions-menu.e2e.mjs",
+    "test:separate": "node e2e/separate-placement.e2e.mjs",
     "test:qr-star": "node e2e/qr-star.e2e.mjs",
     "test:profile": "node e2e/profile-identity.e2e.mjs",
     "test:privacy": "node e2e/privacy-note.e2e.mjs",

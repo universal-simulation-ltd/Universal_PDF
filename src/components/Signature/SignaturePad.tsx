@@ -230,7 +230,14 @@ export default function SignaturePad() {
   const effectiveName = isUnansweredNameLine(rawName) ? '' : rawName.trim()
   const includeName = includeDetails
   // Whether there's anything to place separately (gates the placement control).
-  const hasExtras = (includeDetails && !!effectiveName) || includeDate
+  //
+  // ⚠️ Gated on the SWITCHES, not on what has been typed yet. It used to require
+  // `includeDetails && effectiveName`, so turning "Add your details" on left the
+  // control greyed out until a name was typed over the "Signed by: " seed — and
+  // since turning "Add date" on lit it up immediately, the control read as
+  // belonging to the date alone (owner, 2026-08-29). A control that appears on
+  // one switch and not the other is describing a rule nobody wrote down.
+  const hasExtras = includeDetails || includeDate
   // The label lines the advanced options will produce, previewed live inside
   // the drawing box. Built through the same helper the bake uses, so what the
   // preview shows is exactly what ships — untouched seeds stay invisible here
@@ -435,15 +442,19 @@ export default function SignaturePad() {
     let finalH = ink.height
     let extras: SignatureExtras | undefined
 
-    // ⚠️ Details are never placed separately, only baked. They are a block that
-    // belongs under the ink, and the separate-placement flow drops ONE text
-    // piece per click — three clicks to land a role and an email is not an
-    // interaction anyone wants.
-    if ((wantName || wantDate) && separatePlacement && !wantDetails) {
-      // Image stays ink-only; the name/date are placed by extra clicks, each
+    // Details ARE placed separately now (owner, 2026-08-29). They used to be
+    // excluded — "a block that belongs under the ink", and three clicks to land
+    // a role and an email judged more than anyone wants — but the exclusion was
+    // SILENT: picking "Separate click" with details on baked everything anyway,
+    // so the control did nothing and said nothing about doing nothing. One line
+    // per click is also the right shape for what this is for, since each piece
+    // is headed for a form field and a form field holds one line.
+    if ((wantName || wantDate || wantDetails) && separatePlacement) {
+      // Image stays ink-only; every label is placed by an extra click, each
       // line exactly as written in the pad.
       extras = {
         name: wantName ? effectiveName : undefined,
+        details: wantDetails ? detailLines(details) : undefined,
         date: wantDate,
         dateText: dateLine.trim() || undefined,
         color: inkColor
@@ -475,7 +486,11 @@ export default function SignaturePad() {
       name: wantName ? effectiveName : undefined,
       showName: wantName && !separatePlacement,
       details: details || undefined,
-      showDetails: includeDetails,
+      // ⚠️ `&& !separatePlacement` for the same reason as showName and showDate
+      // either side of it: separately-placed labels are not part of the image,
+      // so re-placing this signature from the library must not draw them back
+      // under the ink.
+      showDetails: includeDetails && !separatePlacement,
       showDate: wantDate && !separatePlacement,
       dateText: dateLine.trim() || undefined,
       align: DEFAULT_SIG_ALIGN,
@@ -604,7 +619,15 @@ export default function SignaturePad() {
                   style={{
                     ...pos,
                     color: inkColor,
-                    opacity: 0.85,
+                    // Under "Separate click" these lines are NOT baked into the
+                    // image — they are a queue of pieces the user will click
+                    // into place. So the preview stops pretending to be a
+                    // caption and shows them as detached: dimmer, ringed. An
+                    // `outline` and not a border on purpose — it draws outside
+                    // the box, so the block does not move when the mode flips.
+                    opacity: separatePlacement ? 0.5 : 0.85,
+                    outline: separatePlacement ? '1px dashed currentColor' : undefined,
+                    outlineOffset: '3px',
                     fontFamily: 'Helvetica, Arial, sans-serif'
                   }}
                 >
@@ -740,7 +763,8 @@ export default function SignaturePad() {
                     </button>
                   </div>
                   <p className="mt-1 text-xs text-slate-400">
-                    “Separate click” drops the name/date after the signature, so you can place them in form fields.
+                    “Separate click” keeps the image ink-only and drops each line — name, details, date —
+                    on a click of its own, so every one can go in a form’s own field.
                   </p>
                 </div>
               </div>
