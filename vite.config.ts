@@ -105,6 +105,13 @@ export default defineConfig(({ mode }) => {
           // and it ships gzipped at ~700 kB. The QR editor is the obvious thing
           // to code-split out of the first load if this needs to come down.
           maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+          // ⚠️ The HEIC decoder is the biggest single chunk in the build (~3 MB)
+          // and stays OUT of the install-time precache. Precaching it would hand
+          // that download to every visitor and undo the dynamic import in
+          // `lib/convert.ts`, which exists precisely so that people who never
+          // convert an iPhone photo never pay for it. Same bargain, and the same
+          // pair of rules, as Universal Converter and Universal Compress.
+          globIgnores: ['**/heic-to-*.js'],
           // The on-device OCR runtime (Tesseract.js WASM core + English model)
           // is large (~15 MB) and only fetched from the Tesseract CDN when the
           // optional "Make searchable (OCR)" tool is used. Keep it OUT of the
@@ -114,6 +121,17 @@ export default defineConfig(({ mode }) => {
           // user has run it once. Same pattern as Universal Images' background
           // removal. Cross-origin responses are opaque (status 0), so allow that.
           runtimeCaching: [
+            {
+              // The HEIC decoder — cached after the first iPhone photo, so
+              // Images → PDF keeps working offline from then on.
+              urlPattern: /\/assets\/heic-to-.*\.js$/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'heic-to',
+                expiration: { maxEntries: 2, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
             {
               urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/npm\/tesseract\.js.*/,
               handler: 'CacheFirst',

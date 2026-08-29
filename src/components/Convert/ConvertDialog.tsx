@@ -228,14 +228,18 @@ export default function ConvertDialog({ initialMode, onClose, initialPdf }: Prop
                   {images.length > 0 ? `${images.length} image${images.length > 1 ? 's' : ''} selected` : 'Choose images…'}
                 </span>
                 <span className="block text-xs text-slate-500">
-                  PNG, JPG, WebP — one page each, in the order picked
+                  PNG, JPG, WebP, HEIC — one page each, in the order picked
                 </span>
               </span>
             </button>
+            {/* `.heic`/`.heif` are spelled out even though `image/*` is here:
+                a photo copied straight off a phone routinely has no MIME type
+                on Windows, and `image/*` alone then greys it out in the
+                picker — the file the format exists for. */}
             <input
               ref={imgInputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,.heic,.heif"
               multiple
               hidden
               onChange={(e) => {

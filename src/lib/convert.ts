@@ -121,10 +121,55 @@ async function fileToPngBytes(file: File): Promise<Uint8Array> {
   }
 }
 
+const HEIC_EXT_RE = /\.(heic|heif)$/i
+const HEIC_MIME = new Set(['image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence'])
+
+/**
+ * Is this the thing an iPhone hands you?
+ *
+ * ⚠️ The extension test is not belt-and-braces, it is the one that fires. A
+ * `.heic` copied off a phone routinely arrives with `file.type === ''` on
+ * Windows, because the OS has no MIME registered for it.
+ */
+function isHeic(file: File): boolean {
+  return HEIC_MIME.has(file.type.toLowerCase()) || HEIC_EXT_RE.test(file.name)
+}
+
+// A photo goes into a PDF as JPEG, not PNG. `fileToPngBytes` above would work,
+// but a 24MP capture is ~50MB as PNG against ~3MB as JPEG for a picture nobody
+// can tell apart — which is what every scanner does, for the same reason.
+const HEIC_PDF_QUALITY = 0.9
+
+/**
+ * HEIC/HEIF → JPEG bytes, so a photo straight off a phone can be embedded.
+ *
+ * ⚠️ **`heic-to` (libheif 1.19), NOT `heic2any`.** heic2any's last release
+ * bundles a libheif from 2019 and fails on every photo a current iPhone takes —
+ * they store the main image as a `grid` of HEVC tiles with an HDR gain map and
+ * a `tmap` item beside it. It decodes a synthetic single-item fixture happily,
+ * which is exactly how a test goes green on something the app cannot do. Same
+ * call as Universal Converter, Compress and Images; the long version is in the
+ * Universal Images section of `Docs_UNI_SIM/landmines.md`.
+ *
+ * ~3MB, so it is dynamic-imported on the first HEIC and costs nothing to anyone
+ * who never converts one.
+ */
+async function heicToJpegBytes(file: File): Promise<Uint8Array> {
+  const { heicTo } = await import('heic-to')
+  try {
+    const blob = await heicTo({ blob: file, type: 'image/jpeg', quality: HEIC_PDF_QUALITY })
+    return new Uint8Array(await blob.arrayBuffer())
+  } catch (e) {
+    // Name the cause rather than blaming the file for what the decoder did.
+    const why = e instanceof Error ? e.message : String(e)
+    throw new Error(`Could not decode ${file.name} — ${why}`)
+  }
+}
+
 // Build a PDF with one page per image, each page sized to its image's native
 // pixel dimensions (1px → 1pt). JPEGs and PNGs embed directly (lossless
-// pass-through of the original bytes); anything else is normalized to PNG first
-// so it can be embedded at all.
+// pass-through of the original bytes); HEIC is decoded to JPEG; anything else
+// is normalized to PNG first so it can be embedded at all.
 export async function imagesToPdf(files: File[]): Promise<Uint8Array> {
   if (files.length === 0) throw new Error('No images to convert')
   const out = await PDFDocument.create()
@@ -136,6 +181,11 @@ export async function imagesToPdf(files: File[]): Promise<Uint8Array> {
       img = await out.embedJpg(new Uint8Array(await file.arrayBuffer()))
     } else if (isPng) {
       img = await out.embedPng(new Uint8Array(await file.arrayBuffer()))
+    } else if (isHeic(file)) {
+      // Before the generic branch: `fileToPngBytes` decodes through an <img>,
+      // and no engine but Safari's will read a HEIC that way — so a photo off a
+      // phone used to fail here with "Could not decode", on every desktop.
+      img = await out.embedJpg(await heicToJpegBytes(file))
     } else {
       img = await out.embedPng(await fileToPngBytes(file))
     }
