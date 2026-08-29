@@ -80,7 +80,12 @@ function check(label, condition, detail) {
 }
 
 const DISMISS_KEY = 'universal:privacy_note_dismissed'
-const NOTE = 'text=Other companies upload your files'
+// ⚠️ Anchored to the note's own <p>, not a bare `text=` match. The headline is
+// quoted verbatim in the suite changelog entry that announced this feature, so
+// a loose matcher also finds the (hidden) changelog popup and reports the note
+// as still present after it has gone — which is exactly how this read as two
+// failures on the live site before the selector was tightened.
+const NOTE = 'p:text-is("Other companies upload your files to view them and scrape your data.")'
 const CLOSE = "button[aria-label=\"Don't show this again in any Universal app\"]"
 
 const playwright = await loadPlaywright()
