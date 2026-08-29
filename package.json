@@ -26,6 +26,7 @@
     "test:qr-star": "node e2e/qr-star.e2e.mjs",
     "test:profile": "node e2e/profile-identity.e2e.mjs",
     "test:privacy": "node e2e/privacy-note.e2e.mjs",
+    "test:about": "node e2e/about-app.e2e.mjs",
     "test:names": "node --experimental-strip-types scripts/exportName.test.mjs",
     "test:hosted-paths": "node --experimental-strip-types scripts/hostedPath.test.mjs",
     "electron": "electron .",

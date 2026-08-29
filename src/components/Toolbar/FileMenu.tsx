@@ -7,7 +7,7 @@ import { useSearchStore } from '../../stores/searchStore'
 import { LANGS, persistLang, readSavedLang, type LangCode } from '../../lib/lang'
 import { OfficeImportError, PDF_OR_OFFICE_ACCEPT, toViewablePdf } from '../../lib/officeToPdf'
 import { RedactIcon } from '../icons/RedactIcon'
-import { useCloseAppMenu } from '@unisim/sdk'
+import { AboutAppDialog, useCloseAppMenu } from '@unisim/sdk'
 
 /**
  * The one category the dropdown has expanded, or `null` for all collapsed.
@@ -192,6 +192,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const [renameDraft, setRenameDraft] = useState('')
   const [currentLang, setCurrentLang] = useState<LangCode>(readSavedLang())
   const [showOtherHint, setShowOtherHint] = useState(false)
+  const [aboutOpen, setAboutOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -676,6 +677,16 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                     info="See who and what this file names — then scrub it."
                     onSelect={() => { setMetadataOpen(true); closeMenu() }}
                   />
+                  {/* ⚠️ This app keeps its OWN Advanced section, so it gets the
+                      SDK's <AboutAppDialog> without the SDK's <AdvancedMenu>
+                      around it. Two sections both labelled Advanced in one
+                      dropdown would be worse than either. */}
+                  <InfoRow
+                    icon="ℹ"
+                    label="About this app"
+                    info="What it does, what it never sends, and which build you are on."
+                    onSelect={() => { setAboutOpen(true); closeMenu() }}
+                  />
                 </div>
               )}
             </>
@@ -833,6 +844,22 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
         </>
   )
 
+  // The About dialog is a portal, so it can be mounted from either variant and
+  // survives the dropdown closing behind it (`closeMenu()` runs on the same
+  // click). Its content — the product name, mark, tagline and the privacy note
+  // itself — comes from the SDK; only what is true of THIS app is passed.
+  const aboutDialog = (
+    <AboutAppDialog
+      open={aboutOpen}
+      onClose={() => setAboutOpen(false)}
+      repo="https://github.com/universal-simulation-ltd/Universal_PDF"
+      proof="https://github.com/universal-simulation-ltd/Universal_PDF/blob/main/PRIVACY.md"
+      subject="Your PDF"
+      except="backup and send-to-sign"
+      version={__APP_VERSION__}
+    />
+  )
+
   // Rows mode: the SDK's dropdown is the container, so there is no trigger, no
   // panel and no `open` state in play (the outside-click and positioning
   // effects above are both gated on `open`, which stays false here).
@@ -841,6 +868,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
       <>
         {fileInput}
         <div className={MENU_MIN_WIDTH_CLASS}>{body}</div>
+        {aboutDialog}
       </>
     )
   }
@@ -860,6 +888,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
       </button>
       {fileInput}
       {open && renderMenu(body)}
+      {aboutDialog}
     </div>
   )
 }
