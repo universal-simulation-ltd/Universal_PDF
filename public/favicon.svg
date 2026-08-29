@@ -12,5 +12,5 @@
   <rect width="64" height="64" rx="14" fill="url(#u-pdf-tile)"/>
   <polygon points="10,6 38,6 38,22 54,22 54,58 10,58" fill="#ffffff"/>
   <polygon points="38,6 54,22 38,22" fill="#fdba74"/>
-  <text x="32" y="50" text-anchor="middle" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="16" font-weight="900" letter-spacing="1" fill="#e05504">PDF</text>
+  <text x="32" y="50" text-anchor="middle" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="17" font-weight="900" letter-spacing="1" fill="#e05504">PDF</text>
 </svg>
