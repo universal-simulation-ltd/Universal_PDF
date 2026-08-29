@@ -32,6 +32,41 @@ import { CONTAINER } from '../../lib/layout'
 // make the file smaller. Stronger/lighter are still one tap away in the modal.
 const DEFAULT_COMPRESS_QUALITY: CompressQuality = 'balanced'
 
+// The third column of the closing grid. These are not features, they are the
+// answer to "what does it cost me when it isn't money", so each one names the
+// thing it is refusing — a struck-through cloud, eye and megaphone — rather than
+// wearing the tick its neighbours do. Lucide's `cloud-off` / `eye-off` /
+// `megaphone-off` outlines, drawn inline: a lone symbol CHARACTER falls back to
+// whatever font happens to carry it (see the chevron on the compress row).
+const PROMISES: { claim: string; paths: string[] }[] = [
+  {
+    claim: 'No forced uploads',
+    paths: [
+      'M5.78 5.78A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.3-.19',
+      'M21.53 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7 7 0 0 0 10 5.07',
+      'M2 2l20 20'
+    ]
+  },
+  {
+    claim: 'No data scraping',
+    paths: [
+      'M9.88 9.88a3 3 0 1 0 4.24 4.24',
+      'M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68',
+      'M6.61 6.61A13.53 13.53 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61',
+      'M2 2l20 20'
+    ]
+  },
+  {
+    claim: 'No advertising',
+    paths: [
+      'M9.26 9.26 3 11v3l14.14 3.14',
+      'M21 15.34V6l-7.31 2.03',
+      'M11.6 16.8a3 3 0 1 1-5.8-1.6',
+      'M2 2l20 20'
+    ]
+  }
+]
+
 export default function LandingPage() {
   // The default-app offer, now surfaced only as the "System options" pill —
   // the top-of-page bar it used to share this with is gone (2026-08-27).
@@ -628,19 +663,59 @@ export default function LandingPage() {
                 )
               })()}
 
-              {/* What you get, in the same two-column tick grid Universal
-                  Images closes its card with. Every line ends "for free"
-                  deliberately and repetitively: these are the things people
-                  arrive expecting to hit a paywall or a watermark on, and one
-                  "all free" heading over a list does not answer the question
-                  the way the word next to each item does. */}
-              <ul className="mt-5 grid grid-cols-2 gap-2 text-xs text-slate-600">
-                <li className="flex items-center gap-2 pl-6"><span className="text-orange-700">✓</span> Sign PDF for free</li>
-                <li className="flex items-center gap-2 pl-6"><span className="text-orange-700">✓</span> Compress PDF for free</li>
-                <li className="flex items-center gap-2 pl-6"><span className="text-orange-700">✓</span> Convert PDF for free</li>
-                <li className="flex items-center gap-2 pl-6"><span className="text-orange-700">✓</span> Add QR codes for free</li>
-                <li className="flex items-center gap-2 pl-6"><span className="text-orange-700">✓</span> Redact PDF for free</li>
-                <li className="flex items-center gap-2 pl-6"><span className="text-orange-700">✓</span> Export PDF for free</li>
+              {/* What you get, in the tick grid Universal Images closes its
+                  card with. The first two columns end "for free" deliberately
+                  and repetitively: these are the things people arrive expecting
+                  to hit a paywall or a watermark on, and one "all free" heading
+                  over a list does not answer the question the way the word next
+                  to each item does.
+
+                  The third column answers the OTHER question — what it costs
+                  you when it isn't money — so each line names the thing it
+                  refuses (see `PROMISES`) instead of wearing a tick. A tick
+                  beside "No advertising" would read as one more feature in the
+                  pile.
+
+                  ⚠️ `grid-flow-col` + `grid-rows-3` fills DOWN each column, so
+                  the DOM order below IS the column order. Row-flow would deal
+                  the shields out across the rows and there would be no third
+                  column at all.
+
+                  Three columns only from `sm`. Measured on a 390px phone: every
+                  one of the nine wrapped onto a second line, which is a block of
+                  eighteen. Below that it falls back to two columns and plain
+                  row-flow, where they all fit on one line each. */}
+              <ul className="mt-5 grid grid-cols-2 sm:grid-cols-3 sm:grid-rows-3 sm:grid-flow-col gap-x-1 gap-y-2 text-xs text-slate-600">
+                {[
+                  'Sign PDF for free',
+                  'Convert PDF for free',
+                  'Redact PDF for free',
+                  'Compress PDF for free',
+                  'Add QR codes for free',
+                  'Export PDF for free'
+                ].map((claim) => (
+                  <li key={claim} className="flex items-center gap-2 pl-2 sm:pl-4">
+                    <span className="text-orange-700" aria-hidden="true">✓</span>
+                    {claim}
+                  </li>
+                ))}
+                {PROMISES.map(({ claim, paths }) => (
+                  <li key={claim} className="flex items-center gap-2 pl-2 sm:pl-4">
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="w-3.5 h-3.5 shrink-0 text-orange-700"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      {paths.map((d) => <path key={d} d={d} />)}
+                    </svg>
+                    {claim}
+                  </li>
+                ))}
               </ul>
             </div>
 
