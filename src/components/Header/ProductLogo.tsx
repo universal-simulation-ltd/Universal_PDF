@@ -32,7 +32,13 @@ export default function ProductLogo() {
     >
       <style>{CSS}</style>
       <svg viewBox="0 0 64 64" className="h-6 w-6" aria-hidden="true">
-        <rect x="0" y="0" width="64" height="64" rx="14" fill="#0f172a" />
+        <defs>
+          <linearGradient id="uam-nav-pdf-tile" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#fe8c01" />
+            <stop offset="1" stopColor="#e05504" />
+          </linearGradient>
+        </defs>
+        <rect width="64" height="64" rx="14" fill="url(#uam-nav-pdf-tile)" />
         <polygon points="10,6 38,6 38,22 54,22 54,58 10,58" fill="#ffffff" />
         <polygon points="38,6 54,22 38,22" fill="#fdba74" className="uam-pdf-fold" />
         <text x={32} y={50} textAnchor="middle" fontFamily="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" fontSize={16} fontWeight={900} letterSpacing={1} fill="#e05504" className="uam-pdf-label">PDF</text>
