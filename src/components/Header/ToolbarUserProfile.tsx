@@ -115,7 +115,16 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
   // pointer skating over the edge, and is under the time it takes to move a
   // hand back to the pill.
   const lastRefreshAt = useRef(0)
-  function rereadProfileSoon() {
+  // ⚠️ THE PILL ONLY. The panel is a child of this same wrapper, so a bare
+  // handler here fires on every click INSIDE the open menu — every accordion
+  // header, every row, the language `<select>` — and each one was a `profiles`
+  // select. Measured with a 350ms stub: three clicks on Actions categories,
+  // three reads. The pointer reaching the *trigger* is the signal this exists
+  // for ("edited your name, closed the dialog, came back to the menu"); a click
+  // on a row twenty pixels lower is not.
+  function rereadProfileSoon(e?: { target: EventTarget | null }) {
+    const el = e?.target
+    if (el instanceof Element && el.closest('[role="menu"]')) return
     const now = Date.now()
     if (now - lastRefreshAt.current < 500) return
     lastRefreshAt.current = now
@@ -136,8 +145,23 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
   }, [])
 
   const isAnonymous = session?.user?.is_anonymous === true
+
+  // ⚠️ The '·' placeholder is for the FIRST load only, not for every re-read.
+  //
+  // This used to be `userLoading || profileLoading`, and `useProfile().refresh()`
+  // sets `loading` true again each time — so a background re-read blanked the
+  // whole control: the pill's photo flipped to a '·' disc, and because the props
+  // below carry `name` / `email` / `onSignOut`, the account rows they drive
+  // vanished from the open panel too. Measured: the dropdown dropped from 13
+  // rows to 10 and the language `<select>` jumped 83px UP under the cursor
+  // mid-press, which is why the language could not be chosen at all.
+  //
+  // There is nothing to hide: `useProfile()` leaves the previous row in state
+  // across a refresh, so the honest thing to show while the new answer is in
+  // flight is the old one. Only "we have never had an answer" gets the dot.
+  const firstLoad = userLoading || (profileLoading && !profile)
   const resolvedUser: ComponentProps<typeof UserProfile> =
-    userLoading || profileLoading
+    firstLoad
       ? { initials: '·' }
       : !user || isAnonymous
         ? {

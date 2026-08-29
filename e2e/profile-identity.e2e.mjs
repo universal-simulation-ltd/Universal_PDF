@@ -146,10 +146,21 @@ const org = () => ({
 })
 const profileRow = () => ({ id: UID, display_name: world.displayName, avatar_url: null, locale: 'en' })
 
+// `profileDelayMs` is what makes the re-read OBSERVABLE. Answered instantly,
+// `loading` goes true and false inside one React batch and a needless refresh
+// is invisible — which is exactly why the bug below sat there. A third of a
+// second is an ordinary round trip.
+let profileReads = 0
+let profileDelayMs = 0
+
 await context.route('**/rest/v1/**', async (route) => {
   const table = new URL(route.request().url()).pathname.split('/rest/v1/')[1]
   let body = []
-  if (table === 'profiles') body = [profileRow()]
+  if (table === 'profiles') {
+    profileReads++
+    body = [profileRow()]
+    if (profileDelayMs) await new Promise((r) => setTimeout(r, profileDelayMs))
+  }
   else if (table === 'org_members') body = [{ user_id: UID, role: 'owner', organisations: org(), profile: profileRow() }]
   else if (table === 'organisations') body = [org()]
   await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) })
@@ -242,6 +253,86 @@ await page.waitForTimeout(600)
 await openMenu()
 check('the mark is rendered as an image', (await badge.locator('img').count()) === 1, )
 check('the renamed org is shown', (await badge.first().innerText()).includes('Acme Holdings'))
+
+// ── The other half of the same wire ─────────────────────────────────────────
+//
+// The refresh above hangs off pointer events on the WRAPPER, and the dropdown
+// panel is a child of that same wrapper — so every click inside the open menu
+// fired one too, and while each was in flight the control fell back to its '·'
+// placeholder. Two visible faults from one cause (James, 2026-08-29):
+//
+//   • the avatar blinked to a dot on every click in the menu; and
+//   • the account rows the props drive left the panel with it, so everything
+//     below jumped ~83px — including the language <select>, which moved out
+//     from under the cursor mid-press and could not be used at all.
+//
+// Both are pinned here rather than by the pill's appearance alone, because a
+// screenshot of the resting state looks identical either way.
+profileDelayMs = 350
+
+console.log('\nclicking inside the open menu does not re-read the profile (the reported bug)')
+await openMenu()
+const readsBefore = profileReads
+// ⚠️ Observe `document`, and from evaluate() — NOT addInitScript, which runs
+// before the document exists and would silently never fire.
+await page.evaluate(() => {
+  window.__pill = []
+  const pill = document.querySelector('button[aria-label$="Profile"]')
+  new MutationObserver(() => {
+    const t = pill.textContent.replace(/\s+/g, ' ').trim()
+    if (window.__pill[window.__pill.length - 1] !== t) window.__pill.push(t)
+  }).observe(document, { childList: true, subtree: true, characterData: true, attributes: true })
+})
+for (const name of ['Advanced', 'View', 'File']) {
+  const row = page.locator(`button[aria-haspopup="true"][aria-expanded]:has-text("${name}")`).first()
+  if (await row.count()) {
+    await row.click()
+    await page.waitForTimeout(700)
+  }
+}
+check(
+  'no profiles select for three clicks on Actions rows',
+  profileReads === readsBefore,
+  `${profileReads - readsBefore} read(s)`,
+)
+const pillStates = await page.evaluate(() => window.__pill)
+check(
+  'the avatar never blanks to its placeholder',
+  !pillStates.some((t) => t.includes('·')),
+  JSON.stringify(pillStates),
+)
+
+console.log('\nthe language row holds still while the pointer is on it')
+const panelShape = () =>
+  page.evaluate(() => {
+    const el = document.querySelector('[role="menu"] select')
+    if (!el) return null
+    return {
+      top: Math.round(el.getBoundingClientRect().top),
+      rows: document.querySelectorAll('[role="menu"] > *').length,
+    }
+  })
+await openMenu()
+const atRest = await panelShape()
+const selBox = await page.locator('[role="menu"] select').first().boundingBox()
+check('the language select is in the open panel', !!atRest && !!selBox)
+if (atRest && selBox) {
+  await page.mouse.move(selBox.x + selBox.width / 2, selBox.y + selBox.height / 2)
+  await page.mouse.down()
+  await page.waitForTimeout(150)
+  const pressed = await panelShape()
+  await page.mouse.up()
+  check(
+    'it does not move under the cursor',
+    !!pressed && pressed.top === atRest.top,
+    JSON.stringify({ atRest, pressed }),
+  )
+  check(
+    'and the panel keeps every row',
+    !!pressed && pressed.rows === atRest.rows,
+    JSON.stringify({ atRest, pressed }),
+  )
+}
 
 await browser.close()
 
