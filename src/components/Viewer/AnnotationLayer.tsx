@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Stage,
@@ -31,6 +31,7 @@ import {
   dateLineSeed
 } from '../../lib/composeSignature'
 import { inkColorFor, renderInkSignature } from '../../lib/renderInk'
+import { isPaleFill, redactFillHex } from '../../lib/redactGate'
 import { FONT_CSS } from '../../lib/fonts'
 import { effectiveRuns, runFontStyle, runHasStyle, runsToPlainText, runsToHtml, parseRunsFromDom, mergeRuns } from '../../lib/textRuns'
 import type { Annotation, DrawAnnotation, ImageAnnotation, SignatureData, SignatureFieldAnnotation, SigAlign, TextAnnotation, Tool, TextRun } from '../../types/annotations'
@@ -556,7 +557,6 @@ function SigField({
 export default function AnnotationLayer({ pageIndex, width, height, scale }: Props) {
   const tool = useAnnotationStore((s) => s.tool)
   const color = useAnnotationStore((s) => s.color)
-  const redactFill = useAnnotationStore((s) => s.redactFill)
   const strokeWidth = useAnnotationStore((s) => s.strokeWidth)
   const lineSnap = useAnnotationStore((s) => s.lineSnap)
   const fontSize = useAnnotationStore((s) => s.fontSize)
@@ -1189,7 +1189,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             y,
             width: w,
             height: h,
-            fill: redactFill
+            fill: color
           })
         }
       } else if (tool === 'sigfield') {
@@ -1794,23 +1794,56 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                     strokeWidth={a.filled ? 0 : 2}
                   />
                 )
-              case 'redact':
+              case 'redact': {
+                const hex = redactFillHex(a.fill)
+                const pale = isPaleFill(hex)
+                // The label says out loud what the box is FOR. A plain black
+                // rectangle is indistinguishable from a filled shape, and the
+                // difference between them is the whole point: one hides pixels,
+                // the other deletes the text underneath on export. It is drawn
+                // here and nowhere else, so it can never reach the exported
+                // file — `rasterizePageWithRedacts` paints the block alone.
+                //
+                // A sibling rather than a Group wrapping both: `common` carries
+                // the Transformer ref, and the resize handler reads width() /
+                // height() off that node — a Group reports neither.
+                const hint = a.width >= 118 && a.height >= 14
                 return (
-                  <Rect
-                    key={a.id}
-                    {...common}
-                    x={a.x}
-                    y={a.y}
-                    width={a.width}
-                    height={a.height}
-                    fill={a.fill === 'white' ? '#ffffff' : '#000000'}
-                    // A white redaction blanks a white page, so without a hint it
-                    // would be invisible in the editor — outline it (the border is
-                    // editor-only; export bakes a clean fill).
-                    stroke={a.fill === 'white' ? '#94a3b8' : undefined}
-                    strokeWidth={a.fill === 'white' ? 1 : 0}
-                  />
+                  <Fragment key={a.id}>
+                    <Rect
+                      {...common}
+                      x={a.x}
+                      y={a.y}
+                      width={a.width}
+                      height={a.height}
+                      fill={hex}
+                      // A pale redaction blanks a white page, so without a hint it
+                      // would be invisible in the editor — outline it (the border is
+                      // editor-only; export bakes a clean fill).
+                      stroke={pale ? '#94a3b8' : undefined}
+                      strokeWidth={pale ? 1 : 0}
+                    />
+                    {hint && (
+                      <Text
+                        listening={false}
+                        x={a.x + 4}
+                        y={a.y}
+                        width={a.width - 8}
+                        height={a.height}
+                        text="This will be redacted on export"
+                        fontSize={Math.min(11, a.height * 0.5)}
+                        fontFamily={FONT_STACK.sans}
+                        fill={pale ? '#475569' : '#ffffff'}
+                        opacity={0.85}
+                        align="center"
+                        verticalAlign="middle"
+                        wrap="none"
+                        ellipsis
+                      />
+                    )}
+                  </Fragment>
                 )
+              }
               case 'tick': {
                 const s = a.size
                 return (
@@ -1945,6 +1978,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           })()}
           {currentLine && tool === 'redact' && (() => {
             const [x1, y1, x2, y2] = currentLine
+            const pale = isPaleFill(color)
             return (
               <Rect
                 listening={false}
@@ -1952,9 +1986,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 y={Math.min(y1, y2)}
                 width={Math.abs(x2 - x1)}
                 height={Math.abs(y2 - y1)}
-                fill={redactFill === 'white' ? '#ffffff' : '#000000'}
-                stroke={redactFill === 'white' ? '#94a3b8' : undefined}
-                strokeWidth={redactFill === 'white' ? 1 : 0}
+                fill={color}
+                stroke={pale ? '#94a3b8' : undefined}
+                strokeWidth={pale ? 1 : 0}
                 opacity={0.7}
               />
             )
@@ -2158,12 +2192,13 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         // as the resize/rotate Transformer (any selection, not while dragging or
         // editing text). Sits just off the top-right corner.
         //
-        // While a placement tool is still armed, a Confirm affordance sits
-        // beside it. Placing (say) a cross leaves the tool armed so the next
-        // click drops another one — which is what you want when ticking a run of
-        // boxes — and this gives the object three outcomes without a trip to the
-        // toolbar: confirm it and drop back to Select, bin it, or just click
-        // elsewhere on the page to place the next one.
+        // A Confirm affordance sits beside it on EVERY selection (James,
+        // 2026-08-29). It used to appear only while a placement tool was still
+        // armed, which made the pair of buttons come and go for reasons the
+        // user has no way to see — and left a plain selection with one visible
+        // outcome, delete. The two answers to "what do I do with this thing I
+        // just drew" are now always both on screen: keep it (deselect, and drop
+        // back to Select if a tool is still armed) or bin it.
         if (draggingId || editingId) return null
         const selected = annotations.find((a) => a.id === selectedId)
         if (!selected) return null
@@ -2196,21 +2231,30 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 <path d="M10 11v6M14 11v6" />
               </svg>
             </button>
-            {PLACEMENT_TOOLS.has(tool) && (
-              <button
-                type="button"
-                title="Done — keep this and go back to Select"
-                aria-label="Confirm placement and switch to the Select tool"
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={(e) => { e.stopPropagation(); setSelected(null); setTool('select') }}
-                style={{ position: 'absolute', left: left + 36, top, zIndex: 21 }}
-                className="w-8 h-8 rounded-full bg-white shadow-lg border border-slate-300 text-emerald-600 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 flex items-center justify-center transition-colors"
-              >
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M5 13l4 4L19 7" />
-                </svg>
-              </button>
-            )}
+            <button
+              type="button"
+              title={
+                PLACEMENT_TOOLS.has(tool)
+                  ? 'Done — keep this and go back to Select'
+                  : 'Done — keep this and deselect'
+              }
+              aria-label="Confirm and deselect"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation()
+                setSelected(null)
+                // Only leave the tool if one is still armed: with Select active
+                // there is nothing to go back to, and re-setting it would be a
+                // no-op the user can't see.
+                if (PLACEMENT_TOOLS.has(tool)) setTool('select')
+              }}
+              style={{ position: 'absolute', left: left + 36, top, zIndex: 21 }}
+              className="w-8 h-8 rounded-full bg-white shadow-lg border border-slate-300 text-emerald-600 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 flex items-center justify-center transition-colors"
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M5 13l4 4L19 7" />
+              </svg>
+            </button>
             {placedQr && (
               // Edit ✏️ — reopens the generator on THIS code, so the link, the
               // style or the branding can be changed after placing it. Only on
@@ -2572,6 +2616,60 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             className="w-8 h-8 rounded-full bg-white shadow-lg border border-slate-300 text-slate-700 hover:bg-slate-900 hover:text-white hover:border-slate-900 flex items-center justify-center transition-colors"
           >
             <RedactIcon size={16} />
+          </button>
+        )
+      })()}
+
+      {(() => {
+        // …and the way back. The bucket on a selected REDACTION turns it into an
+        // ordinary filled box, in the same slot where a box carries its Fill
+        // pill — so the two conversions are one button in one place, each
+        // offering the other state. Drawing a redaction and then deciding you
+        // only wanted a coloured block over the area is an easy thing to want,
+        // and until now the only way back was to delete the box and draw it
+        // again with a different tool.
+        //
+        // ⚠️ This DROPS the redaction: the text underneath survives export and
+        // stays selectable. The title says so — a filled shape is decoration,
+        // not privacy.
+        if (draggingId || editingId) return null
+        const selected = annotations.find((a) => a.id === selectedId)
+        if (!selected || selected.type !== 'redact') return null
+        const bbox = getAnnotationBBox(selected)
+        return (
+          <button
+            type="button"
+            title="Turn into a filled shape — the text underneath is NO LONGER removed on export"
+            aria-label="Turn this redaction into a filled shape"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              const id = crypto.randomUUID()
+              remove(selected.id)
+              add({
+                id,
+                pageIndex: selected.pageIndex,
+                type: 'rect',
+                x: selected.x,
+                y: selected.y,
+                width: selected.width,
+                height: selected.height,
+                // Keep the colour it was already wearing, so the swap changes
+                // what the box MEANS and not what it looks like.
+                color: redactFillHex(selected.fill),
+                filled: true
+              })
+              setSelected(id)
+            }}
+            style={{
+              position: 'absolute',
+              left: (bbox.x + bbox.width) * scale + 8,
+              top: bbox.y * scale - 8 + 36,
+              zIndex: 20
+            }}
+            className="w-8 h-8 rounded-full bg-white shadow-lg border border-slate-300 hover:border-orange-500 hover:bg-orange-50 flex items-center justify-center text-base leading-none"
+          >
+            <span aria-hidden="true">🪣</span>
           </button>
         )
       })()}

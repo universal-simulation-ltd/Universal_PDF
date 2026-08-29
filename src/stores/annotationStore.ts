@@ -4,10 +4,10 @@ import type { QrPlacement } from '../lib/qr/design'
 
 interface AnnotationState {
   tool: Tool
+  // The one colour every annotation is drawn with, redactions included — a
+  // redaction stores it as `fill` rather than `color`, but the toolbar swatches
+  // are the single control (there is no separate redaction palette any more).
   color: string
-  // Fill the redact tool bakes new boxes with (black is the privacy default;
-  // white lets you blank an area to match a white page).
-  redactFill: 'black' | 'white'
   strokeWidth: number
   // When true the line tool draws "rigid" strokes that snap to the nearest
   // horizontal, vertical or 45° diagonal. Free-form lines when false.
@@ -31,7 +31,6 @@ interface AnnotationState {
   future: Annotation[][]
   setTool: (t: Tool) => void
   setColor: (c: string) => void
-  setRedactFill: (f: 'black' | 'white') => void
   setStrokeWidth: (w: number) => void
   setLineSnap: (v: boolean) => void
   setFontSize: (s: number) => void
@@ -68,7 +67,6 @@ function pushPast(past: Annotation[][], current: Annotation[]): Annotation[][] {
 export const useAnnotationStore = create<AnnotationState>((set) => ({
   tool: 'select',
   color: '#000000',
-  redactFill: 'black',
   strokeWidth: 2.5,
   lineSnap: false,
   fontSize: 18,
@@ -89,31 +87,20 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
     set((s) => {
       const sel = s.annotations.find((a) => a.id === s.selectedId)
       if (sel && sel.type !== 'image') {
+        // A redaction carries its colour as `fill` — the solid block it is
+        // baked as — where every other annotation carries `color`. Same
+        // swatches, same setter; only the field differs.
+        const patch = sel.type === 'redact' ? { fill: color } : { color }
         return {
           color,
           annotations: s.annotations.map((a) =>
-            a.id === sel.id ? ({ ...a, color } as Annotation) : a
+            a.id === sel.id ? ({ ...a, ...patch } as Annotation) : a
           ),
           past: pushPast(s.past, s.annotations),
           future: []
         }
       }
       return { color }
-    }),
-  setRedactFill: (redactFill) =>
-    set((s) => {
-      const sel = s.annotations.find((a) => a.id === s.selectedId)
-      if (sel && sel.type === 'redact') {
-        return {
-          redactFill,
-          annotations: s.annotations.map((a) =>
-            a.id === sel.id ? ({ ...a, fill: redactFill } as Annotation) : a
-          ),
-          past: pushPast(s.past, s.annotations),
-          future: []
-        }
-      }
-      return { redactFill }
     }),
   setStrokeWidth: (strokeWidth) =>
     set((s) => {

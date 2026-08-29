@@ -23,8 +23,11 @@ export default function FindBar() {
   const redactIntent = useSearchStore((s) => s.redactIntent)
   const addMany = useAnnotationStore((s) => s.addMany)
   const clearSelection = useAnnotationStore((s) => s.setSelectedIds)
-  const redactFill = useAnnotationStore((s) => s.redactFill)
-  const setRedactFill = useAnnotationStore((s) => s.setRedactFill)
+  // Find-and-redact paints with the SAME colour as a hand-drawn redaction — the
+  // toolbar's colour, not a setting of its own. The two swatches below are a
+  // shortcut into it, not a second place the choice is stored.
+  const color = useAnnotationStore((s) => s.color)
+  const setColor = useAnnotationStore((s) => s.setColor)
 
   const inputRef = useRef<HTMLInputElement>(null)
   // Open with the redact panel already showing when the bar was launched from
@@ -108,7 +111,7 @@ export default function FindBar() {
           y: r.y - REDACT_PAD,
           width: r.w + REDACT_PAD * 2,
           height: r.h + REDACT_PAD * 2,
-          fill: redactFill
+          fill: color
         })
       }
     }
@@ -204,18 +207,29 @@ export default function FindBar() {
           <div className="flex items-center gap-2 mb-2">
             <span className="text-[11px] font-medium text-slate-500">Fill</span>
             <div className="flex items-center gap-1.5">
-              {(['black', 'white'] as const).map((f) => (
+              {([['#000000', 'Black'], ['#ffffff', 'White']] as const).map(([hex, name]) => (
                 <button
-                  key={f}
+                  key={hex}
                   type="button"
-                  onClick={() => setRedactFill(f)}
-                  title={f === 'black' ? 'Black redaction' : 'White redaction'}
-                  aria-pressed={redactFill === f}
+                  onClick={() => setColor(hex)}
+                  title={`${name} redaction`}
+                  aria-pressed={color.toLowerCase() === hex}
                   className={`w-6 h-6 rounded-full border-2 transition-transform ${
-                    redactFill === f ? 'border-orange-500 scale-110' : 'border-slate-300 hover:scale-105'
-                  } ${f === 'white' ? 'bg-white' : 'bg-black'}`}
+                    color.toLowerCase() === hex ? 'border-orange-500 scale-110' : 'border-slate-300 hover:scale-105'
+                  }`}
+                  style={{ backgroundColor: hex }}
                 />
               ))}
+              {/* Any other toolbar colour lands here too — shown, not offered,
+                  so the bar never disagrees with the swatch that is actually
+                  armed. */}
+              {color.toLowerCase() !== '#000000' && color.toLowerCase() !== '#ffffff' && (
+                <span
+                  title={`Current colour ${color}`}
+                  className="w-6 h-6 rounded-full border-2 border-orange-500 scale-110"
+                  style={{ backgroundColor: color }}
+                />
+              )}
             </div>
           </div>
           <div className="space-y-1.5">
@@ -270,7 +284,7 @@ export default function FindBar() {
                     Redact all {count > 0 ? count : ''} match{count === 1 ? '' : 'es'}
                   </span>
                   <span className="block text-[11px] text-slate-500 group-hover:text-slate-300 leading-tight mt-0.5">
-                    {redactFill === 'white' ? 'Whites' : 'Blacks'} out every match — text is removed on export
+                    {color.toLowerCase() === '#ffffff' ? 'Whites' : 'Blocks'} out every match — text is removed on export
                   </span>
                 </span>
               </button>

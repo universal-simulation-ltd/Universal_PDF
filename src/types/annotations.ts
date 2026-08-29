@@ -113,9 +113,14 @@ export type RedactAnnotation = Base & {
   y: number
   width: number
   height: number
-  // Fill colour the box is baked with on export. Defaults to black when
-  // undefined (back-compat with boxes drawn before white-fill existed).
-  fill?: 'black' | 'white'
+  // Fill colour the box is baked with on export — a hex string taken from the
+  // toolbar's colour swatches, the same control that colours every other
+  // annotation. Defaults to black (the privacy default) when undefined.
+  //
+  // ⚠️ Boxes drawn before redactions took an arbitrary colour stored the words
+  // `'black'` / `'white'` here, and an old `.unipdf` backup still carries them.
+  // Read this through `redactFillHex()` rather than testing it yourself.
+  fill?: string
 }
 
 export type MarkAnnotation = Base & {

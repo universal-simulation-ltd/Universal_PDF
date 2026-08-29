@@ -142,8 +142,8 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const canRedo = useAnnotationStore((s) => s.future.length > 0)
   const clearAll = useAnnotationStore((s) => s.clearAll)
   const setTool = useAnnotationStore((s) => s.setTool)
-  const redactFill = useAnnotationStore((s) => s.redactFill)
-  const setRedactFill = useAnnotationStore((s) => s.setRedactFill)
+  const setColor = useAnnotationStore((s) => s.setColor)
+  const setSelected = useAnnotationStore((s) => s.setSelected)
 
   const doc = usePdfStore((s) => s.doc)
   const fileName = usePdfStore((s) => s.fileName)
@@ -706,30 +706,20 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                       onSelect={() => { openForRedact(); closeMenu() }}
                     />
                   )}
+                  {/* Arming the tool resets the colour to black — the privacy
+                      default — rather than inheriting whatever the pencil was
+                      last set to. From here the fill is the toolbar's own
+                      colour swatches (James, 2026-08-29): this submenu used to
+                      carry a second black/white picker of its own, which meant
+                      two controls for one colour and neither showing what the
+                      other had chosen. */}
                   <InfoRow
                     icon="✏️"
                     label="Free draw"
-                    info="Drag a box over anything to redact it by hand."
-                    onSelect={() => { setTool('redact'); closeMenu() }}
+                    info="Drag a box over anything to redact it. Pick the fill from the toolbar colours."
+                    onSelect={() => { setSelected(null); setColor('#000000'); setTool('redact'); closeMenu() }}
                     className="border-t border-slate-100"
                   />
-
-                  {/* Fill colour for new redactions (black is the privacy default; white blanks a white page) */}
-                  <div className="flex items-center gap-2 pl-8 pr-3 py-2.5 border-t border-slate-100">
-                    <span className="text-[11px] font-medium text-slate-500">Fill</span>
-                    {(['black', 'white'] as const).map((f) => (
-                      <button
-                        key={f}
-                        type="button"
-                        onClick={() => setRedactFill(f)}
-                        title={f === 'black' ? 'Black redaction' : 'White redaction'}
-                        aria-pressed={redactFill === f}
-                        className={`w-6 h-6 rounded-full border-2 transition-transform ${
-                          redactFill === f ? 'border-orange-500 scale-110' : 'border-slate-300 hover:scale-105'
-                        } ${f === 'white' ? 'bg-white' : 'bg-black'}`}
-                      />
-                    ))}
-                  </div>
                 </div>
               )}
             </>

@@ -5,6 +5,7 @@ import { hexToPdfRgb } from './colors'
 import { fontBase, type PdfBaseFont } from './fonts'
 import { effectiveRuns } from './textRuns'
 import { pdfjsLib, type PDFDocumentProxy } from './pdfjs'
+import { redactFillHex } from './redactGate'
 
 // Custom PDF catalog key carrying the unsigned signature-request boxes, so a
 // reopened or shared file's boxes stay interactive (movable / click-to-sign) in
@@ -122,7 +123,9 @@ async function rasterizePageWithRedacts(
 
   const k = renderScale / annotationScale
   for (const r of redacts) {
-    ctx.fillStyle = r.fill === 'white' ? '#ffffff' : '#000000'
+    // The block only — never the editor's "This will be redacted on export"
+    // hint, which is drawn by the annotation layer and has no counterpart here.
+    ctx.fillStyle = redactFillHex(r.fill)
     ctx.fillRect(r.x * k, r.y * k, r.width * k, r.height * k)
   }
 

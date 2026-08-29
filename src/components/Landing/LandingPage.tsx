@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { DropAnywhere, DropRing, PrivacyNote, useFileDrop } from '@unisim/sdk'
 import { usePdfStore } from '../../stores/pdfStore'
+import { useAnnotationStore } from '../../stores/annotationStore'
 import { createExamplePdfFile } from '../../lib/examplePdf'
 import { compressPdf, type CompressQuality, type CompressResult } from '../../lib/export'
 import {
@@ -19,6 +20,7 @@ import TransformPanel from '../Transform/TransformPanel'
 import PdfIllustration from './PdfIllustration'
 import DownloadRow from './DownloadRow'
 import DropRingWatermark from './DropRingWatermark'
+import { RedactIcon } from '../icons/RedactIcon'
 import { DefaultAppPill } from '../Onboarding/DefaultAppOffer'
 import { useDefaultPdfApp } from '../../hooks/useDefaultPdfApp'
 import { PreviewPanePill } from '../Onboarding/PreviewPaneOffer'
@@ -37,6 +39,8 @@ export default function LandingPage() {
   const previewPane = usePreviewPane()
   const compressInputRef = useRef<HTMLInputElement>(null)
   const ocrInputRef = useRef<HTMLInputElement>(null)
+  const redactInputRef = useRef<HTMLInputElement>(null)
+  const advancedRef = useRef<HTMLDivElement>(null)
   const loadFile = usePdfStore((s) => s.loadFile)
   const hasRecents = usePdfStore((s) => s.recents.length > 0)
   const [opening, setOpening] = useState(false)
@@ -53,6 +57,12 @@ export default function LandingPage() {
     results: CompressResult[]
   } | null>(null)
   const [dragOverCompress, setDragOverCompress] = useState(false)
+  // The extra tools, behind the chevron that sits on the end of the Compress
+  // row. They used to be a `<details>` with its own "Advanced options" summary
+  // line, which cost a full-width row of the card to say nothing (James,
+  // 2026-08-29) — the chevron carries the same meaning in the space already
+  // taken by the row above it.
+  const [advancedOpen, setAdvancedOpen] = useState(false)
   const [transformOpen, setTransformOpen] = useState(false)
   const [mergeOpen, setMergeOpen] = useState(false)
   const [convertMode, setConvertMode] = useState<ConvertMode | null>(null)
@@ -78,7 +88,10 @@ export default function LandingPage() {
   const modalOpen =
     !!compressJob || !!batchJob || transformOpen || mergeOpen || !!convertMode || !!ocrJob
   const drop = useFileDrop({
-    onFiles: openFiles,
+    // Wrapped rather than passed straight through: `openFiles` reports whether
+    // the document actually opened (the redact entry point below only arms the
+    // tool if it did), and a `Promise<boolean>` isn't a `Promise<void>`.
+    onFiles: (files) => { void openFiles(files) },
     accept: PDF_OR_OFFICE_ACCEPT,
     multiple: false,
     pageWide: true,
@@ -153,18 +166,41 @@ export default function LandingPage() {
   // message written to be read, so anything it says is shown as-is — including
   // its "save it as .docx first" answer for a legacy .doc, which is the whole
   // point of not simply rejecting everything that isn't a PDF here.
-  async function openFiles(files: File[]) {
+  // Returns whether a document ended up open, so a caller that wants to hand
+  // the user straight to a tool doesn't arm it over a failed load.
+  async function openFiles(files: File[]): Promise<boolean> {
     const file = files[0]
-    if (!file) return
+    if (!file) return false
     setConverting(!isPdfFile(file))
     try {
       const { file: pdf, notice } = await toViewablePdf(file)
       await loadFile(pdf, { notice })
+      return true
     } catch (err) {
       console.error(err)
       alert(err instanceof OfficeImportError ? err.message : 'Failed to load PDF')
+      return false
     } finally {
       setConverting(false)
+    }
+  }
+
+  // "Redact text" opens the PDF with the redact tool already in hand, so the
+  // first drag on the page draws a box. Coming through a door labelled Redact
+  // and landing on the Select tool would mean hunting for the tool in a menu
+  // the user has never opened — the door IS the instruction.
+  //
+  // Black, and nothing selected: the tool's colour is the toolbar's colour, and
+  // whatever the pencil was last set to is not a sane default for a redaction.
+  async function onRedactFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (await openFiles([file])) {
+      const s = useAnnotationStore.getState()
+      s.setSelected(null)
+      s.setColor('#000000')
+      s.setTool('redact')
     }
   }
 
@@ -368,6 +404,9 @@ export default function LandingPage() {
                   the root container to the hook's `window` listener. The marker
                   is what keeps that true if the stopPropagation is ever tidied
                   away as redundant — which, on its own, it would then not be. */}
+              {/* Compress + the chevron that opens everything else, on one
+                  row. */}
+              <div className="mt-3 flex items-stretch gap-2">
               <button
                 type="button"
                 data-unisim-dropzone=""
@@ -396,7 +435,7 @@ export default function LandingPage() {
                 }}
                 className={[
                   PILL,
-                  'mt-3 disabled:opacity-60 disabled:cursor-wait',
+                  'flex-1 min-w-0 disabled:opacity-60 disabled:cursor-wait',
                   // Dashed + amber while a file is over it — the one bit of the
                   // old card worth keeping, because this pill is a drop target
                   // as well as a button and nothing else in the box is.
@@ -412,6 +451,51 @@ export default function LandingPage() {
                     ? 'Drop to compress'
                     : '1 Click Compress — drop one or many'}
               </button>
+
+              {/* The chevron IS the "Advanced options" label now: a square
+                  button on the end of the Compress row, wearing the same border
+                  as the pill beside it. The row it replaced was full-width and
+                  carried nothing but the word. */}
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !advancedOpen
+                  setAdvancedOpen(next)
+                  // On a short screen the revealed options open below the fold;
+                  // bring them back into view once they have rendered.
+                  if (next) {
+                    requestAnimationFrame(() =>
+                      advancedRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+                    )
+                  }
+                }}
+                aria-expanded={advancedOpen}
+                aria-controls="pdf-advanced-options"
+                aria-label={advancedOpen ? 'Hide advanced options' : 'Show advanced options'}
+                title="Advanced options — merge, convert, OCR, redact, Markdown"
+                className={`shrink-0 w-11 inline-flex items-center justify-center rounded-lg border transition-colors ${
+                  advancedOpen
+                    ? 'border-orange-400 bg-orange-50/60 text-orange-700'
+                    : 'border-slate-300 text-slate-500 hover:border-orange-400 hover:bg-orange-50/40 hover:text-slate-700'
+                }`}
+              >
+                {/* An SVG chevron, not the `⌄` character the old summary row
+                    used: alone in a button it fell back to a font that draws it
+                    as a plain "<". */}
+                <svg
+                  viewBox="0 0 24 24"
+                  className={`w-4 h-4 transition-transform ${advancedOpen ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
+              </div>
               <input
                 ref={compressInputRef}
                 type="file"
@@ -421,28 +505,8 @@ export default function LandingPage() {
                 onChange={onCompressFile}
               />
 
-              {/* Power-user tools tucked into a collapsible. On expand, scroll
-                  the whole panel into view so every revealed option is visible
-                  (it sits near the bottom of the fold on shorter screens). */}
-              <details
-                className="group mt-3"
-                onToggle={(e) => {
-                  if (!e.currentTarget.open) return
-                  const el = e.currentTarget
-                  requestAnimationFrame(() =>
-                    el.scrollIntoView({ behavior: 'smooth', block: 'end' })
-                  )
-                }}
-              >
-                <summary className="flex items-center gap-2 cursor-pointer select-none list-none px-1 py-1 text-xs uppercase tracking-wide font-medium text-slate-500 hover:text-slate-700 transition-colors">
-                  <span>Advanced options</span>
-                  <span
-                    className="ml-auto text-base text-slate-400 transition-transform group-open:rotate-180"
-                    aria-hidden="true"
-                  >
-                    ⌄
-                  </span>
-                </summary>
+              {advancedOpen && (
+              <div id="pdf-advanced-options" ref={advancedRef}>
 
                 {/* The four tools wear the same pill as the two above, so
                     expanding this doesn't drop a stack of chunky cards into a
@@ -484,6 +548,26 @@ export default function LandingPage() {
                   onChange={onOcrFile}
                 />
 
+                {/* Redact — the one entry here that opens the editor rather
+                    than running a job, so it says what it will do to the
+                    document ("unreadable to humans and machines") rather than
+                    naming a tool. The PDF opens with the redact tool armed. */}
+                <button
+                  type="button"
+                  onClick={() => redactInputRef.current?.click()}
+                  className={`${PILL} ${PILL_IDLE} mt-3`}
+                >
+                  <RedactIcon size={16} className="shrink-0" />
+                  Redact text — make portions unreadable to humans and machines
+                </button>
+                <input
+                  ref={redactInputRef}
+                  type="file"
+                  accept="application/pdf"
+                  hidden
+                  onChange={onRedactFile}
+                />
+
                 <button
                   type="button"
                   onClick={() => setTransformOpen(true)}
@@ -492,7 +576,8 @@ export default function LandingPage() {
                   <span aria-hidden="true">✎</span>
                   Transform text into a PDF — paste Markdown
                 </button>
-              </details>
+              </div>
+              )}
 
               {/* OS-integration switches, apart from the document tools:
                   things that change how this MACHINE treats PDFs rather than
@@ -542,6 +627,21 @@ export default function LandingPage() {
                 </details>
                 )
               })()}
+
+              {/* What you get, in the same two-column tick grid Universal
+                  Images closes its card with. Every line ends "for free"
+                  deliberately and repetitively: these are the things people
+                  arrive expecting to hit a paywall or a watermark on, and one
+                  "all free" heading over a list does not answer the question
+                  the way the word next to each item does. */}
+              <ul className="mt-5 grid grid-cols-2 gap-2 text-xs text-slate-600">
+                <li className="flex items-center gap-2 pl-6"><span className="text-orange-700">✓</span> Sign PDF for free</li>
+                <li className="flex items-center gap-2 pl-6"><span className="text-orange-700">✓</span> Compress PDF for free</li>
+                <li className="flex items-center gap-2 pl-6"><span className="text-orange-700">✓</span> Convert PDF for free</li>
+                <li className="flex items-center gap-2 pl-6"><span className="text-orange-700">✓</span> Add QR codes for free</li>
+                <li className="flex items-center gap-2 pl-6"><span className="text-orange-700">✓</span> Redact PDF for free</li>
+                <li className="flex items-center gap-2 pl-6"><span className="text-orange-700">✓</span> Export PDF for free</li>
+              </ul>
             </div>
 
             {/* Under the card, outside the box: a statement the page makes
