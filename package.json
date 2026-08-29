@@ -30,6 +30,7 @@
     "test:about": "node e2e/about-app.e2e.mjs",
     "test:names": "node --experimental-strip-types scripts/exportName.test.mjs",
     "test:hosted-paths": "node --experimental-strip-types scripts/hostedPath.test.mjs",
+    "check:mobile-bundle": "node scripts/verify-mobile-bundle.mjs",
     "electron": "electron .",
     "thumbnail:build": "powershell -NoProfile -ExecutionPolicy Bypass -File native/win-thumbnail/scripts/build.ps1",
     "dist": "npm run build:desktop && electron-builder",
@@ -37,7 +38,7 @@
     "dist:mac": "npm run build:desktop && scripts/with-python.sh electron-builder --mac",
     "dist:mac:unsigned": "CSC_IDENTITY_AUTO_DISCOVERY=false npm run build:desktop && CSC_IDENTITY_AUTO_DISCOVERY=false scripts/with-python.sh electron-builder --mac -c.mac.notarize=false -c.mac.hardenedRuntime=false",
     "dist:linux": "npm run build:desktop && electron-builder --linux",
-    "cap:sync": "npm run build:mobile && npx cap sync",
+    "cap:sync": "npm run build:mobile && npx cap sync && npm run check:mobile-bundle",
     "cap:open:ios": "npx cap open ios",
     "cap:open:android": "npx cap open android"
   },
