@@ -427,6 +427,52 @@ it is equally a point of no return for redactions. Any future surface that
 launches the dialog inherits the gate for free, which is the point of it living
 on the action rather than the launcher.
 
+## "Tap the page to place it" — the armed-placement banner
+
+`components/Viewer/PlacementHint.tsx`, mounted as a sibling of the viewer in
+`App.tsx` and positioned against that `relative` `<main>`.
+
+Saving a signature, choosing a stamp, uploading a picture or hitting **Add to
+page** in the QR dialog does not put anything on the page. It **arms** a tool,
+and the next tap on the page is what places the thing. The dialog closes onto a
+screen that looks exactly like the one before it opened, so (James, 2026-08-30)
+"you're not sure what to do". The banner is the state made visible: a pill at the
+top of the document area naming what is about to land, with a thumbnail of it
+where there is an image, and a **Cancel** that disarms.
+
+It covers every state where a single tap places something:
+
+| State | It says |
+|---|---|
+| signature armed (`tool: 'signature'` + an active signature) | place your signature |
+| a name/details/date piece queued (`pendingExtras`) | where the *name* / *details* / *date* should go, the text itself, and how many follow |
+| a generated code armed (`tool: 'image'` + `uploadedImageQr`) | place your QR code |
+| a picture armed (`tool: 'image'` + `uploadedImageSrc`) | place your image |
+| `text` / `tick` / `cross` | what a tap adds, and that the tool stays on |
+
+Four things about it are load-bearing:
+
+- ⚠️ **It is not a toast.** It is up for exactly as long as the armed state and
+  goes the moment the thing lands. Nothing about it is timed, and there is no
+  dismiss — Cancel disarms the tool, which is a different act.
+- ⚠️ **It must not eat the tap it is asking for.** It floats over the top of the
+  page, so everything but Cancel is `pointer-events: none`. `e2e/placement-hint`
+  asserts this by dropping a signature *through* the banner rather than by
+  reading the CSS, which would pass on a child that re-enabled events.
+- ⚠️ **The two tools that need a payload are gated on the payload, not the
+  tool.** `tool: 'image'` with nothing armed places nothing on a tap; a banner
+  there would be an instruction that does not work.
+- ⚠️ **`w-max max-w-full` on the pill.** It is content-sized, so a label merely
+  allowed to wrap collapses to *min*-content — one word per line, seven lines
+  tall, on a 390px phone. `w-max` asks for the single-line width and the `max-w`
+  clamps it, so it wraps only when it must.
+
+The phone is the case this exists for. `AnnotationLayer` already drew a
+cursor-following ghost of the armed signature — but that needs a **hover**, so
+touch had no feedback at all, and even with a mouse only the signature had one
+(an armed QR or picture had none on any device). The wording follows
+`useCoarsePointer()`: *Tap* on glass, *Click* with a mouse.
+
 ## Selected-object affordances (🗑 and ✓)
 
 Anything selected gets a **bin** just off its top-right corner and, beside it, a

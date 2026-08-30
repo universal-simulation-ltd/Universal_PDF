@@ -7,6 +7,7 @@ import {
 } from './components/Toolbar/Toolbar'
 import PdfViewer from './components/Viewer/PdfViewer'
 import PageNavigator from './components/Viewer/PageNavigator'
+import PlacementHint from './components/Viewer/PlacementHint'
 import SignaturePad from './components/Signature/SignaturePad'
 import StampPicker from './components/Signature/StampPicker'
 import SignatureImport from './components/Signature/SignatureImport'
@@ -553,7 +554,14 @@ export default function App() {
             Loading PDF…
           </div>
         ) : doc ? (
-          <PdfViewer />
+          /* ⚠️ PlacementHint is a sibling of the viewer, absolutely positioned
+             against this `relative` <main> — so it floats at the top of the
+             document area without being inside the viewer's own scroller (where
+             it would scroll away from the state it is describing). */
+          <>
+            <PdfViewer />
+            <PlacementHint />
+          </>
         ) : (
           <LandingPage />
         )}
