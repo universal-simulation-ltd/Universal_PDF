@@ -14,7 +14,6 @@ def capacitor_pods
   pod 'CapacitorApp', :path => '../../node_modules/@capacitor/app'
   pod 'CapacitorFilesystem', :path => '../../node_modules/@capacitor/filesystem'
   pod 'CapacitorShare', :path => '../../node_modules/@capacitor/share'
-  pod 'UnisimSdk', :path => '../../node_modules/@unisim/sdk'
 end
 
 target 'App' do
