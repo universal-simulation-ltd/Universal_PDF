@@ -277,8 +277,14 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
                   onClick={(e) => { e.stopPropagation(); remove(s.id) }}
                   className="text-slate-300 hover:text-red-600 text-sm"
                   title="Delete"
+                  aria-label={`Delete ${s.name}`}
                 >
-                  ✕
+                  {/* SVG, not `✕`: U+2715 is a hollow ▯?▯ box in iOS's system
+                      font — see the suite landmines. The button carries the
+                      name now, since the glyph no longer provides one. */}
+                  <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true">
+                    <path d="m4 4 8 8M12 4l-8 8" />
+                  </svg>
                 </button>
               </div>
             </div>

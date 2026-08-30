@@ -207,10 +207,15 @@ export default function PageNavigator() {
           </div>
           <button
             onClick={() => setOpen(false)}
-            className="md:hidden text-slate-400 hover:text-slate-700 w-7 h-7"
+            className="md:hidden text-slate-400 hover:text-slate-700 w-7 h-7 flex items-center justify-center"
             aria-label="Close pages"
           >
-            ✕
+            {/* ⚠️ SVG, not `✕`: U+2715 has no glyph in iOS's system font, so
+                the only way to close the page list on a phone — where this
+                button is the ONLY one shown — was a hollow ▯?▯ box. */}
+            <svg viewBox="0 0 16 16" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true">
+              <path d="m4 4 8 8M12 4l-8 8" />
+            </svg>
           </button>
         </div>
         <div
@@ -370,7 +375,10 @@ function PageThumb({
           aria-label={`Delete page ${index + 1}`}
           className="w-6 h-6 rounded-full bg-white text-red-600 hover:bg-red-600 hover:text-white border border-slate-300 shadow text-xs leading-none flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          ✕
+          {/* SVG, not `✕` — see the note on the Close pages button above. */}
+          <svg viewBox="0 0 16 16" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <path d="m4 4 8 8M12 4l-8 8" />
+          </svg>
         </button>
       </div>
       <div className="absolute top-2 left-2 flex flex-col gap-1 z-20">

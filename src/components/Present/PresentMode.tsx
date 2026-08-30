@@ -204,7 +204,15 @@ export default function PresentMode() {
           className="ml-auto px-3 h-9 rounded bg-white/15 hover:bg-white/25 text-sm font-medium backdrop-blur-sm"
           aria-label="Exit presentation"
         >
-          Exit ✕
+          {/* ⚠️ An SVG, not `✕` — U+2715 has no glyph in iOS's system font and
+              WebKit does not fall back, so the one way out of presentation
+              mode read "Exit ▯?▯" on the phone. See the suite landmines. */}
+          <span className="inline-flex items-center gap-1.5">
+            Exit
+            <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true">
+              <path d="m4 4 8 8M12 4l-8 8" />
+            </svg>
+          </span>
         </button>
       </div>
 
