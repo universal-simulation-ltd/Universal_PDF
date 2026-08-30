@@ -315,18 +315,25 @@ body {
    a desktop. Checkboxes, radios, ranges and colour swatches are excluded — they
    render no text, and a 16px font-size on them changes their box size.
 
-   ⚠️ `!important` is load-bearing, and it is here because of the SDK. Its
-   dialogs are styled with inline `style` objects — <SignInDialog />'s email and
-   password fields carry `fontSize: 14` on the element itself — and an inline
-   declaration outranks any author rule that is not important, however specific.
-   Without the flag this rule covered only the app's own fields: signing in from
-   an iPhone focused the autofocused 14px email field, zoomed the page, and left
-   it zoomed after the dialog closed, with the fixed bottom toolbar then wider
-   than the screen and clipped at both ends. */
+   `!important` used to be load-bearing here and no longer is, as of
+   @unisim/sdk 0.123.2. The SDK's dialogs are styled with inline `style`
+   objects, and <SignInDialog />'s email and password fields carried
+   `fontSize: 14` on the element itself — which no author rule can outrank
+   without the flag. Signing in from an iPhone focused the autofocused 14px
+   email field, zoomed the page, and left it zoomed after the dialog closed,
+   with the fixed bottom toolbar then wider than the screen and clipped at both
+   ends.
+
+   0.123.2 sizes those inputs itself (16px on touch), so this rule is back to
+   covering only the app's own fields, which is all it should ever have needed
+   to do. ⚠️ It is safe to drop the flag because the SDK's condition is a
+   SUPERSET of this media query: it uses `!(hover: hover) and (pointer: fine)`,
+   which is true everywhere `(pointer: coarse)` is. If the SDK dependency is
+   ever moved back below 0.123.2, the flag has to come back with it. */
 @media (pointer: coarse) {
   input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']),
   select,
   textarea {
-    font-size: 16px !important;
+    font-size: 16px;
   }
 }
