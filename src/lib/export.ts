@@ -6,6 +6,7 @@ import { fontBase, type PdfBaseFont } from './fonts'
 import { effectiveRuns } from './textRuns'
 import { pdfjsLib, type PDFDocumentProxy } from './pdfjs'
 import { redactFillHex } from './redactGate'
+import { saveBlob } from './saveFile'
 
 // Custom PDF catalog key carrying the unsigned signature-request boxes, so a
 // reopened or shared file's boxes stay interactive (movable / click-to-sign) in
@@ -624,14 +625,7 @@ export async function readEmbeddedSigFields(
 
 export function downloadPdfBytes(bytes: Uint8Array, fileName: string) {
   const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = fileName
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  URL.revokeObjectURL(url)
+  saveBlob(blob, fileName)
 }
 
 export async function exportPdfWithAnnotations(

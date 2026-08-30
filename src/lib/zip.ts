@@ -14,6 +14,7 @@
 // DOM-free so it can be self-tested in plain Node.
 
 import { zipBytes, type ZipEntry } from '@unisim/media'
+import { saveBlob } from './saveFile'
 
 export type { ZipEntry }
 
@@ -22,12 +23,5 @@ export type { ZipEntry }
 export function downloadZip(entries: ZipEntry[], zipName: string) {
   const bytes = zipBytes(entries)
   const blob = new Blob([bytes as BlobPart], { type: 'application/zip' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = zipName
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  URL.revokeObjectURL(url)
+  saveBlob(blob, zipName)
 }

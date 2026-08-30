@@ -3,6 +3,7 @@ import { pdfToImages, imagesToPdf, type ImageFormat } from '../../lib/convert'
 import { downloadPdfBytes } from '../../lib/export'
 import { downloadZip } from '../../lib/zip'
 import { usePdfStore } from '../../stores/pdfStore'
+import { saveBlob } from '../../lib/saveFile'
 
 export type ConvertMode = 'pdf-to-images' | 'images-to-pdf'
 
@@ -54,14 +55,7 @@ export default function ConvertDialog({ initialMode, onClose, initialPdf }: Prop
       if (entries.length === 1) {
         const mime = format === 'png' ? 'image/png' : 'image/jpeg'
         const blob = new Blob([entries[0].data as BlobPart], { type: mime })
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = entries[0].name
-        document.body.appendChild(link)
-        link.click()
-        link.remove()
-        URL.revokeObjectURL(url)
+        saveBlob(blob, entries[0].name)
       } else {
         const stem = pdf.name.replace(/\.pdf$/i, '')
         downloadZip(entries, `${stem}-images.zip`)

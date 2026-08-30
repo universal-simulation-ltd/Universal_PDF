@@ -9,6 +9,7 @@
 
 import { qrDisplayName, type QrDesign } from '@unisim/qr'
 import { PLACEMENT_SIZE, renderQrPng } from './render'
+import { saveBlob } from '../saveFile'
 
 /** Slugify a design's display name into a safe filename stem — the same rule as
  *  Universal QR's `fileStem`, so a design shared between the two apps downloads
@@ -38,14 +39,7 @@ function dataUrlToBlob(dataUrl: string): Blob {
 /** Render the design and save it as a PNG. */
 export async function downloadQrPng(design: QrDesign): Promise<void> {
   const blob = dataUrlToBlob(await renderQrPng(design, PLACEMENT_SIZE))
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `${qrFileStem(design)}.png`
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  URL.revokeObjectURL(url)
+  saveBlob(blob, `${qrFileStem(design)}.png`)
 }
 
 /** Copy the rendered PNG to the clipboard. Returns false when the browser has

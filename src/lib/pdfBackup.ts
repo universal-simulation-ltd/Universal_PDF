@@ -2,6 +2,7 @@ import { usePdfStore } from '../stores/pdfStore'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useFormStore, type FormFieldValue } from '../stores/formStore'
 import type { Annotation } from '../types/annotations'
+import { saveBlob } from './saveFile'
 
 // "Save to desktop" backup for Universal PDF — the editable middle tier between
 // the free in-browser recents and the paid "Hosted by UNI·SIM" cloud. A backup
@@ -75,14 +76,7 @@ export function buildBackup(): { blob: Blob; fileName: string } {
 /** Save the open PDF + edits to the guest's device as a re-importable backup. */
 export function downloadBackup(): void {
   const { blob, fileName } = buildBackup()
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = fileName
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+  saveBlob(blob, fileName)
 }
 
 /** Restore a previously-downloaded backup: load the PDF back into the editor
