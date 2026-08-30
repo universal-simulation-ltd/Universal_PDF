@@ -50,7 +50,7 @@ export default function QrEnlargeModal({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-5 bg-slate-900/80 p-4 backdrop-blur-sm sm:p-6"
+      className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-5 bg-slate-900/80 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-sm sm:p-6"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -60,7 +60,10 @@ export default function QrEnlargeModal({
         type="button"
         onClick={onClose}
         aria-label="Close"
-        className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-xl leading-none text-white hover:bg-white/25"
+        // ⚠️ `top` clears the notch: this overlay is positioned against the
+        // VIEWPORT, so it escapes the app root's safe-area padding and a flat
+        // top-4 put the only way out under the Dynamic Island.
+        className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-xl leading-none text-white hover:bg-white/25"
       >
         ×
       </button>

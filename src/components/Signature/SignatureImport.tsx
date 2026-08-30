@@ -106,13 +106,17 @@ export default function SignatureImport() {
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]"
       onClick={(e) => {
         if (e.target === e.currentTarget) closeImport()
       }}
     >
-      <div className="bg-white rounded-lg shadow-2xl p-5 w-full max-w-lg">
-        <div className="flex items-center justify-between mb-3">
+      {/* ⚠️ Capped at the viewport and split: the title row is pinned and
+          everything below it scrolls. `min(100%,100dvh)` rather than a `vh`
+          cap — `vh` is the LARGE viewport on iOS, so a `vh`-capped box can
+          still overrun the visible area once the browser chrome shows. */}
+      <div className="bg-white rounded-lg shadow-2xl p-5 w-full max-w-lg flex max-h-[min(100%,100dvh)] flex-col">
+        <div className="flex shrink-0 items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-slate-900">
             {isStamp ? 'Import stamp' : 'Import signature'}
           </h2>
@@ -124,6 +128,7 @@ export default function SignatureImport() {
             ×
           </button>
         </div>
+        <div className="-mx-5 min-h-0 flex-1 overflow-y-auto px-5">
 
         {!file ? (
           <button
@@ -183,7 +188,8 @@ export default function SignatureImport() {
 
         {error && <div className="mt-3 text-sm text-red-600">{error}</div>}
 
-        <div className="flex flex-wrap items-center gap-2 mt-4">
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2 mt-4">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}

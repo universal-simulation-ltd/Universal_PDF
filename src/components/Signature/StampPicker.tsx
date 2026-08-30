@@ -128,11 +128,18 @@ export default function StampPicker() {
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]"
       onClick={(e) => { if (e.target === e.currentTarget) closeStampPicker() }}
     >
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 max-h-[85vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-5">
+      {/* ⚠️ A flex COLUMN capped at the viewport, not one box that scrolls.
+          `max-h-[min(100%,100dvh)]`: 100% is the overlay's content box and
+          100dvh shrinks with iOS's browser chrome, so min() takes whichever is
+          actually visible — a `vh` cap does not, because `vh` is the LARGE
+          viewport on iOS. The title row and its Close button are pinned
+          OUTSIDE the scrolling body, so a tall dialog can no longer scroll its
+          own way out off the top of a 390x844 screen. */}
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 flex max-h-[min(100%,100dvh)] flex-col">
+        <div className="flex shrink-0 items-center justify-between mb-5">
           <h2 className="text-lg font-semibold text-slate-900">
             {creating ? 'New stamp' : 'Choose a Stamp'}
           </h2>
@@ -145,6 +152,7 @@ export default function StampPicker() {
           </button>
         </div>
 
+        <div className="-mx-6 min-h-0 flex-1 overflow-y-auto px-6">
         {creating ? (
           <div className="flex flex-col gap-4">
             <div>
@@ -281,6 +289,7 @@ export default function StampPicker() {
             </p>
           </>
         )}
+        </div>
       </div>
     </div>
   )

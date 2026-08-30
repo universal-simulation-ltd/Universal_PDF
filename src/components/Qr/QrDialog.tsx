@@ -454,13 +454,20 @@ export default function QrDialog() {
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]"
       onClick={(e) => {
         if (e.target === e.currentTarget) setOpen(false)
       }}
     >
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 pt-5 pb-3">
+      {/* ⚠️ A flex COLUMN capped at the viewport, not one box that scrolls.
+          `max-h-[min(100%,100dvh)]`: 100% is the overlay's content box and
+          100dvh shrinks with iOS's browser chrome, so min() takes whichever is
+          actually visible — a `vh` cap does not, because `vh` is the LARGE
+          viewport on iOS. The title row and its Close button are pinned
+          OUTSIDE the scrolling body, so a tall dialog can no longer scroll its
+          own way out off the top of a 390x844 screen. */}
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex max-h-[min(100%,100dvh)] flex-col overflow-hidden">
+        <div className="flex shrink-0 items-center justify-between px-6 pt-5 pb-3">
           <h2 className="text-lg font-semibold text-slate-900">
             {qrEdit ? 'Edit this QR code' : 'Add a QR code'}
           </h2>
@@ -473,7 +480,7 @@ export default function QrDialog() {
           </button>
         </div>
 
-        <div className="px-6 pb-5 flex flex-col sm:flex-row gap-5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-5 flex flex-col sm:flex-row gap-5">
           {/* Preview — click it to enlarge for scanning, as in Universal QR. */}
           <div className="flex flex-col items-center gap-2 shrink-0">
             <div

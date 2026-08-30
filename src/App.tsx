@@ -358,6 +358,19 @@ export default function App() {
     // whichever of them is wrapped for a phone — currently only this one.
     <div className="flex flex-col h-full bg-slate-100 pt-[env(safe-area-inset-top)]">
       {showLanding && (
+        // ⚠️ `relative z-50` is load-bearing, and it is what spares this app the
+        // z-index trap the rest of the suite hit on 2026-08-30. The SDK's
+        // UniversalAppsNavBar sets an inline `zIndex: 1000` on itself, which no
+        // Tailwind class can outrank — elsewhere that put the bar on top of
+        // open dialogs. Here the wrapper confines it to a z-50 stacking
+        // context, so the app's own `fixed … z-50` dialogs tie with the WRAPPER
+        // and win on document order.
+        //
+        // Which means the tie is what protects the dialogs: every dialog must
+        // keep rendering AFTER this block in App's tree (they all live at the
+        // bottom of the return), and nothing that must sit above the bar may
+        // drop below z-50. Measured at 390x844 against the built app: a probe
+        // box at z-40 is painted over by the bar, z-50 and above are not.
         <div className="relative z-50">
           <UniversalAppsNavBar
             product="pdf"

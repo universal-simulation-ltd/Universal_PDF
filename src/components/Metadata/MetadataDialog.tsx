@@ -69,12 +69,12 @@ export default function MetadataDialog({ sourceBytes, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]"
       onClick={(e) => {
         if (e.target === e.currentTarget && !busy) onClose()
       }}
     >
-      <div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-md max-h-[85vh] flex flex-col">
+      <div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-md max-h-[min(100%,100dvh)] flex flex-col">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
             <span aria-hidden="true">🏷</span>

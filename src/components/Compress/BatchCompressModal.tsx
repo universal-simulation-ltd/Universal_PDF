@@ -100,12 +100,12 @@ export default function BatchCompressModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-lg max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-lg max-h-[min(100%,100dvh)] flex flex-col">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-slate-900">
             Compress {files.length} files

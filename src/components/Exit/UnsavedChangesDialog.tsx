@@ -72,7 +72,7 @@ export default function UnsavedChangesDialog() {
     <div
       // z-[80] — above the Present overlay (z-[70]) and every dialog below it.
       // Whatever is on screen, the question about leaving is in front of it.
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[80] p-4"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[80] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="unsaved-changes-title"
@@ -83,15 +83,23 @@ export default function UnsavedChangesDialog() {
         e.stopPropagation()
       }}
     >
-      <div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-md">
+      {/* ⚠️ Capped at the viewport and split: the question and the three
+          answers are pinned, and only the explanation between them scrolls.
+          `min(100%,100dvh)` rather than a `vh` cap — `vh` is the LARGE
+          viewport on iOS, so a `vh`-capped box can still overrun the visible
+          area once the browser chrome shows. Of every dialog in the app this
+          is the one that must never put its buttons off screen: it is asking a
+          question whose wrong answer costs a file. */}
+      <div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-md flex max-h-[min(100%,100dvh)] flex-col">
         <h2
           id="unsaved-changes-title"
-          className="text-lg font-semibold text-slate-900 flex items-center gap-2"
+          className="shrink-0 text-lg font-semibold text-slate-900 flex items-center gap-2"
         >
           <span aria-hidden="true">✎</span>
           Save your changes?
         </h2>
 
+        <div className="-mx-5 min-h-0 flex-1 overflow-y-auto px-5">
         <p className="mt-2 text-sm text-slate-600 leading-relaxed">
           <span className="font-medium text-slate-800">{fileName ?? 'This PDF'}</span> has
           amendments that aren&rsquo;t in a saved file yet. {WHAT_HAPPENS[pending.intent]}
@@ -145,7 +153,9 @@ export default function UnsavedChangesDialog() {
           Saves as <span className="font-medium text-slate-700">{previewExportName(fileName)}</span>
         </div>
 
-        <div className="mt-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+        </div>
+
+        <div className="mt-4 flex shrink-0 flex-col-reverse sm:flex-row sm:justify-end gap-2">
           <button
             onClick={cancel}
             disabled={saving}

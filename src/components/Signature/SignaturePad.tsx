@@ -510,11 +510,16 @@ export default function SignaturePad() {
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]"
       onClick={(e) => { if (e.target === e.currentTarget) cancel() }}
     >
-      <div className="bg-white rounded-lg shadow-2xl p-5 max-w-full">
-        <div className="flex items-center justify-between gap-3 mb-3">
+      {/* ⚠️ Capped at the viewport and split: the title row and the mode
+          toggle are pinned, the pad and its controls scroll.
+          `min(100%,100dvh)` rather than a `vh` cap — `vh` is the LARGE
+          viewport on iOS, so a `vh`-capped box can still overrun the visible
+          area once the browser chrome shows. */}
+      <div className="bg-white rounded-lg shadow-2xl p-5 max-w-full flex max-h-[min(100%,100dvh)] flex-col">
+        <div className="flex shrink-0 items-center justify-between gap-3 mb-3">
           <h2 className="text-lg font-semibold text-slate-900">
             {mode === 'phone' ? 'Send to sign' : 'Draw signature'}
           </h2>
@@ -548,6 +553,7 @@ export default function SignaturePad() {
             </button>
           </div>
         </div>
+        <div className="-mx-5 min-h-0 flex-1 overflow-y-auto px-5">
         {/* The box asked for live ink. Worded as what the document asks for —
             NOT as a guarantee the ink is verified — because this is a
             client-side constraint, the same class of claim as the signing
@@ -773,6 +779,7 @@ export default function SignaturePad() {
         </div>
         </>
         )}
+        </div>
       </div>
     </div>
   )

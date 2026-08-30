@@ -82,13 +82,17 @@ export default function CompressResultModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-md">
-        <div className="flex items-center justify-between mb-3">
+        {/* ⚠️ Capped at the viewport and split: the title row is pinned and
+            everything below it scrolls. `min(100%,100dvh)` rather than a `vh`
+            cap — `vh` is the LARGE viewport on iOS, so a `vh`-capped box can
+            still overrun the visible area once the browser chrome shows. */}
+      <div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-md flex max-h-[min(100%,100dvh)] flex-col">
+        <div className="flex shrink-0 items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-slate-900">Compression result</h2>
           <button
             onClick={onClose}
@@ -98,6 +102,7 @@ export default function CompressResultModal({
             ×
           </button>
         </div>
+        <div className="-mx-5 min-h-0 flex-1 overflow-y-auto px-5">
 
         {/* Quality selector — re-compresses live */}
         <div className="mb-3">
@@ -167,7 +172,8 @@ export default function CompressResultModal({
           Output: <span className="font-mono">{result.fileName}</span>
         </div>
 
-        <div className="mt-5 flex items-center gap-2 justify-end">
+        </div>
+        <div className="mt-5 flex shrink-0 items-center gap-2 justify-end">
           <button
             onClick={onClose}
             className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700"

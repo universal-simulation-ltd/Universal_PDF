@@ -86,15 +86,19 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]"
       onClick={(e) => {
         // Only dismiss by backdrop once the work is finished — a mid-run click
         // shouldn't discard the OCR pass the user is waiting on.
         if (e.target === e.currentTarget && phase !== 'running') onClose()
       }}
     >
-      <div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-md">
-        <div className="flex items-center justify-between mb-3">
+      {/* ⚠️ Capped at the viewport and split: the title row is pinned and
+          everything below it scrolls. `min(100%,100dvh)` rather than a `vh`
+          cap — `vh` is the LARGE viewport on iOS, so a `vh`-capped box can
+          still overrun the visible area once the browser chrome shows. */}
+      <div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-md flex max-h-[min(100%,100dvh)] flex-col">
+        <div className="flex shrink-0 items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
             <span aria-hidden="true">🔎</span>
             Make searchable (OCR)
@@ -109,6 +113,7 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
             </button>
           )}
         </div>
+        <div className="-mx-5 min-h-0 flex-1 overflow-y-auto px-5">
 
         <p className="text-xs text-slate-500 mb-4 leading-relaxed">
           Runs entirely on your device — nothing is uploaded. The first run
@@ -206,6 +211,7 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   )
