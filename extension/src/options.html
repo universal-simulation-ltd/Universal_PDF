@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Universal PDF — sites</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        margin: 0 auto;
+        padding: 32px 24px 64px;
+        max-width: 620px;
+        font: 14px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+        background: #f8fafc;
+        color: #0f172a;
+      }
+      h1 { font-size: 20px; margin: 0 0 4px; }
+      p.lede { margin: 0 0 24px; color: #475569; }
+      ul { list-style: none; margin: 0; padding: 0; }
+      li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 12px;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        margin-bottom: 8px;
+      }
+      li code { font: 12px/1.4 ui-monospace, monospace; word-break: break-all; }
+      button { font: inherit; border-radius: 7px; cursor: pointer; }
+      button.remove { border: 1px solid #e2e8f0; background: #fff; color: #b91c1c; padding: 5px 10px; font-size: 12px; }
+      form { display: flex; gap: 8px; margin-top: 20px; }
+      input {
+        flex: 1;
+        padding: 8px 10px;
+        border: 1px solid #cbd5e1;
+        border-radius: 7px;
+        font: inherit;
+        background: #fff;
+        color: inherit;
+      }
+      button.add { border: 0; background: #ea580c; color: #fff; padding: 8px 16px; font-weight: 600; }
+      .empty { color: #64748b; font-style: italic; }
+      .status { margin-top: 12px; min-height: 1.4em; font-size: 13px; color: #b45309; }
+      .caveat { margin-top: 28px; padding-top: 18px; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 13px; }
+      @media (prefers-color-scheme: dark) {
+        body { background: #0f172a; color: #e2e8f0; }
+        li { background: #1e293b; border-color: #334155; }
+        input { background: #1e293b; border-color: #334155; }
+        p.lede, .empty, .caveat { color: #94a3b8; }
+        button.remove { background: #1e293b; border-color: #334155; color: #fca5a5; }
+        .caveat { border-top-color: #1e293b; }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Sites that open in Universal PDF</h1>
+    <p class="lede">
+      PDFs on these sites open in Universal PDF instead of the browser's viewer. Everywhere else is untouched —
+      click the toolbar button when you want a one-off.
+    </p>
+    <ul id="sites"></ul>
+    <form id="add-form">
+      <input id="site" type="text" placeholder="https://example.com" aria-label="Site address" />
+      <button class="add" type="submit">Add site</button>
+    </form>
+    <p class="status" id="status"></p>
+    <p class="caveat">
+      On these sites the document is downloaded a second time so that Universal PDF can open it. That is invisible
+      for ordinary files, and it carries your login for the site — but a link that only works once, such as a
+      one-time download or a file behind a form you have just submitted, cannot be fetched twice and will not open.
+      Use the toolbar button for those: it reads the document the browser already has.
+    </p>
+    <script src="options.js"></script>
+  </body>
+</html>

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Universal PDF</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        width: 300px;
+        margin: 0;
+        padding: 14px;
+        font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+        background: #f8fafc;
+        color: #0f172a;
+      }
+      h1 { margin: 0 0 2px; font-size: 14px; }
+      .url {
+        margin: 0 0 12px;
+        color: #64748b;
+        font-size: 11px;
+        word-break: break-all;
+        max-height: 2.9em;
+        overflow: hidden;
+      }
+      button.primary {
+        width: 100%;
+        padding: 9px 12px;
+        border: 0;
+        border-radius: 8px;
+        background: #ea580c;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button.primary:disabled { background: #cbd5e1; color: #64748b; cursor: default; }
+      .always { display: flex; gap: 8px; align-items: flex-start; margin-top: 14px; font-size: 12px; }
+      .always input { margin: 2px 0 0; }
+      .note { margin: 6px 0 0 22px; color: #64748b; font-size: 11px; }
+      .status { margin-top: 12px; font-size: 12px; color: #b45309; }
+      .status:empty { display: none; }
+      .status a { color: inherit; }
+      hr { border: 0; border-top: 1px solid #e2e8f0; margin: 14px 0 0; }
+      footer { margin-top: 10px; font-size: 11px; color: #94a3b8; }
+      footer a { color: #64748b; }
+      @media (prefers-color-scheme: dark) {
+        body { background: #0f172a; color: #e2e8f0; }
+        .url, .note, footer { color: #94a3b8; }
+        hr { border-top-color: #1e293b; }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Universal PDF</h1>
+    <p class="url" id="url"></p>
+    <button class="primary" id="open" disabled>Open in Universal PDF</button>
+    <label class="always" hidden id="always-row">
+      <input type="checkbox" id="always" />
+      <span>Always use Universal PDF on <b id="host"></b></span>
+    </label>
+    <p class="note" hidden id="always-note"></p>
+    <p class="status" id="status"></p>
+    <hr />
+    <footer>Everything happens on this computer. <a href="#" id="manage">Sites</a> · <a href="https://opensource.unisim.co.uk/pdf/" target="_blank" rel="noreferrer">About</a></footer>
+    <script src="popup.js"></script>
+  </body>
+</html>

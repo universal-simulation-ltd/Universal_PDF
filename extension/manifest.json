@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "Universal PDF",
+  "version": "0.0.0",
+  "description": "Open the PDF you are looking at in Universal PDF \u2014 annotate, sign and redact it, entirely on your own machine.",
+  "homepage_url": "https://opensource.unisim.co.uk/pdf/",
+  "icons": {
+    "16": "icons/icon.png",
+    "32": "icons/icon.png",
+    "48": "icons/icon.png",
+    "128": "icons/icon.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Open this PDF in Universal PDF",
+    "default_icon": {
+      "16": "icons/icon.png",
+      "32": "icons/icon.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "options_page": "options.html",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "contextMenus",
+    "declarativeNetRequest",
+    "storage"
+  ],
+  "optional_host_permissions": [
+    "*://*/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "viewer/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}
