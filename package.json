@@ -51,7 +51,7 @@
     "@capacitor/filesystem": "^7.1.8",
     "@capacitor/ios": "^7.6.8",
     "@capacitor/share": "^7.0.4",
-    "@unisim/doc": "^0.5.0",
+    "@unisim/doc": "^0.6.0",
     "@unisim/media": "^0.5.0",
     "@unisim/qr": "^0.1.0",
     "@unisim/sdk": "^0.124.0",
