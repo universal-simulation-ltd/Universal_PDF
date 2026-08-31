@@ -33,6 +33,12 @@ export interface OfficeConversion {
   /** The original file's name, for the notice and for error messages. */
   sourceName: string
   format: OfficeFormat
+  /**
+   * Distinct characters the PDF writer could not spell, already replaced with
+   * '?' in `file`. Empty for the overwhelming majority of documents — see
+   * `droppedSentence` for why it is surfaced at all.
+   */
+  dropped: string[]
 }
 
 /** Thrown for anything the user needs told about. The message is written to be read. */
@@ -142,7 +148,8 @@ export async function convertOfficeFile(file: File): Promise<OfficeConversion> {
     return {
       file: new File([result.blob], pdfName, { type: 'application/pdf' }),
       sourceName: file.name,
-      format
+      format,
+      dropped: result.dropped
     }
   } catch (err) {
     if (err instanceof OfficeImportError) throw err
@@ -171,9 +178,38 @@ function safeFilename(s: string): string {
   return (cleaned || 'document').slice(0, 80)
 }
 
+/**
+ * The characters clause of the notice, or '' when nothing was lost.
+ *
+ * ⚠️ This is NOT decoration. `@unisim/doc` writes the base-14 PDF fonts with
+ * /WinAnsiEncoding and embeds no font, so anything outside Latin-1 — arrows in
+ * a diagram, box-drawing, curly bullets, any non-Latin script — is written as a
+ * literal '?'. The package has always reported which ones (`PdfResult.dropped`,
+ * "for an honest warning"); this app used to take `.blob` and throw the report
+ * away, so a document came back quietly corrupted and the user found out on
+ * page four, or never.
+ *
+ * Name the characters rather than counting them: "→ and ↓ are missing" tells
+ * someone where to look, "2 characters are missing" starts a hunt.
+ */
+function droppedSentence(dropped: string[]): string {
+  if (dropped.length === 0) return ''
+  // A document in a script this PDF can't write at all (Greek, Cyrillic, CJK)
+  // drops hundreds of distinct characters, and listing them would be a wall of
+  // '?' — the very thing being warned about. Past a handful, count instead.
+  const LIST_LIMIT = 8
+  if (dropped.length > LIST_LIMIT) {
+    return ` ${dropped.length} characters this PDF's fonts can't write were replaced with “?”.`
+  }
+  const shown = dropped.join(' ')
+  const plural = dropped.length > 1 ? 's' : ''
+  return ` The character${plural} ${shown} couldn't be written and ${dropped.length > 1 ? 'appear' : 'appears'} as “?”.`
+}
+
 /** The notice to show once a converted document is on screen. */
 export function importNoticeFor(conversion: OfficeConversion): string {
-  return conversion.format === 'docx' ? IMPORT_NOTICE : IMPORT_NOTICE_ODT
+  const base = conversion.format === 'docx' ? IMPORT_NOTICE : IMPORT_NOTICE_ODT
+  return base + droppedSentence(conversion.dropped)
 }
 
 export function isPdfFile(file: File): boolean {
