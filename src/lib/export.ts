@@ -807,7 +807,20 @@ export async function compressPdf(
   sourceBytes: ArrayBuffer,
   fileName: string,
   quality: CompressQuality = 'light',
-  onProgress: (fraction: number) => void = () => {}
+  onProgress: (fraction: number) => void = () => {},
+  /**
+   * Keep the rasterised pages even when they come out BIGGER than the lossless
+   * save. Off everywhere that is compressing for size — where handing back a
+   * larger file would be absurd — and on for the export dialog's "Flatten pages
+   * to images" checkbox, where size is not what is being asked for.
+   *
+   * ⚠️ Without this, ticking that box on a text document silently does nothing:
+   * the fallback below returns the lossless bytes, the text layer survives, and
+   * the user sends out a file believing its text cannot be copied. That is the
+   * one failure mode of this feature that is worse than not having it, because
+   * it is invisible and it is the opposite of what was asked for.
+   */
+  keepRasterEvenIfBigger = false
 ): Promise<CompressResult> {
   const originalSize = sourceBytes.byteLength
   const outName = fileName.replace(/\.pdf$/i, '') + '-compressed.pdf'
@@ -857,7 +870,7 @@ export async function compressPdf(
   }
   const lossless = await srcPdf.save({ useObjectStreams: true })
   onProgress(1)
-  if (bytes.byteLength >= lossless.byteLength) {
+  if (bytes.byteLength >= lossless.byteLength && !keepRasterEvenIfBigger) {
     return {
       bytes: lossless,
       originalSize,

@@ -27,16 +27,34 @@ const EXPORT_SCALE = 1.0
 
 type Variant = 'original' | 'compressed'
 
-// The same three strengths the Compress dialogs offer, worded for this one.
-// 'light' stays the default here and nowhere else: an export is an annotated —
-// often signed — document, and rasterising it trades away the text layer of a
-// file someone is about to send on. That trade is worth offering, but not worth
-// making on their behalf.
-const QUALITY_OPTIONS: { value: CompressQuality; label: string; hint: string }[] = [
-  { value: 'light', label: 'Light', hint: 'Lossless re-save · text stays selectable' },
-  { value: 'balanced', label: 'Balanced', hint: 'Pages become images · big saving on scans' },
+// ⚠️ TWO ORTHOGONAL QUESTIONS, and until 2026-08-31 this file asked them as
+// one. `CompressQuality` is a single scale — light / balanced / strong — but
+// 'light' differs from the other two in KIND, not in degree: it is a lossless
+// re-save, while both the others turn every page into a picture. Presenting
+// them as one row of three made "do I keep my text layer?" look like a
+// compression setting, and gated it behind whether flattening would save
+// enough bytes to be worth offering.
+//
+// It is not a size question. The reason to want a flattened PDF is "nobody can
+// reflow, copy or edit what I signed", which is true of a 40 KB letter exactly
+// as it is of a 40 MB scan — and a 40 KB letter never cleared the ≥20% AND
+// ≥100 KB bar in `worthOffering`, so on every text document (every Word file
+// this app converts, for one) the mode was present, functional and completely
+// unreachable.
+//
+// So the two questions are now two controls: a FLATTEN checkbox, always
+// available, and — only once flattening is on — a strength choice between the
+// two rasterising levels. 'light' is no longer a button; it IS the unchecked
+// box, which is the default here and nowhere else, because an export is an
+// annotated and often signed document and giving away its text layer is not a
+// thing to do on somebody's behalf.
+const FLATTEN_OPTIONS: { value: CompressQuality; label: string; hint: string }[] = [
+  { value: 'balanced', label: 'Balanced', hint: 'Good quality · big saving on scans' },
   { value: 'strong', label: 'Maximum', hint: 'Smallest · most visible loss' }
 ]
+
+/** The quality used when the flatten box is ticked, before any strength is picked. */
+const DEFAULT_FLATTEN: CompressQuality = 'balanced'
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -189,9 +207,22 @@ export default function ExportModal({ open, onClose }: Props) {
     ;(async () => {
       try {
         const annotBuf = annotated.slice().buffer
-        const comp = await compressPdf(annotBuf, fileName ?? 'document.pdf', quality, (f) => {
-          if (myId === compressIdRef.current) setCompressPct(f)
-        })
+        // ⚠️ The 5th argument is what makes the flatten checkbox honest. By
+        // default `compressPdf` hands back the lossless bytes whenever
+        // rasterising inflated the file — right when the ask is "make this
+        // smaller", and exactly wrong when the ask is "make this
+        // uneditable", which is what any rasterising quality means HERE.
+        // Without it, ticking the box on a text document quietly returns a
+        // file whose text is still selectable.
+        const comp = await compressPdf(
+          annotBuf,
+          fileName ?? 'document.pdf',
+          quality,
+          (f) => {
+            if (myId === compressIdRef.current) setCompressPct(f)
+          },
+          quality !== 'light'
+        )
         if (myId !== compressIdRef.current) return
         setCompressed(comp)
       } catch (e) {
@@ -224,23 +255,33 @@ export default function ExportModal({ open, onClose }: Props) {
   // tab promising "−0%" is just a second button that does nothing.
   const didShrink = saved > 0 && (pct >= 0.5 || saved >= 20 * 1024)
 
-  // Whether to show the compression controls AT ALL.
+  // Is the user asking for a flattened file? This is the whole of the flatten
+  // state — there is no second boolean to keep in step with `quality`, and so
+  // no way for the checkbox and the compressor to disagree about what is being
+  // produced.
+  const flatten = quality !== 'light'
+
+  // Whether to show the SIZE-driven compression controls at all.
   //
-  // Two different "no gain" cases, and only one of them means the controls are
-  // useless:
+  // Two different "no gain" cases, and only one of them means they are useless:
   //
-  //  - Light found nothing, but the document HAS images. Balanced or Maximum
-  //    may still shrink it enormously — that is the whole point of them on a
-  //    scan — so the controls stay and the hint says to try them.
-  //  - The document has no images at all. Then no quality can win: the
-  //    rasterising ones have nothing to re-encode and would only inflate it
-  //    (see `fellBackToLossless`), and Light has already had its go. There is
-  //    genuinely nothing to choose, so the whole block goes.
+  //  - Light found nothing, but the document HAS images. Flattening may still
+  //    shrink it enormously — that is the whole point of it on a scan — so the
+  //    controls stay and the hint says to try it.
+  //  - The document has no images at all. Then nothing can win on SIZE: the
+  //    rasterising levels have nothing to re-encode and would only inflate it
+  //    (see `fellBackToLossless`), and Light has already had its go.
+  //
+  // ⚠️ `&& !flatten`. Somebody who has ticked the box is not asking for a
+  // smaller file — they are asking for one nobody can edit — so "there is
+  // nothing to gain here" is no longer a reason to take the controls away.
+  // Without this clause the text-only document, which is exactly the case the
+  // checkbox exists for, hides the result of its own setting.
   //
   // `hasImages === null` means the probe has not finished (or failed, in which
   // case it reports true). Keep the controls until we know better — appearing
   // late is worse than a control that turns out not to help.
-  const compressionPointless = ready && !didShrink && hasImages === false
+  const compressionPointless = ready && !didShrink && hasImages === false && !flatten
 
   // Which strength buttons are worth putting on screen.
   //
@@ -261,24 +302,32 @@ export default function ExportModal({ open, onClose }: Props) {
     const savedVs = against - estimated
     return savedVs >= against * RASTER_WORTH_IT && savedVs >= RASTER_MIN_BYTES
   }
-  const offeredQualities = QUALITY_OPTIONS.filter((opt) => {
-    if (opt.value === 'light') return true
-    // Not measured yet (or the estimate failed): show everything rather than
-    // hide a level that might have been the useful one.
+  // ⚠️ `worthOffering` NO LONGER DECIDES WHETHER FLATTENING IS REACHABLE — that
+  // is the whole point of the checkbox, and it is available on every document.
+  // What it still decides is whether MAXIMUM is worth putting beside Balanced:
+  // if the two land in the same place, the extra visible damage buys nothing
+  // and one button is not a choice.
+  const offeredQualities = FLATTEN_OPTIONS.filter((opt) => {
+    if (opt.value === 'balanced') return true
+    // Not measured yet (or the estimate failed): show it rather than hide a
+    // level that might have been the useful one.
     if (!rasterEstimate) return true
     // Never hide the level currently in use — a button vanishing from under
     // the user's own selection is worse than one that turns out not to help.
     if (opt.value === quality) return true
-    if (opt.value === 'balanced') return worthOffering(rasterEstimate.balanced, losslessSize)
-    // Maximum has to beat the lossless file AND be meaningfully better than
-    // Balanced; if the two land in the same place, the extra visible damage
-    // buys nothing and only Balanced is worth showing.
-    return (
-      worthOffering(rasterEstimate.strong, losslessSize) &&
-      (!worthOffering(rasterEstimate.balanced, losslessSize) ||
-        worthOffering(rasterEstimate.strong, rasterEstimate.balanced))
-    )
+    return worthOffering(rasterEstimate.strong, rasterEstimate.balanced)
   })
+
+  // How much smaller flattening would make it, for the line under the checkbox.
+  // Null when unknown, and — deliberately — also when it would make the file
+  // BIGGER: a text document rasterises to something larger almost every time,
+  // and "· 240 KB bigger" beside a checkbox reads as a warning against ticking
+  // it when size is not what it is for. `fellBackToLossless` says the same
+  // thing afterwards, in the place where it matters.
+  const flattenSaving =
+    rasterEstimate && losslessSize - rasterEstimate.balanced >= RASTER_MIN_BYTES
+      ? losslessSize - rasterEstimate.balanced
+      : null
   // ⚠️ Two SEPARATE questions, and conflating them drops a real choice:
   //
   //  - showStrength: is there more than one compression level worth picking?
@@ -289,8 +338,16 @@ export default function ExportModal({ open, onClose }: Props) {
   //    files. Hiding the tabs with the strength row would have stranded the
   //    user on whichever variant happened to be selected.
   const showVariantTabs = !compressionPointless
-  const showStrength = showVariantTabs && offeredQualities.length > 1
-  const effectiveTab: Variant = ready && tab === 'compressed' && !didShrink ? 'original' : tab
+  // ⚠️ Only ever a choice BETWEEN the two rasterising levels, so it needs
+  // flattening to be on. When the box is unticked there is exactly one
+  // possible output and a strength row would be a control over nothing.
+  const showStrength = showVariantTabs && flatten && offeredQualities.length > 1
+  // ⚠️ `&& !flatten`. This bounce exists so nobody downloads a "compressed"
+  // file that is the same size as the original — but a deliberately flattened
+  // file is wanted whatever it weighs, and bouncing the user back to Original
+  // would silently hand them the very text layer they asked to destroy.
+  const effectiveTab: Variant =
+    ready && tab === 'compressed' && !didShrink && !flatten ? 'original' : tab
 
   // Why the Compressed tab has nothing to offer. On the lossless pass that is
   // usually a scan whose bulk is images — exactly what Balanced is for — so say
@@ -399,50 +456,83 @@ export default function ExportModal({ open, onClose }: Props) {
           </>
         ) : (
           <>
-            {/* Compression strength — re-compresses the annotated bytes live.
-                Hidden when there is no second level worth picking; see
-                `showStrength`. */}
-            {showStrength && (
+            {/* ⚠️ ALWAYS OFFERED, on every document, and that is the change.
+                This used to be two of three buttons in a "Compression" row that
+                only appeared when rasterising would save ≥20% AND ≥100 KB — so
+                on a text document it was unreachable, which is precisely the
+                document somebody wants flattened. The reason to want it is
+                "nobody can reflow, copy or edit what I signed"; that has
+                nothing to do with file size, so size no longer gates it. */}
             <div className="mb-3">
-              <div className="text-xs uppercase tracking-wide text-slate-500 font-medium mb-1.5">
-                Compression
-              </div>
-              <div
-                className="grid gap-1 p-1 bg-slate-100 rounded-lg"
-                style={{ gridTemplateColumns: `repeat(${offeredQualities.length}, minmax(0, 1fr))` }}
-              >
-                {offeredQualities.map((opt) => {
-                  const active = opt.value === quality
-                  return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setQuality(opt.value)}
-                      disabled={building || compressing}
-                      aria-pressed={active}
-                      className={[
-                        'rounded-md px-2 py-1.5 text-sm font-medium transition-colors disabled:cursor-wait',
-                        active
-                          ? 'bg-white text-orange-700 shadow-sm'
-                          : 'text-slate-600 hover:text-slate-900'
-                      ].join(' ')}
-                    >
-                      {opt.label}
-                    </button>
-                  )
-                })}
-              </div>
-              <div className="mt-1.5 text-xs text-slate-500">
-                {QUALITY_OPTIONS.find((o) => o.value === quality)?.hint}
-              </div>
-              {quality !== 'light' && (
-                <div className="mt-1.5 text-xs text-amber-700">
-                  Every page becomes a picture: the text in the compressed copy can no
-                  longer be selected, searched or read aloud. The Original tab is unaffected.
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={flatten}
+                  onChange={(e) => setQuality(e.target.checked ? DEFAULT_FLATTEN : 'light')}
+                  disabled={building || compressing}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-orange-700 disabled:cursor-wait"
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium text-slate-900">
+                    Flatten pages to images
+                    {flattenSaving !== null && (
+                      <span className="ml-1.5 text-xs font-medium tabular-nums text-emerald-700">
+                        ≈ {formatSize(flattenSaving)} smaller
+                      </span>
+                    )}
+                  </span>
+                  <span className="block text-xs text-slate-500 mt-0.5">
+                    Every page becomes a picture, so nobody can select, copy, search or edit
+                    the text — useful for a document you have signed.
+                  </span>
+                </span>
+              </label>
+
+              {/* Only a choice between the two rasterising levels, so it lives
+                  inside the checkbox it belongs to and appears with it. */}
+              {showStrength && (
+                <div className="mt-2.5 pl-6.5">
+                  <div className="text-xs uppercase tracking-wide text-slate-500 font-medium mb-1.5">
+                    Image quality
+                  </div>
+                  <div
+                    className="grid gap-1 p-1 bg-slate-100 rounded-lg"
+                    style={{ gridTemplateColumns: `repeat(${offeredQualities.length}, minmax(0, 1fr))` }}
+                  >
+                    {offeredQualities.map((opt) => {
+                      const active = opt.value === quality
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setQuality(opt.value)}
+                          disabled={building || compressing}
+                          aria-pressed={active}
+                          className={[
+                            'rounded-md px-2 py-1.5 text-sm font-medium transition-colors disabled:cursor-wait',
+                            active
+                              ? 'bg-white text-orange-700 shadow-sm'
+                              : 'text-slate-600 hover:text-slate-900'
+                          ].join(' ')}
+                        >
+                          {opt.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div className="mt-1.5 text-xs text-slate-500">
+                    {FLATTEN_OPTIONS.find((o) => o.value === quality)?.hint}
+                  </div>
+                </div>
+              )}
+
+              {flatten && (
+                <div className="mt-2 text-xs text-amber-700">
+                  The Original tab is unaffected — it keeps its text layer, so download that
+                  one if you need the text back.
                 </div>
               )}
             </div>
-            )}
 
             <div className="rounded-lg border border-slate-200 overflow-hidden">
               {/* Two tabs are a choice. With compression ruled out there is only
@@ -475,8 +565,14 @@ export default function ExportModal({ open, onClose }: Props) {
                   role="tab"
                   aria-selected={effectiveTab === 'compressed'}
                   onClick={() => setTab('compressed')}
-                  disabled={ready ? !didShrink : false}
-                  title={ready && !didShrink ? noGainNote : undefined}
+                  // ⚠️ `|| flatten`. Disabling this tab is how the modal stops
+                  // somebody downloading a "compressed" copy that saved
+                  // nothing — but once flattening is ticked the second file is
+                  // wanted for what it IS, not for what it weighs, and a
+                  // disabled tab would make the checkbox unusable on exactly
+                  // the documents it was added for.
+                  disabled={ready ? !didShrink && !flatten : false}
+                  title={ready && !didShrink && !flatten ? noGainNote : undefined}
                   className={[
                     'flex-1 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors disabled:cursor-not-allowed',
                     effectiveTab === 'compressed'
@@ -484,14 +580,23 @@ export default function ExportModal({ open, onClose }: Props) {
                       : 'border-transparent text-slate-500 hover:text-slate-700 disabled:text-slate-300 disabled:hover:text-slate-300'
                   ].join(' ')}
                 >
-                  Compressed
+                  {/* Named for what it holds. "Compressed" is a claim about
+                      size, and a deliberately flattened file may well be
+                      bigger — calling that tab Compressed would be wrong in
+                      the one case the user asked for it. */}
+                  {flatten ? 'Flattened' : 'Compressed'}
                   {ready && didShrink && (
                     <span className="ml-2 text-[11px] font-medium tabular-nums text-emerald-700">
                       −{pct.toFixed(0)}%
                     </span>
                   )}
-                  {ready && !didShrink && (
+                  {ready && !didShrink && !flatten && (
                     <span className="ml-2 text-[11px] font-normal text-slate-400">no savings</span>
+                  )}
+                  {ready && !didShrink && flatten && (
+                    <span className="ml-2 text-[11px] font-normal tabular-nums text-slate-400">
+                      {saved < 0 ? `+${formatSize(-saved)}` : 'same size'}
+                    </span>
                   )}
                 </button>
               </div>
@@ -535,15 +640,37 @@ export default function ExportModal({ open, onClose }: Props) {
                       <div className="text-2xl font-semibold text-slate-900 tabular-nums">
                         {formatSize(compSize)}
                       </div>
-                      <div className="text-xs font-medium text-emerald-700">
-                        Saved {formatSize(saved)} ({pct.toFixed(1)}%)
-                      </div>
+                      {/* ⚠️ Three outcomes, not one. Flattening a text document
+                          routinely produces a BIGGER file, and the old single
+                          line rendered that as "Saved -240 KB (-12.0%)" in
+                          green — a saving of a negative number, which is not a
+                          sentence anybody should have to parse. */}
+                      {saved > 0 ? (
+                        <div className="text-xs font-medium text-emerald-700">
+                          Saved {formatSize(saved)} ({pct.toFixed(1)}%)
+                        </div>
+                      ) : saved < 0 ? (
+                        <div className="text-xs font-medium text-amber-700">
+                          {formatSize(-saved)} bigger ({(-pct).toFixed(1)}%)
+                        </div>
+                      ) : (
+                        <div className="text-xs font-medium text-slate-500">Same size</div>
+                      )}
                     </div>
                     <div className="text-[11px] text-slate-400 mt-0.5">
                       {compressed?.fellBackToLossless || quality === 'light'
                         ? 'object-stream re-save'
                         : 'pages rasterised to JPEG'}
                     </div>
+                    {/* ⓘ No "these pages were not flattened" warning here, and
+                        that is not an omission. It was written first, then
+                        deleted once `compressPdf` gained
+                        `keepRasterEvenIfBigger`: with the export dialog passing
+                        that for every rasterising quality, `fellBackToLossless`
+                        can no longer come back true on this path, so the
+                        warning was unreachable UI describing a state that
+                        cannot happen. The fallback is still right for the
+                        Compress dialogs, which ARE asking for a smaller file. */}
                   </>
                 )}
               </div>
@@ -594,7 +721,7 @@ export default function ExportModal({ open, onClose }: Props) {
                 {/* "Download Original" only means something next to a
                     "Download Compressed". On its own it reads as though there
                     were another, better copy being withheld. */}
-                Download{!showVariantTabs ? '' : effectiveTab === 'original' ? ' Original' : ' Compressed'}
+                Download{!showVariantTabs ? '' : effectiveTab === 'original' ? ' Original' : flatten ? ' Flattened' : ' Compressed'}
               </button>
               <button
                 onClick={openPrintPreview}
