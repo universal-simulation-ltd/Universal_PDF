@@ -104,10 +104,10 @@ export default function CompressResultModal({
         </div>
         <div className="-mx-5 min-h-0 flex-1 overflow-y-auto px-5">
 
-        {/* Quality selector — re-compresses live */}
+        {/* Compression selector — re-compresses live */}
         <div className="mb-3">
           <div className="text-xs uppercase tracking-wide text-slate-500 font-medium mb-1.5">
-            Quality
+            Compression
           </div>
           <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-lg">
             {QUALITY_OPTIONS.map((opt) => {

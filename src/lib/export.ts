@@ -690,8 +690,14 @@ export function hasRasterImages(pdf: PDFDocument): boolean {
 // progressively lower render resolution and JPEG quality.
 export type CompressQuality = 'light' | 'balanced' | 'strong'
 
+// ⚠️ 'balanced' is the default the landing page's 1-click compress uses, so it
+// is the setting people actually judge the app by, and it has to survive being
+// looked at. 1.5x/0.70 shrank a 12 MB pack to 860 KB but read visibly soft on
+// screen — the gap to 'light' was a cliff, not a step. 2.0x (≈144 DPI) with
+// JPEG 0.82 lands a few hundred KB higher and stays sharp; 'strong' keeps the
+// aggressive end of the range for when size is all that matters.
 const RASTER_SETTINGS: Record<'balanced' | 'strong', { renderScale: number; jpegQuality: number }> = {
-  balanced: { renderScale: 1.5, jpegQuality: 0.7 },
+  balanced: { renderScale: 2.0, jpegQuality: 0.82 },
   strong: { renderScale: 1.0, jpegQuality: 0.45 }
 }
 
@@ -707,6 +713,13 @@ export interface CompressResult {
   fellBackToLossless?: boolean
 }
 
+// ⚠️ Mobile Safari refuses to back a canvas past roughly 16.7M pixels, and
+// hands back a blank (or null) bitmap rather than an error. A4 at 2x is 2M and
+// nowhere near it, but a poster-sized page is: A0 at 2x is 16M, right on the
+// line. Cap the area and drop the scale to fit, so a big page degrades to a
+// slightly softer render instead of a blank one.
+const MAX_RASTER_PIXELS = 8_000_000
+
 // Render one source page through pdfjs at the given DPI and return JPEG bytes.
 async function rasterizePageToJpeg(
   pdfjsDoc: PDFDocumentProxy,
@@ -715,7 +728,13 @@ async function rasterizePageToJpeg(
   jpegQuality: number
 ): Promise<Uint8Array> {
   const page = await pdfjsDoc.getPage(pageIndex + 1)
-  const viewport = page.getViewport({ scale: renderScale })
+  const unscaled = page.getViewport({ scale: 1 })
+  const pixelsAtScale = unscaled.width * unscaled.height * renderScale * renderScale
+  const scale =
+    pixelsAtScale > MAX_RASTER_PIXELS
+      ? renderScale * Math.sqrt(MAX_RASTER_PIXELS / pixelsAtScale)
+      : renderScale
+  const viewport = page.getViewport({ scale })
   const canvas = document.createElement('canvas')
   canvas.width = viewport.width
   canvas.height = viewport.height

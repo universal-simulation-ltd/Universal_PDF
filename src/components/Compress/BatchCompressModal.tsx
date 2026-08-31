@@ -119,10 +119,10 @@ export default function BatchCompressModal({
           </button>
         </div>
 
-        {/* Quality selector — re-compresses every file */}
+        {/* Compression selector — re-compresses every file */}
         <div className="mb-3">
           <div className="text-xs uppercase tracking-wide text-slate-500 font-medium mb-1.5">
-            Quality — applied to all files
+            Compression — applied to all files
           </div>
           <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-lg">
             {QUALITY_OPTIONS.map((opt) => {
