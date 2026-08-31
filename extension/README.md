@@ -107,9 +107,18 @@ The redirect rule does keep the port, so only that origin is redirected.
 
 ## What the automated spec does not cover
 
-Two gestures live in browser chrome, where nothing can reach them:
+Three things live in browser chrome, where nothing can reach them. **All three
+were checked by hand against Chrome on 2026-08-31 and all three passed** — so
+what follows is the procedure to repeat per release, not an open question.
 
-1. **The permission bubble.** `chrome.permissions.request` raises a prompt in
+**0. The toolbar button itself.** The click is what makes Chrome grant
+`activeTab`, and `activeTab` is what lets the extension read the page — so the
+primary path is the one the spec can least reach. Confirmed: clicking the button
+on a PDF tab opens it in our viewer with no permission prompt at all.
+
+
+1. **The permission bubble.** Confirmed: it names that one host, and nothing
+   else. `chrome.permissions.request` raises a prompt in
    the browser's own UI. Playwright cannot answer it, headless never settles it,
    headed does not either, and there is no Chromium switch to auto-accept —
    all four measured. The spec therefore proves the negatives against the real
@@ -119,9 +128,11 @@ Two gestures live in browser chrome, where nothing can reach them:
    the copy differs by that one key. **Worth doing by hand once per release:**
    tick "Always use Universal PDF on this site" on a real site and confirm
    Chrome's prompt appears, naming that site and no other.
-2. **The right-click entry.** Context menus cannot be driven from Playwright at
-   all. The item is registered for pages and frames; **check by hand** that it
-   appears when you right-click inside Chrome's PDF viewer.
+2. **The right-click entry.** Confirmed: "Open in Universal PDF" does appear in
+   the menu when you right-click inside Chrome's own PDF viewer — which was not
+   obvious, since that is a plugin document rather than an ordinary page.
+   Context menus cannot be driven from Playwright at all, so this one is
+   hand-only, permanently.
 
 ## Not published
 
