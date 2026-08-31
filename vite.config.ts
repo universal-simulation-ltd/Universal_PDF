@@ -111,7 +111,11 @@ export default defineConfig(({ mode }) => {
           // `lib/convert.ts`, which exists precisely so that people who never
           // convert an iPhone photo never pay for it. Same bargain, and the same
           // pair of rules, as Universal Converter and Universal Compress.
-          globIgnores: ['**/heic-to-*.js'],
+          // ⚠️ The Cyrillic/Greek/Hebrew fallback face is 350 KB and matters
+          // only to somebody opening a Word file in one of those alphabets.
+          // Same bargain again: out of the install-time precache, fetched by
+          // `lib/fallbackFont.ts` when a document actually needs it.
+          globIgnores: ['**/heic-to-*.js', 'fonts/*.ttf'],
           // The on-device OCR runtime (Tesseract.js WASM core + English model)
           // is large (~15 MB) and only fetched from the Tesseract CDN when the
           // optional "Make searchable (OCR)" tool is used. Keep it OUT of the
@@ -121,6 +125,17 @@ export default defineConfig(({ mode }) => {
           // user has run it once. Same pattern as Universal Images' background
           // removal. Cross-origin responses are opaque (status 0), so allow that.
           runtimeCaching: [
+            {
+              // The fallback face — cached after the first document that needs
+              // another alphabet, so that person has it offline from then on.
+              urlPattern: /\/fonts\/.*\.ttf$/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'fallback-font',
+                expiration: { maxEntries: 2, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
             {
               // The HEIC decoder — cached after the first iPhone photo, so
               // Images → PDF keeps working offline from then on.
