@@ -74,6 +74,39 @@ function deliverPdf(filePath) {
   else pendingPdfPath = filePath
 }
 
+// Bring the existing window back in front of whatever the user is looking at.
+// `focus()` alone only raises the window WITHIN an app that is already
+// frontmost, and an app being handed a document by Finder or Explorer usually
+// is not — so the app itself has to be raised too.
+function revealMainWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  if (mainWindow.isMinimized()) mainWindow.restore()
+  if (!mainWindow.isVisible()) mainWindow.show()
+  mainWindow.focus()
+  // macOS only: `steal` is what lets a background app pull itself forward.
+  if (process.platform === 'darwin') app.focus({ steal: true })
+}
+
+// A document handed over by the OS — double-click, "Open with → Universal PDF",
+// or a second launch on Windows/Linux.
+//
+// ⚠️ The window has to be CREATED here when there is none, and that is not
+// an edge case: macOS keeps an app running after its last window closes (see
+// `window-all-closed`), so "running, no window" is the ordinary state of a
+// Universal PDF that has been used once already. Handing the document to
+// `deliverPdf` and stopping there parked it in `pendingPdfPath` while NOTHING
+// appeared on screen — the app was frontmost, the menu bar said so, and the
+// document only surfaced when a Dock click happened to run `activate` and
+// build the window that flushed it.
+function openFromOs(filePath) {
+  if (filePath) deliverPdf(filePath)
+  // Before `ready` there is no window to make; `whenReady` is moments away and
+  // createWindow() picks `pendingPdfPath` up on its own.
+  if (!app.isReady()) return
+  if (mainWindow && !mainWindow.isDestroyed()) revealMainWindow()
+  else createWindow()
+}
+
 function createWindow() {
   // Fill the display's full working height (screen minus taskbar) on launch —
   // PDFs are portrait documents, so vertical space is what matters. Width
@@ -211,20 +244,13 @@ if (!gotLock) {
   pendingPdfPath = pdfPathFromArgv(process.argv)
 
   app.on('second-instance', (_event, argv) => {
-    const filePath = pdfPathFromArgv(argv)
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore()
-      mainWindow.focus()
-      if (filePath) deliverPdf(filePath)
-    } else if (filePath) {
-      pendingPdfPath = filePath
-    }
+    openFromOs(pdfPathFromArgv(argv))
   })
 
   // macOS delivers OS-opened files as an event (possibly before `ready`).
   app.on('open-file', (event, filePath) => {
     event.preventDefault()
-    deliverPdf(filePath)
+    openFromOs(filePath)
   })
 
   // Whether this app owns .pdf on the machine, and the attempt to make it so.
@@ -277,7 +303,8 @@ if (!gotLock) {
     return res.ok ? { ok: true, bytes: new Uint8Array(res.bytes), version: res.version } : res
   })
 
-  ipcMain.handle('default-app:status', () => defaultApp.status())
+  ipcMain.handle('default-app:status', () => defaultApp.status())
+
   ipcMain.handle('default-app:set', () => defaultApp.makeDefault())
 
   // The Explorer preview pane. Its last registry key is machine-wide, so
@@ -291,7 +318,10 @@ if (!gotLock) {
     // system browser as a stranger — the desktop app's session lives here and
     // nowhere else.
     installHubHandoff({ icon: path.join(__dirname, '..', 'public', 'icon-512.png') })
-    createWindow()
+    // Guarded, because `open-file` can arrive before this runs and builds the
+    // window itself — an unguarded call would answer one document with two
+    // windows.
+    if (!mainWindow) createWindow()
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow()
     })
