@@ -98,7 +98,9 @@ The installer registers Universal PDF as a `.pdf` file handler, so it appears
 in Windows' right-click *Open with* menu (and can be made the default PDF
 app). Files opened that way — or double-clicked while it's the default — load
 straight into the editor, skipping the landing page; opening another PDF while
-the app is running reuses the existing window.
+the app is running reuses the existing window, and **opens one if there isn't
+one**, which on macOS is what closing the last window leaves you with (the app
+keeps running). See `openFromOs` in [`electron/main.cjs`](electron/main.cjs).
 
 **Each target must be built on its own OS.** electron-builder packages a
 platform-native binary, so cross-building from a plain Linux host won't produce
