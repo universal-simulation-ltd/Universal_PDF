@@ -1,9 +1,10 @@
 import { execSync } from 'node:child_process'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import pkg from './package.json' with { type: 'json' }
+import { checkBuildEnv, buildEnvError } from './scripts/buildEnv.ts'
 
 // Universal PDF is served at opensource.unisim.co.uk/pdf in production. `base`
 // controls where built assets resolve from; in local dev it stays `/`. The
@@ -31,7 +32,26 @@ function resolveBuildSha(): string {
 }
 const BUILD_SHA = resolveBuildSha()
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
+  // ⚠️ Refuse to BUILD without the Supabase pair `src/main.tsx` inlines. Vite
+  // substitutes `undefined` for a missing variable and reports success, so the
+  // first thing to notice used to be a user staring at the error boundary —
+  // once in CI (PR #80) and once in the 0.6.15 macOS build, which was packaged
+  // in a checkout with no `.env.local` and could not start. See
+  // `scripts/buildEnv.ts`.
+  //
+  // Build only, never `vite dev`: a contributor with no credentials can still
+  // run the app locally against the SDK's `?mockauth=1` fixture world, and
+  // taking that away would be a bigger tax than the bug this prevents.
+  //
+  // `loadEnv` reads the `.env*` files AND `process.env` — which is what makes
+  // one check cover both the local path (`.env.local`) and CI, where the
+  // release workflow passes the pair in from repo secrets.
+  if (command === 'build') {
+    const problems = checkBuildEnv(loadEnv(mode, process.cwd(), 'VITE_'))
+    if (problems.length) throw new Error(buildEnvError(problems, mode))
+  }
+
   const isDesktop = mode === 'desktop'
   const BASE_PATH = isDesktop ? './' : mode === 'production' ? '/pdf/' : '/'
   return {

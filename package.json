@@ -34,6 +34,7 @@
     "test:placement-hint": "node e2e/placement-hint.e2e.mjs",
     "test:names": "node --experimental-strip-types scripts/exportName.test.mjs",
     "test:hosted-paths": "node --experimental-strip-types scripts/hostedPath.test.mjs",
+    "test:build-env": "node --experimental-strip-types scripts/buildEnv.test.mjs",
     "check:mobile-bundle": "node scripts/verify-mobile-bundle.mjs",
     "electron": "electron .",
     "thumbnail:build": "powershell -NoProfile -ExecutionPolicy Bypass -File native/win-thumbnail/scripts/build.ps1",

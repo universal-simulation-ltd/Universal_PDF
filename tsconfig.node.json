@@ -5,6 +5,11 @@
     "module": "ESNext",
     "skipLibCheck": true,
     "moduleResolution": "bundler",
+    // `vite.config.ts` imports `./scripts/buildEnv.ts` BY EXTENSION, because
+    // `scripts/buildEnv.test.mjs` imports the same file under plain Node, whose
+    // ESM resolver will not guess one. tsconfig.app.json allows it for the same
+    // reason. Safe with `noEmit`: nothing is written that could keep the path.
+    "allowImportingTsExtensions": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "noEmit": true
