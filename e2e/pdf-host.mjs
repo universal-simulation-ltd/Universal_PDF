@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 
-export function startPdfHost() {
+export function startPdfHost(port = 0) {
   const pdf = readFileSync(join(HERE, 'fixtures', 'sample.pdf'))
   const log = []
   const spent = new Set()
@@ -71,7 +71,7 @@ export function startPdfHost() {
   })
 
   return new Promise((resolve) => {
-    server.listen(0, '127.0.0.1', () => {
+    server.listen(port, '127.0.0.1', () => {
       const { port } = server.address()
       resolve({
         origin: `http://127.0.0.1:${port}`,
