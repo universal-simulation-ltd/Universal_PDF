@@ -24,6 +24,7 @@
 // refactor stayed behaviour-preserving and the existing suite could prove it.
 
 import { DEFAULT_PDF_SETTINGS, ZipArchive, docToPdf, readDocx, readOdt } from '@unisim/doc'
+import { loadFallbackFont } from './fallbackFont'
 
 export type OfficeFormat = 'docx' | 'odt'
 
@@ -141,6 +142,11 @@ export async function convertOfficeFile(file: File): Promise<OfficeConversion> {
     const result = await docToPdf(
       { ...doc, title: doc.title || baseName(file.name) },
       DEFAULT_PDF_SETTINGS,
+      // The Cyrillic/Greek/Hebrew fallback face — see `fallbackFont.ts`. Called
+      // only when the document holds something the base-14 fonts cannot spell,
+      // so an English document never fetches it, and every way it can fail
+      // lands back on the '?' behaviour `droppedSentence` already explains.
+      loadFallbackFont,
     )
     // Named from the *file*, not the document's own title: someone who converts
     // "Site survey.docx" is looking for "Site survey.pdf" afterwards.
