@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GENERATED FILE — do not edit by hand.
+     Source: backoffice/universal-platform/scripts/app-marks/marks.mjs
+     Regenerate: node scripts/app-marks/native-icons.mjs (from backoffice/universal-platform)
+
+     Android 12+ ignores the launch theme's android:background and draws its own
+     splash. Without this the OS picks its default pale background and the brand
+     colour never appears. See splashThemeV31() in the generator. -->
+<resources>
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
+    </style>
+</resources>

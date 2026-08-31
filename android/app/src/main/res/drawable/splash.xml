@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GENERATED FILE — do not edit by hand.
+     Source: backoffice/universal-platform/scripts/app-marks/marks.mjs
+     Regenerate: node scripts/app-marks/native-icons.mjs (from backoffice/universal-platform)
+
+     A layer-list, NOT a bitmap. See ANDROID_SPLASH_DP in the generator: a
+     window-background bitmap is stretched to the window, which squashes the
+     logo on any phone whose aspect ratio differs from the drawable's. A
+     centred <bitmap> inside a layer-list is drawn at its intrinsic size and is
+     never stretched, so this one file is correct on every screen. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/ic_launcher_tile"/>
+    <item>
+        <bitmap android:src="@drawable/splash_mark" android:gravity="center"/>
+    </item>
+</layer-list>
