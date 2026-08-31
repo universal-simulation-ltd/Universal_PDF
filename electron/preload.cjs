@@ -65,6 +65,13 @@ contextBridge.exposeInMainWorld('desktop', {
     status: () => ipcRenderer.invoke('default-app:status'),
     makeDefault: () => ipcRenderer.invoke('default-app:set'),
   },
+  // Convert a Word / OpenDocument file with the user's own LibreOffice, giving
+  // a faithful copy of Word's layout instead of the built-in re-typeset one.
+  // `status` is cheap and cached in main; `convert` is not, so ask first.
+  libreOffice: {
+    status: () => ipcRenderer.invoke('libreoffice:status'),
+    convert: (fileName, bytes) => ipcRenderer.invoke('libreoffice:convert', { fileName, bytes }),
+  },
   // Whether PDFs show in Explorer's preview pane, and turning it on or off.
   // ⚠️ `set` raises a Windows administrator prompt: the key that makes a
   // preview handler visible to the shell is machine-wide.

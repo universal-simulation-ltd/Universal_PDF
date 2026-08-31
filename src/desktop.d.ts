@@ -75,6 +75,31 @@ declare global {
         }>
       }
       /**
+       * Convert a Word / OpenDocument file with the user's OWN LibreOffice,
+       * when the machine happens to have it — a faithful copy of the original
+       * page layout, rather than the built-in re-typeset one.
+       *
+       * ⚠️ Ask `status()` before `convert()`. Not because convert would break
+       * without it, but because the bytes of the user's document should not
+       * cross the IPC boundary at all when there is nothing on the other side
+       * to convert them.
+       *
+       * Every failure resolves `{ ok: false }` with a `reason` — nothing here
+       * throws, and nothing here is worth showing the user. The answer to "no"
+       * is always the built-in converter, which was the only option before
+       * this existed.
+       */
+      libreOffice: {
+        status(): Promise<{ available: boolean; version?: string }>
+        convert(
+          fileName: string,
+          bytes: Uint8Array
+        ): Promise<
+          | { ok: true; bytes: Uint8Array; version?: string }
+          | { ok: false; reason: string; error?: string }
+        >
+      }
+      /**
        * Whether PDFs appear in Explorer's preview pane (Alt+P), and turning
        * that on or off.
        *

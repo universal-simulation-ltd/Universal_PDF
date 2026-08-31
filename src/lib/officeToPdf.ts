@@ -217,16 +217,76 @@ export function isPdfFile(file: File): boolean {
 }
 
 /**
+ * Shown when the user's own LibreOffice did the conversion. Deliberately does
+ * NOT say "the layout may differ", because it mostly won't — but it does name
+ * the one thing that still can, which is fonts.
+ */
+export const LIBREOFFICE_NOTICE =
+  'Converted with LibreOffice on this computer — the page layout should match the original. Fonts this computer doesn’t have are substituted.'
+
+/**
+ * Convert through the user's own LibreOffice, if this is the desktop app and
+ * they happen to have it. Returns `null` for "not available, or didn't work" —
+ * every one of those is a fall back to the built-in converter, never an error,
+ * because the built-in converter was the only option before this existed.
+ *
+ * ⚠️ Unlike `convertOfficeFile`, this does NOT sniff the package to work out
+ * the real format. It doesn't need to: LibreOffice does its own format
+ * detection and has no interest in what we think the file is. The extension is
+ * used only to word the notice.
+ *
+ * See `electron/libreOffice.cjs` for why this is worth having at all, and for
+ * the two things that make it work (a private user profile, and one conversion
+ * at a time).
+ */
+async function tryLibreOffice(file: File): Promise<{ file: File; notice: string } | null> {
+  const api = window.desktop?.libreOffice
+  if (!api) return null
+  try {
+    // Ask before sending: the user's document should not cross the IPC boundary
+    // when there is nothing on the other side to convert it.
+    const { available } = await api.status()
+    if (!available) return null
+
+    const bytes = new Uint8Array(await file.arrayBuffer())
+    const res = await api.convert(file.name, bytes)
+    if (!res.ok) return null
+
+    const pdfName = `${safeFilename(baseName(file.name))}.pdf`
+    return {
+      file: new File([res.bytes as BlobPart], pdfName, { type: 'application/pdf' }),
+      notice: LIBREOFFICE_NOTICE
+    }
+  } catch (err) {
+    // A broken bridge must never take the document with it — the built-in
+    // converter is right there.
+    console.warn('LibreOffice conversion unavailable, using the built-in converter', err)
+    return null
+  }
+}
+
+/**
  * What every "open a document" path calls. A PDF passes straight through; a
  * Word or OpenDocument file is converted here first and the notice comes back
  * with it. Everything else is refused — but a `.doc`, `.rtf` or `.pages` is
  * refused by `convertOfficeFile` with an answer the user can act on, which is
  * why they are let this far rather than filtered out above.
+ *
+ * ⚠️ The LibreOffice attempt is only made for files we would have converted
+ * ourselves. A `.doc` or `.rtf` is refused with advice as before, even though
+ * LibreOffice sitting right there could in fact read both — widening what the
+ * app accepts is a product decision, and it must not become one accidentally
+ * just because a particular machine happens to have LibreOffice installed. The
+ * app has to accept the same formats everywhere.
  */
 export async function toViewablePdf(file: File): Promise<{ file: File; notice?: string }> {
   if (isPdfFile(file)) return { file }
   if (!isOfficeFile(file) && !/\.(doc|rtf|pages)$/i.test(file.name)) {
     throw new OfficeImportError('Please choose a PDF, Word (.docx) or OpenDocument (.odt) file.')
+  }
+  if (isOfficeFile(file)) {
+    const faithful = await tryLibreOffice(file)
+    if (faithful) return faithful
   }
   const conversion = await convertOfficeFile(file)
   return { file: conversion.file, notice: importNoticeFor(conversion) }

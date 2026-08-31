@@ -3,6 +3,7 @@ const path = require('node:path')
 const fs = require('node:fs')
 const defaultApp = require('./defaultApp.cjs')
 const previewPane = require('./previewPane.cjs')
+const libreOffice = require('./libreOffice.cjs')
 const { installHubHandoff } = require('@unisim/sdk/electron')
 
 // Set by `npm run electron:dev` to load the live Vite dev server. When unset
@@ -260,6 +261,20 @@ if (!gotLock) {
       console.error('Failed to save the PDF:', err)
       return { ok: false, error: err.message || 'The PDF could not be written.' }
     }
+  })
+
+  // A Word/OpenDocument file converted by LibreOffice, when the machine happens
+  // to have it. The renderer asks first (`status`) so it only sends the bytes
+  // when there is something to send them to, and treats every failure as "use
+  // the built-in converter" — see electron/libreOffice.cjs.
+  ipcMain.handle('libreoffice:status', () => libreOffice.status())
+  ipcMain.handle('libreoffice:convert', async (_event, payload) => {
+    const bytes = payload && payload.bytes
+    if (!bytes) return { ok: false, reason: 'no-input' }
+    const res = await libreOffice.convert(bytes, payload.fileName)
+    // Buffer does not survive the IPC boundary as a Buffer; hand back a plain
+    // Uint8Array the renderer can put straight into a File.
+    return res.ok ? { ok: true, bytes: new Uint8Array(res.bytes), version: res.version } : res
   })
 
   ipcMain.handle('default-app:status', () => defaultApp.status())
