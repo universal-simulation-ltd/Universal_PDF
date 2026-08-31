@@ -6,6 +6,7 @@ import FileNameEditor from '../Header/FileNameEditor'
 import FindBar from './FindBar'
 import PdfPage from './PdfPage'
 import { maxZoomForDocument } from '../../lib/renderBudget'
+import { setAnchorPage } from '../../lib/renderQueue'
 
 // "100% zoom" in standard PDF viewers means physical paper size on screen.
 // CSS treats 1 inch as 96 px while a PDF point is 1/72 inch, so to render at
@@ -69,6 +70,84 @@ export default function PdfViewer() {
     }).catch(() => {})
     return () => { cancelled = true }
   }, [doc, numPages])
+
+  // The band of pages that carry their interactive layers — see `PdfPage`'s
+  // `active`. Measured from layout rather than fixed at "the anchor ± N",
+  // because how many pages are on screen at once is a function of the zoom: at
+  // 25% on a tall display it is nine or ten, and a fixed radius of four would
+  // leave the pages at the top and bottom of the reader's own screen without
+  // their annotations. The band is what is visible, plus a screen's worth
+  // either side so it is already there when they scroll into it.
+  const [active, setActive] = useState<{ from: number; to: number }>({ from: 0, to: 4 })
+  // ⚠️ A ceiling regardless, so no layout — a document mid-load whose pages are
+  // all still zero-height and stacked at the same y — can put the whole
+  // document back in the band and bring the eight seconds back with it.
+  const MAX_ACTIVE_RADIUS = 12
+
+  // Tell the render queue which page the reader is nearest, so rasterization
+  // follows them. Without it the queue would always work outwards from page 1,
+  // and jumping to page 300 of a long document would sit blank behind 299 pages
+  // that have already been scrolled past. See `renderQueue`.
+  //
+  // ⚠️ Read from layout rather than from arithmetic on `scrollTop`: pages are
+  // only as tall as their own viewport once `getPage` has resolved, so early in
+  // a load the container's height is still growing and any ratio taken off it
+  // points at the wrong page.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el || !doc) return
+    let frame = 0
+
+    function update() {
+      frame = 0
+      const box = el!.getBoundingClientRect()
+      const mid = box.top + box.height / 2
+      // One screen of margin either side: a page enters the band before it can
+      // be scrolled into view, so its layers are never seen arriving.
+      const margin = box.height
+      let best = 0
+      let bestDist = Infinity
+      let first = Infinity
+      let last = -Infinity
+      for (const p of el!.querySelectorAll<HTMLElement>('[data-page-index]')) {
+        const r = p.getBoundingClientRect()
+        const i = Number(p.dataset.pageIndex)
+        const d = Math.abs(r.top + r.height / 2 - mid)
+        if (d < bestDist) {
+          bestDist = d
+          best = i
+        }
+        if (r.bottom > box.top - margin && r.top < box.bottom + margin) {
+          if (i < first) first = i
+          if (i > last) last = i
+        }
+      }
+      setAnchorPage(best)
+      // Nothing intersected — every page is still zero-height, which is the
+      // state a long document is in for its first frames. Fall back to a small
+      // band around the anchor rather than to none at all.
+      let from = first === Infinity ? best - 2 : first
+      let to = last === -Infinity ? best + 2 : last
+      // The anchor is always in its own band, and the band never runs further
+      // than the ceiling in either direction.
+      from = Math.max(0, best - MAX_ACTIVE_RADIUS, Math.min(from, best))
+      to = Math.min(best + MAX_ACTIVE_RADIUS, Math.max(to, best))
+      // Setting state to what it already holds is a no-op in React, so the
+      // common case — scrolling within one page — costs nothing.
+      setActive((prev) => (prev.from === from && prev.to === to ? prev : { from, to }))
+    }
+    function onScroll() {
+      // Coalesced to a frame: this reads layout for every page, and a trackpad
+      // fling delivers scroll events far faster than that is worth doing.
+      if (!frame) frame = requestAnimationFrame(update)
+    }
+    update()
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      el.removeEventListener('scroll', onScroll)
+      if (frame) cancelAnimationFrame(frame)
+    }
+  }, [doc])
 
   // Pages added to an already-zoomed document can push the ceiling below where
   // the zoom already is — come back down rather than sit over budget.
@@ -839,7 +918,15 @@ export default function PdfViewer() {
         >
           <div ref={contentRef} className="flex flex-col items-center gap-6 py-6 px-4">
             {Array.from({ length: numPages }, (_, i) => (
-              <PdfPage key={i} doc={doc} pageIndex={i} scale={scale} isXfa={isXfa} onSized={notifySized} />
+              <PdfPage
+                key={i}
+                doc={doc}
+                pageIndex={i}
+                scale={scale}
+                isXfa={isXfa}
+                active={i >= active.from && i <= active.to}
+                onSized={notifySized}
+              />
             ))}
           </div>
         </div>

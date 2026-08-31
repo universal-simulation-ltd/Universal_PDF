@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { PDFDocumentProxy, PDFPageProxy } from '../../lib/pdfjs'
 import AnnotationLayer from './AnnotationLayer'
 import FormFieldLayer from './FormFieldLayer'
@@ -6,6 +6,7 @@ import SearchHighlightLayer from './SearchHighlightLayer'
 import TextSelectLayer from './TextSelectLayer'
 import XfaPage from './XfaPage'
 import { layerPixelRatio, pagePixelBudget } from '../../lib/renderBudget'
+import { requestRenderSlot, type RenderSlot } from '../../lib/renderQueue'
 
 interface Props {
   doc: PDFDocumentProxy
@@ -30,9 +31,28 @@ interface Props {
    * top of a layout that had already grown to match it.
    */
   onSized?: () => void
+  /**
+   * Whether this page is near enough to the reader to carry its interactive
+   * layers — the Konva annotation stage, the selectable text overlay, the form
+   * fields and the search highlights.
+   *
+   * ⚠️ This is the difference between a long document opening and a long
+   * document hanging, and the cost is not the pixels. Measured on a 400-page
+   * file: with every page carrying its layers, page 1 appeared after **3.73 s**,
+   * because all 400 pages' layers mount in ONE React commit and a Konva stage
+   * is two more canvases apiece. With the layers held back it was **0.16 s**.
+   * The page still draws its own bitmap either way (that is `renderQueue`'s
+   * job) — what waits here is only what you can interact with, and it arrives
+   * before you can reach it.
+   *
+   * Nothing is lost by unmounting: annotations live in `useAnnotationStore` and
+   * filled-in field values in `useFormStore`, so a page that scrolls away and
+   * comes back is rebuilt from the same state it left.
+   */
+  active: boolean
 }
 
-export default function PdfPage({ doc, pageIndex, scale, isXfa, onSized }: Props) {
+function PdfPage({ doc, pageIndex, scale, isXfa, active, onSized }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [size, setSize] = useState<{ width: number; height: number } | null>(null)
   const [page, setPage] = useState<PDFPageProxy | null>(null)
@@ -41,6 +61,7 @@ export default function PdfPage({ doc, pageIndex, scale, isXfa, onSized }: Props
     let cancelled = false
     let renderTask: { cancel: () => void; promise: Promise<void> } | null = null
     let retryTimer: ReturnType<typeof setTimeout> | null = null
+    let slot: RenderSlot | null = null
 
     async function render(attempt = 0) {
       const p = await doc.getPage(pageIndex + 1)
@@ -61,8 +82,9 @@ export default function PdfPage({ doc, pageIndex, scale, isXfa, onSized }: Props
       //
       // How far above CSS resolution that goes is the document's memory budget
       // to give — see `renderBudget`. Every page of the document is rasterized
-      // at once, so a zoomed-in page spends its share of the budget on the
-      // bitmap first and gives up sharpness before the zoom itself is capped.
+      // eventually (`renderQueue` decides only the order), so a zoomed-in page
+      // spends its share of the budget on the bitmap first and gives up
+      // sharpness before the zoom itself is capped.
       const effectiveDpr = layerPixelRatio(
         cssViewport.width,
         cssViewport.height,
@@ -78,6 +100,16 @@ export default function PdfPage({ doc, pageIndex, scale, isXfa, onSized }: Props
       canvas.style.width = `${cssViewport.width}px`
       canvas.style.height = `${cssViewport.height}px`
       setSize({ width: cssViewport.width, height: cssViewport.height })
+
+      // ⚠️ Wait for a turn before spending anything on pixels. Everything above
+      // is cheap and has to happen for every page immediately — the size is
+      // what gives the document its scroll height. Everything below is the
+      // expensive half: a full-size offscreen bitmap and a pdf.js render task.
+      // Letting all N pages do that in the same tick is what kept page 1 off
+      // the screen for the length of the whole document. See `renderQueue`.
+      slot = requestRenderSlot(pageIndex)
+      const go = await slot.granted
+      if (!go || cancelled) return
 
       // Rasterize into an offscreen canvas and blit only when complete. Two
       // reasons, both learned from a touchpad pinch leaving pages permanently
@@ -103,8 +135,12 @@ export default function PdfPage({ doc, pageIndex, scale, isXfa, onSized }: Props
         // failure retries once after a beat rather than leaving the page
         // blank until the next zoom.
         if (!cancelled && attempt === 0) {
+          // ⚠️ Hand the slot back before the retry, or a page that fails twice
+          // holds one of the three for the life of the document.
+          slot?.release()
+          slot = null
           retryTimer = setTimeout(() => {
-            void render(1)
+            runRender(1)
           }, 500)
         }
         return
@@ -117,10 +153,22 @@ export default function PdfPage({ doc, pageIndex, scale, isXfa, onSized }: Props
       ctx.drawImage(off, 0, 0)
     }
 
-    void render()
+    // ⚠️ Every path out of `render` must give the slot back — the early
+    // returns (cancelled, no canvas, no 2D context) as much as the happy one —
+    // or the queue leaks one of its three and the document stops rendering
+    // partway down. ⚠️ The RETRY goes through here too, for the same reason.
+    function runRender(attempt = 0) {
+      void render(attempt).finally(() => {
+        slot?.release()
+        slot = null
+      })
+    }
+    runRender()
     return () => {
       cancelled = true
       renderTask?.cancel()
+      slot?.release()
+      slot = null
       if (retryTimer) clearTimeout(retryTimer)
     }
   }, [doc, pageIndex, scale, isXfa])
@@ -152,15 +200,15 @@ export default function PdfPage({ doc, pageIndex, scale, isXfa, onSized }: Props
       ) : (
         <>
           <canvas ref={canvasRef} className="block" />
-          {size && <SearchHighlightLayer pageIndex={pageIndex} scale={scale} />}
-          {size && (
+          {size && active && <SearchHighlightLayer pageIndex={pageIndex} scale={scale} />}
+          {size && active && (
             <AnnotationLayer pageIndex={pageIndex} width={size.width} height={size.height} scale={scale} />
           )}
           {/* Selectable text overlay — inert unless the Select-text tool is
               active (see TextSelectLayer). Rendered after the annotation Stage
               so it can sit on top while selecting. */}
-          {size && page && <TextSelectLayer page={page} scale={scale} />}
-          {size && page && (
+          {size && active && page && <TextSelectLayer page={page} scale={scale} />}
+          {size && active && page && (
             <FormFieldLayer
               page={page}
               pageIndex={pageIndex}
@@ -173,3 +221,8 @@ export default function PdfPage({ doc, pageIndex, scale, isXfa, onSized }: Props
     </div>
   )
 }
+
+// ⚠️ Memoised: the viewer re-renders on every change of the anchor page, and
+// without this that walks all N pages' subtrees. With it, only the handful
+// whose `active` actually flipped re-render.
+export default memo(PdfPage)
