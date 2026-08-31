@@ -20,6 +20,23 @@
 /pdf/og-image.png         /og-image.png         200
 /pdf/unisim-icon.png      /unisim-icon.png      200
 
+# The fallback font (@unisim/doc embeds it so Cyrillic, Greek and Hebrew stop
+# converting to '?'). ⚠️ It was missing from this list for the whole of the day
+# the font shipped, and nothing showed it: `fallbackFont.ts` checks the sfnt
+# magic number, so the SPA shell below came back, was read as "no font
+# available", and every document converted with '?' exactly as before. Measured
+# 2026-08-31 before this rule: 200 text/html, 3,442 bytes of index.html.
+# ⚠️ These files are all 200s — check `content-type`, not the status code.
+/pdf/fonts/*              /fonts/:splat         200
+
+# PWA install icons. The generated manifest names icon-192 and icon-512 and
+# resolves them against the /pdf/ scope, so without these the installed app
+# falls back to favicon.svg and the PNGs are dead. icon-180 is the iOS
+# apple-touch-icon.
+/pdf/icon-180.png         /icon-180.png         200
+/pdf/icon-192.png         /icon-192.png         200
+/pdf/icon-512.png         /icon-512.png         200
+
 # Bare /pdf (no trailing slash) — redirect to canonical /pdf/ so the SPA loads.
 /pdf                      /pdf/                 301
 
