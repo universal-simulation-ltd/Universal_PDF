@@ -165,6 +165,16 @@ export default function LivePreview() {
                 doc={doc}
                 pageIndex={i}
                 scale={PREVIEW_SCALE}
+                // ⚠️ THE RAW PAGE COUNT, and `renderBudget.ts` tells you not
+                // to — read the rest of this before "fixing" it. Its
+                // `budgetedPageCount` caps the divisor at `MAX_RETAINED_PAGES`
+                // because the VIEWER only ever holds canvases for the band of
+                // pages around the reader. This preview is not windowed: the
+                // map below mounts a canvas for every page of the document at
+                // once, with the viewer still mounted behind it. Capping the
+                // divisor here would hand a 251-page preview a 25-page
+                // allowance — ten times the budget, which is a killed web view
+                // on a phone rather than a blurry page.
                 budget={pagePixelBudget(doc.numPages)}
               />
             ))}
