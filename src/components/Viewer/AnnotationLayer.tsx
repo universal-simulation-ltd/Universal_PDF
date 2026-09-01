@@ -771,14 +771,14 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       if (!node.isDragging()) continue
       node.stopDrag()
       const ann = annos.find((a) => a.id === id)
-      if (ann) node.position(nodeHomePosition(ann))
+      if (ann) restoreNodeHome(node, ann)
     }
     // Members of a group drag are moved directly by onShapeDragMove, so they
     // are not "dragging" themselves and need putting back explicitly.
     for (const id of useAnnotationStore.getState().selectedIds) {
       const node = shapeRefs.current.get(id)
       const ann = annos.find((a) => a.id === id)
-      if (node && ann) node.position(nodeHomePosition(ann))
+      if (node && ann) restoreNodeHome(node, ann)
     }
     // A resize/rotate already under way is stopped where it stands rather than
     // reverted — Konva's Transformer has no undo for a partial transform, and
@@ -1257,6 +1257,54 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     }
   }
 
+  // The "This will be redacted on export" caption is a SIBLING of the redaction
+  // Rect, not a child (see the `redact` case in the render for why), so nothing
+  // carries it along when Konva drags or resizes that Rect — and the store,
+  // which is where its x/y come from, is only written on dragend/transformend.
+  // Left alone it sits at the box's old home for the whole gesture. Move it
+  // imperatively each frame instead: no React render per pointer move, so it
+  // tracks the finger exactly rather than lagging a frame behind it.
+  const redactHintRefs = useRef(new Map<string, Konva.Text>())
+
+  function redactHintRefSetter(id: string) {
+    return (node: Konva.Text | null) => {
+      if (node) redactHintRefs.current.set(id, node)
+      else redactHintRefs.current.delete(id)
+    }
+  }
+
+  // Keep in step with the caption's props in the `redact` render branch — this
+  // is the same geometry applied by hand.
+  function placeRedactHint(id: string, box: { x: number; y: number; width: number; height: number }) {
+    const hint = redactHintRefs.current.get(id)
+    if (!hint) return
+    hint.position({ x: box.x + 4, y: box.y })
+    hint.width(Math.max(0, box.width - 8))
+    hint.height(box.height)
+    hint.fontSize(Math.min(11, box.height * 0.5))
+  }
+
+  // Put a node back where the model says it belongs after a cancelled gesture,
+  // and take the caption with it. React will not: the annotation never changed,
+  // so the caption's x/y props are identical to last render and react-konva
+  // skips them — leaving it stranded wherever the abandoned drag pushed it.
+  function restoreNodeHome(node: Konva.Node, a: Annotation) {
+    node.position(nodeHomePosition(a))
+    if (a.type === 'redact') placeRedactHint(a.id, a)
+  }
+
+  // Live geometry of a shape mid-gesture: a drag moves x/y and leaves the size
+  // alone; a Transformer resize leaves width/height alone and scales instead
+  // (onShapeTransformEnd bakes the scale back into the stored size at the end).
+  function syncRedactHint(id: string, node: Konva.Node) {
+    placeRedactHint(id, {
+      x: node.x(),
+      y: node.y(),
+      width: node.width() * node.scaleX(),
+      height: node.height() * node.scaleY()
+    })
+  }
+
   function onShapeClick(id: string, e?: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
     if (tool !== 'select') return
     // Shift-clicks are handled on pointerdown (toggle); don't let the trailing
@@ -1373,6 +1421,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // selected node by the same delta so the group moves rigidly together.
   function onShapeDragMove(a: Annotation, e: Konva.KonvaEventObject<DragEvent>) {
     if (gestureCancelled.current) return
+    if (a.type === 'redact') syncRedactHint(a.id, e.target)
     const last = groupDragLast.current
     if (!last) return
     const ids = useAnnotationStore.getState().selectedIds
@@ -1384,7 +1433,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     for (const id of ids) {
       if (id === a.id) continue
       const n = shapeRefs.current.get(id)
-      if (n) n.position({ x: n.x() + dx, y: n.y() + dy })
+      if (!n) continue
+      n.position({ x: n.x() + dx, y: n.y() + dy })
+      // No-op unless this member is a redaction (nothing else registers a hint).
+      syncRedactHint(id, n)
     }
     groupDragLast.current = { x: node.x(), y: node.y() }
     trRef.current?.forceUpdate()
@@ -1840,6 +1892,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                       y={a.y}
                       width={a.width}
                       height={a.height}
+                      // A resize scales this Rect live and only commits the new
+                      // size on transformend, so the caption needs dragging
+                      // along frame by frame here too — same as onShapeDragMove.
+                      onTransform={(e) => syncRedactHint(a.id, e.target)}
                       fill={hex}
                       // A pale redaction blanks a white page, so without a hint it
                       // would be invisible in the editor — outline it (the border is
@@ -1849,6 +1905,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                     />
                     {hint && (
                       <Text
+                        ref={redactHintRefSetter(a.id)}
                         listening={false}
                         x={a.x + 4}
                         y={a.y}
