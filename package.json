@@ -37,6 +37,7 @@
     "test:progressive-load": "node e2e/progressive-load.e2e.mjs",
     "test:lock": "node e2e/lock-pdf.e2e.mjs",
     "test:lock-password": "node --experimental-strip-types scripts/lockPassword.test.mjs",
+    "test:sign-access": "node --experimental-strip-types scripts/signAccessSecret.test.mjs",
     "test:encrypt": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/pdfEncrypt.test.mjs",
     "test:names": "node --experimental-strip-types scripts/exportName.test.mjs",
     "test:hosted-paths": "node --experimental-strip-types scripts/hostedPath.test.mjs",

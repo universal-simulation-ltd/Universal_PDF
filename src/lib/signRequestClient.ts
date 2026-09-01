@@ -1,4 +1,5 @@
 import { useUniversal } from '@unisim/sdk'
+import { hashSecret, randomHex, generateAccessPin } from './signAccessSecret'
 
 // Client wrappers for the "Send to sign" Edge Functions.
 //
@@ -7,7 +8,14 @@ import { useUniversal } from '@unisim/sdk'
 // - send-sign-request (sender side): email the request out with the PDF
 //   attached; a 501 not_configured response means "fall back to mailto:".
 //
-// Backend: migration 0057_pdf_sign_requests + the two functions in
+// On a request minted with verification on (migration 0131), three more
+// recipient-side actions run BEFORE the document exists as far as the client is
+// concerned: `begin` (what the holding page shows), `requestAccessCode` (the
+// typed address is compared and a code emailed to the STORED one), and
+// `verifyAccess` (code + optional PIN → a session). The session is then required
+// by BOTH `load` and `submit`.
+//
+// Backend: migrations 0057 + 0058 + 0131 and the two functions in
 // universal-platform/supabase/functions/.
 
 type Supabase = ReturnType<typeof useUniversal>['supabase']
@@ -37,17 +45,20 @@ function base64FromBytes(bytes: Uint8Array): string {
 export interface LoadSignRequestResult {
   ok: boolean
   error?: string
-  code?: 'invalid_token' | 'expired' | 'already_signed' | 'deleted' | 'completed' | (string & {})
+  code?: 'invalid_token' | 'expired' | 'already_signed' | 'deleted' | 'completed'
+    | 'verification_required' | 'verification_expired' | 'no_recipient' | (string & {})
   docName?: string
   signedUrl?: string
   party?: { role: 'requester' | 'recipient'; status: 'pending' | 'signed' }
   alreadySigned?: boolean
 }
 
-/** Recipient: validate the token and get the document (name + signed URL). */
-export async function loadSignRequest(supabase: Supabase, token: string): Promise<LoadSignRequestResult> {
+/** Recipient: validate the token and get the document (name + signed URL).
+ *  `session` is required when the request was minted with verification on —
+ *  without it the server answers `verification_required`. */
+export async function loadSignRequest(supabase: Supabase, token: string, session?: string): Promise<LoadSignRequestResult> {
   const { data, error } = await supabase.functions.invoke('pdf-sign-request', {
-    body: { action: 'load', token },
+    body: { action: 'load', token, session },
   })
   if (error) {
     // FunctionsHttpError carries the response — surface the body's message/code.
@@ -75,9 +86,13 @@ export async function submitSignedPdf(
   token: string,
   bytes: Uint8Array,
   annotations: Array<{ type?: string; opacity?: number; pageIndex?: number }>,
+  session?: string,
 ): Promise<SubmitSignedResult> {
+  // ⚠️ The session goes on the SUBMIT too, not just the load. The server
+  // enforces it on both — guarding only the view would leave a forwarded link
+  // able to sign the document without ever opening it.
   const { data, error } = await supabase.functions.invoke('pdf-sign-request', {
-    body: { action: 'submit', token, pdfBase64: base64FromBytes(bytes), annotations },
+    body: { action: 'submit', token, pdfBase64: base64FromBytes(bytes), annotations, session },
   })
   if (error) {
     const body = await parseFunctionError(error)
@@ -158,4 +173,130 @@ async function parseFunctionError(error: unknown): Promise<{ error?: string; cod
     }
   }
   return {}
+}
+
+// ── Verified access (migration 0131) ────────────────────────────────────────
+
+export interface BeginSignRequestResult {
+  ok: boolean
+  error?: string
+  code?: string
+  docName?: string
+  /** False for every request minted before 0131, and for any the sender left
+   *  open — the caller then goes straight to `loadSignRequest`. */
+  requireVerification?: boolean
+  hasPin?: boolean
+  /** e.g. `j••••@u•••••.co.uk`, or null if no address is on file. */
+  maskedEmail?: string | null
+  role?: 'requester' | 'recipient'
+  alreadySigned?: boolean
+  completed?: boolean
+}
+
+/** Recipient: what the holding page needs. Returns no document and no signed
+ *  URL, and moves nothing — safe for a link scanner to hit. */
+export async function beginSignRequest(supabase: Supabase, token: string): Promise<BeginSignRequestResult> {
+  const { data, error } = await supabase.functions.invoke('pdf-sign-request', {
+    body: { action: 'begin', token },
+  })
+  if (error) {
+    const body = await parseFunctionError(error)
+    return { ok: false, error: body.error ?? error.message, code: body.code }
+  }
+  return (data ?? { ok: false, error: 'No response' }) as BeginSignRequestResult
+}
+
+export interface RequestAccessCodeResult {
+  ok: boolean
+  error?: string
+  code?: 'email_mismatch' | 'too_soon' | 'too_many_sends' | 'not_configured' | 'no_recipient' | (string & {})
+  maskedEmail?: string
+  expiresInMinutes?: number
+  retryAfter?: number
+}
+
+/**
+ * Recipient: "this is my address, send me a code."
+ *
+ * ⚠️ The address is a CLAIM the server compares against the one the sender
+ * stored; the code is emailed to the stored one either way. Nothing the caller
+ * types can redirect it.
+ */
+export async function requestAccessCode(
+  supabase: Supabase,
+  token: string,
+  email: string,
+): Promise<RequestAccessCodeResult> {
+  const { data, error } = await supabase.functions.invoke('pdf-sign-request', {
+    body: { action: 'request_code', token, email },
+  })
+  if (error) {
+    const body = await parseFunctionError(error)
+    return { ok: false, error: body.error ?? error.message, code: body.code }
+  }
+  return (data ?? { ok: false, error: 'No response' }) as RequestAccessCodeResult
+}
+
+export interface VerifyAccessResult {
+  ok: boolean
+  error?: string
+  code?: 'bad_credentials' | 'code_expired' | 'too_many_attempts' | 'no_code' | (string & {})
+  /** Hand this to `loadSignRequest` and `submitSignedPdf`. */
+  session?: string
+  triesLeft?: number
+  expiresInMinutes?: number
+}
+
+/** Recipient: the emailed code, plus the sender's PIN if there is one. */
+export async function verifyAccess(
+  supabase: Supabase,
+  token: string,
+  input: { code: string; pin?: string },
+): Promise<VerifyAccessResult> {
+  const { data, error } = await supabase.functions.invoke('pdf-sign-request', {
+    body: { action: 'verify', token, code: input.code, pin: input.pin },
+  })
+  if (error) {
+    const body = await parseFunctionError(error)
+    return { ok: false, error: body.error ?? error.message, code: body.code }
+  }
+  return (data ?? { ok: false, error: 'No response' }) as VerifyAccessResult
+}
+
+// ── Sender side: turning the protection on ──────────────────────────────────
+
+/**
+ * Sender: switch verification on for a freshly minted request, and store the
+ * hash of the optional PIN.
+ *
+ * ⚠️ A separate UPDATE rather than part of the insert because
+ * `createSignRequest` lives in `@unisim/sdk` and does not know about these
+ * columns. The UPDATE only started working in migration 0131, which added the
+ * member update policy that `pdf_sign_requests` never had — see the note there
+ * about `updateSignRequestRecipient` having silently matched zero rows.
+ *
+ * The PIN itself is never sent anywhere: only its salt and hash leave the
+ * browser. The sender is shown it once and has to pass it on themselves.
+ */
+export { generateAccessPin }
+
+export async function applySignRequestProtection(
+  supabase: Supabase,
+  requestId: string,
+  opts: { requireVerification: boolean; pin?: string | null },
+): Promise<{ ok: boolean; error?: string }> {
+  const patch: Record<string, unknown> = {
+    require_verification: opts.requireVerification,
+    has_access_pin: !!opts.pin,
+    access_pin_hash: null,
+    access_pin_salt: null,
+  }
+  if (opts.pin) {
+    const salt = randomHex(16)
+    patch.access_pin_salt = salt
+    patch.access_pin_hash = await hashSecret(opts.pin, salt)
+  }
+  const { error } = await supabase.from('pdf_sign_requests').update(patch).eq('id', requestId)
+  if (error) return { ok: false, error: error.message }
+  return { ok: true }
 }

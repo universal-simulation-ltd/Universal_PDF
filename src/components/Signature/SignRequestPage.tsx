@@ -5,7 +5,8 @@ import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { currentPdfBytes } from '../../lib/hostedStore'
 import { downloadPdfBytes } from '../../lib/export'
-import { loadSignRequest, submitSignedPdf, certLink } from '../../lib/signRequestClient'
+import { beginSignRequest, loadSignRequest, submitSignedPdf, certLink } from '../../lib/signRequestClient'
+import SignRequestGate from './SignRequestGate'
 
 /**
  * Recipient side of "Send to sign" (opened via `?signdoc=<token>` from the
@@ -20,7 +21,20 @@ export default function SignRequestPage({ token }: { token: string }) {
   const loadFile = usePdfStore((s) => s.loadFile)
   const doc = usePdfStore((s) => s.doc)
 
-  const [phase, setPhase] = useState<'loading' | 'ready' | 'submitting' | 'done' | 'error'>('loading')
+  // 'gate' = a protected link waiting on the recipient to prove the email
+  // address it was sent to is theirs. See SignRequestGate.
+  const [phase, setPhase] = useState<'loading' | 'gate' | 'ready' | 'submitting' | 'done' | 'error'>('loading')
+  const [gate, setGate] = useState<{ docName: string; maskedEmail: string | null; hasPin: boolean } | null>(null)
+  // ⚠️ Held in React state only — deliberately NOT in localStorage or the URL.
+  // It is a bearer credential for this document, and the whole point of the
+  // gate is that possession of a link is not enough; leaving the session behind
+  // on a shared machine would reintroduce exactly that.
+  const [session, setSession] = useState<string | undefined>(undefined)
+  // ⚠️ A session that expires WHILE somebody is signing must not cost them the
+  // signature. This re-opens the gate as an overlay over the editor rather than
+  // sending them back through `openDocument`, which would reload the PDF and
+  // wipe every annotation they had just placed.
+  const [reverify, setReverify] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [docName, setDocName] = useState<string>('document.pdf')
   const [banner, setBanner] = useState(true)
@@ -32,7 +46,31 @@ export default function SignRequestPage({ token }: { token: string }) {
     if (startedRef.current) return // StrictMode double-mount guard
     startedRef.current = true
     ;(async () => {
-      const res = await loadSignRequest(supabase, token)
+      // ⚠️ `begin` first, always. It returns no document and no signed URL, so
+      // a link scanner that fetches the URL learns nothing and moves nothing —
+      // and for an unprotected request it simply says so and we fall straight
+      // through to the load below, exactly as before 0131.
+      const pre = await beginSignRequest(supabase, token)
+      if (pre.ok && pre.requireVerification) {
+        setGate({
+          docName: pre.docName ?? 'document.pdf',
+          maskedEmail: pre.maskedEmail ?? null,
+          hasPin: !!pre.hasPin,
+        })
+        setDocName(pre.docName ?? 'document.pdf')
+        setPhase('gate')
+        return
+      }
+      await openDocument(undefined)
+    })()
+  }, [supabase, token, loadFile])
+
+  // Fetch + load the document. `sess` is required for a verified request and
+  // ignored by the server for any other.
+  async function openDocument(sess: string | undefined) {
+    setPhase('loading')
+    {
+      const res = await loadSignRequest(supabase, token, sess)
       if (!res.ok || !res.signedUrl) {
         setError(
           res.code === 'expired' ? 'This signing link has expired. Ask the sender for a fresh one.'
@@ -56,10 +94,13 @@ export default function SignRequestPage({ token }: { token: string }) {
         setError((e as Error).message)
         setPhase('error')
       }
-    })()
-  }, [supabase, token, loadFile])
+    }
+  }
 
-  async function onSubmit() {
+  // ⚠️ `sessionOverride` exists because `setSession` has not landed yet when the
+  // re-verify overlay calls straight back into this. Reading `session` from
+  // state here would resubmit with the OLD, expired one and loop.
+  async function onSubmit(sessionOverride?: string) {
     if (phase !== 'ready') return
     // Nudge rather than block: signing is the point, but the sender may only
     // want a tick or a date — so confirm instead of refusing.
@@ -74,8 +115,14 @@ export default function SignRequestPage({ token }: { token: string }) {
       const { bytes } = await currentPdfBytes()
       // Send the structured annotation set too, so the server can classify what
       // was added (signature vs other edits) into the provenance log.
-      const res = await submitSignedPdf(supabase, token, bytes, anns)
+      const res = await submitSignedPdf(supabase, token, bytes, anns, sessionOverride ?? session)
       if (!res.ok) {
+        if (res.code === 'verification_expired' || res.code === 'verification_required') {
+          setError('Your confirmation expired. Confirm your email again and your signature will be sent.')
+          setReverify(true)
+          setPhase('ready')
+          return
+        }
         setError(res.code === 'already_signed'
           ? 'You have already signed this document.'
           : res.code === 'completed'
@@ -96,6 +143,41 @@ export default function SignRequestPage({ token }: { token: string }) {
   function downloadCopy() {
     if (!signedCopy) return
     downloadPdfBytes(signedCopy.slice(), docName.replace(/\.pdf$/i, '') + '-signed.pdf')
+  }
+
+  // Re-verification after an expiry mid-signature: the same gate, but reached
+  // from the editor, and on success it retries the submit instead of reloading
+  // the file.
+  if (reverify && gate) {
+    return (
+      <SignRequestGate
+        token={token}
+        docName={gate.docName}
+        maskedEmail={gate.maskedEmail}
+        hasPin={gate.hasPin}
+        onVerified={(s) => {
+          setSession(s)
+          setReverify(false)
+          setError(null)
+          void onSubmit(s)
+        }}
+      />
+    )
+  }
+
+  if (phase === 'gate' && gate) {
+    return (
+      <SignRequestGate
+        token={token}
+        docName={gate.docName}
+        maskedEmail={gate.maskedEmail}
+        hasPin={gate.hasPin}
+        onVerified={(s) => {
+          setSession(s)
+          void openDocument(s)
+        }}
+      />
+    )
   }
 
   // ── Terminal states get a clean full-screen card instead of the editor ──
@@ -178,7 +260,7 @@ export default function SignRequestPage({ token }: { token: string }) {
             {error && <p className="mt-2 text-xs text-rose-600">{error}</p>}
             <button
               type="button"
-              onClick={onSubmit}
+              onClick={() => { void onSubmit() }}
               disabled={phase === 'submitting'}
               className="mt-3 w-full rounded-lg bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
             >

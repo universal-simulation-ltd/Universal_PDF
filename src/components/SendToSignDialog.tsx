@@ -16,6 +16,8 @@ import { usePdfStore } from '../stores/pdfStore'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { storeCurrentPdf, currentPdfBytes } from '../lib/hostedStore'
 import {
+  applySignRequestProtection,
+  generateAccessPin,
   signRequestLink,
   certLink,
   sendSignRequestEmail,
@@ -81,6 +83,25 @@ export default function SendToSignDialog() {
   const [email, setEmail] = useState('')
   const [emailState, setEmailState] = useState<'idle' | 'sending' | 'sent' | 'mailto'>('idle')
 
+  // ⚠️ WHO CAN OPEN THE DOCUMENT — the one choice on this dialog that changes
+  // what the link is. Unprotected, the party token is a BEARER credential:
+  // whoever holds the URL is the signer, so a forwarded email signs the
+  // contract. Protected, the recipient has to prove they can read the address
+  // it was addressed to before the document exists for them at all.
+  //
+  // Not labelled "secure" / "non-secure". The property is what the sender needs
+  // to weigh, and a grade invites them to pick the flattering one without
+  // reading. Migration 0131 has the threat model.
+  const [protect, setProtect] = useState(false)
+  // Generated, never typed. See `generateAccessPin` — the sender is shown it
+  // once here and has to pass it on by phone; only its hash is stored, so it
+  // cannot be looked up again afterwards.
+  const [usePin, setUsePin] = useState(false)
+  const [pin, setPin] = useState<string | null>(null)
+  // The address baked into a protected request at mint time, lower-cased. Null
+  // for an unprotected one, where the address is free to change.
+  const [normalizedEmailAtMint, setNormalizedEmailAtMint] = useState<string | null>(null)
+
   if (!open) return null
 
   const signedIn = !!session?.user && session.user.is_anonymous !== true
@@ -97,6 +118,10 @@ export default function SendToSignDialog() {
     setEmail('')
     setEmailState('idle')
     setRedactConfirm('')
+    setProtect(false)
+    setUsePin(false)
+    setPin(null)
+    setNormalizedEmailAtMint(null)
   }
 
   // ── Email-verification gate ──
@@ -134,6 +159,13 @@ export default function SendToSignDialog() {
   // ── Store + mint the link ──
   async function onCreateLink() {
     if (!doc || !activeOrgId || busy) return
+    // ⚠️ The stored address is the ONE thing the gate compares against, so a
+    // protected request cannot be minted without it. Filling it in later is not
+    // an option worth offering: it has to be right before the link exists.
+    if (protect && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError('Enter the recipient’s email address — a protected link is checked against it.')
+      return
+    }
     setBusy(true)
     setError(null)
     try {
@@ -157,6 +189,25 @@ export default function SendToSignDialog() {
         setError(req.error ?? 'Could not create the signing link.')
         return
       }
+      // ⚠️ Applied BEFORE the link is shown, and a failure here abandons the
+      // whole request rather than handing over an unprotected link the sender
+      // believes is protected. That silent downgrade is the worst thing this
+      // dialog could do.
+      let mintedPin: string | null = null
+      if (protect) {
+        mintedPin = usePin ? generateAccessPin() : null
+        const applied = await applySignRequestProtection(supabase, req.requestId, {
+          requireVerification: true,
+          pin: mintedPin,
+        })
+        if (!applied.ok) {
+          setError(`Could not protect this link (${applied.error ?? 'unknown error'}), so it has not been shared. Nothing was sent.`)
+          return
+        }
+      }
+      setPin(mintedPin)
+      setNormalizedEmailAtMint(protect ? email.trim().toLowerCase() : null)
+
       const recipient = req.parties?.find((p) => p.role === 'recipient')
       const requester = req.parties?.find((p) => p.role === 'requester')
       setMinted({
@@ -189,6 +240,14 @@ export default function SendToSignDialog() {
   async function onSendEmail() {
     if (!minted || busy) return
     const to = email.trim()
+    // ⚠️ On a protected request the stored address is what the gate compares
+    // against, and it was fixed when the link was minted. Emailing it somewhere
+    // else would send a link its recipient can never open — a silent dead end
+    // that looks exactly like a broken link.
+    if (protect && normalizedEmailAtMint && to.toLowerCase() !== normalizedEmailAtMint) {
+      setError(`This link is locked to ${normalizedEmailAtMint}. Create a new link to send it to a different address.`)
+      return
+    }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
       setError('Enter a valid email address.')
       return
@@ -199,11 +258,20 @@ export default function SendToSignDialog() {
     try {
       // Record who it went to (best-effort), then send with the PDF attached.
       updateSignRequestRecipient(supabase, minted.id, to).catch(() => {})
+      // ⚠️ NO ATTACHMENT ON A PROTECTED REQUEST, and this is the line that
+      // makes the protection mean anything. The whole point is that the
+      // document does not open until the recipient proves the address is
+      // theirs; attaching the same PDF to the same email hands it over
+      // unconditionally to anyone the message is forwarded to, gate or no gate.
       let bytes: Uint8Array | undefined
-      try {
-        bytes = (await currentPdfBytes()).bytes
-      } catch {
-        bytes = undefined // attachment is a bonus; the link is the substance
+      if (protect) {
+        bytes = undefined
+      } else {
+        try {
+          bytes = (await currentPdfBytes()).bytes
+        } catch {
+          bytes = undefined // attachment is a bonus; the link is the substance
+        }
       }
       const res = await sendSignRequestEmail(supabase, {
         to,
@@ -345,7 +413,29 @@ export default function SendToSignDialog() {
                   </div>
                 ) : minted ? (
                   <div className="mt-3">
-                    <p className="text-xs text-slate-500">Anyone with this link can open and sign <strong>{minted.docName}</strong> (expires in 30 days, or when you delete the stored copy):</p>
+                    <p className="text-xs text-slate-500">
+                      {protect
+                        ? <>Only <strong>{email.trim()}</strong> can open and sign <strong>{minted.docName}</strong> — they must confirm a code sent to that address (expires in 30 days, or when you delete the stored copy):</>
+                        : <>Anyone with this link can open and sign <strong>{minted.docName}</strong> (expires in 30 days, or when you delete the stored copy):</>}
+                    </p>
+
+                    {/* ⚠️ SHOWN ONCE AND NEVER AGAIN. Only a salted hash is
+                        stored, so this dialog is the only place this PIN will
+                        ever exist — reopening the request cannot bring it back.
+                        Said plainly, because a sender who assumes they can look
+                        it up later locks their own recipient out. */}
+                    {pin && (
+                      <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                        <p className="text-xs font-medium text-amber-900">
+                          Read this PIN to them by phone or text — not by email
+                        </p>
+                        <div className="mt-1.5 text-2xl font-bold tracking-[0.3em] text-amber-900 tabular-nums">{pin}</div>
+                        <p className="mt-1.5 text-xs text-amber-800">
+                          Write it down now. It is not stored, so it cannot be shown again — if it
+                          is lost you will need to send a new link.
+                        </p>
+                      </div>
+                    )}
                     <div className="mt-2 flex items-center gap-2">
                       <input
                         readOnly
@@ -403,6 +493,90 @@ export default function SendToSignDialog() {
                       />
                     </div>
                   )}
+                  {/* ⚠️ WHO CAN OPEN IT — asked BEFORE the link is minted,
+                      because the answer is baked into the request row and there
+                      is no member-facing way to change it afterwards. */}
+                  <div className="mt-3 rounded-lg border border-slate-200 p-3">
+                    <div className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+                      Who can open it
+                    </div>
+                    <label className="flex cursor-pointer items-start gap-2.5">
+                      <input
+                        type="radio"
+                        name="sign-protect"
+                        checked={!protect}
+                        onChange={() => setProtect(false)}
+                        disabled={busy}
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-orange-700"
+                      />
+                      <span className="min-w-0">
+                        <span className="block text-sm text-slate-900">Anyone with the link</span>
+                        <span className="block text-xs text-slate-500">
+                          Simplest. If the email is forwarded, whoever receives it can sign.
+                        </span>
+                      </span>
+                    </label>
+                    <label className="mt-2.5 flex cursor-pointer items-start gap-2.5">
+                      <input
+                        type="radio"
+                        name="sign-protect"
+                        checked={protect}
+                        onChange={() => setProtect(true)}
+                        disabled={busy}
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-orange-700"
+                      />
+                      <span className="min-w-0">
+                        <span className="block text-sm text-slate-900">Only the person you address it to</span>
+                        <span className="block text-xs text-slate-500">
+                          They enter their email address and a code we send them, before the
+                          document opens. A forwarded link is no use to anyone else.
+                        </span>
+                      </span>
+                    </label>
+
+                    {protect && (
+                      <div className="mt-3 border-t border-slate-100 pt-3">
+                        <label className="block text-xs font-medium text-slate-700" htmlFor="sign-recipient">
+                          Recipient's email address
+                        </label>
+                        <input
+                          id="sign-recipient"
+                          type="email"
+                          inputMode="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          disabled={busy}
+                          placeholder="signer@example.com"
+                          className="mt-1 w-full rounded-lg border border-slate-300 px-2.5 py-2 text-sm focus:border-orange-700 focus:outline-none focus:ring-1 focus:ring-orange-700"
+                        />
+                        <p className="mt-1 text-xs text-slate-500">
+                          The code is always sent here, whatever address the visitor types.
+                        </p>
+
+                        <label className="mt-3 flex cursor-pointer items-start gap-2.5">
+                          <input
+                            type="checkbox"
+                            checked={usePin}
+                            onChange={(e) => setUsePin(e.target.checked)}
+                            disabled={busy}
+                            className="mt-0.5 h-4 w-4 shrink-0 accent-orange-700"
+                          />
+                          <span className="min-w-0">
+                            <span className="block text-sm text-slate-900">Also ask for a PIN</span>
+                            {/* The email code proves somebody can read that
+                                mailbox. Only a secret that never travels by
+                                email covers the mailbox itself being read by
+                                someone else. */}
+                            <span className="block text-xs text-slate-500">
+                              We'll generate one to read out to them by phone or text. Use it if
+                              their inbox itself might not be private.
+                            </span>
+                          </span>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+
                   <button
                     type="button"
                     onClick={onCreateLink}
