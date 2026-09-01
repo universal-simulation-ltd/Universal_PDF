@@ -1,11 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
+import { useFormStore } from '../../stores/formStore'
 import { buildAnnotatedPdfBytes, downloadPdfBytes } from '../../lib/export'
 import { pdfjsLib, type PDFDocumentProxy } from '../../lib/pdfjs'
+import { layerPixelRatio, pagePixelBudget } from '../../lib/renderBudget'
 
 // 1:1 with the editor's PDF-point coordinate space — see ExportModal.tsx.
 const EXPORT_SCALE = 1.0
+// ⚠️ CSS pixels per PDF point — the DISPLAYED size only. It is not the
+// rendering resolution: the canvas behind it is drawn at `scale × ratio`, where
+// ratio comes from `layerPixelRatio`. Until 2026-09-01 there was no ratio, so
+// the backing store was 1.2 device pixels per point on a screen showing 2.4 —
+// every preview was a half-resolution bitmap stretched to twice its size, which
+// is what "the preview looks worse than the export" was. The exported file was
+// never affected; only the picture of it on screen.
 const PREVIEW_SCALE = 1.2
 
 export default function LivePreview() {
@@ -14,6 +23,11 @@ export default function LivePreview() {
   const sourceBytes = usePdfStore((s) => s.sourceBytes)
   const fileName = usePdfStore((s) => s.fileName)
   const annotations = useAnnotationStore((s) => s.annotations)
+  // ⚠️ The export bakes typed form values into the page content streams, and
+  // for two months this preview did not pass them — so a filled form previewed
+  // BLANK and the dialog's "How the exported PDF will look" was a false
+  // statement about the one document type where it mattered most.
+  const formValues = useFormStore((s) => s.values)
 
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null)
   const [bytes, setBytes] = useState<Uint8Array | null>(null)
@@ -31,7 +45,7 @@ export default function LivePreview() {
     const timer = window.setTimeout(async () => {
       try {
         const copy = sourceBytes.slice(0)
-        const out = await buildAnnotatedPdfBytes(copy, annotations, EXPORT_SCALE)
+        const out = await buildAnnotatedPdfBytes(copy, annotations, EXPORT_SCALE, formValues)
         if (myId !== buildIdRef.current) return
         // pdfjs consumes the buffer; hand it a copy so we keep `out` intact
         // for the Download button.
@@ -56,7 +70,7 @@ export default function LivePreview() {
     }, 250)
 
     return () => window.clearTimeout(timer)
-  }, [open, sourceBytes, annotations])
+  }, [open, sourceBytes, annotations, formValues])
 
   // Tear down the rendered doc when the modal closes so we don't hold memory.
   useEffect(() => {
@@ -146,7 +160,13 @@ export default function LivePreview() {
         ) : (
           <div className="flex flex-col items-center gap-6 py-6 px-4">
             {Array.from({ length: doc.numPages }, (_, i) => (
-              <PreviewPage key={i} doc={doc} pageIndex={i} scale={PREVIEW_SCALE} />
+              <PreviewPage
+                key={i}
+                doc={doc}
+                pageIndex={i}
+                scale={PREVIEW_SCALE}
+                budget={pagePixelBudget(doc.numPages)}
+              />
             ))}
           </div>
         )}
@@ -158,11 +178,14 @@ export default function LivePreview() {
 function PreviewPage({
   doc,
   pageIndex,
-  scale
+  scale,
+  budget
 }: {
   doc: PDFDocumentProxy
   pageIndex: number
   scale: number
+  /** This page's share of the canvas budget — see lib/renderBudget.ts. */
+  budget: number
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [size, setSize] = useState<{ width: number; height: number } | null>(null)
@@ -174,17 +197,28 @@ function PreviewPage({
     async function render() {
       const page = await doc.getPage(pageIndex + 1)
       if (cancelled) return
-      const viewport = page.getViewport({ scale })
+      // TWO viewports, and the difference between them is the fix. `css` is
+      // the box on screen; `bitmap` is what gets drawn into it, at whatever
+      // multiple of that the device and the budget allow.
+      const css = page.getViewport({ scale })
+      const ratio = layerPixelRatio(css.width, css.height, budget)
+      const bitmap = ratio === 1 ? css : page.getViewport({ scale: scale * ratio })
       const canvas = canvasRef.current
       if (!canvas) return
       const ctx = canvas.getContext('2d')
       if (!ctx) return
 
-      canvas.width = viewport.width
-      canvas.height = viewport.height
-      setSize({ width: viewport.width, height: viewport.height })
+      // ⚠️ Backing store in DEVICE pixels, CSS size in the `style` below —
+      // setting only `width`/`height` (as this did) makes the canvas its own
+      // display size, which is exactly the blur being fixed. The two must be
+      // set together or the page renders at the wrong size instead.
+      canvas.width = Math.round(bitmap.width)
+      canvas.height = Math.round(bitmap.height)
+      canvas.style.width = `${css.width}px`
+      canvas.style.height = `${css.height}px`
+      setSize({ width: css.width, height: css.height })
 
-      renderTask = page.render({ canvasContext: ctx, viewport })
+      renderTask = page.render({ canvasContext: ctx, viewport: bitmap })
       try {
         await renderTask.promise
       } catch {
@@ -197,7 +231,10 @@ function PreviewPage({
       cancelled = true
       renderTask?.cancel()
     }
-  }, [doc, pageIndex, scale])
+    // ⚠️ `budget` is a plain number, so this re-renders only when the page
+    // count changes — not on every parent render, which would restart the
+    // render task in a loop.
+  }, [doc, pageIndex, scale, budget])
 
   return (
     <div

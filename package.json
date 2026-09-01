@@ -37,6 +37,7 @@
     "test:open-fit": "node e2e/open-at-fit.e2e.mjs",
     "test:progressive-load": "node e2e/progressive-load.e2e.mjs",
     "test:lock": "node e2e/lock-pdf.e2e.mjs",
+    "test:preview": "node e2e/export-preview.e2e.mjs",
     "test:lock-password": "node --experimental-strip-types scripts/lockPassword.test.mjs",
     "test:sign-access": "node --experimental-strip-types scripts/signAccessSecret.test.mjs",
     "test:encrypt": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/pdfEncrypt.test.mjs",

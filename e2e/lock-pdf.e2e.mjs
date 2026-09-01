@@ -84,6 +84,19 @@ async function waitReady(page, timeout = 120000) {
     .catch(() => {})
 }
 
+// ⚠️ Since 2026-09-01 the flatten checkbox and the lock fields sit behind a
+// COLLAPSED "Advanced exports" disclosure, so neither is in the DOM when the
+// dialog opens. Every assertion below about either of them has to open it
+// first — a suite that skipped this would fail with "checkbox not on screen",
+// which is exactly what the section is supposed to make true by default.
+async function openAdvanced(page) {
+  const trigger = page.getByRole('button', { name: /Advanced exports/i })
+  await trigger.waitFor({ state: 'visible', timeout: 30000 }).catch(() => {})
+  if (!(await trigger.count())) return false
+  if ((await trigger.getAttribute('aria-expanded')) !== 'true') await trigger.click()
+  return true
+}
+
 const SENTENCE = 'Only the password holder should read this.'
 
 const playwright = await loadPlaywright()
@@ -173,6 +186,9 @@ await page.waitForSelector('[data-page-index="0"] canvas', { timeout: 30000 })
 await page.getByRole('button', { name: /export/i }).first().click()
 await page.waitForSelector('text=Export PDF', { timeout: 15000 })
 await waitReady(page)
+
+check('the export dialog collapses flatten and lock behind "Advanced exports"',
+  await openAdvanced(page))
 
 const lockBox = page.getByRole('checkbox', { name: /Lock with a password/i })
 check('the export dialog offers "Lock with a password"', (await lockBox.count()) > 0)

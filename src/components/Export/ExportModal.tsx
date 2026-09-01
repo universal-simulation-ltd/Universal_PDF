@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { useFormStore } from '../../stores/formStore'
@@ -144,6 +144,20 @@ export default function ExportModal({ open, onClose }: Props) {
   const [locking, setLocking] = useState(false)
   const [lockError, setLockError] = useState<string | null>(null)
 
+  // Flattening and locking both live behind one disclosure. Neither is part of
+  // a normal export — the overwhelmingly common answer to "how do I want this
+  // file?" is "as it is" — and between them they were pushing the size panel,
+  // the filename and the Download button off a phone screen before the dialog
+  // had said anything the user came for.
+  //
+  // ⚠️ Collapsed on EVERY opening, not just the first, because the reset
+  // effect below puts `quality` and `lock` back to their defaults too. An
+  // open section restored from the last export would be showing empty fields
+  // and an unticked box — the appearance of remembered settings, with none of
+  // the substance.
+  const [advancedOpen, setAdvancedOpen] = useState(false)
+  const advancedId = useId()
+
   useEffect(() => {
     if (!open) return
     setTab('compressed')
@@ -155,6 +169,7 @@ export default function ExportModal({ open, onClose }: Props) {
     // forgotten they typed.
     setLock(EMPTY_LOCK)
     setLockError(null)
+    setAdvancedOpen(false)
   }, [open])
 
   useEffect(() => {
@@ -383,6 +398,14 @@ export default function ExportModal({ open, onClose }: Props) {
   // label and `nextExportName` for the actual save.
   const previewName = previewExportName(fileName)
 
+  // Only ever shown while the section is shut, so it says what is switched on
+  // rather than what is available. Empty when neither is — the trigger falls
+  // back to naming the two controls, so a shut row still advertises what is
+  // behind it.
+  const advancedSummary = [flatten ? 'Flatten' : null, lock.enabled ? 'Lock' : null]
+    .filter(Boolean)
+    .join(' · ')
+
   async function download(which: 'original' | 'compressed') {
     if (!annotated || !compressed) return
     // Widened to plain `Uint8Array` because the locked bytes come back over a
@@ -501,93 +524,146 @@ export default function ExportModal({ open, onClose }: Props) {
           </>
         ) : (
           <>
-            {/* ⚠️ ALWAYS OFFERED, on every document, and that is the change.
-                This used to be two of three buttons in a "Compression" row that
-                only appeared when rasterising would save ≥20% AND ≥100 KB — so
-                on a text document it was unreachable, which is precisely the
-                document somebody wants flattened. The reason to want it is
-                "nobody can reflow, copy or edit what I signed"; that has
-                nothing to do with file size, so size no longer gates it. */}
-            <div className="mb-3">
-              <label className="flex items-start gap-2.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={flatten}
-                  onChange={(e) => setQuality(e.target.checked ? DEFAULT_FLATTEN : 'light')}
-                  disabled={building || compressing}
-                  className="mt-0.5 h-4 w-4 shrink-0 accent-orange-700 disabled:cursor-wait"
-                />
-                <span className="min-w-0">
-                  <span className="block text-sm font-medium text-slate-900">
-                    Flatten pages to images
-                    {flattenSaving !== null && (
-                      <span className="ml-1.5 text-xs font-medium tabular-nums text-emerald-700">
-                        ≈ {formatSize(flattenSaving)} smaller
-                      </span>
-                    )}
-                  </span>
-                  <span className="block text-xs text-slate-500 mt-0.5">
-                    Every page becomes a picture, so nobody can select, copy, search or edit
-                    the text — useful for a document you have signed.
-                  </span>
+            {/* ⚠️ COLLAPSED, and the two things inside it are the reason.
+                Flattening throws away the text layer; locking encrypts the
+                file with a password this app cannot recover. Neither belongs
+                in the path of a plain "give me my document" export, and open
+                by default they filled a phone screen — the size panel, the
+                filename and the Download button all sat below the fold, under
+                two questions almost nobody opening this dialog was asking.
+
+                ⚠️ Not a <details>. The open state has to be readable from
+                render (the disabled-button hint below points AT this section
+                by name when the lock is half-filled), and a native <details>
+                keeps that in the DOM where React cannot see it. */}
+            <div className="mb-3 rounded-lg border border-slate-200">
+              <button
+                type="button"
+                onClick={() => setAdvancedOpen((o) => !o)}
+                aria-expanded={advancedOpen}
+                aria-controls={advancedId}
+                className="flex w-full items-center gap-2 px-3 py-2.5 text-left"
+              >
+                <span
+                  aria-hidden="true"
+                  className={[
+                    'text-xs text-slate-400 transition-transform',
+                    advancedOpen ? 'rotate-90' : ''
+                  ].join(' ')}
+                >
+                  ▶
                 </span>
-              </label>
-
-              {/* Only a choice between the two rasterising levels, so it lives
-                  inside the checkbox it belongs to and appears with it. */}
-              {showStrength && (
-                <div className="mt-2.5 pl-6.5">
-                  <div className="text-xs uppercase tracking-wide text-slate-500 font-medium mb-1.5">
-                    Image quality
-                  </div>
-                  <div
-                    className="grid gap-1 p-1 bg-slate-100 rounded-lg"
-                    style={{ gridTemplateColumns: `repeat(${offeredQualities.length}, minmax(0, 1fr))` }}
+                <span className="text-sm font-medium text-slate-900">Advanced exports</span>
+                {/* ⚠️ What is ON, whenever it is shut. A collapsed section that
+                    hides a ticked Flatten box is how somebody downloads a
+                    picture of their document without being told; the summary
+                    is the only thing standing between them and that. */}
+                {/* Shut only. Open, the controls speak for themselves and a
+                    second copy of their names is noise. */}
+                {!advancedOpen && (
+                  <span
+                    className={[
+                      'ml-auto truncate text-xs',
+                      advancedSummary ? 'font-medium text-orange-700' : 'text-slate-400'
+                    ].join(' ')}
                   >
-                    {offeredQualities.map((opt) => {
-                      const active = opt.value === quality
-                      return (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => setQuality(opt.value)}
-                          disabled={building || compressing}
-                          aria-pressed={active}
-                          className={[
-                            'rounded-md px-2 py-1.5 text-sm font-medium transition-colors disabled:cursor-wait',
-                            active
-                              ? 'bg-white text-orange-700 shadow-sm'
-                              : 'text-slate-600 hover:text-slate-900'
-                          ].join(' ')}
-                        >
-                          {opt.label}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  <div className="mt-1.5 text-xs text-slate-500">
-                    {FLATTEN_OPTIONS.find((o) => o.value === quality)?.hint}
-                  </div>
-                </div>
-              )}
+                    {advancedSummary || 'Flatten · Lock'}
+                  </span>
+                )}
+              </button>
 
-              {flatten && (
-                <div className="mt-2 text-xs text-amber-700">
-                  The Original tab is unaffected — it keeps its text layer, so download that
-                  one if you need the text back.
+              {advancedOpen && (
+                <div id={advancedId} className="border-t border-slate-200 px-3 pt-3">
+              {/* ⚠️ ALWAYS OFFERED, on every document, and that is the change.
+                  This used to be two of three buttons in a "Compression" row that
+                  only appeared when rasterising would save ≥20% AND ≥100 KB — so
+                  on a text document it was unreachable, which is precisely the
+                  document somebody wants flattened. The reason to want it is
+                  "nobody can reflow, copy or edit what I signed"; that has
+                  nothing to do with file size, so size no longer gates it. */}
+              <div className="mb-3">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={flatten}
+                    onChange={(e) => setQuality(e.target.checked ? DEFAULT_FLATTEN : 'light')}
+                    disabled={building || compressing}
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-orange-700 disabled:cursor-wait"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-slate-900">
+                      Flatten pages to images
+                      {flattenSaving !== null && (
+                        <span className="ml-1.5 text-xs font-medium tabular-nums text-emerald-700">
+                          ≈ {formatSize(flattenSaving)} smaller
+                        </span>
+                      )}
+                    </span>
+                    <span className="block text-xs text-slate-500 mt-0.5">
+                      Every page becomes a picture, so nobody can select, copy, search or edit
+                      the text — useful for a document you have signed.
+                    </span>
+                  </span>
+                </label>
+
+                {/* Only a choice between the two rasterising levels, so it lives
+                    inside the checkbox it belongs to and appears with it. */}
+                {showStrength && (
+                  <div className="mt-2.5 pl-6.5">
+                    <div className="text-xs uppercase tracking-wide text-slate-500 font-medium mb-1.5">
+                      Image quality
+                    </div>
+                    <div
+                      className="grid gap-1 p-1 bg-slate-100 rounded-lg"
+                      style={{ gridTemplateColumns: `repeat(${offeredQualities.length}, minmax(0, 1fr))` }}
+                    >
+                      {offeredQualities.map((opt) => {
+                        const active = opt.value === quality
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setQuality(opt.value)}
+                            disabled={building || compressing}
+                            aria-pressed={active}
+                            className={[
+                              'rounded-md px-2 py-1.5 text-sm font-medium transition-colors disabled:cursor-wait',
+                              active
+                                ? 'bg-white text-orange-700 shadow-sm'
+                                : 'text-slate-600 hover:text-slate-900'
+                            ].join(' ')}
+                          >
+                            {opt.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <div className="mt-1.5 text-xs text-slate-500">
+                      {FLATTEN_OPTIONS.find((o) => o.value === quality)?.hint}
+                    </div>
+                  </div>
+                )}
+
+                {flatten && (
+                  <div className="mt-2 text-xs text-amber-700">
+                    The Original tab is unaffected — it keeps its text layer, so download that
+                    one if you need the text back.
+                  </div>
+                )}
+              </div>
+
+              {/* ⚠️ Below flattening, and that ordering is the point. The two
+                  look like neighbours — both are "stop someone doing something
+                  with this file" — but only one of them is real. Flattening
+                  removes the text layer; locking encrypts the document. Putting
+                  a lock beside a PDF "no printing / no copying" permissions
+                  checkbox is what most PDF apps do, and it is why users believe
+                  those flags protect anything. There is no such checkbox here on
+                  purpose — see the note at the top of lib/pdfCrypto.ts. */}
+              <LockFields value={lock} onChange={setLock} disabled={building || compressing || locking} />
                 </div>
               )}
             </div>
-
-            {/* ⚠️ Below flattening, and that ordering is the point. The two
-                look like neighbours — both are "stop someone doing something
-                with this file" — but only one of them is real. Flattening
-                removes the text layer; locking encrypts the document. Putting
-                a lock beside a PDF "no printing / no copying" permissions
-                checkbox is what most PDF apps do, and it is why users believe
-                those flags protect anything. There is no such checkbox here on
-                purpose — see the note at the top of lib/pdfCrypto.ts. */}
-            <LockFields value={lock} onChange={setLock} disabled={building || compressing || locking} />
 
             <div className="rounded-lg border border-slate-200 overflow-hidden">
               {/* Two tabs are a choice. With compression ruled out there is only
@@ -771,7 +847,23 @@ export default function ExportModal({ open, onClose }: Props) {
                 can fix by typing, so it is the only one that says so. */}
             {lockIncomplete(lock) && !lockError && (
               <p className="mt-1 text-xs text-amber-700">
-                Finish the {lock.mode === 'pin' ? 'PIN' : 'password'} fields above to download.
+                {/* ⚠️ Names the section when it is shut. "Fields above" is a
+                    dead end pointing at a collapsed row — the one case where a
+                    disabled button with a stated reason is no better than a
+                    disabled button without one. The text opens it. */}
+                Finish the {lock.mode === 'pin' ? 'PIN' : 'password'} fields{' '}
+                {advancedOpen ? (
+                  'above'
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setAdvancedOpen(true)}
+                    className="underline underline-offset-2 hover:text-amber-900"
+                  >
+                    in Advanced exports
+                  </button>
+                )}{' '}
+                to download.
               </p>
             )}
             {lockError && <p className="mt-1 text-xs text-red-600">{lockError}</p>}

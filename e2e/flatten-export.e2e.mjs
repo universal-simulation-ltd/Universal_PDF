@@ -88,6 +88,19 @@ async function waitReady(page, timeout = 120000) {
     .catch(() => {})
 }
 
+// ⚠️ Since 2026-09-01 the flatten checkbox and the lock fields sit behind a
+// COLLAPSED "Advanced exports" disclosure, so neither is in the DOM when the
+// dialog opens. Every assertion below about either of them has to open it
+// first — a suite that skipped this would fail with "checkbox not on screen",
+// which is exactly what the section is supposed to make true by default.
+async function openAdvanced(page) {
+  const trigger = page.getByRole('button', { name: /Advanced exports/i })
+  await trigger.waitFor({ state: 'visible', timeout: 30000 }).catch(() => {})
+  if (!(await trigger.count())) return false
+  if ((await trigger.getAttribute('aria-expanded')) !== 'true') await trigger.click()
+  return true
+}
+
 const failures = []
 function check(label, condition, detail) {
   if (condition) console.log(`  ✓ ${label}`)
@@ -221,6 +234,9 @@ if (uiOk !== true) {
   await exportBtn.waitFor({ state: 'visible', timeout: 20000 }).catch(() => {})
   if (await exportBtn.count()) await exportBtn.click()
 
+  check('the export dialog collapses flatten and lock behind "Advanced exports"',
+    await openAdvanced(page))
+
   const box = page.getByRole('checkbox', { name: /Flatten pages to images/i })
   await box.waitFor({ state: 'visible', timeout: 30000 }).catch(() => {})
   check('the flatten checkbox is on screen for a text-only PDF', (await box.count()) > 0)
@@ -281,6 +297,7 @@ console.log('\n  A document big enough for Balanced vs Maximum to matter')
     const exportBtn2 = page.getByRole('button', { name: /export|download|save/i }).first()
     await exportBtn2.waitFor({ state: 'visible', timeout: 30000 }).catch(() => {})
     if (await exportBtn2.count()) await exportBtn2.click()
+    await openAdvanced(page)
     const box2 = page.getByRole('checkbox', { name: /Flatten pages to images/i })
     await box2.waitFor({ state: 'visible', timeout: 60000 }).catch(() => {})
     if (!(await box2.count())) {
@@ -367,6 +384,7 @@ console.log('\n  A scan, where flattening genuinely shrinks the file')
     const btn = page.getByRole('button', { name: /export|download|save/i }).first()
     await btn.waitFor({ state: 'visible', timeout: 30000 }).catch(() => {})
     if (await btn.count()) await btn.click()
+    await openAdvanced(page)
     const box3 = page.getByRole('checkbox', { name: /Flatten pages to images/i })
     await box3.waitFor({ state: 'visible', timeout: 60000 }).catch(() => {})
     if (!(await box3.count())) {
