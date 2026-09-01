@@ -99,6 +99,11 @@ export default function App() {
   const loadFile = usePdfStore((s) => s.loadFile)
   const doc = usePdfStore((s) => s.doc)
   const loading = usePdfStore((s) => s.loading)
+  // See `firstPaint` in the store: the placeholder stays up over the empty page
+  // frames until page 1 has drawn (or the store's grace period gives up), so a
+  // document opened from the OS goes loading → document rather than
+  // loading → outlines → document.
+  const firstPaint = usePdfStore((s) => s.firstPaint)
   const refreshRecents = usePdfStore((s) => s.refreshRecents)
   const loadFromCurrentUrl = usePdfStore((s) => s.loadFromCurrentUrl)
 
@@ -193,8 +198,16 @@ export default function App() {
   // the IPC message above. The manifest's `file_handlers.action` carries the
   // same `?launching=1`, so this path holds the loading state from the first
   // paint too.
+  //
+  // ⚠️ `isNativeShell()` is the guard, NOT `window.launchQueue`. Android's
+  // WebView has no launchQueue, so this effect used to fall straight into the
+  // `!queue` branch below and `setLaunching(false)` on mount — clearing, one
+  // tick after the first paint, the very hold `isNativeShell()` had just put
+  // up. The landing page then showed on EVERY native launch, including one
+  // carrying a document, which is the "it only opened the front page" half of
+  // the WhatsApp report. On native the effect below owns the placeholder.
   useEffect(() => {
-    if (window.desktop) return
+    if (window.desktop || isNativeShell()) return
     const queue = window.launchQueue
     if (!queue) {
       // No file handling here at all, so a `?launching=1` that reached this
@@ -222,7 +235,7 @@ export default function App() {
   // iOS / Android — a PDF opened through the share sheet or the chooser. Same
   // shape as the two paths above: a file turns up, or word that none is coming.
   useEffect(() => {
-    if (window.desktop || window.launchQueue) return
+    if (window.desktop || !isNativeShell()) return
     let unsubscribe: (() => void) | null = null
     let cancelled = false
     void subscribeNativeOpenPdf(
@@ -357,7 +370,31 @@ export default function App() {
     // It lives here rather than in @unisim/sdk's UniversalAppsNavBar because
     // that bar is shared by every Universal App, and the padding belongs to
     // whichever of them is wrapped for a phone — currently only this one.
-    <div className="flex flex-col h-full bg-slate-100 pt-[env(safe-area-inset-top)]">
+    <div className="flex flex-col h-full bg-slate-100">
+      {/* ⚠️ THE NOTCH SPACER IS DARK ON PURPOSE, and the reason is the system
+          clock rather than taste. Android and iOS draw the status bar's own
+          clock/signal/battery glyphs over whatever the app paints up there,
+          and nothing in this app chooses their colour — there is no
+          @capacitor/status-bar here, so the icons are whatever the platform
+          decided at install time, which on Android is WHITE. This strip used
+          to be the shell's `bg-slate-100`, so a white clock sat on a near-white
+          band and simply vanished (measured on a Nothing Phone, Android 16).
+
+          slate-900 is not an arbitrary dark: it is exactly what sits directly
+          under this strip whenever a document is open — the UniversalBar strip
+          and the tools bar are both `bg-slate-900` — so the chrome now reads as
+          one unbroken bar from the top of the screen. On the landing page the
+          navbar below is white (BAR.light.surface), so there the strip reads as
+          a deliberate status band instead. Either way the glyphs are legible,
+          which is the thing that was broken.
+
+          It is a flow child rather than padding on the shell because padding
+          takes its parent's background and the parent has to stay light. */}
+      <div
+        aria-hidden="true"
+        className="shrink-0 bg-slate-900"
+        style={{ height: 'env(safe-area-inset-top)' }}
+      />
       {showLanding && (
         // ⚠️ `relative z-50` is load-bearing, and it is what spares this app the
         // z-index trap the rest of the suite hit on 2026-08-30. The SDK's
@@ -563,7 +600,7 @@ export default function App() {
           zoom menu) stay below the navbar — otherwise they bubble up to the
           root context and can paint over the navbar's open dropdowns. */}
       <main className={`flex-1 min-h-0 md:pb-0 ${doc ? 'pb-[calc(4rem_+_env(safe-area-inset-bottom))] relative z-0 isolate' : 'overflow-auto'}`}>
-        {loading || launching ? (
+        {loading || launching || (doc && !firstPaint) ? (
           <div className="h-full flex items-center justify-center text-slate-500">
             Loading PDF…
           </div>

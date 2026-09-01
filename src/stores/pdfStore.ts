@@ -73,6 +73,24 @@ interface PdfState {
   // the XFA HTML layer (XfaPage) and saves filled values with saveDocument().
   isXfa: boolean
   loading: boolean
+  // ⚠️ False from the moment a document is handed to the viewer until page 1
+  // has actually been PAINTED — not merely parsed. `loading` goes false as
+  // soon as pdf.js resolves the document, but the viewer then mounts a box for
+  // every page and rasterizes them three at a time (see `renderQueue.ts`), so
+  // for a beat the reader gets a screen of empty white page frames. On a phone
+  // opening a PDF from WhatsApp that beat is a visible stage of its own —
+  // "splash, loading, outline pdf, pdf" — and it reads as the app stalling
+  // halfway. Holding the existing placeholder over it collapses two stages
+  // into one.
+  //
+  // ⚠️ It is a HOLD, NOT A GATE: `firstPaintDeadline` below flips it true
+  // regardless after a beat, so a page that never paints (a render failure, a
+  // pure-XFA document, which draws through XfaPage and never reaches
+  // `markFirstPaint` at all) can never strand the viewer behind a spinner. The
+  // worst case is exactly today's behaviour, arriving a moment later.
+  firstPaint: boolean
+  /** Page 1 has drawn. Called by `PdfPage`; idempotent. */
+  markFirstPaint: () => void
   pageNavOpen: boolean
   previewOpen: boolean
   presentOpen: boolean
@@ -141,6 +159,14 @@ interface PdfState {
   movePage: (from: number, to: number) => Promise<void>
 }
 
+// How long the "page 1 is drawing" hold may last before the viewer is shown
+// regardless. Sized to cover the rasterization of one page on a phone, not the
+// whole document — the rest of the pages carry on filling in behind the reader
+// exactly as they did before. Overshooting it costs nothing worse than the
+// empty page frames this hold exists to hide.
+const FIRST_PAINT_GRACE_MS = 1200
+let firstPaintDeadline: ReturnType<typeof setTimeout> | null = null
+
 export const usePdfStore = create<PdfState>((set, get) => ({
   doc: null,
   numPages: 0,
@@ -148,6 +174,9 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   sourceBytes: null,
   isXfa: false,
   loading: false,
+  // True when idle: with no document there is no first paint to wait for, and
+  // the landing page must never sit behind this.
+  firstPaint: true,
   pageNavOpen: false,
   previewOpen: false,
   presentOpen: false,
@@ -247,6 +276,14 @@ export const usePdfStore = create<PdfState>((set, get) => ({
       // A different document is now in hand — drop the outgoing PDF's
       // annotations/drawings/signatures/form/find state before showing it.
       clearDocumentState()
+      // ⚠️ The deadline is armed in the same breath as the hold, never later.
+      // Arming it from the viewer (on mount, say) would mean a document that
+      // fails between here and there holds the placeholder for ever.
+      if (firstPaintDeadline) clearTimeout(firstPaintDeadline)
+      firstPaintDeadline = setTimeout(() => {
+        firstPaintDeadline = null
+        get().markFirstPaint()
+      }, FIRST_PAINT_GRACE_MS)
       set({
         doc,
         numPages: doc.numPages,
@@ -254,6 +291,9 @@ export const usePdfStore = create<PdfState>((set, get) => ({
         sourceBytes: buf,
         isXfa: doc.isPureXfa,
         loading: false,
+        // Page 1 has not drawn yet; hold the placeholder over the empty page
+        // frames rather than showing them. See the field's own note.
+        firstPaint: false,
         // Always assigned, never merged: opening a PDF normally has to clear a
         // notice left over from the converted document before it.
         importNotice: options?.notice ?? null,
@@ -328,13 +368,20 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     }
     return ok
   },
+  markFirstPaint: () => {
+    if (firstPaintDeadline) {
+      clearTimeout(firstPaintDeadline)
+      firstPaintDeadline = null
+    }
+    if (!get().firstPaint) set({ firstPaint: true })
+  },
   reset: () => {
     get().doc?.destroy()
     clearDocumentState()
     // Nothing is open, so nothing is unsaved. Re-baselining here is also what
     // keeps the structural-edit counter in step across documents.
     markSaved()
-    set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, previewOpen: false, presentOpen: false, ocrOpen: false, mergeOpen: false, convertOpen: false, metadataOpen: false, qrOpen: false, qrEdit: null, importNotice: null, lockedFile: null })
+    set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, firstPaint: true, previewOpen: false, presentOpen: false, ocrOpen: false, mergeOpen: false, convertOpen: false, metadataOpen: false, qrOpen: false, qrEdit: null, importNotice: null, lockedFile: null })
     setHashSlug(null)
   },
   refreshRecents: async () => {

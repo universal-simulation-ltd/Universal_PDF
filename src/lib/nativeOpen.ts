@@ -93,16 +93,57 @@ export async function subscribeNativeOpenPdf(
   const { App } = await import('@capacitor/app')
   let cancelled = false
 
+  // ⚠️ EVERY LAUNCH DELIVERS THE SAME DOCUMENT TWICE, and reading it twice is
+  // not the harmless belt-and-braces the old comment here claimed.
+  //
+  // Capacitor's Android AppPlugin fires `appUrlOpen` as a RETAINED event, so a
+  // listener attached after the WebView finished booting is handed the launch
+  // intent anyway — and `getLaunchUrl()` then returns that same URI a moment
+  // later. Measured on a Nothing Phone (Android 16), one WhatsApp hand-over
+  // produced two `Filesystem.readFile` calls one millisecond apart and two
+  // concurrent `loadFile`s of the same bytes. The second one's
+  // `get().doc?.destroy()` tears down the first one's pdf.js worker mid-parse,
+  // the first rejects with "Transport destroyed" (fourteen unhandled
+  // rejections, counted in logcat), and the app lands on the front door having
+  // just told the user the PDF failed to load.
+  //
+  // So a URL is read at most ONCE per app session, whichever path names it
+  // first. `seen` is filled in BEFORE the await, which is what makes it a lock
+  // rather than a check — the two deliveries land close enough that a set
+  // written after the read would still let both through.
+  const seen = new Set<string>()
+
+  // ⚠️ `accepted` is a SEPARATE question from "did this call read anything",
+  // and conflating the two is its own bug. Whoever loses the race above gets
+  // `false` back from `deliver` because the URL is a duplicate — NOT because
+  // no document is coming. Reporting that as `onNone()` tells the caller to
+  // take its placeholder down while the winning read is still in flight, and
+  // the landing page appears for a beat in the middle of opening a document:
+  // splash → loading → LANDING → document. Once a URL has been taken on by
+  // either path, nothing here may say "nothing is coming".
+  let accepted = false
+  let settled = false
+  const none = () => {
+    if (settled || cancelled) return
+    settled = true
+    onNone()
+  }
+
   const deliver = async (url: string) => {
-    if (cancelled || !looksOpenable(url)) return false
+    if (cancelled || !looksOpenable(url) || seen.has(url)) return
+    seen.add(url)
+    accepted = true
     try {
       const opened = await readUrl(url)
-      if (!opened || cancelled) return false
+      if (!opened || cancelled) return
+      settled = true
       onFile(new File([opened.bytes], opened.name, { type: 'application/pdf' }))
-      return true
     } catch (err) {
+      // The hand-over is genuinely dead — a revoked URI grant, a message
+      // deleted out of the chat. Nothing IS coming now, so say so rather than
+      // leaving the caller on a placeholder until its backstop times out.
       console.error('Failed to read the file the OS handed over:', err)
-      return false
+      none()
     }
   }
 
@@ -114,16 +155,14 @@ export async function subscribeNativeOpenPdf(
   // The launch document, if the app was started by one. Checked AFTER the
   // listener is attached: a cold start can deliver either way round depending
   // on how quickly the WebView gets going, and losing the file to a race is
-  // worse than reading it twice (the second read just replaces the document
-  // with itself).
-  let handled = false
+  // the one failure with no recovery. `seen` is what makes the overlap free.
   try {
     const launch = await App.getLaunchUrl()
-    if (launch?.url) handled = await deliver(launch.url)
+    if (launch?.url) await deliver(launch.url)
   } catch (err) {
     console.error('Could not read the launch URL:', err)
   }
-  if (!handled && !cancelled) onNone()
+  if (!accepted) none()
 
   return () => {
     cancelled = true

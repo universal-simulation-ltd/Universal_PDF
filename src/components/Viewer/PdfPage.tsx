@@ -7,6 +7,7 @@ import TextSelectLayer from './TextSelectLayer'
 import XfaPage from './XfaPage'
 import { layerPixelRatio, pagePixelBudget } from '../../lib/renderBudget'
 import { requestRenderSlot, type RenderSlot } from '../../lib/renderQueue'
+import { usePdfStore } from '../../stores/pdfStore'
 
 interface Props {
   doc: PDFDocumentProxy
@@ -151,6 +152,10 @@ function PdfPage({ doc, pageIndex, scale, isXfa, active, onSized }: Props) {
       canvas.width = off.width
       canvas.height = off.height
       ctx.drawImage(off, 0, 0)
+      // Page 1 is on screen — the viewer is worth showing now. Reported after
+      // the blit, not after `renderTask.promise`, because it is this line that
+      // puts pixels in front of the reader.
+      if (pageIndex === 0) usePdfStore.getState().markFirstPaint()
     }
 
     // ⚠️ Every path out of `render` must give the slot back — the early

@@ -37,7 +37,19 @@ export default function MobileWelcomeToast() {
     return () => window.clearTimeout(showTimer)
   }, [])
 
+  // ⚠️ EVERY WAY OUT OF THIS COACH-MARK IS PERMANENT (James, 2026-09-01).
+  // There is no longer a "just this once" dismissal: the ×, a tap on the page
+  // behind it, and the one remaining button all persist the flag, so a phone
+  // shows this greeting exactly once for the life of the install.
+  //
+  // It used to offer "Got it" (dismiss) beside "Don't show again" (dismiss AND
+  // remember), and a tap outside took the third, most forgiving path — hide it
+  // and say nothing. Which meant the commonest gesture of all, brushing it
+  // aside to get at the toolbar it is pointing at, taught the app nothing and
+  // the greeting came back on the next document. A coach-mark that reappears
+  // after you have read it is not onboarding, it is a nag.
   function close() {
+    persistDismissed()
     setVisible(false)
     window.setTimeout(() => setMounted(false), 250)
   }
@@ -58,11 +70,6 @@ export default function MobileWelcomeToast() {
     return () => window.removeEventListener('pointerdown', onDown, true)
   }, [mounted])
 
-  function dontShowAgain() {
-    persistDismissed()
-    close()
-  }
-
   if (!mounted) return null
 
   return (
@@ -82,7 +89,7 @@ export default function MobileWelcomeToast() {
         <button
           type="button"
           onClick={close}
-          aria-label="Close welcome message"
+          aria-label="Close welcome message and don’t show it again"
           className="absolute top-2 right-2 w-6 h-6 inline-flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-500 text-lg leading-none"
         >
           ×
@@ -96,20 +103,16 @@ export default function MobileWelcomeToast() {
             </div>
           </div>
         </div>
-        <div className="mt-3 flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={dontShowAgain}
-            className="text-xs text-slate-500 underline-offset-2 hover:underline"
-          >
-            Don't show again
-          </button>
+        {/* One action, and it says what actually happens. Two buttons that
+            differ only in whether the app remembers is a choice nobody wants
+            to make about a greeting. */}
+        <div className="mt-3 flex items-center justify-end">
           <button
             type="button"
             onClick={close}
             className="text-xs font-semibold text-orange-700 hover:text-orange-800 px-3 py-1.5 rounded-full bg-orange-50 hover:bg-orange-100"
           >
-            Got it
+            Don't show again
           </button>
         </div>
         <div
