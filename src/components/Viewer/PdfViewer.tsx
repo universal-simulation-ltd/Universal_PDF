@@ -5,7 +5,7 @@ import { useSearchStore } from '../../stores/searchStore'
 import FileNameEditor from '../Header/FileNameEditor'
 import FindBar from './FindBar'
 import PdfPage from './PdfPage'
-import { maxZoomForDocument } from '../../lib/renderBudget'
+import { budgetedPageCount, maxZoomForDocument, MAX_RETAINED_PAGES } from '../../lib/renderBudget'
 import { setAnchorPage } from '../../lib/renderQueue'
 
 // "100% zoom" in standard PDF viewers means physical paper size on screen.
@@ -84,7 +84,10 @@ export default function PdfViewer() {
     doc.getPage(1).then((page) => {
       if (cancelled) return
       const { width, height } = page.getViewport({ scale: BASE_SCALE })
-      setMaxZoom(maxZoomForDocument(width, height, numPages, MAX_ZOOM))
+      // ⚠️ Pages HELD AT ONCE, not the document's length — only the band around
+      // the reader holds canvases. Charging the ceiling for all N pages is what
+      // pinned every long document to 100% whatever the device could hold.
+      setMaxZoom(maxZoomForDocument(width, height, budgetedPageCount(numPages), MAX_ZOOM))
     }).catch(() => {})
     return () => { cancelled = true }
   }, [doc, numPages])
@@ -100,7 +103,21 @@ export default function PdfViewer() {
   // ⚠️ A ceiling regardless, so no layout — a document mid-load whose pages are
   // all still zero-height and stacked at the same y — can put the whole
   // document back in the band and bring the eight seconds back with it.
-  const MAX_ACTIVE_RADIUS = 12
+  //
+  // ⚠️ Derived from the budget's `MAX_RETAINED_PAGES` rather than chosen here:
+  // the band IS what the memory budget is divided by, so a band wider than the
+  // budget expects would silently overspend, and being killed for holding too
+  // much canvas is not an error anyone sees — the web view simply reloads.
+  const MAX_ACTIVE_RADIUS = Math.floor((MAX_RETAINED_PAGES - 1) / 2)
+
+  // ⚠️ The band has to be re-measured when a page TAKES ITS SIZE, not only when
+  // the reader scrolls. Early in a load every page is still zero-height and
+  // stacked at the same y, so the first measurement can only see a handful —
+  // and now that the band decides which pages hold a bitmap at all, a band left
+  // at that first reading would leave the rest of the first screenful blank
+  // for ever. `notifySized` calls this; it is a ref because that lives further
+  // down the component than this effect does.
+  const remeasureBand = useRef<(() => void) | null>(null)
 
   // Tell the render queue which page the reader is nearest, so rasterization
   // follows them. Without it the queue would always work outwards from page 1,
@@ -161,8 +178,10 @@ export default function PdfViewer() {
     }
     update()
     el.addEventListener('scroll', onScroll, { passive: true })
+    remeasureBand.current = onScroll
     return () => {
       el.removeEventListener('scroll', onScroll)
+      remeasureBand.current = null
       if (frame) cancelAnimationFrame(frame)
     }
     // ⚠️ `fitted` is a dependency because the pages only exist once it is true:
@@ -270,6 +289,9 @@ export default function PdfViewer() {
   const notifySized = useCallback(() => {
     // Copy first: a listener that finishes removes itself mid-iteration.
     for (const fn of [...sizeListeners.current]) fn()
+    // A page taking its size changes which pages are on screen — see
+    // `remeasureBand`. Coalesced to a frame by the handler itself.
+    remeasureBand.current?.()
   }, [])
 
   // Commit a zoom and put the anchored point back under the cursor or the

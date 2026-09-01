@@ -5,7 +5,7 @@ import FormFieldLayer from './FormFieldLayer'
 import SearchHighlightLayer from './SearchHighlightLayer'
 import TextSelectLayer from './TextSelectLayer'
 import XfaPage from './XfaPage'
-import { layerPixelRatio, pagePixelBudget } from '../../lib/renderBudget'
+import { budgetedPageCount, layerPixelRatio, pagePixelBudget } from '../../lib/renderBudget'
 import { requestRenderSlot, type RenderSlot } from '../../lib/renderQueue'
 import { usePdfStore } from '../../stores/pdfStore'
 
@@ -33,18 +33,25 @@ interface Props {
    */
   onSized?: () => void
   /**
-   * Whether this page is near enough to the reader to carry its interactive
-   * layers — the Konva annotation stage, the selectable text overlay, the form
-   * fields and the search highlights.
+   * Whether this page is near enough to the reader to hold pixels at all — its
+   * BITMAP, and its interactive layers (the Konva annotation stage, the
+   * selectable text overlay, the form fields and the search highlights).
+   *
+   * ⚠️ Since 2026-09-01 this gates the bitmap too, and that is what lets a
+   * retained page be drawn at the screen's own pixel ratio: the document's
+   * whole canvas cost is bounded by the band rather than growing with its
+   * length, so the allowance is no longer shared with pages nobody is looking
+   * at. See `renderBudget`. A page outside the band keeps its LAYOUT BOX and
+   * loses only its pixels, so the scroll height never moves.
    *
    * ⚠️ This is the difference between a long document opening and a long
    * document hanging, and the cost is not the pixels. Measured on a 400-page
    * file: with every page carrying its layers, page 1 appeared after **3.73 s**,
    * because all 400 pages' layers mount in ONE React commit and a Konva stage
    * is two more canvases apiece. With the layers held back it was **0.16 s**.
-   * The page still draws its own bitmap either way (that is `renderQueue`'s
-   * job) — what waits here is only what you can interact with, and it arrives
-   * before you can reach it.
+   * (When that was measured the bitmap was drawn either way, and only the
+   * layers waited here. The measurement still stands for the layers; the bitmap
+   * now waits on the same signal.)
    *
    * Nothing is lost by unmounting: annotations live in `useAnnotationStore` and
    * filled-in field values in `useFormStore`, so a page that scrolls away and
@@ -63,6 +70,16 @@ function PdfPage({ doc, pageIndex, scale, isXfa, active, onSized }: Props) {
     let renderTask: { cancel: () => void; promise: Promise<void> } | null = null
     let retryTimer: ReturnType<typeof setTimeout> | null = null
     let slot: RenderSlot | null = null
+
+    // Give the bitmap's memory back. ⚠️ 0×0 rather than `clearRect`: clearing
+    // erases the pixels and keeps the allocation, which is the opposite of the
+    // point.
+    function releaseCanvas() {
+      const canvas = canvasRef.current
+      if (!canvas || canvas.width === 0) return
+      canvas.width = 0
+      canvas.height = 0
+    }
 
     async function render(attempt = 0) {
       const p = await doc.getPage(pageIndex + 1)
@@ -86,10 +103,15 @@ function PdfPage({ doc, pageIndex, scale, isXfa, active, onSized }: Props) {
       // eventually (`renderQueue` decides only the order), so a zoomed-in page
       // spends its share of the budget on the bitmap first and gives up
       // sharpness before the zoom itself is capped.
+      // ⚠️ `budgetedPageCount`, NOT `doc.numPages`: only the band around the
+      // reader holds canvases, so the allowance is shared between those pages
+      // and not with a document's worth of pages nobody is looking at. Passing
+      // the raw length is what made a long document render at half the linear
+      // resolution of a short one — see `renderBudget`.
       const effectiveDpr = layerPixelRatio(
         cssViewport.width,
         cssViewport.height,
-        pagePixelBudget(doc.numPages)
+        pagePixelBudget(budgetedPageCount(doc.numPages))
       )
       const renderViewport = p.getViewport({ scale: scale * effectiveDpr })
       const canvas = canvasRef.current
@@ -101,6 +123,23 @@ function PdfPage({ doc, pageIndex, scale, isXfa, active, onSized }: Props) {
       canvas.style.width = `${cssViewport.width}px`
       canvas.style.height = `${cssViewport.height}px`
       setSize({ width: cssViewport.width, height: cssViewport.height })
+
+      // ⚠️ A page outside the band around the reader HOLDS NO BITMAP. Dropping
+      // it here is what pays for the resolution above: the whole document's
+      // canvas cost is bounded by `MAX_RETAINED_PAGES` however long it is, so
+      // each retained page can afford to be drawn at the screen's own pixel
+      // ratio. Freed by resizing to 0×0 — assigning to `width` is what releases
+      // a canvas's backing store; leaving the element in place keeps the page's
+      // layout box, and therefore the document's scroll height, untouched.
+      //
+      // The size work ABOVE this line still runs for every page on purpose: the
+      // box each page occupies is what gives the document its scroll height,
+      // and gating that would leave the scrollbar wrong. Only pixels are
+      // windowed.
+      if (!active) {
+        releaseCanvas()
+        return
+      }
 
       // ⚠️ Wait for a turn before spending anything on pixels. Everything above
       // is cheap and has to happen for every page immediately — the size is
@@ -176,7 +215,10 @@ function PdfPage({ doc, pageIndex, scale, isXfa, active, onSized }: Props) {
       slot = null
       if (retryTimer) clearTimeout(retryTimer)
     }
-  }, [doc, pageIndex, scale, isXfa])
+    // ⚠️ `active` belongs here: it decides whether this page holds pixels at
+    // all, so a page entering the band has to rasterize and one leaving it has
+    // to let go.
+  }, [doc, pageIndex, scale, isXfa, active])
 
   // Layout effect, not effect: this has to run in the same commit that wrote
   // the new width/height, before the paint. See `onSized`.

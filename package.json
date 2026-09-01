@@ -35,6 +35,7 @@
     "test:about": "node e2e/about-app.e2e.mjs",
     "test:placement-hint": "node e2e/placement-hint.e2e.mjs",
     "test:open-fit": "node e2e/open-at-fit.e2e.mjs",
+    "test:crisp": "node e2e/crisp-pages.e2e.mjs",
     "test:progressive-load": "node e2e/progressive-load.e2e.mjs",
     "test:lock": "node e2e/lock-pdf.e2e.mjs",
     "test:preview": "node e2e/export-preview.e2e.mjs",

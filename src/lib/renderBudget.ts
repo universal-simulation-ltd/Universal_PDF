@@ -9,14 +9,20 @@
 //   • Konva's hit canvas, which sits beside the scene canvas and is always at
 //     CSS resolution.
 //
-// ⚠️ Since 2026-08-31 only the FIRST of those three is per-page: the two Konva
-// canvases exist only for the band of pages around the reader (`PdfPage`'s
-// `active`). So the budget below is now CONSERVATIVE for a long document — it
-// still charges every page for three canvases when most pay for one. That is
-// deliberately left alone here: it errs towards not being killed, and the zoom
-// ceiling it produces has been tuned against real devices. Revisiting it would
-// let long documents zoom further than they currently can, and is a change to
-// make on its own with a device to test on, not a line to tweak in passing.
+// ⚠️ SINCE 2026-09-01 NONE OF THE THREE IS PER-DOCUMENT-PAGE: all three exist
+// only for the band of pages around the reader (`PdfPage`'s `active`), and a
+// page leaving that band drops its bitmap. So the document's whole cost is
+// bounded by `MAX_RETAINED_PAGES`, however long it is, and that — not the page
+// count — is what every budget below divides by. See `budgetedPageCount`.
+//
+// ⚠️ What that replaced, because the symptom was subtle and will be misread if
+// it comes back: dividing by the page count meant a 251-page document gave each
+// page 637k pixels when one page at reading size needs 652k merely to be 1:1,
+// so `layerPixelRatio` fell to 1 and every page was drawn at HALF the linear
+// resolution of the same page in a 6-page document. Measured on a retina Mac,
+// page 1 of a 6-page PDF: 1190 backing pixels across 595 CSS. The same page of
+// a 251-page PDF: 595. Nobody had asked for a blurrier document; it fell out of
+// an allowance shared with 250 pages nobody was looking at.
 //
 // Every one of them costs 4 bytes a pixel, and their area grows with the SQUARE
 // of the zoom. A three-page A4 document on a phone is ~30 MB of canvas at 100%
@@ -60,6 +66,24 @@ const DESKTOP_BUDGET_PIXELS = 160_000_000
 // `renderQueue`.)
 const MIN_MAX_ZOOM = 1
 
+// How many pages may hold canvases at once — the band `PdfViewer` keeps around
+// the reader, which is what every budget here is divided by.
+//
+// ⚠️ This number and `PdfViewer`'s active band are ONE decision, so the viewer
+// derives its `MAX_ACTIVE_RADIUS` from this rather than carrying its own: a
+// band wider than this would quietly spend more canvas than the budget allows,
+// and the failure mode of that is a killed web view, not a warning.
+export const MAX_RETAINED_PAGES = 25
+
+/**
+ * The number of pages the budgets below should be shared between: the document
+ * length for a short document, and the retained band for anything longer. A
+ * document of 25 pages or fewer is budgeted EXACTLY as it always was.
+ */
+export function budgetedPageCount(numPages: number): number {
+  return Math.min(Math.max(1, numPages), MAX_RETAINED_PAGES)
+}
+
 function isHandheld(): boolean {
   if (typeof window === 'undefined') return false
   // Touch-first AND small: a touchscreen laptop is not a phone, and neither is
@@ -97,7 +121,13 @@ export function documentPixelBudget(): number {
   return budget
 }
 
-/** The share of that budget one page of a `pageCount`-page document gets. */
+/**
+ * The share of that budget one page gets.
+ *
+ * ⚠️ `pageCount` is the number of pages HELD AT ONCE, not the length of the
+ * document — pass `budgetedPageCount(numPages)`. Passing the raw length is the
+ * bug described at the top of this file.
+ */
 export function pagePixelBudget(pageCount: number): number {
   return documentPixelBudget() / Math.max(1, pageCount)
 }
@@ -127,6 +157,11 @@ export function layerPixelRatio(cssWidth: number, cssHeight: number, budget: num
  *
  * `pageWidth`/`pageHeight` are one page's CSS size at 100% zoom; `hardMax` is
  * the viewer's own ceiling, which this never exceeds.
+ *
+ * ⚠️ `pageCount` is pages held at once — `budgetedPageCount(numPages)`. Before
+ * the band was bounded this took the document's length, which is why a long
+ * document could not be zoomed past 100% at all: the ceiling fell to
+ * `MIN_MAX_ZOOM` on page count alone, whatever the device could actually hold.
  */
 export function maxZoomForDocument(
   pageWidth: number,

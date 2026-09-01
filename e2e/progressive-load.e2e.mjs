@@ -23,8 +23,23 @@
 //
 //   • page 1 has pixels while the far end of the document still does not —
 //     i.e. the document stopped arriving in one lump (`renderQueue`);
-//   • a page far from the reader carries no interactive layers until they
-//     approach it, and does once they arrive (`PdfPage`'s `active`).
+//   • a page far from the reader carries no interactive layers OR bitmap until
+//     they approach it, and carries both once they arrive (`PdfPage`'s
+//     `active`).
+//
+// ⚠️ THIS SPEC USED TO ASSERT "and the rest do follow — none are abandoned",
+// i.e. that all 200 pages end up painted. That is deliberately no longer true
+// (2026-09-01): a page outside the band around the reader now holds no bitmap,
+// which is what lets the pages you ARE looking at be drawn at the screen's full
+// pixel ratio however long the document is — see `crisp-pages.e2e.mjs`. What
+// replaces it is the claim that actually matters to a reader: the page arrives
+// when you get there.
+//
+// ⚠️ AND THE PREDICATE HAD TO CHANGE WITH IT. `painted()` used to mean "this
+// canvas is not 300×150", the untouched default. A RELEASED canvas is 0×0, and
+// that passed the old test — so with windowing in place every unpainted page
+// read as painted and this spec cheerfully asserted the opposite of the truth.
+// It tests `width > 1`.
 
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -109,9 +124,11 @@ try {
     // ⚠️ NOT `canvas.width > 0`: an untouched <canvas> reports the default
     // 300x150, so every page would look painted the instant React mounts it.
     // The backing store is only sized in PdfPage's final blit.
+    // ⚠️ `width > 1` as well as "not the 300×150 default": a page whose bitmap
+    // has been released is 0×0, and 0×0 is not painted either.
     const painted = (i) => {
       const el = document.querySelector(`[data-page-index="${i}"] canvas`)
-      return !!el && !(el.width === 300 && el.height === 150)
+      return !!el && el.width > 1 && !(el.width === 300 && el.height === 150)
     }
     const bin = atob(b64)
     const bytes = new Uint8Array(bin.length)
@@ -133,17 +150,14 @@ try {
       }
       await new Promise((r) => setTimeout(r, 10))
     }
-    // Let the rest arrive, so the "all of it eventually renders" claim is real
-    // and not just "the far pages never come".
-    let all = false
-    while (performance.now() < deadline && !all) {
-      all = Array.from({ length: PAGES }, (_, i) => i).every(painted)
-      if (!all) await new Promise((r) => setTimeout(r, 25))
-    }
+    // Let the first screenful settle, then count what is actually held. The
+    // whole document is NOT expected to paint — see the note at the top.
+    await new Promise((r) => setTimeout(r, 1500))
+    const held = Array.from({ length: PAGES }, (_, i) => i).filter(painted).length
     await done.catch(() => {})
     return {
       firstPaintedWithLastStillBlank,
-      all,
+      held,
       numPages: usePdfStore.getState().numPages
     }
   }, { b64, PAGES })
@@ -156,7 +170,11 @@ try {
       ? 'page 1 never painted at all'
       : 'the whole document still arrives in one lump'
   )
-  check('and the rest do follow — none are abandoned', load.all)
+  check(
+    'and the document does not hold a bitmap for all 200 — the far ones wait',
+    load.held > 0 && load.held < PAGES,
+    `${load.held} of ${PAGES} held`
+  )
 
   console.log('\nOnly the pages near the reader carry their interactive layers')
   // Konva renders its stage into a `div.konvajs-content`, so that is the
@@ -179,6 +197,23 @@ try {
   ).catch(() => {})
   check('page 151 now has its annotation layer', await layerAt(150))
   check('and page 1, far behind now, has given its up', !(await layerAt(0)))
+
+  // The bitmap follows the same band, and is the half the reader actually sees.
+  const paintedAt = (i) =>
+    page.evaluate((i) => {
+      const el = document.querySelector(`[data-page-index="${i}"] canvas`)
+      return !!el && el.width > 1 && !(el.width === 300 && el.height === 150)
+    }, i)
+  await page.waitForFunction(
+    (i) => {
+      const el = document.querySelector(`[data-page-index="${i}"] canvas`)
+      return !!el && el.width > 1 && !(el.width === 300 && el.height === 150)
+    },
+    150,
+    { timeout: 15000 }
+  ).catch(() => {})
+  check('and its bitmap arrived with it', await paintedAt(150))
+  check('while page 1 has released its own', !(await paintedAt(0)))
 } finally {
   await browser.close().catch(() => {})
 }
