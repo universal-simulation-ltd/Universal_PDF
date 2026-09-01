@@ -99,7 +99,10 @@
     },
     "files": [
       "dist/**/*",
-      "electron/**/*"
+      "electron/**/*",
+      "!node_modules/**/*",
+      "node_modules/@unisim/sdk/package.json",
+      "node_modules/@unisim/sdk/electron/**/*"
     ],
     "fileAssociations": [
       {

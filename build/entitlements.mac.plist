@@ -3,10 +3,11 @@
 <!--
   Hardened Runtime entitlements for a notarised macOS build.
 
-  Not used by the current release pipeline: there is no Developer ID cert, so
-  `dist:mac:unsigned` turns Hardened Runtime and notarisation off. This file is
-  what the build needs the day a cert exists — Hardened Runtime is REQUIRED for
-  notarisation, and it blocks things Electron genuinely needs.
+  IN USE by the release pipeline: `dist:mac` signs with the Developer ID cert
+  (Universal Simulation Ltd, ZH9C5TS86A) and notarises, and Hardened Runtime is
+  REQUIRED for notarisation — it blocks things Electron genuinely needs, which
+  is what the keys below hand back. Only `dist:mac:unsigned` turns both off, for
+  a local build with no cert to hand.
 
   Deliberately SHORTER than Universal USB's copy of this file: that app loads an
   unsigned libusb .node and needs `disable-library-validation` to do it.

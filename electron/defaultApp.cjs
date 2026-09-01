@@ -101,8 +101,22 @@ ObjC.import('CoreServices')
 // An ad-hoc signature (a local `dist:mac:unsigned` build) is rejected here, as
 // is anything signed without a Developer ID and notarized. That is correct: the
 // offer should appear only on a build that can actually honour it.
+//
+// ⚠️ MEMOISED, and not as micro-optimisation. `spctl --assess` re-hashes the
+// whole .app every time it is asked — measured at 1.9–2.5s on this bundle with
+// everything already warm in the page cache, and it scales with bundle size
+// (Calculator.app, 3.4MB, answers in 0.22s). `status()` is called on mount AND
+// again on every window focus, so an uncached probe spends seconds of disk and
+// CPU during the launch it is least affordable in — a cost macOS pays alone,
+// which is most of why this app cold-starts slower here than on Windows or
+// Linux. The answer cannot change while the app runs: the bundle it is asking
+// about is the one currently executing, and macOS will not let it be rewritten
+// underneath itself. A new build is a new process.
+let macGatekeeperVerdict
 async function macGatekeeperAccepts(bundlePath) {
+  if (macGatekeeperVerdict !== undefined) return macGatekeeperVerdict
   const { ok } = await run('spctl', ['--assess', '--type', 'execute', bundlePath], 20_000)
+  macGatekeeperVerdict = ok
   return ok
 }
 
@@ -263,6 +277,14 @@ async function status() {
     const info = await macQuery(false)
     if (!info || !info.id) return { ...base, reason: 'no-bundle-id' }
     const isDefault = sameId(info.id, info.current)
+    // Already the handler? Then `canSet` is answering a question nobody is
+    // asking — there is no offer to make — and the seconds `spctl` costs would
+    // buy nothing. Skipped rather than cached-away, so the common case never
+    // pays it even once.
+    // (`canSet` is unobservable here: every reader of it in the UI sits behind
+    // `available`, which is false whenever `isDefault` is true.)
+    if (isDefault)
+      return { ...base, supported: true, canSet: true, isDefault: true, reason: 'already-default' }
     const notarized = await macGatekeeperAccepts(macBundlePath())
     return {
       ...base,
