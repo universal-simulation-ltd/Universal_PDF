@@ -521,6 +521,29 @@ The hint is a sibling of the `Rect`, not a `Group` wrapping both: `common` carri
 the Transformer ref and the resize handler reads `width()` / `height()` off that
 node, which a Group does not report.
 
+⚠️ **The price of that is that nothing carries the hint along.** Konva moves the
+dragged node alone, and the store the hint's `x`/`y` come from is only written on
+`dragend` / `transformend` — so left to itself the caption sits at the box's old
+home for the whole gesture and snaps into place only when the finger lifts (James,
+2026-09-01). `AnnotationLayer` keeps a ref per caption and pushes the live node
+geometry into it from `onShapeDragMove` and from an `onTransform` on the
+redaction `Rect` — imperatively, so a pointer move costs no React render and the
+caption can't lag a frame behind the box. Three things to keep in step:
+
+- **Group drags.** A multi-selection moves its other members by hand in
+  `onShapeDragMove`; each one syncs its caption there too.
+- **Cancelled gestures.** A pinch mid-drag puts the nodes back via
+  `restoreNodeHome`, which must take the caption with them — React won't, because
+  the annotation never changed, so the caption's props are identical to the last
+  render and react-konva skips them.
+- **The geometry itself** is duplicated between `placeRedactHint` and the `redact`
+  branch of the render. Change one, change the other.
+
+`npm run test:redact-hint` (`e2e/redact-hint-follow.e2e.mjs`) pins it, reading
+Konva's scene graph **mid-gesture with the mouse still down** — assertions taken
+after the drop pass on the broken build, because the commit re-renders the
+caption at the new position.
+
 ### The fill colour is the toolbar's colour
 
 `RedactAnnotation.fill` is a **hex string**, taken from the same swatches that
