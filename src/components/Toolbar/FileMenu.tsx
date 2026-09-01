@@ -159,6 +159,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const setMergeOpen = usePdfStore((s) => s.setMergeOpen)
   const setConvertOpen = usePdfStore((s) => s.setConvertOpen)
   const setMetadataOpen = usePdfStore((s) => s.setMetadataOpen)
+  const setAdvancedExportOpen = usePdfStore((s) => s.setAdvancedExportOpen)
   const isXfa = usePdfStore((s) => s.isXfa)
   const setSearchOpen = useSearchStore((s) => s.setOpen)
   const openForRedact = useSearchStore((s) => s.openForRedact)
@@ -671,6 +672,22 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                     info="Render each page to PNG or JPG (a ZIP for multiple pages)."
                     onSelect={() => { setConvertOpen(true); closeMenu() }}
                   />
+                  {/* ⚠️ NOT in the Export dialog, and not two rows here
+                      either. Flattening and locking both change what the file
+                      IS rather than how big it is, so they were pulled out of
+                      Export (2026-09-01) — and they share one dialog because
+                      the document you flatten so nobody can edit what you
+                      signed is usually the one you then want sealed with a
+                      password. Two rows would mean flatten, download, re-open
+                      the result, lock, download again. */}
+                  {!isXfa && (
+                    <InfoRow
+                      icon="🔒"
+                      label="Advanced export"
+                      info="Flatten the pages into pictures, lock it with a password, or both."
+                      onSelect={() => { setAdvancedExportOpen(true); closeMenu() }}
+                    />
+                  )}
                   <InfoRow
                     icon="🏷"
                     label="Document metadata"

@@ -107,6 +107,7 @@ interface PdfState {
   // Advanced-menu dialogs that act on the currently-open document.
   mergeOpen: boolean
   convertOpen: boolean
+  advancedExportOpen: boolean
   metadataOpen: boolean
   // The "Add QR code" generator (toolbar, next to the image button).
   qrOpen: boolean
@@ -144,6 +145,7 @@ interface PdfState {
   setPinching: (pinching: boolean) => void
   setMergeOpen: (open: boolean) => void
   setConvertOpen: (open: boolean) => void
+  setAdvancedExportOpen: (open: boolean) => void
   setMetadataOpen: (open: boolean) => void
   setQrOpen: (open: boolean) => void
   /** Reopen the generator on a code already placed on a page. */
@@ -186,6 +188,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   pinching: false,
   mergeOpen: false,
   convertOpen: false,
+  advancedExportOpen: false,
   metadataOpen: false,
   qrOpen: false,
   qrEdit: null,
@@ -204,6 +207,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   setPinching: (pinching) => set({ pinching }),
   setMergeOpen: (mergeOpen) => set({ mergeOpen }),
   setConvertOpen: (convertOpen) => set({ convertOpen }),
+  setAdvancedExportOpen: (advancedExportOpen) => set({ advancedExportOpen }),
   setMetadataOpen: (metadataOpen) => set({ metadataOpen }),
   // Clearing the edit target on every open AND close is what keeps the toolbar
   // button meaning "a new code": without it, closing an edit and pressing QR
@@ -381,7 +385,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     // Nothing is open, so nothing is unsaved. Re-baselining here is also what
     // keeps the structural-edit counter in step across documents.
     markSaved()
-    set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, firstPaint: true, previewOpen: false, presentOpen: false, ocrOpen: false, mergeOpen: false, convertOpen: false, metadataOpen: false, qrOpen: false, qrEdit: null, importNotice: null, lockedFile: null })
+    set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, firstPaint: true, previewOpen: false, presentOpen: false, ocrOpen: false, mergeOpen: false, convertOpen: false, advancedExportOpen: false, metadataOpen: false, qrOpen: false, qrEdit: null, importNotice: null, lockedFile: null })
     setHashSlug(null)
   },
   refreshRecents: async () => {

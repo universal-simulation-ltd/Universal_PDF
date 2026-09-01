@@ -1,62 +1,23 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
-import { useFormStore } from '../../stores/formStore'
-import { PDFDocument } from 'pdf-lib'
-import {
-  buildAnnotatedPdfBytes,
-  compressPdf,
-  downloadPdfBytes,
-  estimateRasterSizes,
-  hasRasterImages,
-  type CompressQuality,
-  type CompressResult,
-  type RasterEstimate
-} from '../../lib/export'
+import { downloadPdfBytes } from '../../lib/export'
 import { nextExportName, previewExportName } from '../../lib/exportName'
 import { countRedactions, isRedactConfirmed } from '../../lib/redactGate'
-import { encryptPdf } from '../../lib/pdfEncrypt'
-import LockFields, { EMPTY_LOCK, lockIncomplete, lockPasswordOf, type LockState } from '../Lock/LockFields'
 import { markSaved } from '../../lib/unsavedChanges'
 import { RedactIcon } from '../icons/RedactIcon'
+import { useExportBuild } from './useExportBuild'
 
-// Annotations are stored in PDF-point space (the editor divides the on-screen
-// pointer position by the render scale before saving), so the export maps them
-// 1:1 into the page — no extra scaling. A value other than 1 shifts and
-// shrinks every annotation toward the page's bottom-left corner. (The redaction
-// rasteriser's DPI is a separate `renderScale` inside export.ts.)
-const EXPORT_SCALE = 1.0
-
+// The plain export: here is your document, here is what it weighs, take it.
+//
+// ⚠️ FLATTENING AND LOCKING ARE NOT HERE — they moved to Actions ▸ Advanced ▸
+// Advanced export on 2026-09-01 (`AdvancedExportDialog`). Both change what the
+// file IS rather than how big it is, both are wanted by a minority of exports,
+// and between them they filled a phone screen above the size panel, the
+// filename and the Download button. ⚠️ Do not add a "quick" checkbox for
+// either back into this dialog: two places to flatten, disagreeing about which
+// one the Download button honours, is the failure that arrangement invites.
 type Variant = 'original' | 'compressed'
-
-// ⚠️ TWO ORTHOGONAL QUESTIONS, and until 2026-08-31 this file asked them as
-// one. `CompressQuality` is a single scale — light / balanced / strong — but
-// 'light' differs from the other two in KIND, not in degree: it is a lossless
-// re-save, while both the others turn every page into a picture. Presenting
-// them as one row of three made "do I keep my text layer?" look like a
-// compression setting, and gated it behind whether flattening would save
-// enough bytes to be worth offering.
-//
-// It is not a size question. The reason to want a flattened PDF is "nobody can
-// reflow, copy or edit what I signed", which is true of a 40 KB letter exactly
-// as it is of a 40 MB scan — and a 40 KB letter never cleared the ≥20% AND
-// ≥100 KB bar in `worthOffering`, so on every text document (every Word file
-// this app converts, for one) the mode was present, functional and completely
-// unreachable.
-//
-// So the two questions are now two controls: a FLATTEN checkbox, always
-// available, and — only once flattening is on — a strength choice between the
-// two rasterising levels. 'light' is no longer a button; it IS the unchecked
-// box, which is the default here and nowhere else, because an export is an
-// annotated and often signed document and giving away its text layer is not a
-// thing to do on somebody's behalf.
-const FLATTEN_OPTIONS: { value: CompressQuality; label: string; hint: string }[] = [
-  { value: 'balanced', label: 'Balanced', hint: 'Good quality · big saving on scans' },
-  { value: 'strong', label: 'Maximum', hint: 'Smallest · most visible loss' }
-]
-
-/** The quality used when the flatten box is ticked, before any strength is picked. */
-const DEFAULT_FLATTEN: CompressQuality = 'balanced'
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -99,34 +60,25 @@ interface Props {
 }
 
 export default function ExportModal({ open, onClose }: Props) {
-  const sourceBytes = usePdfStore((s) => s.sourceBytes)
   const fileName = usePdfStore((s) => s.fileName)
-  const doc = usePdfStore((s) => s.doc)
   const isXfa = usePdfStore((s) => s.isXfa)
   const setPreviewOpen = usePdfStore((s) => s.setPreviewOpen)
+  const setAdvancedExportOpen = usePdfStore((s) => s.setAdvancedExportOpen)
   const annotations = useAnnotationStore((s) => s.annotations)
-  const formValues = useFormStore((s) => s.values)
 
-  const [annotated, setAnnotated] = useState<Uint8Array | null>(null)
-  const [compressed, setCompressed] = useState<CompressResult | null>(null)
-  // null = not worked out yet. Whether the rasterising qualities have anything
-  // to bite on; see `canCompressAtAll` below for what it is used for.
-  const [hasImages, setHasImages] = useState<boolean | null>(null)
-  // What the two rasterising levels would produce, measured from one sampled
-  // page. null until known; see `offeredQualities`.
-  const [rasterEstimate, setRasterEstimate] = useState<RasterEstimate | null>(null)
-  const [building, setBuilding] = useState(false)
-  const [compressing, setCompressing] = useState(false)
-  const [compressPct, setCompressPct] = useState(0)
-  const [quality, setQuality] = useState<CompressQuality>('light')
-  const [error, setError] = useState<string | null>(null)
+  // ⚠️ 'light' and nothing else. It is the LOSSLESS re-save — an object-stream
+  // rebuild that keeps the text layer — so this dialog can offer a smaller copy
+  // without ever asking the user to give something up for it. The rasterising
+  // levels live in the advanced dialog, behind a checkbox that says what they
+  // cost.
+  const { annotated, compressed, hasImages, building, compressing, compressPct, error, ready } =
+    useExportBuild(open, 'light')
+
   const [tab, setTab] = useState<Variant>('compressed')
-  const buildIdRef = useRef(0)
-  const compressIdRef = useRef(0)
 
   // Export is the point of no return for redactions: until now they're just
-  // movable black-box markup, but the rasterise-and-rebuild pass below removes
-  // the underlying text for good. Gate the destructive actions behind a typed
+  // movable black-box markup, but the rasterise-and-rebuild pass removes the
+  // underlying text for good. Gate the destructive actions behind a typed
   // "REDACT" confirmation when the document has any.
   // ⚠️ The rule itself lives in lib/redactGate.ts, shared with the exit
   // guard's "Save and exit" — the other way a redaction can be baked in.
@@ -135,136 +87,11 @@ export default function ExportModal({ open, onClose }: Props) {
   const [redactConfirm, setRedactConfirm] = useState('')
   const redactConfirmed = !needsRedactConfirm || isRedactConfirmed(redactConfirm)
 
-  // Locking runs at DOWNLOAD time, not while the dialog is open: it is the
-  // last step over the finished bytes, and re-running it on every keystroke of
-  // a password would be both pointless and slow (Algorithm 2.B is designed to
-  // be slow). `locking` exists because that step is the one part of an export
-  // that can take a visible moment.
-  const [lock, setLock] = useState<LockState>(EMPTY_LOCK)
-  const [locking, setLocking] = useState(false)
-  const [lockError, setLockError] = useState<string | null>(null)
-
-  // Flattening and locking both live behind one disclosure. Neither is part of
-  // a normal export — the overwhelmingly common answer to "how do I want this
-  // file?" is "as it is" — and between them they were pushing the size panel,
-  // the filename and the Download button off a phone screen before the dialog
-  // had said anything the user came for.
-  //
-  // ⚠️ Collapsed on EVERY opening, not just the first, because the reset
-  // effect below puts `quality` and `lock` back to their defaults too. An
-  // open section restored from the last export would be showing empty fields
-  // and an unticked box — the appearance of remembered settings, with none of
-  // the substance.
-  const [advancedOpen, setAdvancedOpen] = useState(false)
-  const advancedId = useId()
-
   useEffect(() => {
     if (!open) return
     setTab('compressed')
-    setQuality('light')
     setRedactConfirm('')
-    // ⚠️ Cleared every time the dialog opens. A password left in state from a
-    // previous export would silently lock the NEXT document with it — a file
-    // the user never meant to protect, sealed with something they have already
-    // forgotten they typed.
-    setLock(EMPTY_LOCK)
-    setLockError(null)
-    setAdvancedOpen(false)
   }, [open])
-
-  useEffect(() => {
-    if (!open || !sourceBytes) return
-    const myId = ++buildIdRef.current
-    setAnnotated(null)
-    setCompressed(null)
-    setHasImages(null)
-    setRasterEstimate(null)
-    setError(null)
-    setBuilding(true)
-    ;(async () => {
-      try {
-        // XFA forms: the pdf-lib annotate/rasterize pipeline can't see XFA field
-        // values (they live in the XFA datasets, not AcroForm widgets). PDF.js's
-        // saveDocument() serializes the values the user typed into the live form
-        // (held in doc.annotationStorage) back into the PDF. No compressed
-        // variant — the rasterizer would only capture Adobe's placeholder page.
-        if (isXfa && doc) {
-          const saved = await doc.saveDocument()
-          if (myId !== buildIdRef.current) return
-          setAnnotated(saved)
-          setCompressed(null)
-          return
-        }
-        const copy = sourceBytes.slice(0)
-        const annot = await buildAnnotatedPdfBytes(copy, annotations, EXPORT_SCALE, formValues)
-        if (myId !== buildIdRef.current) return
-        setAnnotated(annot)
-        // Asked of the ANNOTATED bytes, not the source: a placed signature or
-        // pasted picture is a raster image the source did not have, and it is
-        // as compressible as any other.
-        try {
-          const probe = await PDFDocument.load(annot.slice(0))
-          if (myId !== buildIdRef.current) return
-          setHasImages(hasRasterImages(probe))
-        } catch {
-          if (myId === buildIdRef.current) setHasImages(true)
-        }
-        // Runs alongside the light compression the other effect is doing, so
-        // by the time the dialog is `ready` both answers are usually in and the
-        // level buttons settle before they were ever usable.
-        try {
-          const est = await estimateRasterSizes(annot.slice(0).buffer as ArrayBuffer)
-          if (myId === buildIdRef.current) setRasterEstimate(est)
-        } catch {
-          // Unknown stays unknown — offeredQualities shows everything.
-        }
-      } catch (e) {
-        if (myId !== buildIdRef.current) return
-        setError((e as Error).message || 'Export failed')
-      } finally {
-        if (myId === buildIdRef.current) setBuilding(false)
-      }
-    })()
-  }, [open, sourceBytes, annotations, formValues, isXfa, doc])
-
-  // Compression is its own pass so that changing the quality re-compresses the
-  // annotated bytes we already have, instead of re-baking every annotation and
-  // re-rasterising every redaction to arrive at the identical input again.
-  useEffect(() => {
-    if (!open || isXfa || !annotated) return
-    const myId = ++compressIdRef.current
-    setCompressed(null)
-    setCompressing(true)
-    setCompressPct(0)
-    ;(async () => {
-      try {
-        const annotBuf = annotated.slice().buffer
-        // ⚠️ The 5th argument is what makes the flatten checkbox honest. By
-        // default `compressPdf` hands back the lossless bytes whenever
-        // rasterising inflated the file — right when the ask is "make this
-        // smaller", and exactly wrong when the ask is "make this
-        // uneditable", which is what any rasterising quality means HERE.
-        // Without it, ticking the box on a text document quietly returns a
-        // file whose text is still selectable.
-        const comp = await compressPdf(
-          annotBuf,
-          fileName ?? 'document.pdf',
-          quality,
-          (f) => {
-            if (myId === compressIdRef.current) setCompressPct(f)
-          },
-          quality !== 'light'
-        )
-        if (myId !== compressIdRef.current) return
-        setCompressed(comp)
-      } catch (e) {
-        if (myId !== compressIdRef.current) return
-        setError((e as Error).message || 'Compression failed')
-      } finally {
-        if (myId === compressIdRef.current) setCompressing(false)
-      }
-    })()
-  }, [open, annotated, quality, fileName, isXfa])
 
   useEffect(() => {
     if (!open) return
@@ -277,7 +104,6 @@ export default function ExportModal({ open, onClose }: Props) {
 
   if (!open) return null
 
-  const ready = !building && !compressing && annotated && compressed
   const origSize = annotated?.byteLength ?? 0
   const compSize = compressed?.compressedSize ?? 0
   const saved = origSize - compSize
@@ -287,110 +113,18 @@ export default function ExportModal({ open, onClose }: Props) {
   // tab promising "−0%" is just a second button that does nothing.
   const didShrink = saved > 0 && (pct >= 0.5 || saved >= 20 * 1024)
 
-  // Is the user asking for a flattened file? This is the whole of the flatten
-  // state — there is no second boolean to keep in step with `quality`, and so
-  // no way for the checkbox and the compressor to disagree about what is being
-  // produced.
-  const flatten = quality !== 'light'
-
-  // Whether to show the SIZE-driven compression controls at all.
-  //
-  // Two different "no gain" cases, and only one of them means they are useless:
-  //
-  //  - Light found nothing, but the document HAS images. Flattening may still
-  //    shrink it enormously — that is the whole point of it on a scan — so the
-  //    controls stay and the hint says to try it.
-  //  - The document has no images at all. Then nothing can win on SIZE: the
-  //    rasterising levels have nothing to re-encode and would only inflate it
-  //    (see `fellBackToLossless`), and Light has already had its go.
-  //
-  // ⚠️ `&& !flatten`. Somebody who has ticked the box is not asking for a
-  // smaller file — they are asking for one nobody can edit — so "there is
-  // nothing to gain here" is no longer a reason to take the controls away.
-  // Without this clause the text-only document, which is exactly the case the
-  // checkbox exists for, hides the result of its own setting.
-  //
-  // `hasImages === null` means the probe has not finished (or failed, in which
-  // case it reports true). Keep the controls until we know better — appearing
-  // late is worse than a control that turns out not to help.
-  const compressionPointless = ready && !didShrink && hasImages === false && !flatten
-
-  // Which strength buttons are worth putting on screen.
-  //
-  // 'light' is always offered — it is the lossless one and the default.
-  // 'balanced' and 'strong' turn every page into a picture, which costs the
-  // document its text layer: it can no longer be selected, searched or read
-  // aloud. That is a real trade, so it is only worth OFFERING for a real
-  // saving. A level that would shave 3% off does not earn the question.
-  //
-  // Measured against the lossless result, not the original, because Light is
-  // what the user gets for free without giving anything up.
-  const RASTER_WORTH_IT = 0.2 // ≥20% smaller...
-  const RASTER_MIN_BYTES = 100 * 1024 // ...and ≥100 KB, so tiny files don't qualify on ratio alone
-  const losslessSize = compressed && !compressed.fellBackToLossless && quality === 'light'
-    ? compressed.compressedSize
-    : origSize
-  function worthOffering(estimated: number, against: number): boolean {
-    const savedVs = against - estimated
-    return savedVs >= against * RASTER_WORTH_IT && savedVs >= RASTER_MIN_BYTES
-  }
-  // ⚠️ `worthOffering` NO LONGER DECIDES WHETHER FLATTENING IS REACHABLE — that
-  // is the whole point of the checkbox, and it is available on every document.
-  // What it still decides is whether MAXIMUM is worth putting beside Balanced:
-  // if the two land in the same place, the extra visible damage buys nothing
-  // and one button is not a choice.
-  const offeredQualities = FLATTEN_OPTIONS.filter((opt) => {
-    if (opt.value === 'balanced') return true
-    // Not measured yet (or the estimate failed): show it rather than hide a
-    // level that might have been the useful one.
-    if (!rasterEstimate) return true
-    // Never hide the level currently in use — a button vanishing from under
-    // the user's own selection is worse than one that turns out not to help.
-    if (opt.value === quality) return true
-    return worthOffering(rasterEstimate.strong, rasterEstimate.balanced)
-  })
-
-  // How much smaller flattening would make it, for the line under the checkbox.
-  // Null when unknown, and — deliberately — also when it would make the file
-  // BIGGER: a text document rasterises to something larger almost every time,
-  // and "· 240 KB bigger" beside a checkbox reads as a warning against ticking
-  // it when size is not what it is for. `fellBackToLossless` says the same
-  // thing afterwards, in the place where it matters.
-  const flattenSaving =
-    rasterEstimate && losslessSize - rasterEstimate.balanced >= RASTER_MIN_BYTES
-      ? losslessSize - rasterEstimate.balanced
-      : null
-  // ⚠️ Two SEPARATE questions, and conflating them drops a real choice:
-  //
-  //  - showStrength: is there more than one compression level worth picking?
-  //    One button is not a choice, so the strength row goes.
-  //  - showVariantTabs: is there a compressed file worth choosing INSTEAD of
-  //    the original? A document where Light saves 40% but rasterising is not
-  //    worth offering has only one strength — and still very much has two
-  //    files. Hiding the tabs with the strength row would have stranded the
-  //    user on whichever variant happened to be selected.
+  // Nothing was saved and there are no images to try harder on, so the whole
+  // size question is settled and the tab strip has nothing to offer.
+  const compressionPointless = ready && !didShrink && hasImages === false
   const showVariantTabs = !compressionPointless
-  // ⚠️ Only ever a choice BETWEEN the two rasterising levels, so it needs
-  // flattening to be on. When the box is unticked there is exactly one
-  // possible output and a strength row would be a control over nothing.
-  const showStrength = showVariantTabs && flatten && offeredQualities.length > 1
-  // ⚠️ `&& !flatten`. This bounce exists so nobody downloads a "compressed"
-  // file that is the same size as the original — but a deliberately flattened
-  // file is wanted whatever it weighs, and bouncing the user back to Original
-  // would silently hand them the very text layer they asked to destroy.
-  const effectiveTab: Variant =
-    ready && tab === 'compressed' && !didShrink && !flatten ? 'original' : tab
+  const effectiveTab: Variant = ready && tab === 'compressed' && !didShrink ? 'original' : tab
 
   // Why the Compressed tab has nothing to offer. On the lossless pass that is
-  // usually a scan whose bulk is images — exactly what Balanced is for — so say
-  // so rather than leaving a dead tab with no way forward. Where rasterising
-  // itself would have bloated the file, compressPdf already kept the lossless
-  // bytes and says so.
+  // usually a scan whose bulk is images — which is what flattening is for — so
+  // say so rather than leaving a dead tab with no way forward.
   const noGainNote = compressed?.fellBackToLossless
     ? 'Kept the lossless version — turning these pages into images would have made the file bigger.'
-    : quality === 'light'
-      ? 'Already optimised — try Balanced or Maximum for image-heavy PDFs.'
-      : 'Already optimised — this PDF is as small as it goes.'
+    : 'Already optimised — try Advanced export to turn image-heavy pages into pictures.'
 
   // ⚠️ The name is claimed at DOWNLOAD time, not here. `nextExportName`
   // increments a per-document counter, so working it out during render would
@@ -398,49 +132,12 @@ export default function ExportModal({ open, onClose }: Props) {
   // label and `nextExportName` for the actual save.
   const previewName = previewExportName(fileName)
 
-  // Only ever shown while the section is shut, so it says what is switched on
-  // rather than what is available. Empty when neither is — the trigger falls
-  // back to naming the two controls, so a shut row still advertises what is
-  // behind it.
-  const advancedSummary = [flatten ? 'Flatten' : null, lock.enabled ? 'Lock' : null]
-    .filter(Boolean)
-    .join(' · ')
-
-  async function download(which: 'original' | 'compressed') {
-    if (!annotated || !compressed) return
-    // Widened to plain `Uint8Array` because the locked bytes come back over a
-    // buffer TypeScript will not narrow to ArrayBuffer; both are the same
-    // thing at runtime.
-    let bytes: Uint8Array = (which === 'original' ? annotated : compressed.bytes).slice()
-
-    if (lock.enabled) {
-      const password = lockPasswordOf(lock)
-      // ⚠️ Bail, never fall through. If the fields are incomplete the button
-      // is already disabled, but the one unacceptable outcome here is handing
-      // someone an UNLOCKED file because their confirm box was a character
-      // out — so the null case stops the export rather than skipping the lock.
-      if (!password) return
-      setLockError(null)
-      setLocking(true)
-      try {
-        bytes = (await encryptPdf(bytes, password)).bytes
-      } catch (e) {
-        setLockError((e as Error).message || 'Could not lock this PDF.')
-        return
-      } finally {
-        setLocking(false)
-      }
-    }
-
-    // ⚠️ Claimed only now that the bytes exist. `nextExportName` increments a
-    // per-document counter, so calling it before a lock that then failed would
-    // burn v1 on a file that was never written.
-    //
-    // One name for either variant: the modal closes after a download, so only
-    // one of the two ever leaves per opening, and which variant it was is not
-    // something the file needs to carry.
+  function download(which: Variant) {
+    if (!annotated) return
+    const source = which === 'original' ? annotated : compressed?.bytes
+    if (!source) return
     const name = nextExportName(fileName)
-    downloadPdfBytes(bytes, name)
+    downloadPdfBytes(source.slice(), name)
     // The amendments are now in a file, so the exit guard has nothing left to
     // offer to save. Every route out of a document reads this.
     markSaved()
@@ -449,6 +146,11 @@ export default function ExportModal({ open, onClose }: Props) {
 
   function openPrintPreview() {
     setPreviewOpen(true)
+    onClose()
+  }
+
+  function openAdvanced() {
+    setAdvancedExportOpen(true)
     onClose()
   }
 
@@ -524,147 +226,6 @@ export default function ExportModal({ open, onClose }: Props) {
           </>
         ) : (
           <>
-            {/* ⚠️ COLLAPSED, and the two things inside it are the reason.
-                Flattening throws away the text layer; locking encrypts the
-                file with a password this app cannot recover. Neither belongs
-                in the path of a plain "give me my document" export, and open
-                by default they filled a phone screen — the size panel, the
-                filename and the Download button all sat below the fold, under
-                two questions almost nobody opening this dialog was asking.
-
-                ⚠️ Not a <details>. The open state has to be readable from
-                render (the disabled-button hint below points AT this section
-                by name when the lock is half-filled), and a native <details>
-                keeps that in the DOM where React cannot see it. */}
-            <div className="mb-3 rounded-lg border border-slate-200">
-              <button
-                type="button"
-                onClick={() => setAdvancedOpen((o) => !o)}
-                aria-expanded={advancedOpen}
-                aria-controls={advancedId}
-                className="flex w-full items-center gap-2 px-3 py-2.5 text-left"
-              >
-                <span
-                  aria-hidden="true"
-                  className={[
-                    'text-xs text-slate-400 transition-transform',
-                    advancedOpen ? 'rotate-90' : ''
-                  ].join(' ')}
-                >
-                  ▶
-                </span>
-                <span className="text-sm font-medium text-slate-900">Advanced exports</span>
-                {/* ⚠️ What is ON, whenever it is shut. A collapsed section that
-                    hides a ticked Flatten box is how somebody downloads a
-                    picture of their document without being told; the summary
-                    is the only thing standing between them and that. */}
-                {/* Shut only. Open, the controls speak for themselves and a
-                    second copy of their names is noise. */}
-                {!advancedOpen && (
-                  <span
-                    className={[
-                      'ml-auto truncate text-xs',
-                      advancedSummary ? 'font-medium text-orange-700' : 'text-slate-400'
-                    ].join(' ')}
-                  >
-                    {advancedSummary || 'Flatten · Lock'}
-                  </span>
-                )}
-              </button>
-
-              {advancedOpen && (
-                <div id={advancedId} className="border-t border-slate-200 px-3 pt-3">
-              {/* ⚠️ ALWAYS OFFERED, on every document, and that is the change.
-                  This used to be two of three buttons in a "Compression" row that
-                  only appeared when rasterising would save ≥20% AND ≥100 KB — so
-                  on a text document it was unreachable, which is precisely the
-                  document somebody wants flattened. The reason to want it is
-                  "nobody can reflow, copy or edit what I signed"; that has
-                  nothing to do with file size, so size no longer gates it. */}
-              <div className="mb-3">
-                <label className="flex items-start gap-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={flatten}
-                    onChange={(e) => setQuality(e.target.checked ? DEFAULT_FLATTEN : 'light')}
-                    disabled={building || compressing}
-                    className="mt-0.5 h-4 w-4 shrink-0 accent-orange-700 disabled:cursor-wait"
-                  />
-                  <span className="min-w-0">
-                    <span className="block text-sm font-medium text-slate-900">
-                      Flatten pages to images
-                      {flattenSaving !== null && (
-                        <span className="ml-1.5 text-xs font-medium tabular-nums text-emerald-700">
-                          ≈ {formatSize(flattenSaving)} smaller
-                        </span>
-                      )}
-                    </span>
-                    <span className="block text-xs text-slate-500 mt-0.5">
-                      Every page becomes a picture, so nobody can select, copy, search or edit
-                      the text — useful for a document you have signed.
-                    </span>
-                  </span>
-                </label>
-
-                {/* Only a choice between the two rasterising levels, so it lives
-                    inside the checkbox it belongs to and appears with it. */}
-                {showStrength && (
-                  <div className="mt-2.5 pl-6.5">
-                    <div className="text-xs uppercase tracking-wide text-slate-500 font-medium mb-1.5">
-                      Image quality
-                    </div>
-                    <div
-                      className="grid gap-1 p-1 bg-slate-100 rounded-lg"
-                      style={{ gridTemplateColumns: `repeat(${offeredQualities.length}, minmax(0, 1fr))` }}
-                    >
-                      {offeredQualities.map((opt) => {
-                        const active = opt.value === quality
-                        return (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => setQuality(opt.value)}
-                            disabled={building || compressing}
-                            aria-pressed={active}
-                            className={[
-                              'rounded-md px-2 py-1.5 text-sm font-medium transition-colors disabled:cursor-wait',
-                              active
-                                ? 'bg-white text-orange-700 shadow-sm'
-                                : 'text-slate-600 hover:text-slate-900'
-                            ].join(' ')}
-                          >
-                            {opt.label}
-                          </button>
-                        )
-                      })}
-                    </div>
-                    <div className="mt-1.5 text-xs text-slate-500">
-                      {FLATTEN_OPTIONS.find((o) => o.value === quality)?.hint}
-                    </div>
-                  </div>
-                )}
-
-                {flatten && (
-                  <div className="mt-2 text-xs text-amber-700">
-                    The Original tab is unaffected — it keeps its text layer, so download that
-                    one if you need the text back.
-                  </div>
-                )}
-              </div>
-
-              {/* ⚠️ Below flattening, and that ordering is the point. The two
-                  look like neighbours — both are "stop someone doing something
-                  with this file" — but only one of them is real. Flattening
-                  removes the text layer; locking encrypts the document. Putting
-                  a lock beside a PDF "no printing / no copying" permissions
-                  checkbox is what most PDF apps do, and it is why users believe
-                  those flags protect anything. There is no such checkbox here on
-                  purpose — see the note at the top of lib/pdfCrypto.ts. */}
-              <LockFields value={lock} onChange={setLock} disabled={building || compressing || locking} />
-                </div>
-              )}
-            </div>
-
             <div className="rounded-lg border border-slate-200 overflow-hidden">
               {/* Two tabs are a choice. With compression ruled out there is only
                   one file to download, so a tab strip with a permanently
@@ -696,14 +257,8 @@ export default function ExportModal({ open, onClose }: Props) {
                   role="tab"
                   aria-selected={effectiveTab === 'compressed'}
                   onClick={() => setTab('compressed')}
-                  // ⚠️ `|| flatten`. Disabling this tab is how the modal stops
-                  // somebody downloading a "compressed" copy that saved
-                  // nothing — but once flattening is ticked the second file is
-                  // wanted for what it IS, not for what it weighs, and a
-                  // disabled tab would make the checkbox unusable on exactly
-                  // the documents it was added for.
-                  disabled={ready ? !didShrink && !flatten : false}
-                  title={ready && !didShrink && !flatten ? noGainNote : undefined}
+                  disabled={ready ? !didShrink : false}
+                  title={ready && !didShrink ? noGainNote : undefined}
                   className={[
                     'flex-1 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors disabled:cursor-not-allowed',
                     effectiveTab === 'compressed'
@@ -711,23 +266,14 @@ export default function ExportModal({ open, onClose }: Props) {
                       : 'border-transparent text-slate-500 hover:text-slate-700 disabled:text-slate-300 disabled:hover:text-slate-300'
                   ].join(' ')}
                 >
-                  {/* Named for what it holds. "Compressed" is a claim about
-                      size, and a deliberately flattened file may well be
-                      bigger — calling that tab Compressed would be wrong in
-                      the one case the user asked for it. */}
-                  {flatten ? 'Flattened' : 'Compressed'}
+                  Compressed
                   {ready && didShrink && (
                     <span className="ml-2 text-[11px] font-medium tabular-nums text-emerald-700">
                       −{pct.toFixed(0)}%
                     </span>
                   )}
-                  {ready && !didShrink && !flatten && (
+                  {ready && !didShrink && (
                     <span className="ml-2 text-[11px] font-normal text-slate-400">no savings</span>
-                  )}
-                  {ready && !didShrink && flatten && (
-                    <span className="ml-2 text-[11px] font-normal tabular-nums text-slate-400">
-                      {saved < 0 ? `+${formatSize(-saved)}` : 'same size'}
-                    </span>
                   )}
                 </button>
               </div>
@@ -739,9 +285,6 @@ export default function ExportModal({ open, onClose }: Props) {
                     <div className="text-sm text-slate-500">
                       {building ? 'Building export…' : 'Compressing…'}
                     </div>
-                    {/* A rasterising pass over a long document is minutes of
-                        work. Without a bar it reads as a hung dialog, which is
-                        how people learn to kill the tab mid-export. */}
                     {compressing && (
                       <div className="mt-2 h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
                         <div
@@ -771,37 +314,11 @@ export default function ExportModal({ open, onClose }: Props) {
                       <div className="text-2xl font-semibold text-slate-900 tabular-nums">
                         {formatSize(compSize)}
                       </div>
-                      {/* ⚠️ Three outcomes, not one. Flattening a text document
-                          routinely produces a BIGGER file, and the old single
-                          line rendered that as "Saved -240 KB (-12.0%)" in
-                          green — a saving of a negative number, which is not a
-                          sentence anybody should have to parse. */}
-                      {saved > 0 ? (
-                        <div className="text-xs font-medium text-emerald-700">
-                          Saved {formatSize(saved)} ({pct.toFixed(1)}%)
-                        </div>
-                      ) : saved < 0 ? (
-                        <div className="text-xs font-medium text-amber-700">
-                          {formatSize(-saved)} bigger ({(-pct).toFixed(1)}%)
-                        </div>
-                      ) : (
-                        <div className="text-xs font-medium text-slate-500">Same size</div>
-                      )}
+                      <div className="text-xs font-medium text-emerald-700">
+                        Saved {formatSize(saved)} ({pct.toFixed(1)}%)
+                      </div>
                     </div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">
-                      {compressed?.fellBackToLossless || quality === 'light'
-                        ? 'object-stream re-save'
-                        : 'pages rasterised to JPEG'}
-                    </div>
-                    {/* ⓘ No "these pages were not flattened" warning here, and
-                        that is not an omission. It was written first, then
-                        deleted once `compressPdf` gained
-                        `keepRasterEvenIfBigger`: with the export dialog passing
-                        that for every rasterising quality, `fellBackToLossless`
-                        can no longer come back true on this path, so the
-                        warning was unreachable UI describing a state that
-                        cannot happen. The fallback is still right for the
-                        Compress dialogs, which ARE asking for a smaller file. */}
+                    <div className="text-[11px] text-slate-400 mt-0.5">object-stream re-save</div>
                   </>
                 )}
               </div>
@@ -842,45 +359,17 @@ export default function ExportModal({ open, onClose }: Props) {
               Saves as <span className="font-medium text-slate-700">{previewName}</span>
             </p>
 
-            {/* A disabled button with no stated reason is the same as a broken
-                one. `lockIncomplete` is the only condition here that the user
-                can fix by typing, so it is the only one that says so. */}
-            {lockIncomplete(lock) && !lockError && (
-              <p className="mt-1 text-xs text-amber-700">
-                {/* ⚠️ Names the section when it is shut. "Fields above" is a
-                    dead end pointing at a collapsed row — the one case where a
-                    disabled button with a stated reason is no better than a
-                    disabled button without one. The text opens it. */}
-                Finish the {lock.mode === 'pin' ? 'PIN' : 'password'} fields{' '}
-                {advancedOpen ? (
-                  'above'
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setAdvancedOpen(true)}
-                    className="underline underline-offset-2 hover:text-amber-900"
-                  >
-                    in Advanced exports
-                  </button>
-                )}{' '}
-                to download.
-              </p>
-            )}
-            {lockError && <p className="mt-1 text-xs text-red-600">{lockError}</p>}
-
             <div className="mt-2 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2">
               <button
-                onClick={() => { void download(effectiveTab) }}
-                disabled={!ready || !redactConfirmed || lockIncomplete(lock) || locking}
+                onClick={() => download(effectiveTab)}
+                disabled={!ready || !redactConfirmed}
                 className="px-4 py-2.5 bg-orange-700 hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
               >
-                <span aria-hidden="true">{lock.enabled ? '🔒' : '⬇'}</span>
+                <span aria-hidden="true">⬇</span>
                 {/* "Download Original" only means something next to a
                     "Download Compressed". On its own it reads as though there
                     were another, better copy being withheld. */}
-                {locking
-                  ? 'Locking…'
-                  : `Download${!showVariantTabs ? '' : effectiveTab === 'original' ? ' Original' : flatten ? ' Flattened' : ' Compressed'}`}
+                {`Download${!showVariantTabs ? '' : effectiveTab === 'original' ? ' Original' : ' Compressed'}`}
               </button>
               <button
                 onClick={openPrintPreview}
@@ -899,6 +388,19 @@ export default function ExportModal({ open, onClose }: Props) {
                 Print
               </button>
             </div>
+
+            {/* ⚠️ A SIGNPOST, not a second set of controls. Flattening and
+                locking are two menus away from here, and somebody who came to
+                the Export dialog looking for them would otherwise have no
+                reason to think the app can do either. It closes this dialog and
+                opens that one — there is never a moment with both on screen. */}
+            <button
+              type="button"
+              onClick={openAdvanced}
+              className="mt-3 text-xs text-slate-500 hover:text-orange-700 underline underline-offset-2"
+            >
+              Need to flatten the pages or lock it with a password?
+            </button>
 
           </>
         )}

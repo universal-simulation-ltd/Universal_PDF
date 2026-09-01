@@ -82,22 +82,33 @@ async function loadPlaywright() {
 // for the dialog to settle is what a person does anyway.
 async function waitReady(page, timeout = 120000) {
   await page
-    .locator('text=/Building export…|Compressing…/')
+    .locator('text=/Building export…|Compressing…|Flattening pages…/')
     .first()
     .waitFor({ state: 'detached', timeout })
     .catch(() => {})
 }
 
-// ⚠️ Since 2026-09-01 the flatten checkbox and the lock fields sit behind a
-// COLLAPSED "Advanced exports" disclosure, so neither is in the DOM when the
-// dialog opens. Every assertion below about either of them has to open it
-// first — a suite that skipped this would fail with "checkbox not on screen",
-// which is exactly what the section is supposed to make true by default.
-async function openAdvanced(page) {
-  const trigger = page.getByRole('button', { name: /Advanced exports/i })
-  await trigger.waitFor({ state: 'visible', timeout: 30000 }).catch(() => {})
-  if (!(await trigger.count())) return false
-  if ((await trigger.getAttribute('aria-expanded')) !== 'true') await trigger.click()
+// ⚠️ FLATTEN AND LOCK ARE NOT IN THE EXPORT DIALOG (owner, 2026-09-01). They
+// live in Actions ▸ Advanced ▸ Advanced export — its own dialog, reached
+// through a hover-opened menu and a collapsed accordion section. A suite that
+// still clicked Export would fail with "checkbox not on screen", which is
+// exactly what the move was supposed to make true.
+//
+// ⚠️ HOVER, not click, on the pill. It opens on `mouseenter` as well as on
+// click, so a Playwright click opens it on the way in and toggles it straight
+// back shut — see actions-menu.e2e.mjs, where this cost an afternoon.
+async function openAdvancedExport(page) {
+  await page.hover('button[aria-label$="Profile"]')
+  await page.waitForTimeout(400)
+  const section = page.getByRole('button', { name: 'Advanced', exact: true })
+  await section.waitFor({ state: 'visible', timeout: 30000 }).catch(() => {})
+  if (!(await section.count())) return false
+  if ((await section.getAttribute('aria-expanded')) !== 'true') await section.click()
+  const row = page.getByRole('button', { name: /Advanced export/i }).first()
+  await row.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {})
+  if (!(await row.count())) return false
+  await row.click()
+  await page.waitForSelector('text=Advanced export', { timeout: 15000 }).catch(() => {})
   return true
 }
 
@@ -230,12 +241,8 @@ const uiOk = await openTextPdf(1, 1)
 if (uiOk !== true) {
   check('a PDF can be opened in the app', false, String(uiOk))
 } else {
-  const exportBtn = page.getByRole('button', { name: /export|download|save/i }).first()
-  await exportBtn.waitFor({ state: 'visible', timeout: 20000 }).catch(() => {})
-  if (await exportBtn.count()) await exportBtn.click()
-
-  check('the export dialog collapses flatten and lock behind "Advanced exports"',
-    await openAdvanced(page))
+  check('flatten and lock are reachable at Actions ▸ Advanced ▸ Advanced export',
+    await openAdvancedExport(page))
 
   const box = page.getByRole('checkbox', { name: /Flatten pages to images/i })
   await box.waitFor({ state: 'visible', timeout: 30000 }).catch(() => {})
@@ -260,29 +267,28 @@ if (uiOk !== true) {
     check('no image-quality row on a document too small for the levels to differ',
       (await page.getByText('Image quality').count()) === 0)
 
-    // The tab is renamed for what it HOLDS. A flattened file is routinely
-    // bigger, so "Compressed" would be a false claim about size — and the old
-    // "no savings" badge, with the tab disabled behind it, made the checkbox
-    // unusable on exactly the documents it was added for.
+    // ⚠️ ONE FILE, no tab strip. Until 2026-09-01 this lived in the export
+    // dialog beside an Original/Compressed pair, and the flattened half had to
+    // be renamed and un-disabled to stop it claiming "no savings" about a file
+    // wanted for what it IS. The advanced dialog produces exactly one file, so
+    // the whole question is gone — what is asserted instead is that the button
+    // NAMES what it is about to hand over, and that the panel owns up to the
+    // size rather than reporting a saving of a negative number.
     await waitReady(page)
-    const tabs = await page.locator('[role=tablist]').first().innerText()
-    check('the second tab is named Flattened, not Compressed',
-      /Flattened/.test(tabs) && !/Compressed/.test(tabs), JSON.stringify(tabs))
-    check('it owns up to the size rather than claiming "no savings"',
-      !/no savings/.test(tabs), JSON.stringify(tabs))
-    check('and the tab is reachable — not disabled for having saved nothing',
-      await page.getByRole('tab', { name: /Flattened/ }).isEnabled())
+    const dl = page.getByRole('button', { name: /^Download/ }).first()
+    check('the button says it will hand over a flattened file',
+      /flattened/i.test(await dl.innerText()), JSON.stringify(await dl.innerText()))
+    const panel = await page.locator('text=/bigger|smaller|Same size/').first().innerText()
+    check('and the size line owns up to a text document getting BIGGER',
+      /bigger/.test(panel), JSON.stringify(panel))
 
     await waitReady(page)
     await box.uncheck()
     await waitReady(page)
     check('unticking it puts the raster controls away again',
       (await page.getByText('Image quality').count()) === 0)
-    // ⓘ The variant TABS may legitimately vanish here too: with flattening off,
-    // a text-only PDF that the lossless pass cannot shrink has genuinely one
-    // file to download, and `compressionPointless` has always hidden the strip
-    // in that case. Not asserted either way — it is pre-existing behaviour this
-    // change deliberately leaves alone.
+    check('and the button stops promising a flattened file',
+      !/flattened/i.test(await dl.innerText()), JSON.stringify(await dl.innerText()))
   }
 }
 
@@ -294,10 +300,7 @@ console.log('\n  A document big enough for Balanced vs Maximum to matter')
   if (ok !== true) {
     check('a 24-page PDF can be opened in the app', false, String(ok))
   } else {
-    const exportBtn2 = page.getByRole('button', { name: /export|download|save/i }).first()
-    await exportBtn2.waitFor({ state: 'visible', timeout: 30000 }).catch(() => {})
-    if (await exportBtn2.count()) await exportBtn2.click()
-    await openAdvanced(page)
+    await openAdvancedExport(page)
     const box2 = page.getByRole('checkbox', { name: /Flatten pages to images/i })
     await box2.waitFor({ state: 'visible', timeout: 60000 }).catch(() => {})
     if (!(await box2.count())) {
@@ -381,10 +384,7 @@ console.log('\n  A scan, where flattening genuinely shrinks the file')
   if (ok !== true) {
     check('a scan-like PDF can be opened in the app', false, String(ok))
   } else {
-    const btn = page.getByRole('button', { name: /export|download|save/i }).first()
-    await btn.waitFor({ state: 'visible', timeout: 30000 }).catch(() => {})
-    if (await btn.count()) await btn.click()
-    await openAdvanced(page)
+    await openAdvancedExport(page)
     const box3 = page.getByRole('checkbox', { name: /Flatten pages to images/i })
     await box3.waitFor({ state: 'visible', timeout: 60000 }).catch(() => {})
     if (!(await box3.count())) {

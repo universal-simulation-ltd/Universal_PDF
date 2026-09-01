@@ -78,22 +78,33 @@ async function visible(locator, timeout = 15000) {
 
 async function waitReady(page, timeout = 120000) {
   await page
-    .locator('text=/Building export…|Compressing…/')
+    .locator('text=/Building export…|Compressing…|Flattening pages…/')
     .first()
     .waitFor({ state: 'detached', timeout })
     .catch(() => {})
 }
 
-// ⚠️ Since 2026-09-01 the flatten checkbox and the lock fields sit behind a
-// COLLAPSED "Advanced exports" disclosure, so neither is in the DOM when the
-// dialog opens. Every assertion below about either of them has to open it
-// first — a suite that skipped this would fail with "checkbox not on screen",
-// which is exactly what the section is supposed to make true by default.
-async function openAdvanced(page) {
-  const trigger = page.getByRole('button', { name: /Advanced exports/i })
-  await trigger.waitFor({ state: 'visible', timeout: 30000 }).catch(() => {})
-  if (!(await trigger.count())) return false
-  if ((await trigger.getAttribute('aria-expanded')) !== 'true') await trigger.click()
+// ⚠️ FLATTEN AND LOCK ARE NOT IN THE EXPORT DIALOG (owner, 2026-09-01). They
+// live in Actions ▸ Advanced ▸ Advanced export — its own dialog, reached
+// through a hover-opened menu and a collapsed accordion section. A suite that
+// still clicked Export would fail with "checkbox not on screen", which is
+// exactly what the move was supposed to make true.
+//
+// ⚠️ HOVER, not click, on the pill. It opens on `mouseenter` as well as on
+// click, so a Playwright click opens it on the way in and toggles it straight
+// back shut — see actions-menu.e2e.mjs, where this cost an afternoon.
+async function openAdvancedExport(page) {
+  await page.hover('button[aria-label$="Profile"]')
+  await page.waitForTimeout(400)
+  const section = page.getByRole('button', { name: 'Advanced', exact: true })
+  await section.waitFor({ state: 'visible', timeout: 30000 }).catch(() => {})
+  if (!(await section.count())) return false
+  if ((await section.getAttribute('aria-expanded')) !== 'true') await section.click()
+  const row = page.getByRole('button', { name: /Advanced export/i }).first()
+  await row.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {})
+  if (!(await row.count())) return false
+  await row.click()
+  await page.waitForSelector('text=Advanced export', { timeout: 15000 }).catch(() => {})
   return true
 }
 
@@ -166,7 +177,7 @@ check('decryptPdf gives back an ordinary PDF', crypto.unlockedOpens)
 check(`locking is fast enough to do inline (${crypto.lockMs} ms)`, crypto.lockMs < 3000, `${crypto.lockMs} ms`)
 
 // ── 2. The dialog ───────────────────────────────────────────────────────────
-console.log('\nthe Lock control in the export dialog')
+console.log('\nthe Lock control in the advanced-export dialog')
 
 const pdf = await page.evaluate(async (sentence) => {
   const { PDFDocument, StandardFonts } = await import('/node_modules/pdf-lib/dist/pdf-lib.esm.js')
@@ -183,15 +194,12 @@ await page.setInputFiles('input[type=file]', {
 })
 await page.waitForSelector('[data-page-index="0"] canvas', { timeout: 30000 })
 
-await page.getByRole('button', { name: /export/i }).first().click()
-await page.waitForSelector('text=Export PDF', { timeout: 15000 })
+check('the lock lives at Actions ▸ Advanced ▸ Advanced export',
+  await openAdvancedExport(page))
 await waitReady(page)
 
-check('the export dialog collapses flatten and lock behind "Advanced exports"',
-  await openAdvanced(page))
-
 const lockBox = page.getByRole('checkbox', { name: /Lock with a password/i })
-check('the export dialog offers "Lock with a password"', (await lockBox.count()) > 0)
+check('the advanced-export dialog offers "Lock with a password"', (await lockBox.count()) > 0)
 
 const downloadBtn = page.getByRole('button', { name: /Download|Locking/ }).first()
 // ⚠️ Waited, not sampled. The dialog disables its controls while it builds the

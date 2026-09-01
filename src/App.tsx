@@ -22,6 +22,7 @@ import SendToSignDialog from './components/SendToSignDialog'
 import OcrModal from './components/Ocr/OcrModal'
 import MergeDialog from './components/Convert/MergeDialog'
 import ConvertDialog from './components/Convert/ConvertDialog'
+import AdvancedExportDialog from './components/Export/AdvancedExportDialog'
 import MetadataDialog from './components/Metadata/MetadataDialog'
 import QrDialog from './components/Qr/QrDialog'
 import MobileWelcomeToast from './components/Onboarding/MobileWelcomeToast'
@@ -113,6 +114,8 @@ export default function App() {
   const setMergeOpen = usePdfStore((s) => s.setMergeOpen)
   const convertOpen = usePdfStore((s) => s.convertOpen)
   const setConvertOpen = usePdfStore((s) => s.setConvertOpen)
+  const advancedExportOpen = usePdfStore((s) => s.advancedExportOpen)
+  const setAdvancedExportOpen = usePdfStore((s) => s.setAdvancedExportOpen)
   const metadataOpen = usePdfStore((s) => s.metadataOpen)
   const setMetadataOpen = usePdfStore((s) => s.setMetadataOpen)
   const sourceBytes = usePdfStore((s) => s.sourceBytes)
@@ -727,6 +730,7 @@ export default function App() {
       {convertOpen && (
         <ConvertDialog initialMode="pdf-to-images" initialPdf={currentDocFile} onClose={() => setConvertOpen(false)} />
       )}
+      <AdvancedExportDialog open={advancedExportOpen} onClose={() => setAdvancedExportOpen(false)} />
       {metadataOpen && sourceBytes && (
         <MetadataDialog sourceBytes={sourceBytes} onClose={() => setMetadataOpen(false)} />
       )}
