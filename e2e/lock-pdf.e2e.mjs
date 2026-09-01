@@ -15,6 +15,7 @@
 // password is typed" and "a mismatched confirmation keeps Download disabled"
 // red — i.e. the app would hand out a file locked with a half-typed password.
 
+import fs from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
@@ -279,6 +280,54 @@ await page.getByRole('button', { name: 'Unlock' }).click()
 await page.waitForSelector('[data-page-index="0"] canvas', { timeout: 30000 })
 check('the right password opens the document for editing', await visible(page.locator('[data-page-index="0"] canvas').first()))
 check('and the prompt is gone', (await page.locator('text=This PDF is locked').count()) === 0)
+
+console.log('\nopening a document THIS APP DID NOT LOCK')
+
+// ⚠️ Every check above locks a file with our own code and then opens it again,
+// so all of them would still pass if `decryptPdf` only understood its own
+// output — which, until 2026-09-01, is exactly what it did. This fixture was
+// written by LibreOffice 26.2 (PDF 2.0, AES-256 revision 6, password
+// `hunter2`); regenerating it is documented in `scripts/pdfEncrypt.test.mjs`.
+// It belongs HERE as well as in that suite because this is the path a real
+// recipient takes — the drop zone, the prompt, the browser's own WebCrypto.
+const foreign = new Uint8Array(fs.readFileSync(join(HERE, '../scripts/fixtures/libreoffice-aes256-r6.pdf')))
+
+await page.close()
+page = await browser.newPage()
+page.on('pageerror', (e) => failures.push('page error: ' + e.message))
+await page.goto(BASE, { waitUntil: 'networkidle' })
+await page.setInputFiles('input[type=file]', {
+  name: 'from-libreoffice.pdf',
+  mimeType: 'application/pdf',
+  buffer: Buffer.from(foreign),
+})
+check('a PDF locked by another app raises the prompt', await visible(page.locator('text=This PDF is locked')))
+await page.getByLabel('Password or PIN').fill('hunter2')
+await page.getByRole('button', { name: 'Unlock' }).click()
+await page.waitForSelector('[data-page-index="0"] canvas', { timeout: 30000 })
+check('and it opens and renders', await visible(page.locator('[data-page-index="0"] canvas').first()))
+
+// ⚠️ The older schemes are refused BY DESIGN — they key every object
+// separately and that algorithm is not implemented. What matters in the UI is
+// that the refusal does not read like a wrong password, or the recipient
+// retypes a correct one all afternoon. This fixture is LibreOffice's DEFAULT
+// export (PDF 1.7 → RC4-128), so it is the likeliest such file to arrive.
+const oldScheme = new Uint8Array(fs.readFileSync(join(HERE, '../scripts/fixtures/libreoffice-rc4-128.pdf')))
+await page.close()
+page = await browser.newPage()
+page.on('pageerror', (e) => failures.push('page error: ' + e.message))
+await page.goto(BASE, { waitUntil: 'networkidle' })
+await page.setInputFiles('input[type=file]', {
+  name: 'old-scheme.pdf',
+  mimeType: 'application/pdf',
+  buffer: Buffer.from(oldScheme),
+})
+await page.getByLabel('Password or PIN').fill('hunter2')
+await page.getByRole('button', { name: 'Unlock' }).click()
+check(
+  'an unsupported scheme says so, rather than blaming the password',
+  await visible(page.locator('text=/older encryption scheme/'))
+)
 
 await browser.close()
 console.log(`\n${failures.length === 0 ? 'All checks passed.' : `${failures.length} failed:\n  - ${failures.join('\n  - ')}`}\n`)

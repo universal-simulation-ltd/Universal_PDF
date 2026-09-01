@@ -53,6 +53,7 @@ async function encryptStrings(obj: PDFObject, key: Key): Promise<PDFObject> {
 }
 
 const XREF = PDFName.of('XRef')
+const METADATA = PDFName.of('Metadata')
 const LENGTH = PDFName.of('Length')
 const TYPE = PDFName.of('Type')
 
@@ -216,7 +217,30 @@ export class UnsupportedEncryptionError extends Error {
 /** Mirror of `encryptStrings`. */
 async function decryptStrings(obj: PDFObject, key: Key): Promise<PDFObject> {
   if (obj instanceof PDFString || obj instanceof PDFHexString) {
-    return hexString(await aesDecryptData(key, obj.asBytes()))
+    const raw = obj.asBytes()
+    // ⚠️ NOT EVERY STRING IN A LOCKED PDF IS ACTUALLY CIPHERTEXT, whatever the
+    // spec says, and one such string used to cost the whole document.
+    // LibreOffice 26 writes the PDF 2.0 structure namespace
+    // `/NS (http://iso.org/pdf2/ssn)` in the CLEAR inside an AES-256 file — 23
+    // bytes, which cannot be a 16-byte IV followed by whole cipher blocks
+    // under any key. Handing it to WebCrypto threw a bare `OperationError`
+    // straight out of `decryptPdf`, and `pdfStore.loadFile` shows the message
+    // of whatever it caught: the user was told "The operation failed for an
+    // operation-specific reason" and did not get their file. pdf.js opens the
+    // same document without complaint.
+    //
+    // So: a string that cannot be ciphertext, or that refuses to decrypt under
+    // a key the /U check has already accepted, is left exactly as it is. The
+    // worst case is a garbled /Author; the alternative is losing the document
+    // over it. Stream bodies below are deliberately NOT this forgiving — they
+    // are the content, and passing ciphertext off as content would be silent
+    // corruption.
+    if (raw.length % 16 !== 0) return obj
+    try {
+      return hexString(await aesDecryptData(key, raw))
+    } catch {
+      return obj
+    }
   }
   if (obj instanceof PDFArray) {
     const items = obj.asArray()
@@ -298,14 +322,33 @@ export async function decryptPdf(bytes: Uint8Array, password: string): Promise<U
   const key = await fileKeyFromPassword(password, U, UE, O, OE)
   if (!key) throw new WrongPasswordError()
 
+  // ⚠️ `/EncryptMetadata false` means the XMP metadata stream was deliberately
+  // left readable — the whole point being that a search indexer can read the
+  // title of a document it cannot open. Acrobat offers it as a checkbox. Every
+  // OTHER stream is still sealed, so this is a per-stream exemption and not a
+  // mode: decrypt that one anyway and AES either throws and costs the user the
+  // document, or unpads by luck and writes noise over the metadata.
+  const encryptMetadata = encryptDict.get(PDFName.of('EncryptMetadata'))
+  const metadataIsPlain = encryptMetadata instanceof PDFBool && !encryptMetadata.asBoolean()
+
   for (const [ref, obj] of [...context.enumerateIndirectObjects()]) {
     // The /Encrypt dictionary is the one thing that was never encrypted.
     if (obj === encryptDict) continue
     if (obj instanceof PDFStream) {
       if (obj.dict.get(TYPE) === XREF) continue
+      if (metadataIsPlain && obj.dict.get(TYPE) === METADATA) continue
       await decryptStrings(obj.dict, key)
       const sealed = obj instanceof PDFRawStream ? obj.contents : obj.getContents()
-      const plain = await aesDecryptData(key, sealed)
+      let plain: Uint8Array
+      try {
+        plain = await aesDecryptData(key, sealed)
+      } catch {
+        // The password was already accepted against /U, so this is not a wrong
+        // password — the file itself is damaged or truncated. Say so, because
+        // the raw WebCrypto message ("The operation failed for an
+        // operation-specific reason") is what the user would otherwise read.
+        throw new Error('This PDF was unlocked but part of it could not be read — the file looks damaged.')
+      }
       obj.dict.set(LENGTH, PDFNumber.of(plain.length))
       context.assign(ref, PDFRawStream.of(obj.dict, plain))
       continue

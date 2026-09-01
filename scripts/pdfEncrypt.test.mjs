@@ -10,29 +10,37 @@
 // implementation, written from the same spec by other people, and the one that
 // will actually be reading these files inside this very app.
 //
-// ⚠️ KNOWN GAP. Both directions are verified against pdf.js, and the WRITE
-// direction is additionally verified against Ghostscript by hand (it opens our
-// files with the password, refuses them without, and reports no conformance
-// warnings). The READ direction — `decryptPdf` — is only ever pointed at files
-// this module itself wrote. Ghostscript cannot produce revision 6 ("Encryption
-// revisions 2 and 3 are only supported"), so there was no third-party AES-256
-// file to test against on this machine. A PDF locked by Acrobat or Word is
-// therefore UNPROVEN here; it should work, since the format is the format, but
-// nothing below demonstrates it.
+// ⚠️ The WRITE direction is additionally verified against Ghostscript by hand
+// (it opens our files with the password, refuses them without, and reports no
+// conformance warnings).
 //
-// Negative controls (2026-09-01, actually run, both red):
+// The READ direction used to be the gap: `decryptPdf` was only ever pointed at
+// files this module itself wrote, because Ghostscript cannot produce revision 6
+// ("Encryption revisions 2 and 3 are only supported"). CLOSED 2026-09-01 with
+// LibreOffice, which can — see "Opening a file this app did NOT write" below.
+// It found a real bug on the first attempt: a PDF locked by LibreOffice would
+// NOT open. ⚠️ Still nothing here is a file written by Acrobat or Word
+// specifically; those remain unproven, and a fixture from either is worth
+// adding the day one turns up.
+//
+// Negative controls (2026-09-01, actually run, all four red):
 //   - Truncating Algorithm 2.B's loop to a fixed 64 rounds: pdf.js then
 //     rejects the CORRECT password.
 //   - Hashing the owner password against U[0..31] instead of the full 48
 //     bytes: pdf.js then refuses to open the file as its owner.
+//   - Dropping the string shape guard in `decryptStrings`: the LibreOffice file
+//     stops opening (2 red).
+//   - Dropping the `/EncryptMetadata false` exemption: the hand-built fixture
+//     stops opening (2 red).
 //
 // ⚠️ The second control passed silently until an owner password was added
 // below. With owner and user set to the same string — which is what the app
 // ships — /O is never the thing a reader authenticates against, so the entire
 // owner half of `buildEncryptionValues` could be wrong and nothing noticed.
 
+import fs from 'node:fs'
 import zlib from 'node:zlib'
-import { PDFDocument, StandardFonts } from 'pdf-lib'
+import { PDFDocument, StandardFonts, PDFName, PDFNumber, PDFBool, PDFRawStream } from 'pdf-lib'
 import { encryptPdf, decryptPdf, isEncryptedPdf, WrongPasswordError, UnsupportedEncryptionError } from '../src/lib/pdfEncrypt.ts'
 import { passwordBytes, passwordWarning, checkUserPassword, buildEncryptionValues } from '../src/lib/pdfCrypto.ts'
 
@@ -279,6 +287,132 @@ ok(unsupported instanceof UnsupportedEncryptionError, 'an unlocked PDF is refuse
 const relocked = await encryptPdf(unlocked, 'second-password')
 await opensWith(relocked.bytes, 'second-password', 2, 'an unlocked copy can be locked again')
 await throws(() => openWith(relocked.bytes, PASSWORD), 'and the ORIGINAL password no longer works')
+
+console.log('\nOpening a file this app did NOT write\n')
+
+// ⚠️ THIS IS THE SECTION THAT MATTERS MOST, because everything above still
+// reads files written by the module under test. `scripts/fixtures/` holds two
+// documents produced by LibreOffice 26.2 and nothing else — a genuinely
+// separate writer, from a separate codebase, for the READ direction.
+//
+// Regenerate them with (macOS; any LibreOffice ≥ 7 will do):
+//
+//   soffice --headless \
+//     --convert-to 'pdf:writer_pdf_Export:{"EncryptFile":{"type":"boolean","value":"true"},
+//       "DocumentOpenPassword":{"type":"string","value":"hunter2"},
+//       "SelectPdfVersion":{"type":"long","value":"20"}}' src.txt --outdir out
+//
+// `SelectPdfVersion` 20 (PDF 2.0) is what makes it AES-256 revision 6 —
+// /V 5 /R 6 /CFM /AESV3, checked in the file. Version 17 gives /V 2 /R 3, i.e.
+// RC4-128, which is the second fixture and is what LibreOffice's DEFAULT export
+// produces. Ghostscript cannot write revision 6 at all, which is why this gap
+// stood open until LibreOffice was tried.
+const LO_PASSWORD = 'hunter2'
+const loAes = new Uint8Array(fs.readFileSync(new URL('./fixtures/libreoffice-aes256-r6.pdf', import.meta.url)))
+
+ok(isEncryptedPdf(loAes), 'the LibreOffice AES-256 file is recognised as locked')
+// Proves the fixture is really sealed rather than merely claiming to be — if it
+// opened unaided, every assertion below would be worthless.
+await throws(() => openWith(loAes, undefined), 'pdf.js will not open the fixture without the password')
+
+// ⚠️ Caught, not awaited bare: the regression this section exists for threw
+// out of `decryptPdf` and would take the whole run down with a stack trace
+// where a `✗` belongs — every later test then silently unrun. Same reasoning as
+// `opensWith` above.
+let loUnlocked = null
+try {
+  loUnlocked = await decryptPdf(loAes, LO_PASSWORD)
+  ok(!isEncryptedPdf(loUnlocked), 'a PDF locked by LibreOffice unlocks, and drops its /Encrypt')
+} catch (e) {
+  fail++
+  console.log(`  ✗ a PDF locked by LibreOffice unlocks, and drops its /Encrypt (${e?.message ?? e})`)
+}
+if (loUnlocked) {
+  const loBack = await opensWith(loUnlocked, undefined, 1, 'pdf.js opens the result with no password')
+  if (loBack) {
+    ok((await textOf(loBack, 1)).includes('the quick brown fox'), 'its text came back intact')
+  }
+  ok((await PDFDocument.load(loUnlocked)).getPageCount() === 1, 'and pdf-lib can load it — the editing pipeline works')
+}
+
+// ⚠️ THE REGRESSION THIS FIXTURE EXISTS FOR. LibreOffice writes the PDF 2.0
+// structure namespace `/NS (http://iso.org/pdf2/ssn)` as a PLAINTEXT string
+// inside an encrypted document — 23 bytes, which cannot be an IV plus whole
+// cipher blocks. `decryptStrings` used to hand it to WebCrypto, which threw a
+// bare OperationError out of `decryptPdf`; `pdfStore.loadFile` prints the
+// message of whatever it caught, so the user was shown "The operation failed
+// for an operation-specific reason" and NO document. Remove the shape guard and
+// this line goes red — the check is that the string is still there, unharmed.
+ok(
+  loUnlocked !== null && Buffer.from(loUnlocked).toString('latin1').includes('http://iso.org/pdf2/ssn'),
+  'a string the writer left in the clear is passed through, not fatal and not mangled'
+)
+
+let loWrong = null
+try { await decryptPdf(loAes, 'not-the-password') } catch (e) { loWrong = e }
+// Worth more than the same assertion above it: this rejects against /U and /O
+// values hashed by SOMEBODY ELSE'S implementation of Algorithm 2.B.
+ok(loWrong instanceof WrongPasswordError, 'a wrong password on a third-party file is a wrong password, not a crash')
+
+// The older schemes are refused BY DESIGN, and this is a real file to prove it
+// on rather than a hand-built one. RC4/AES-128 derive a different key per
+// object from the file ID and object number — a separate algorithm this app
+// does not implement, and guessing would produce silent garbage.
+const loRc4 = new Uint8Array(fs.readFileSync(new URL('./fixtures/libreoffice-rc4-128.pdf', import.meta.url)))
+let loOld = null
+try { await decryptPdf(loRc4, LO_PASSWORD) } catch (e) { loOld = e }
+ok(loOld instanceof UnsupportedEncryptionError, 'an RC4-128 file is refused as unsupported, not as a wrong password')
+ok(/older encryption scheme/.test(loOld?.message ?? ''), 'and says so in words the user can act on')
+
+// ⚠️ `/EncryptMetadata false` — the one stream a locked PDF may legitimately
+// leave readable, so a search indexer can list a document it cannot open.
+// Acrobat offers it as a checkbox; nothing available on this machine writes
+// one, so the fixture is built here by hand from our own encrypted output.
+// That is honest for a READER test: what is under test is how `decryptPdf`
+// treats the file, not who produced it.
+const XMP_MARK = 'Readable to a search indexer'
+const xmp = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/"><rdf:Description rdf:about=""><dc:title>${XMP_MARK}</dc:title></rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end="w"?>`
+
+const metaDoc = await PDFDocument.load(plain)
+const metaRef = metaDoc.context.register(
+  metaDoc.context.flateStream(xmp, { Type: 'Metadata', Subtype: 'XML' })
+)
+metaDoc.catalog.set(PDFName.of('Metadata'), metaRef)
+const withMeta = await metaDoc.save({ useObjectStreams: false })
+const sealedMeta = await encryptPdf(withMeta, PASSWORD)
+
+// Now put that stream back in the clear and flag it, the way a writer offering
+// the checkbox would have.
+const reopenedSealed = await PDFDocument.load(sealedMeta.bytes, { ignoreEncryption: true, updateMetadata: false })
+const openedCtx = reopenedSealed.context
+for (const [ref, obj] of [...openedCtx.enumerateIndirectObjects()]) {
+  if (obj instanceof PDFRawStream && String(obj.dict.get(PDFName.of('Type'))) === '/Metadata') {
+    const bytes = Buffer.from(xmp, 'latin1')
+    obj.dict.set(PDFName.of('Length'), PDFNumber.of(bytes.length))
+    obj.dict.delete(PDFName.of('Filter'))
+    openedCtx.assign(ref, PDFRawStream.of(obj.dict, new Uint8Array(bytes)))
+  }
+}
+openedCtx.lookup(openedCtx.trailerInfo.Encrypt).set(PDFName.of('EncryptMetadata'), PDFBool.False)
+const plainMetadataFile = await reopenedSealed.save({ useObjectStreams: false })
+
+let metaUnlocked = null
+try {
+  metaUnlocked = await decryptPdf(plainMetadataFile, PASSWORD)
+} catch (e) {
+  fail++
+  console.log(`  ✗ a file with /EncryptMetadata false still unlocks (${e?.message ?? e})`)
+}
+if (metaUnlocked) {
+  await opensWith(metaUnlocked, undefined, 2, 'a file with /EncryptMetadata false still unlocks')
+}
+// Without the exemption this stream is decrypted anyway: AES either throws and
+// costs the user the whole document, or unpads by luck and writes noise over
+// the metadata. Either way this line goes red.
+ok(
+  metaUnlocked !== null && Buffer.from(metaUnlocked).toString('latin1').includes(XMP_MARK),
+  'and its readable metadata is left alone rather than decrypted into noise'
+)
 
 console.log('\nThe pieces underneath\n')
 
