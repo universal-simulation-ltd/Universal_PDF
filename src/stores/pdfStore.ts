@@ -4,6 +4,7 @@ import { listRecents, saveRecent, getRecent, getRecentBySlug, getRecentEdits, up
 import { readEmbeddedSigFields } from '../lib/export'
 import { applyPageOrderToPdf, buildPageIndexMap } from '../lib/pdfPages'
 import { scrubPdfMetadata } from '../lib/pdfMetadata'
+import { decryptPdf, isEncryptedPdf, WrongPasswordError } from '../lib/pdfEncrypt'
 import { useAnnotationStore } from './annotationStore'
 import { useFormStore } from './formStore'
 import { useSearchStore } from './searchStore'
@@ -101,7 +102,17 @@ interface PdfState {
   // re-typeset version, not a facsimile. Cleared by the next load.
   importNotice: string | null
   dismissImportNotice: () => void
-  loadFile: (file: File, options?: { notice?: string }) => Promise<void>
+  // Set when the file the user just opened is password-locked. The document is
+  // NOT loaded until a password arrives; `LockedFilePrompt` renders from this
+  // and calls `loadFile` again with one.
+  //
+  // ⚠️ The File is held, not its bytes: the prompt may sit on screen for a
+  // while and a File is a handle to something the browser already has, whereas
+  // an ArrayBuffer of a big PDF is a copy we would be pinning in memory for as
+  // long as somebody is hunting for their password.
+  lockedFile: { file: File; notice?: string; error: string | null } | null
+  cancelLockedFile: () => void
+  loadFile: (file: File, options?: { notice?: string; password?: string }) => Promise<void>
   loadFromSlug: (slug: string) => Promise<boolean>
   loadFromCurrentUrl: () => Promise<boolean>
   reset: () => void
@@ -152,6 +163,8 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   recents: [],
   importNotice: null,
   dismissImportNotice: () => set({ importNotice: null }),
+  lockedFile: null,
+  cancelLockedFile: () => set({ lockedFile: null }),
   togglePageNav: () => set((s) => ({ pageNavOpen: !s.pageNavOpen })),
   setPageNavOpen: (pageNavOpen) => set({ pageNavOpen }),
   setPreviewOpen: (previewOpen) => set({ previewOpen }),
@@ -196,7 +209,39 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     set({ loading: true })
     try {
       get().doc?.destroy()
-      const buf = await file.arrayBuffer()
+      let buf = await file.arrayBuffer()
+
+      // ⚠️ A locked PDF is unlocked HERE, before anything else sees it, and
+      // the rest of this function then runs on ordinary bytes. Every tool
+      // downstream — annotating, flattening, compressing, reading embedded
+      // signature boxes — is pdf-lib, which cannot decrypt; letting the
+      // ciphertext through would give a document that renders (pdf.js can cope)
+      // and then fails, differently, in every other feature.
+      const encrypted = isEncryptedPdf(new Uint8Array(buf))
+      if (encrypted) {
+        if (!options?.password) {
+          // Not an error — nobody has been asked yet.
+          set({ loading: false, lockedFile: { file, notice: options?.notice, error: null } })
+          return
+        }
+        try {
+          buf = (await decryptPdf(new Uint8Array(buf), options.password)).slice().buffer as ArrayBuffer
+        } catch (e) {
+          set({
+            loading: false,
+            lockedFile: {
+              file,
+              notice: options?.notice,
+              error:
+                e instanceof WrongPasswordError
+                  ? 'That password does not open this PDF.'
+                  : (e as Error).message || 'This PDF could not be unlocked.',
+            },
+          })
+          return
+        }
+      }
+
       const renderCopy = buf.slice(0)
       const doc = await loadPdf(renderCopy).promise
       // A different document is now in hand — drop the outgoing PDF's
@@ -211,7 +256,8 @@ export const usePdfStore = create<PdfState>((set, get) => ({
         loading: false,
         // Always assigned, never merged: opening a PDF normally has to clear a
         // notice left over from the converted document before it.
-        importNotice: options?.notice ?? null
+        importNotice: options?.notice ?? null,
+        lockedFile: null
       })
       // Re-hydrate any signature-request boxes embedded in the PDF (from a prior
       // export) so a reopened / shared file's boxes are interactive again. The
@@ -230,15 +276,29 @@ export const usePdfStore = create<PdfState>((set, get) => ({
       // guard has nothing to offer to save until the user amends it. Boxes
       // recovered from the PDF above are part of the file, not an amendment.
       markSaved()
-      // Persist to recents in the background — never blocks loading.
-      // The returned slug becomes the URL hash so a refresh reloads the
-      // same PDF straight from IndexedDB.
-      saveRecent(file.name, buf)
-        .then((slug) => {
-          if (slug) setHashSlug(slug)
-          return get().refreshRecents()
-        })
-        .catch(() => {})
+      // ⚠️ A LOCKED DOCUMENT IS NEVER ADDED TO RECENTS. `buf` is plaintext by
+      // this point, and `saveRecent` writes it to IndexedDB — so recording it
+      // would leave an unlocked copy of a deliberately locked file on the disk
+      // of whatever machine opened it, reachable afterwards with no password
+      // at all. Someone who locks a PDF has said what they want; silently
+      // keeping a readable copy is the opposite of it.
+      //
+      // The cost is that a locked document does not survive a refresh and has
+      // no shareable slug. That is the right trade, and it is why the hash is
+      // cleared rather than left pointing at the previous document.
+      if (encrypted) {
+        setHashSlug(null)
+      } else {
+        // Persist to recents in the background — never blocks loading.
+        // The returned slug becomes the URL hash so a refresh reloads the
+        // same PDF straight from IndexedDB.
+        saveRecent(file.name, buf)
+          .then((slug) => {
+            if (slug) setHashSlug(slug)
+            return get().refreshRecents()
+          })
+          .catch(() => {})
+      }
     } catch (e) {
       set({ loading: false })
       throw e
@@ -274,7 +334,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     // Nothing is open, so nothing is unsaved. Re-baselining here is also what
     // keeps the structural-edit counter in step across documents.
     markSaved()
-    set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, previewOpen: false, presentOpen: false, ocrOpen: false, mergeOpen: false, convertOpen: false, metadataOpen: false, qrOpen: false, qrEdit: null, importNotice: null })
+    set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, previewOpen: false, presentOpen: false, ocrOpen: false, mergeOpen: false, convertOpen: false, metadataOpen: false, qrOpen: false, qrEdit: null, importNotice: null, lockedFile: null })
     setHashSlug(null)
   },
   refreshRecents: async () => {

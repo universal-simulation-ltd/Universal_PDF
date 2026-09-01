@@ -15,6 +15,8 @@ import {
 } from '../../lib/export'
 import { nextExportName, previewExportName } from '../../lib/exportName'
 import { countRedactions, isRedactConfirmed } from '../../lib/redactGate'
+import { encryptPdf } from '../../lib/pdfEncrypt'
+import LockFields, { EMPTY_LOCK, lockIncomplete, lockPasswordOf, type LockState } from '../Lock/LockFields'
 import { markSaved } from '../../lib/unsavedChanges'
 import { RedactIcon } from '../icons/RedactIcon'
 
@@ -133,11 +135,26 @@ export default function ExportModal({ open, onClose }: Props) {
   const [redactConfirm, setRedactConfirm] = useState('')
   const redactConfirmed = !needsRedactConfirm || isRedactConfirmed(redactConfirm)
 
+  // Locking runs at DOWNLOAD time, not while the dialog is open: it is the
+  // last step over the finished bytes, and re-running it on every keystroke of
+  // a password would be both pointless and slow (Algorithm 2.B is designed to
+  // be slow). `locking` exists because that step is the one part of an export
+  // that can take a visible moment.
+  const [lock, setLock] = useState<LockState>(EMPTY_LOCK)
+  const [locking, setLocking] = useState(false)
+  const [lockError, setLockError] = useState<string | null>(null)
+
   useEffect(() => {
     if (!open) return
     setTab('compressed')
     setQuality('light')
     setRedactConfirm('')
+    // ⚠️ Cleared every time the dialog opens. A password left in state from a
+    // previous export would silently lock the NEXT document with it — a file
+    // the user never meant to protect, sealed with something they have already
+    // forgotten they typed.
+    setLock(EMPTY_LOCK)
+    setLockError(null)
   }, [open])
 
   useEffect(() => {
@@ -366,13 +383,41 @@ export default function ExportModal({ open, onClose }: Props) {
   // label and `nextExportName` for the actual save.
   const previewName = previewExportName(fileName)
 
-  function download(which: 'original' | 'compressed') {
+  async function download(which: 'original' | 'compressed') {
     if (!annotated || !compressed) return
+    // Widened to plain `Uint8Array` because the locked bytes come back over a
+    // buffer TypeScript will not narrow to ArrayBuffer; both are the same
+    // thing at runtime.
+    let bytes: Uint8Array = (which === 'original' ? annotated : compressed.bytes).slice()
+
+    if (lock.enabled) {
+      const password = lockPasswordOf(lock)
+      // ⚠️ Bail, never fall through. If the fields are incomplete the button
+      // is already disabled, but the one unacceptable outcome here is handing
+      // someone an UNLOCKED file because their confirm box was a character
+      // out — so the null case stops the export rather than skipping the lock.
+      if (!password) return
+      setLockError(null)
+      setLocking(true)
+      try {
+        bytes = (await encryptPdf(bytes, password)).bytes
+      } catch (e) {
+        setLockError((e as Error).message || 'Could not lock this PDF.')
+        return
+      } finally {
+        setLocking(false)
+      }
+    }
+
+    // ⚠️ Claimed only now that the bytes exist. `nextExportName` increments a
+    // per-document counter, so calling it before a lock that then failed would
+    // burn v1 on a file that was never written.
+    //
     // One name for either variant: the modal closes after a download, so only
     // one of the two ever leaves per opening, and which variant it was is not
     // something the file needs to carry.
     const name = nextExportName(fileName)
-    downloadPdfBytes((which === 'original' ? annotated : compressed.bytes).slice(), name)
+    downloadPdfBytes(bytes, name)
     // The amendments are now in a file, so the exit guard has nothing left to
     // offer to save. Every route out of a document reads this.
     markSaved()
@@ -533,6 +578,16 @@ export default function ExportModal({ open, onClose }: Props) {
                 </div>
               )}
             </div>
+
+            {/* ⚠️ Below flattening, and that ordering is the point. The two
+                look like neighbours — both are "stop someone doing something
+                with this file" — but only one of them is real. Flattening
+                removes the text layer; locking encrypts the document. Putting
+                a lock beside a PDF "no printing / no copying" permissions
+                checkbox is what most PDF apps do, and it is why users believe
+                those flags protect anything. There is no such checkbox here on
+                purpose — see the note at the top of lib/pdfCrypto.ts. */}
+            <LockFields value={lock} onChange={setLock} disabled={building || compressing || locking} />
 
             <div className="rounded-lg border border-slate-200 overflow-hidden">
               {/* Two tabs are a choice. With compression ruled out there is only
@@ -711,17 +766,29 @@ export default function ExportModal({ open, onClose }: Props) {
               Saves as <span className="font-medium text-slate-700">{previewName}</span>
             </p>
 
+            {/* A disabled button with no stated reason is the same as a broken
+                one. `lockIncomplete` is the only condition here that the user
+                can fix by typing, so it is the only one that says so. */}
+            {lockIncomplete(lock) && !lockError && (
+              <p className="mt-1 text-xs text-amber-700">
+                Finish the {lock.mode === 'pin' ? 'PIN' : 'password'} fields above to download.
+              </p>
+            )}
+            {lockError && <p className="mt-1 text-xs text-red-600">{lockError}</p>}
+
             <div className="mt-2 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2">
               <button
-                onClick={() => download(effectiveTab)}
-                disabled={!ready || !redactConfirmed}
+                onClick={() => { void download(effectiveTab) }}
+                disabled={!ready || !redactConfirmed || lockIncomplete(lock) || locking}
                 className="px-4 py-2.5 bg-orange-700 hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
               >
-                <span aria-hidden="true">⬇</span>
+                <span aria-hidden="true">{lock.enabled ? '🔒' : '⬇'}</span>
                 {/* "Download Original" only means something next to a
                     "Download Compressed". On its own it reads as though there
                     were another, better copy being withheld. */}
-                Download{!showVariantTabs ? '' : effectiveTab === 'original' ? ' Original' : flatten ? ' Flattened' : ' Compressed'}
+                {locking
+                  ? 'Locking…'
+                  : `Download${!showVariantTabs ? '' : effectiveTab === 'original' ? ' Original' : flatten ? ' Flattened' : ' Compressed'}`}
               </button>
               <button
                 onClick={openPrintPreview}

@@ -26,6 +26,7 @@ import MetadataDialog from './components/Metadata/MetadataDialog'
 import QrDialog from './components/Qr/QrDialog'
 import MobileWelcomeToast from './components/Onboarding/MobileWelcomeToast'
 import UnsavedChangesDialog from './components/Exit/UnsavedChangesDialog'
+import LockedFilePrompt from './components/Lock/LockedFilePrompt'
 import { UniversalAppsNavBar, UniversalBar, ChangelogMenu, DropAnywhere, useFileDrop } from '@unisim/sdk'
 
 // What this copy of the app is, for the changelog panel's footer and the
@@ -673,6 +674,9 @@ export default function App() {
       {/* Last in the list and highest in the stack: the question about leaving
           has to be answerable whatever else is open on top of the document. */}
       <UnsavedChangesDialog />
+      {/* Renders only when `pdfStore.lockedFile` is set — i.e. somebody opened
+          a password-locked PDF and has not supplied the password yet. */}
+      <LockedFilePrompt />
     </div>
   )
 }

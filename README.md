@@ -21,6 +21,11 @@ A clean Progressive Web App for viewing, annotating, and signing PDFs — works 
 - **Edit** placed annotations — drag to move, resize handles on shapes and signatures, double-click text to retype, change colour and size of selected text on the fly
 - **Add a QR code** — the QR button in the toolbar generates one from any link or text, in six styles (square, rounded, dots, circle, star…), and drops it on the page like any image. Placed codes keep an ✏️ button: click it (or double-tap the code) to bring the generator back up on that code and change the link, the style or the branding in place. Codes you've saved in [Universal QR](https://opensource.unisim.co.uk/qr) show up in the dialog ready to place, with nothing to sign into
 - **Export** the annotated PDF; all annotations and signatures are baked into the saved file
+- **Lock a PDF with a password** — tick *Lock with a password* on export and the file is encrypted with **AES-256** (the PDF 2.0 standard security handler, revision 6). Nobody can open it without the password, in any PDF app, on any device. Choose a **password** or a **PIN** if the person receiving it will be typing it on a phone. The dialog says plainly how strong your choice actually is: a 4-digit PIN is ten thousand guesses and it says so. Universal PDF opens locked files too — it asks for the password, then the document behaves like any other, fully editable.
+
+  This is real encryption, not the "no printing / no copying" permission flags most PDF apps offer. Those are not encryption at all: the file is readable by every viewer, which is merely asked to honour the flags, and one command strips them. Universal PDF deliberately does not offer them.
+
+  **There is no reset.** A locked PDF with a forgotten password cannot be opened by us or by anyone — that is the point of it. Locked documents are also never added to *Recents*, so an unlocked copy is never left behind on the machine that opened it.
 - **Recents** are remembered locally so you can reopen a PDF with one tap, even offline
 - **Installable** PWA — add to home screen on phone or install on desktop, works offline after first load
 
@@ -73,6 +78,17 @@ npm run dev
 ```
 
 The dev server runs at <http://localhost:5173>. Build for production with `npm run build`.
+
+### Tests
+
+Unit suites run under Node's type-stripping and import the app's modules directly:
+
+```sh
+npm run test:encrypt        # locking/unlocking a PDF, verified against pdf.js
+npm run test:lock-password  # what counts as an acceptable password, and how it is described
+```
+
+`npm run test:lock` is a browser test (Playwright, borrowed from a sibling Universal app) and needs the dev server running on port 5174 — `./scripts/preview.sh` in another terminal. It is the only place the encryption is proven to work against a real browser's WebCrypto rather than Node's.
 
 Pushes to `main` auto-deploy via Cloudflare Pages, which serves the app at <https://opensource.unisim.co.uk/pdf>. The production build sets Vite `base: '/pdf/'` and ships a `public/_redirects` file that rewrites `/pdf/*` onto the flat `dist/` output.
 
