@@ -606,12 +606,8 @@ export default function App() {
           its positioned layers (Konva canvas, annotation/form overlays, the
           zoom menu) stay below the navbar — otherwise they bubble up to the
           root context and can paint over the navbar's open dropdowns. */}
-      <main className={`flex-1 min-h-0 md:pb-0 ${doc ? 'pb-[calc(4rem_+_env(safe-area-inset-bottom))] relative z-0 isolate' : 'overflow-auto'}`}>
-        {loading || launching || (doc && !firstPaint) ? (
-          <div className="h-full flex items-center justify-center text-slate-500">
-            Loading PDF…
-          </div>
-        ) : doc ? (
+      <main className={`flex-1 min-h-0 md:pb-0 relative ${doc ? 'pb-[calc(4rem_+_env(safe-area-inset-bottom))] z-0 isolate' : 'overflow-auto'}`}>
+        {doc ? (
           /* ⚠️ PlacementHint is a sibling of the viewer, absolutely positioned
              against this `relative` <main> — so it floats at the top of the
              document area without being inside the viewer's own scroller (where
@@ -620,8 +616,27 @@ export default function App() {
             <PdfViewer />
             <PlacementHint />
           </>
-        ) : (
+        ) : loading || launching ? null : (
           <LandingPage />
+        )}
+        {/* ⚠️ AN OVERLAY OVER THE MOUNTED VIEWER, NOT A BRANCH INSTEAD OF IT —
+            and that is the whole point. The store's `firstPaint` hold waits for
+            page 1 to be PAINTED, and page 1 is painted by `PdfPage`, which only
+            exists while `PdfViewer` is mounted. Rendering the placeholder
+            *instead of* the viewer therefore made the hold unsatisfiable: the
+            only thing that could ever release it was its own 1.2s deadline, and
+            the viewer then mounted and drew its empty page frames afterwards —
+            the exact stage the hold was added to hide, moved later rather than
+            removed. Mounting the viewer underneath lets it rasterize behind the
+            placeholder, so page 1 really has drawn (and, see `fittedDoc` in the
+            viewer, drawn at its fit-to-screen zoom) by the time this lifts.
+            Above every layer inside the viewer, including AnnotationLayer's own
+            z-[100] dialogs, and bg-slate-100 because that is the shell colour
+            this placeholder has always sat on. */}
+        {(loading || launching || (doc && !firstPaint)) && (
+          <div className="absolute inset-0 z-[120] bg-slate-100 flex items-center justify-center text-slate-500">
+            Loading PDF…
+          </div>
         )}
       </main>
 

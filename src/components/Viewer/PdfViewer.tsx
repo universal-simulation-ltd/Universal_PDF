@@ -25,6 +25,11 @@ const ZOOM_STEP = 0.1
 const FIT_HEIGHT_MIN_ZOOM = 0.75
 // Quick presets offered when you click the % label while at 100%.
 const ZOOM_PRESETS = [50, 75, 125, 150]
+// How long the pages wait for the fit-on-open zoom to be worked out before they
+// are mounted at the current zoom regardless. See `fittedDoc`. Comfortably
+// inside the store's FIRST_PAINT_GRACE_MS, so a document whose page 1 never
+// resolves still has pages on screen by the time that hold lets go.
+const FIT_TIMEOUT_MS = 600
 // How long a zoom waits for the pages to re-lay-out before restoring the
 // anchored scroll position anyway. Long enough for a page to re-rasterize on a
 // slow phone, short enough that a zoom which doesn't move the layout box (or a
@@ -44,6 +49,19 @@ export default function PdfViewer() {
   const resetSearch = useSearchStore((s) => s.reset)
   const [zoom, setZoom] = useState(1)
   const scale = zoom * BASE_SCALE
+  // The document the fit-on-open zoom below has been worked out for. Pages are
+  // not mounted until it matches the open document, so page 1 is rasterized
+  // ONCE, at the zoom it will be read at.
+  //
+  // ⚠️ Without this the viewer paints page 1 at the default 100% first, because
+  // the fit needs `getPage(1)` and so lands a microtask later — and the store
+  // releases its "page 1 is drawing" hold on that first paint. On a phone
+  // opening a landscape PDF, 100% is far wider than the screen: the reader gets
+  // a moment of the page zoomed in, then it snaps out to fit. Delaying the
+  // mount instead puts that whole beat behind the placeholder that is already
+  // up. See `firstPaint` in the store.
+  const [fittedDoc, setFittedDoc] = useState<typeof doc>(null)
+  const fitted = !!doc && fittedDoc === doc
   const [zoomMenuOpen, setZoomMenuOpen] = useState(false)
   const zoomMenuRef = useRef<HTMLDivElement>(null)
 
@@ -147,7 +165,9 @@ export default function PdfViewer() {
       el.removeEventListener('scroll', onScroll)
       if (frame) cancelAnimationFrame(frame)
     }
-  }, [doc])
+    // ⚠️ `fitted` is a dependency because the pages only exist once it is true:
+    // measured before that, the band is read off an empty container.
+  }, [doc, fitted])
 
   // Pages added to an already-zoomed document can push the ceiling below where
   // the zoom already is — come back down rather than sit over budget.
@@ -720,22 +740,32 @@ export default function PdfViewer() {
   //   container (typical on mobile) — that cap keeps the original MIN_ZOOM
   //   floor so narrow phone screens can shrink below 75%.
   // Caps at 1 so desktop zoom is never increased.
+  // Every path out of here marks the document fitted, including the ones that
+  // never set a zoom: `fittedDoc` is what mounts the pages, so failing to set
+  // it would leave the reader on an empty viewer rather than on a badly-fitted
+  // one.
   useEffect(() => {
     if (!doc) return
     const el = scrollRef.current
-    if (!el) return
+    if (!el) { setFittedDoc(doc); return }
     let cancelled = false
+    // ⚠️ A HOLD, NOT A GATE — same rule as the store's `firstPaint`. A page 1
+    // that never resolves gets today's behaviour a beat later, never a viewer
+    // stuck with nothing in it.
+    const fallback = setTimeout(() => setFittedDoc(doc), FIT_TIMEOUT_MS)
     doc.getPage(1).then((page) => {
       if (cancelled) return
       const { width: pageWidth, height: pageHeight } = page.getViewport({ scale: BASE_SCALE })
       const availableW = el.clientWidth - 32 // px-4 padding × 2
       const availableH = el.clientHeight - 48 // py-6 padding × 2
-      if (availableW <= 0 || availableH <= 0) return
-      const widthFit = Math.max(MIN_ZOOM, Math.min(1, availableW / pageWidth))
-      const heightFit = Math.max(FIT_HEIGHT_MIN_ZOOM, Math.min(1, availableH / pageHeight))
-      setZoom(Math.min(widthFit, heightFit))
-    }).catch(() => {})
-    return () => { cancelled = true }
+      if (availableW > 0 && availableH > 0) {
+        const widthFit = Math.max(MIN_ZOOM, Math.min(1, availableW / pageWidth))
+        const heightFit = Math.max(FIT_HEIGHT_MIN_ZOOM, Math.min(1, availableH / pageHeight))
+        setZoom(Math.min(widthFit, heightFit))
+      }
+      setFittedDoc(doc)
+    }).catch(() => { if (!cancelled) setFittedDoc(doc) })
+    return () => { cancelled = true; clearTimeout(fallback) }
   }, [doc])
 
   // Publish the rendered document width and the document scroll-container's
@@ -917,7 +947,7 @@ export default function PdfViewer() {
           style={{ cursor: handCursor }}
         >
           <div ref={contentRef} className="flex flex-col items-center gap-6 py-6 px-4">
-            {Array.from({ length: numPages }, (_, i) => (
+            {fitted && Array.from({ length: numPages }, (_, i) => (
               <PdfPage
                 key={i}
                 doc={doc}
