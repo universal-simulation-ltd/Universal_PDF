@@ -9,6 +9,8 @@ PODS:
     - IONFilesystemLib (~> 1.1.1)
   - CapacitorShare (7.0.4):
     - Capacitor
+  - CapacitorStatusBar (7.0.6):
+    - Capacitor
   - IONFilesystemLib (1.1.2)
   - UnisimSdk (0.124.0):
     - Capacitor
@@ -19,6 +21,7 @@ DEPENDENCIES:
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorFilesystem (from `../../node_modules/@capacitor/filesystem`)"
   - "CapacitorShare (from `../../node_modules/@capacitor/share`)"
+  - "CapacitorStatusBar (from `../../node_modules/@capacitor/status-bar`)"
   - "UnisimSdk (from `../../node_modules/@unisim/sdk`)"
 
 SPEC REPOS:
@@ -36,6 +39,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/filesystem"
   CapacitorShare:
     :path: "../../node_modules/@capacitor/share"
+  CapacitorStatusBar:
+    :path: "../../node_modules/@capacitor/status-bar"
   UnisimSdk:
     :path: "../../node_modules/@unisim/sdk"
 
@@ -45,9 +50,10 @@ SPEC CHECKSUMS:
   CapacitorCordova: e61ee8c40101b8cd011d0224261606a290c082cf
   CapacitorFilesystem: c63fc54df41e5a6761785a7f3c49dc696c22e296
   CapacitorShare: 25f7fc5dd0e4edbde5d6801c6de5d14a8b450a41
+  CapacitorStatusBar: 416e9e53fd6397e668d4a181cd2131617d949bd6
   IONFilesystemLib: 21a63377696b2d8fab5632ecfb7d2ac67bddb68a
   UnisimSdk: e07889bb5890cba2189125e92328f98bd0e3fc6b
 
-PODFILE CHECKSUM: f2b9f8aca02b3af740d165885029526d7369da02
+PODFILE CHECKSUM: 9ff35553743eb44c241072661a68f90fc42bbb4f
 
 COCOAPODS: 1.16.2

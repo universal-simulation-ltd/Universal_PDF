@@ -169,3 +169,38 @@ export async function subscribeNativeOpenPdf(
     void listener.remove()
   }
 }
+
+/**
+ * Colours the system status bar's own glyphs — the clock, signal and battery
+ * the OS draws over whatever the app paints at the top of the screen.
+ *
+ * ⚠️ THE APP HAS TWO CHROMES UP THERE AND ONLY ONE SET OF GLYPHS, which is why
+ * this cannot be a constant. With a document open the strip is slate-900 (the
+ * app's own notch spacer, matching the tools bar under it) and the glyphs must
+ * be light. On the landing page the strip is WHITE and not the app's to choose:
+ * `UniversalAppsNavBar` takes `env(safe-area-inset-top)` onto itself as padding
+ * and cancels the page wrapper's with an equal negative margin — deliberately,
+ * so the bar can stick without sliding under the Dynamic Island — and paints
+ * its own `surface` there. So the spacer is annulled on that screen and the
+ * glyphs must be dark instead.
+ *
+ * Android's default was light glyphs for both, so on the landing page the clock
+ * was white on white and simply gone. Measured on a Nothing Phone (Android 16):
+ * the top 126 rows read (255, 255, 255) with nothing in them.
+ *
+ * ⚠️ Capacitor's names are the opposite way round to how they read: `Dark`
+ * means "styled FOR a dark background", i.e. LIGHT glyphs. Passing the mood you
+ * want rather than the background you have is the obvious mistake.
+ *
+ * No-ops off a native shell, and swallows its own failure — a status bar that
+ * cannot be styled is a cosmetic loss, never a reason to break a render.
+ */
+export async function setStatusBarOverDarkChrome(dark: boolean): Promise<void> {
+  if (!isNativeShell()) return
+  try {
+    const { StatusBar, Style } = await import('@capacitor/status-bar')
+    await StatusBar.setStyle({ style: dark ? Style.Dark : Style.Light })
+  } catch {
+    /* The plugin is absent (web/desktop) or the platform refused. Cosmetic. */
+  }
+}

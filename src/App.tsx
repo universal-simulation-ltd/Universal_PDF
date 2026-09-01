@@ -72,7 +72,7 @@ import { useExitGuard } from './stores/exitGuard'
 import { hasUnsavedChanges, onSavedStateChanged } from './lib/unsavedChanges'
 import { CONTAINER } from './lib/layout'
 import { OfficeImportError, toViewablePdf } from './lib/officeToPdf'
-import { isNativeShell, subscribeNativeOpenPdf } from './lib/nativeOpen'
+import { isNativeShell, setStatusBarOverDarkChrome, subscribeNativeOpenPdf } from './lib/nativeOpen'
 
 const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_PDF'
 
@@ -268,6 +268,13 @@ export default function App() {
     const timer = window.setTimeout(() => setLaunching(false), 3000)
     return () => window.clearTimeout(timer)
   }, [launching])
+
+  // Keep the system clock/battery legible against whichever chrome is at the
+  // top right now — dark strip with a document open, the SDK bar's white
+  // surface on the landing page. See `setStatusBarOverDarkChrome`.
+  useEffect(() => {
+    void setStatusBarOverDarkChrome(!showLanding)
+  }, [showLanding])
 
   // ── Leaving a document that has amendments ───────────────────────────────
   // Three ways out, one question. `requestExit` runs its action outright when
