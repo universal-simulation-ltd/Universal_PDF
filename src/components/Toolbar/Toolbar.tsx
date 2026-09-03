@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { usePdfStore } from '../../stores/pdfStore'
@@ -93,6 +93,10 @@ const DRAW_SHAPES: { id: Tool; icon: string; label: string }[] = [
 
 type Panel = 'select' | 'text' | 'draw' | 'color' | null
 
+// Breathing room kept between a floated panel and the window edge — and
+// between it and anything it is not allowed to cover.
+const PANEL_MARGIN = 8
+
 // Renders a toolbar dropdown into a body-level portal, fixed-positioned under
 // its anchor. The desktop toolbar sits inside an `overflow-x-auto` container
 // (so it can scroll horizontally on narrow viewports); per the CSS overflow
@@ -110,26 +114,72 @@ function FloatingPanel({
   children: React.ReactNode
 }) {
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
-  useLayoutEffect(() => {
-    function place() {
-      const el = anchorRef.current
-      if (!el) return
-      const r = el.getBoundingClientRect()
-      setPos({ left: r.left, top: r.bottom + 4 })
+  const place = useCallback(() => {
+    const el = anchorRef.current
+    const panel = panelRef.current
+    if (!el || !panel) return
+    const r = el.getBoundingClientRect()
+    const w = panel.offsetWidth
+    const h = panel.offsetHeight
+    // Left-align with the anchor, but never run off the right of the window.
+    // The draw options are nearly as wide as the toolbar itself, so anchored
+    // under a button that sits mid-bar they used to hang off the screen.
+    const left = Math.max(PANEL_MARGIN, Math.min(r.left, window.innerWidth - w - PANEL_MARGIN))
+    let top = r.bottom + 4
+    // The placement banner ("Click the page to place…") floats directly under
+    // the toolbar too, and it reports live state the user needs — so the
+    // panel steps below it rather than covering it.
+    const hint = document.querySelector('[data-placement-hint]')
+    if (hint) {
+      const a = hint.getBoundingClientRect()
+      const overlaps =
+        left < a.right + PANEL_MARGIN &&
+        left + w > a.left - PANEL_MARGIN &&
+        top < a.bottom + PANEL_MARGIN &&
+        top + h > a.top - PANEL_MARGIN
+      if (overlaps) top = a.bottom + PANEL_MARGIN
     }
-    place()
+    top = Math.max(PANEL_MARGIN, Math.min(top, window.innerHeight - h - PANEL_MARGIN))
+    setPos((prev) => (prev && prev.left === left && prev.top === top ? prev : { left, top }))
+  }, [anchorRef, panelRef])
+
+  // Re-place on EVERY render, not just on mount: picking ✓ from the open sheet
+  // arms a placement, so the banner it must dodge can appear while the panel is
+  // already up. `place` no-ops when nothing moved, so this can't loop.
+  useLayoutEffect(place)
+
+  useLayoutEffect(() => {
+    // Where it fits depends on its own size, and the content changes under it
+    // (more fonts revealed, a different tool's swatches) — so watch the box,
+    // not just the window.
+    const ro = new ResizeObserver(place)
+    if (panelRef.current) ro.observe(panelRef.current)
     window.addEventListener('resize', place)
     // Capture phase so the toolbar's own horizontal scroll (and any ancestor
     // scroll) keeps the panel pinned to its anchor.
     window.addEventListener('scroll', place, true)
     return () => {
+      ro.disconnect()
       window.removeEventListener('resize', place)
       window.removeEventListener('scroll', place, true)
     }
-  }, [anchorRef])
-  if (!pos) return null
+  }, [place, panelRef])
   return createPortal(
-    <div ref={panelRef} style={{ position: 'fixed', left: pos.left, top: pos.top, zIndex: 60 }}>
+    // Rendered — invisible — before it has been placed, because the effect above
+    // has to measure it to place it. maxWidth is what lets a too-wide panel wrap
+    // onto a second row instead of overflowing the window.
+    <div
+      ref={panelRef}
+      data-toolbar-panel
+      style={{
+        position: 'fixed',
+        left: pos?.left ?? 0,
+        top: pos?.top ?? 0,
+        zIndex: 60,
+        maxWidth: `calc(100vw - ${PANEL_MARGIN * 2}px)`,
+        visibility: pos ? 'visible' : 'hidden'
+      }}
+    >
       {children}
     </div>,
     document.body
@@ -281,6 +331,10 @@ export function ToolbarDesktopTools() {
   const selectGroupRef = useRef<HTMLDivElement>(null)
   const textGroupRef = useRef<HTMLDivElement>(null)
   const drawGroupRef = useRef<HTMLDivElement>(null)
+  // Inside the draw group the two "+"s open different panels from different
+  // anchors: the pencil's is the full tool sheet, the swatches' is colours only.
+  const drawToolRef = useRef<HTMLDivElement>(null)
+  const colorGroupRef = useRef<HTMLDivElement>(null)
   // The open panel is portaled out of the toolbar, so it's no longer a DOM
   // descendant of the group refs — track it separately for outside-click.
   const panelContentRef = useRef<HTMLDivElement>(null)
@@ -326,7 +380,7 @@ export function ToolbarDesktopTools() {
     e.target.value = ''
   }
 
-  function PlusBox({ panel }: { panel: Panel }) {
+  function PlusBox({ panel, label = 'options' }: { panel: Panel; label?: string }) {
     return (
       <button
         onClick={() => togglePanel(panel)}
@@ -335,7 +389,9 @@ export function ToolbarDesktopTools() {
             ? 'bg-orange-700 border-orange-400 text-white'
             : 'bg-slate-600 border-slate-500 text-slate-300 hover:bg-slate-500 hover:text-white'
         }`}
-        title={`${openPanel === panel ? 'Close' : 'Open'} options`}
+        title={`${openPanel === panel ? 'Close' : 'Open'} ${label}`}
+        aria-label={`${openPanel === panel ? 'Close' : 'Open'} ${label}`}
+        aria-expanded={openPanel === panel}
       >
         +
       </button>
@@ -450,7 +506,7 @@ export function ToolbarDesktopTools() {
                 : 'Select / move',
           'select'
         )}
-        <PlusBox panel="select" />
+        <PlusBox panel="select" label="select options" />
         {openPanel === 'select' && (
           <FloatingPanel anchorRef={selectGroupRef} panelRef={panelContentRef}>
           <div className="bg-slate-800 border border-slate-600 rounded-lg shadow-xl py-1 whitespace-nowrap min-w-56">
@@ -479,10 +535,10 @@ export function ToolbarDesktopTools() {
       {/* Text + font-size expander */}
       <div ref={textGroupRef} className="relative flex items-start">
         {toolBtn('text', 'T', 'Add text', 'text')}
-        <PlusBox panel="text" />
+        <PlusBox panel="text" label="text options" />
         {openPanel === 'text' && (
           <FloatingPanel anchorRef={textGroupRef} panelRef={panelContentRef}>
-          <div className="bg-slate-800 border border-slate-600 rounded-lg shadow-xl px-3 py-2 flex items-center gap-3 whitespace-nowrap">
+          <div className="bg-slate-800 border border-slate-600 rounded-lg shadow-xl px-3 py-2 flex items-center gap-3 gap-y-2 flex-wrap">
             <span className="text-xs text-slate-400">Size</span>
             <input
               type="range"
@@ -527,9 +583,13 @@ export function ToolbarDesktopTools() {
 
       <div className="w-px h-6 bg-slate-700 mx-1" />
 
-      {/* Pencil + highlighter + colours + combined options panel */}
+      {/* Pencil (its "+" = every drawing tool, stroke and colour) + highlighter
+          + the two quick swatches (their "+" = the colour picker on its own). */}
       <div ref={drawGroupRef} className="relative flex items-start gap-1">
-        {toolBtn('draw', '✎', 'Free draw', 'draw', '#000000')}
+        <div ref={drawToolRef} className="flex items-start">
+          {toolBtn('draw', '✎', 'Free draw', 'draw', '#000000')}
+          <PlusBox panel="draw" label="drawing tools" />
+        </div>
         <button
           onClick={() => handleToolClick('highlight', 'draw', HIGHLIGHT_YELLOW)}
           onPointerDown={() => startLongPress('draw')}
@@ -543,23 +603,28 @@ export function ToolbarDesktopTools() {
         >
           <HighlighterIcon className="w-5 h-5" />
         </button>
-        <div className="flex items-center gap-1 self-center ml-1">
+        {/* self-stretch, not self-center: the swatches are shorter than the tool
+            buttons, and this is the box the colour popup hangs off — matched
+            heights are what keep it from opening inside the toolbar. */}
+        <div ref={colorGroupRef} className="flex items-start gap-1 self-stretch ml-1">
+          <div className="flex h-full items-center gap-1">
           {tool === 'highlight' ? (
             <>
-              {colorSwatch(HIGHLIGHT_YELLOW, 'Yellow', true, () => setOpenPanel('draw'))}
-              {colorSwatch(HIGHLIGHT_GREEN, 'Green', true, () => setOpenPanel('draw'))}
+              {colorSwatch(HIGHLIGHT_YELLOW, 'Yellow', true, () => setOpenPanel('color'))}
+              {colorSwatch(HIGHLIGHT_GREEN, 'Green', true, () => setOpenPanel('color'))}
             </>
           ) : (
             <>
-              {colorSwatch('#000000', 'Black', true, () => setOpenPanel('draw'))}
-              {colorSwatch('#ffffff', 'White', true, () => setOpenPanel('draw'))}
+              {colorSwatch('#000000', 'Black', true, () => setOpenPanel('color'))}
+              {colorSwatch('#ffffff', 'White', true, () => setOpenPanel('color'))}
             </>
           )}
+          </div>
+          <PlusBox panel="color" label="colours" />
         </div>
-        <PlusBox panel="draw" />
         {openPanel === 'draw' && (
-          <FloatingPanel anchorRef={drawGroupRef} panelRef={panelContentRef}>
-          <div className="bg-slate-800 border border-slate-600 rounded-lg shadow-xl px-3 py-2 flex items-center gap-2 whitespace-nowrap">
+          <FloatingPanel anchorRef={drawToolRef} panelRef={panelContentRef}>
+          <div className="bg-slate-800 border border-slate-600 rounded-lg shadow-xl px-3 py-2 flex items-center gap-2 gap-y-2 flex-wrap">
             {DRAW_SHAPES.map((s) => (
               <button
                 key={s.id}
@@ -589,6 +654,16 @@ export function ToolbarDesktopTools() {
             {COLORS.map((c) => colorSwatch(c.hex, c.name))}
             <ColorPickerTrigger />
           </div>
+          </FloatingPanel>
+        )}
+        {/* Colours only — the swatch "+" is a colour picker, not a second way
+            into the whole tool sheet. */}
+        {openPanel === 'color' && (
+          <FloatingPanel anchorRef={colorGroupRef} panelRef={panelContentRef}>
+            <div className="bg-slate-800 border border-slate-600 rounded-lg shadow-xl px-3 py-2 flex items-center gap-2 gap-y-2 flex-wrap">
+              {COLORS.map((c) => colorSwatch(c.hex, c.name))}
+              <ColorPickerTrigger />
+            </div>
           </FloatingPanel>
         )}
       </div>

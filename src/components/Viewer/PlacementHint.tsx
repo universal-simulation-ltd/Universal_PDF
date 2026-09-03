@@ -118,7 +118,13 @@ export default function PlacementHint() {
           the two-line case still looks like a banner rather than a lozenge.
           This is the one screen where the banner is the ONLY feedback there is:
           no hover, so no cursor ghost. */}
-      <div className="flex w-max max-w-full items-center gap-2.5 rounded-2xl bg-white/95 backdrop-blur px-3.5 py-2 shadow-lg ring-1 ring-orange-200">
+      {/* data-placement-hint is how the toolbar's floating option panels find
+          this pill: they drop below it rather than covering the one bit of
+          feedback telling the user a tap is armed. */}
+      <div
+        data-placement-hint
+        className="flex w-max max-w-full items-center gap-2.5 rounded-2xl bg-white/95 backdrop-blur px-3.5 py-2 shadow-lg ring-1 ring-orange-200"
+      >
         <span
           aria-hidden="true"
           className="shrink-0 w-2 h-2 rounded-full bg-orange-500 animate-pulse motion-reduce:animate-none"
