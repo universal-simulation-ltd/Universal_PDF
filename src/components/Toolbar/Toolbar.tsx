@@ -113,7 +113,21 @@ function FloatingPanel({
   panelRef: React.RefObject<HTMLDivElement>
   children: React.ReactNode
 }) {
-  const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
+  // ⚠️ The position is written STRAIGHT TO THE NODE and remembered in a ref —
+  // it is deliberately not React state, and putting it back into state would
+  // reintroduce a crash that took the whole app down (owner, 2026-09-04: "when
+  // i clicked the X draw tool" → the root ErrorBoundary). `place` runs from a
+  // dep-less layout effect, i.e. after EVERY commit. While the answer never
+  // changed, the old `setPos` no-op'd and React's eager bailout stopped there —
+  // but the first time it genuinely moved (picking ✓/✗ opened a placement
+  // banner under the toolbar, and the panel steps below it) the update was
+  // dispatched from inside the commit phase, where that bailout no longer
+  // applies: the state landed, the effect ran again, dispatched again, and
+  // every commit scheduled the next one. React gave up at 50 — "Maximum update
+  // depth exceeded" — and the error boundary replaced the document with
+  // "Something went wrong". A DOM write can't schedule a render, so the loop
+  // has nowhere to start.
+  const posRef = useRef<{ left: number; top: number } | null>(null)
   const place = useCallback(() => {
     const el = anchorRef.current
     const panel = panelRef.current
@@ -140,12 +154,18 @@ function FloatingPanel({
       if (overlaps) top = a.bottom + PANEL_MARGIN
     }
     top = Math.max(PANEL_MARGIN, Math.min(top, window.innerHeight - h - PANEL_MARGIN))
-    setPos((prev) => (prev && prev.left === left && prev.top === top ? prev : { left, top }))
+    const prev = posRef.current
+    if (prev && prev.left === left && prev.top === top) return
+    posRef.current = { left, top }
+    panel.style.left = `${left}px`
+    panel.style.top = `${top}px`
+    // Hidden until measured — see the render below.
+    panel.style.visibility = 'visible'
   }, [anchorRef, panelRef])
 
   // Re-place on EVERY render, not just on mount: picking ✓ from the open sheet
   // arms a placement, so the banner it must dodge can appear while the panel is
-  // already up. `place` no-ops when nothing moved, so this can't loop.
+  // already up.
   useLayoutEffect(place)
 
   useLayoutEffect(() => {
@@ -165,19 +185,23 @@ function FloatingPanel({
     }
   }, [place, panelRef])
   return createPortal(
-    // Rendered — invisible — before it has been placed, because the effect above
-    // has to measure it to place it. maxWidth is what lets a too-wide panel wrap
-    // onto a second row instead of overflowing the window.
+    // Rendered — invisible, at 0,0 — before it has been placed, because the
+    // effect above has to measure it to place it. Those three values are the
+    // panel's STARTING state only: `place` overwrites left/top/visibility on the
+    // node itself. React never rewrites them, because what it renders here never
+    // changes between renders, so there is nothing for it to diff and undo.
+    // maxWidth is what lets a too-wide panel wrap onto a second row instead of
+    // overflowing the window.
     <div
       ref={panelRef}
       data-toolbar-panel
       style={{
         position: 'fixed',
-        left: pos?.left ?? 0,
-        top: pos?.top ?? 0,
+        left: 0,
+        top: 0,
         zIndex: 60,
         maxWidth: `calc(100vw - ${PANEL_MARGIN * 2}px)`,
-        visibility: pos ? 'visible' : 'hidden'
+        visibility: 'hidden'
       }}
     >
       {children}
