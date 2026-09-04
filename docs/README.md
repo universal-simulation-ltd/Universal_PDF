@@ -466,6 +466,12 @@ the QR code, which is exactly what survived.)
 either from the drawing panel had never actually shown its banner, on the build
 before this one too. The row is gone, so the docs and the screen agree again.
 
+⚠️ It also **masked a crash** rather than fixing one: a banner appearing under
+the toolbar while a tool panel was open is what put `FloatingPanel` into an
+infinite render loop and replaced the app with *"Something went wrong"* — see
+*A `FloatingPanel` positions itself on the NODE, never in state* below. There is
+no route to it today because of this removal, and the loop was fixed anyway.
+
 Four things about it are load-bearing:
 
 - ⚠️ **It is not a toast.** It is up for exactly as long as the armed state and
@@ -519,6 +525,70 @@ only ever happens against a bound. If you want a floating panel to break, give i
 the rows yourself (or a `max-w`); adding `flex-wrap` reviews as a fix and changes
 nothing on screen. The colours row keeps `flex-wrap` because it *is* bounded — by
 the width the first row establishes.
+
+## ⚠️ A `FloatingPanel` positions itself on the NODE, never in state
+
+`FloatingPanel` (`components/Toolbar/Toolbar.tsx`) is what every toolbar tool
+sheet renders into. `place()` measures the anchor button and the window, steps
+the panel below the placement banner when one is in the way, and clamps it on
+screen.
+
+**`place()` writes `left` / `top` / `visibility` straight onto the panel's own
+node and remembers them in a ref. That is deliberately not React state, and
+putting it back into state re-creates a crash that took the whole app down.**
+
+Owner, 2026-09-04: *"universal pdf — when i clicked the X draw tool"*, with a
+screenshot of the root ErrorBoundary. Picking ✗ (or ✓) from the open drawing
+panel armed a placement, `PlacementHint`'s banner appeared under the toolbar, the
+panel stepped below it — and the whole app was replaced by *"Something went
+wrong"*, on production, until the page was reloaded.
+
+Why the old version read as safe and was not:
+
+- `place` runs from a **dep-less `useLayoutEffect`** — after **every** commit. On
+  purpose: the banner it must dodge can appear while the panel is already up, and
+  no dependency array captures "a sibling appeared above me".
+- It called `setPos(prev => unchanged ? prev : next)` — a guard on the **value**,
+  with a comment saying that therefore it could not loop.
+- What actually stopped the loop was React's **eager bailout** in
+  `dispatchSetState`, and that only applies while the fiber has **no pending
+  lanes**. The first genuine move was dispatched from inside the **commit phase**
+  (a layout effect is commit-phase work), so lanes stayed pending: every commit
+  re-ran the effect, which dispatched, which caused the next commit — 50 deep,
+  then React error **#185** (*Maximum update depth exceeded*) and the boundary ate
+  the document. Instrumented on the live bundle, the numbers were: the same
+  position (top `127.5`) recomputed on every pass, while the update queue's base
+  state stayed at the pre-banner `53.5` and grew by one replayed updater per
+  cycle, ~50 times.
+- A DOM write cannot schedule a render, so the ref + node version has nowhere to
+  loop. The dodge behaviour itself is unchanged.
+
+⚠️ **The rendered style has to stay constant.** The JSX renders
+`left: 0; top: 0; visibility: hidden` and never anything else — those are the
+panel's *starting* values only. Make them track the ref and React diffs them back
+over the top of `place()`'s write, snapping the panel to 0,0 on the next
+unrelated re-render.
+
+### Testing it
+
+`npm run test:panel-dodge` (`e2e/panel-dodge.e2e.mjs`) — ten checks against a
+production build in Chromium. It opens the drawing panel, injects a
+`[data-placement-hint]` banner, and **clicks a colour inside the panel** to force
+a real commit; then asserts the app is still running, the panel stepped below the
+banner, the colour click still did its job, and the panel comes back up when the
+banner goes.
+
+⚠️ **The negative control aborts instead of failing tidily.** Against a build of
+the pre-fix panel the three banner checks go red and the run then stops dead —
+there is no panel left to query, because the error boundary has replaced the
+page. For a crash-class test that abort *is* the red; don't read it as a broken
+harness.
+
+ⓘ **As the app stands, nothing reaches this.** Tick and Cross lost their
+placement banner the same day for product reasons (see the banner section above),
+so no route now opens a banner while a panel is up. That **masks** the crash — it
+does not fix it, which is why the fix and its test exist: the next feature that
+banners over an open panel would otherwise rediscover it.
 
 ## Redaction
 
