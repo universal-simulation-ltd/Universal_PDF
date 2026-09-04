@@ -18,6 +18,7 @@
     "build:extension": "node extension/build.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
+    "credits": "node ../scripts/gen-credits.mjs . --page ../../UNI_SIM_Website/public/pdf-app.html",
     "test:e2e": "node e2e/office-import.e2e.mjs",
     "test:extension": "node e2e/extension.e2e.mjs",
     "test:exit-guard": "node e2e/exit-guard.e2e.mjs",
