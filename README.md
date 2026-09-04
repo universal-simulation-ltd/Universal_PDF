@@ -12,7 +12,7 @@ A clean Progressive Web App for viewing, annotating, and signing PDFs — works 
 
 - **View** multi-page PDFs with zoom (50%–300%), pinch-to-zoom on touch, and a thumbnail navigator
 - **Open Word and OpenDocument files** — drop a `.docx` or `.odt` on the circle and it is converted to a PDF *on your device* (nothing is uploaded), then opens ready to annotate and sign. Headings, bold/italic, bulleted and numbered lists, tables and links all come across as real, selectable text. The page layout is re-typeset rather than copied, so fonts, columns, headers/footers and floating shapes will differ — the app says so when it opens one. Word 97–2003 `.doc` is not supported; save it as `.docx` first
-- **Select text** — the *Select text* tool (in the Select ▾ menu) lets you drag over the PDF's own text and copy it (Ctrl/⌘C)
+- **Select text** — the *Select text* tool (in the Select ▾ menu) lets you drag over the PDF's own text and copy it (Ctrl/⌘C). Or just **double-click a word** with the *Select* tool and it switches over and highlights that word for you, ready to copy — no dragging, and double-clicking blank page or one of your own annotations leaves the tool alone
 - **Make searchable (OCR)** — turn a scanned / image-only PDF into a searchable, selectable one *entirely on your device* (no upload). Find, copy and redact-by-search then work. The OCR engine downloads once on first use, then works offline
 - **Annotate** with free draw, text, rectangles, ticks, and crosses, in any of six colours
 - **Redact** — drag a box over anything and the text underneath is *destroyed* when you export, not just covered over. Offered on the front page ("Redact text"), which opens your PDF with the tool already in hand; also by search, which boxes every match at once. While you edit, each box says *"This will be redacted on export"* so a real redaction is never mistaken for a shape you have simply filled in — and that wording never appears in the file you export. The fill is any toolbar colour, and a bucket on a selected box turns it back into an ordinary shape if you change your mind
@@ -61,7 +61,7 @@ The browser version is the whole app. Open the
 1. **Open a document** — drop a PDF, Word (`.docx`) or OpenDocument (`.odt`) file on the circle, click it to browse, or drag-and-drop anywhere on the page. Word and ODT files are converted to PDF on your device first
 2. **Pick a tool** from the toolbar (Text, Draw, Tick, Cross, Rectangle, or Sign)
 3. **Click / tap on the page** to place the annotation
-4. **Switch to *Select*** to drag, resize, recolour, or delete existing annotations — or *Select text* (same menu) to drag over and copy the PDF's own text
+4. **Switch to *Select*** to drag, resize, recolour, or delete existing annotations — or *Select text* (same menu) to drag over and copy the PDF's own text. Double-clicking a word on the page makes that switch for you and selects the word
 5. **Save** to download the annotated PDF
 
 Signatures: tap *Sign → Draw new signature*, sign with mouse or finger, save. Pick it from the menu, then tap on the PDF to place. Drag the corners to resize, drag the body to reposition.
@@ -89,6 +89,8 @@ npm run test:lock-password  # what counts as an acceptable password, and how it 
 ```
 
 `npm run test:lock` is a browser test (Playwright, borrowed from a sibling Universal app) and needs the dev server running on port 5174 — `./scripts/preview.sh` in another terminal. It is the only place the encryption is proven to work against a real browser's WebCrypto rather than Node's.
+
+`npm run test:word-dblclick` is the other browser test: it pins double-clicking a word with the *Select* tool — the tool switches, exactly the word is selected (asserted on `window.getSelection().toString()`, i.e. what Ctrl/⌘C would copy), and blank page space or an annotation leaves the tool alone. Same dev server on 5174, or set `E2E_BASE_URL` at a production build — the file header gives the commands.
 
 Pushes to `main` auto-deploy via Cloudflare Pages, which serves the app at <https://opensource.unisim.co.uk/pdf>. The production build sets Vite `base: '/pdf/'` and ships a `public/_redirects` file that rewrites `/pdf/*` onto the flat `dist/` output.
 

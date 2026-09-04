@@ -31,6 +31,7 @@ import {
   dateLineSeed
 } from '../../lib/composeSignature'
 import { inkColorFor, renderInkSignature } from '../../lib/renderInk'
+import { requestWordSelect } from '../../lib/wordSelect'
 import { isPaleFill, redactFillHex } from '../../lib/redactGate'
 import { FONT_CSS } from '../../lib/fonts'
 import { effectiveRuns, runFontStyle, runHasStyle, runsToPlainText, runsToHtml, parseRunsFromDom, mergeRuns } from '../../lib/textRuns'
@@ -1693,6 +1694,24 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     setEditingId(null)
   }
 
+  // Double-clicking a word with the Select tool is a request to read the PDF's
+  // own text, not to edit the page: switch to Select text and highlight that
+  // word, the way a double-click does everywhere else. Only empty page space
+  // counts — a double-click that lands ON an annotation belongs to it.
+  //
+  // The word can only be selected once the text layer exists (it is empty while
+  // Select is active), so the point is parked for TextSelectLayer to consume
+  // after it renders — see lib/wordSelect.
+  function onDblClick(e: Konva.KonvaEventObject<MouseEvent>) {
+    if (tool !== 'select' || editingId) return
+    if (e.target !== e.target.getStage()) return
+    requestWordSelect(pageIndex, e.evt.clientX, e.evt.clientY, tool)
+    // Matches the toolbar's own Select-text option: an annotation selection
+    // would keep its handles floating over the text being read.
+    setSelected(null)
+    setTool('selecttext')
+  }
+
   // Dragging is off while a pinch is running, so a second finger can never
   // turn a zoom into a zoom-plus-drag.
   const selectable = tool === 'select' && !pinching
@@ -1747,6 +1766,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           touchAction
         }}
         onPointerDown={onPointerDown}
+        onDblClick={onDblClick}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerCancel}

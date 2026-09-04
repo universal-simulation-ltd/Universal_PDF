@@ -254,7 +254,9 @@ function PdfPage({ doc, pageIndex, scale, isXfa, active, onSized }: Props) {
           {/* Selectable text overlay — inert unless the Select-text tool is
               active (see TextSelectLayer). Rendered after the annotation Stage
               so it can sit on top while selecting. */}
-          {size && active && page && <TextSelectLayer page={page} scale={scale} />}
+          {size && active && page && (
+            <TextSelectLayer page={page} pageIndex={pageIndex} scale={scale} />
+          )}
           {size && active && page && (
             <FormFieldLayer
               page={page}

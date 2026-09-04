@@ -1053,6 +1053,89 @@ Tested by `npm run test:exit-guard` (the popup and its answers, in a browser)
 and `npm run test:exit-guard:desktop` (the held window close and the native
 save, driving the real Electron app). Both need the dev server on :5174.
 
+## Selecting text, and double-clicking a word
+
+The *Select text* tool overlays `TextSelectLayer` — a transparent, selectable
+copy of the page's own text built with PDF.js's `TextLayer` (see "invisible text
+layer" under OCR above). Dragging across it selects real text you can copy with
+Ctrl/⌘C.
+
+**Double-clicking a word with the *Select* tool** (2026-09-04, owner ask: *"if
+select tool is selected and then double click a word, autoswitch to select text
+tool and highlight that word"*) switches to *Select text* and highlights that
+word, ready to copy. Three boundaries, all deliberate:
+
+- **Only empty page space counts.** A double-click that lands on an annotation
+  belongs to that annotation — a text box still retypes, a placed QR code still
+  re-opens its generator. The test in `AnnotationLayer`'s handler is
+  `e.target !== e.target.getStage()`: the Konva stage is the event target only
+  when the double-click hit nothing.
+- **Blank page switches nothing.** If the hit-test finds no word the tool switch
+  is reverted, so it reads as the no-op it was. Switching tools is the user's
+  decision and empty space should not quietly make it for them.
+- **Mouse only.** `onDblClick` is wired; `onDblTap` is not. On touch a
+  double-tap is already zoom-adjacent, and switching tools under a finger is a
+  wider change than the ask.
+
+### Why it needs `lib/wordSelect.ts` and cannot live in the handler
+
+The two halves are in different components. The Konva annotation Stage is what
+sees the double-click — but while any other tool is active the text layer is
+**empty**, so the spans to hit-test do not exist yet. The click therefore *parks*
+a request (the viewport point, the page, and the tool to fall back to), flips the
+tool, and `TextSelectLayer` consumes it once its own `TextLayer.render()` has
+resolved and the spans are on screen.
+
+- ⚠️ **The request is keyed to the PAGE.** Turning the tool on builds the text
+  layer for *every* on-screen page, and whichever finishes first would otherwise
+  consume the request and hit-test against spans that are not under the cursor.
+  `takeWordSelect(pageIndex)` only answers for the page the click was on — which
+  is why `TextSelectLayer` (and `PdfPage`, which passes it) gained a `pageIndex`
+  prop.
+- Requests expire after **3 s**, so one whose page never rendered (extraction
+  failed, page scrolled away) cannot fire later on an unrelated switch to *Select
+  text*.
+
+### ⚠️ `caretRangeFromPoint` is not a hit-test
+
+It reads like "what character is at this point?" and is nothing of the kind: it
+resolves a point **anywhere over the text layer** to the nearest character. Blank
+space halfway down a page comes back with a perfectly plausible word from further
+up — no null, no error, nothing to distinguish it from a real hit. Without a
+guard, double-clicking empty page selects a random word at the top of the
+document.
+
+So `selectWordAtPoint()` **verifies the character it is given is really under the
+pointer**, with a one-character `Range` and `getBoundingClientRect()`. That check
+*is* the hit-test; the caret API only narrows the search. And because the caret
+lands *between* characters, a click on the right-hand half of a letter reports the
+offset *past* it — both sides of the caret are candidates, and the one whose own
+box contains the point wins.
+
+Two APIs are feature-detected, not browser-sniffed: Chrome/Safari have
+`caretRangeFromPoint` (deprecated but present), Firefox has the standard
+`caretPositionFromPoint` and not the other. ⓘ The Firefox branch is written from
+the spec and **has never been run** — the e2e is Chromium.
+
+**Word boundaries** are letters, digits and underscore (`[\p{L}\p{N}_]`).
+Apostrophes (`'` and `’`) join a word, so `don't` and `James’s` select whole, but
+any left on the outside are trimmed — a quoted ‘word’ selects as the word.
+
+### Testing it
+
+`npm run test:word-dblclick` drives a real browser (Playwright, borrowed from a
+sibling Universal app) and pins 7 checks: the tool really changes, the **word**
+is selected and not the line — asserted on `window.getSelection().toString()`,
+i.e. what Ctrl/⌘C would copy — blank space leaves the tool alone and selects
+nothing, and a double-click on an annotation does neither. Run it against
+`./scripts/preview.sh` on :5174, or against a production build (the file header
+gives the exact commands; the built base path is `/pdf/`, so `dist` has to sit
+under a `pdf/` folder).
+
+ⓘ A **negative control** was run on 2026-09-04: with the `onDblClick` body
+short-circuited, only the two "double-clicking a word" checks go red and the
+blank-space and annotation pairs stay green — which is the point of having them.
+
 ## Zoom and page rendering
 
 Two rules from a 2026-08-26 bug (a page rendered blank white with only its

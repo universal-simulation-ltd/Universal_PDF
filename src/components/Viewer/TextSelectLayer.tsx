@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { TextLayer } from '../../lib/pdfjs'
 import type { PDFPageProxy } from '../../lib/pdfjs'
 import { useAnnotationStore } from '../../stores/annotationStore'
+import { selectWordAtPoint, takeWordSelect } from '../../lib/wordSelect'
 
 // A transparent, selectable copy of the page's own text, built with PDF.js's
 // TextLayer and overlaid on top of the rendered canvas. It's the "Select text"
@@ -17,9 +18,11 @@ import { useAnnotationStore } from '../../stores/annotationStore'
 // "synced to zoom" requirement).
 export default function TextSelectLayer({
   page,
+  pageIndex,
   scale
 }: {
   page: PDFPageProxy
+  pageIndex: number
   scale: number
 }) {
   const active = useAnnotationStore((s) => s.tool === 'selecttext')
@@ -51,6 +54,17 @@ export default function TextSelectLayer({
         const textLayer = new TextLayer({ textContentSource, container, viewport })
         layer = textLayer
         await textLayer.render()
+        if (cancelled) return
+        // A double-click on this page with the Select tool switched the tool to
+        // get here — the spans it wanted to hit-test now exist, so make the
+        // selection it asked for.
+        const req = takeWordSelect(pageIndex)
+        if (req && !selectWordAtPoint(req.clientX, req.clientY)) {
+          // Blank page under the double-click — undo the tool switch so it
+          // reads as the no-op it was.
+          const store = useAnnotationStore.getState()
+          if (store.tool === 'selecttext') store.setTool(req.fromTool)
+        }
       } catch {
         // Render cancelled (zoom changed / unmounted) — ignore.
       }
@@ -65,7 +79,7 @@ export default function TextSelectLayer({
       }
       container.replaceChildren()
     }
-  }, [page, scale, active])
+  }, [page, pageIndex, scale, active])
 
   return (
     <div
