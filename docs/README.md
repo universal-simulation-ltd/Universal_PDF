@@ -448,7 +448,24 @@ It covers every state where a single tap places something:
 | a name/details/date piece queued (`pendingExtras`) | where the *name* / *details* / *date* should go, the text itself, and how many follow |
 | a generated code armed (`tool: 'image'` + `uploadedImageQr`) | place your QR code |
 | a picture armed (`tool: 'image'` + `uploadedImageSrc`) | place your image |
-| `text` / `tick` / `cross` | what a tap adds, and that the tool stays on |
+| `tick` / `cross` | what a tap adds, and that the tool stays on |
+
+⚠️ **There is deliberately no banner for the Text tool** (owner, 2026-09-04:
+*"click the page to add a text box hint not needed — it's expected"*). The
+`tool === 'text'` case was removed; the comment left in its place says why the
+others survive, so nobody "restores the missing one" for consistency. The test
+for whether a state deserves a banner is **whether the thing about to land is
+invisible until it lands** — a signature, a QR code, a picture, a queued
+name/details/date — and picking *Text* and clicking to type is the one case
+nobody has to be told.
+
+ⓘ **Known, pre-existing, unfixed (2026-09-04): picking Tick or Cross from the
+drawing panel shows no banner**, even though `PlacementHint` still has that case
+and the table above still claims it. Reproduced identically on the live build
+from *before* the Text removal, so it is not fallout from it — something about
+how those two are armed from that panel means the state the hint reads never
+matches. James has been told and has not asked for it; don't assume the row
+above is proof it works.
 
 Four things about it are load-bearing:
 
@@ -486,6 +503,23 @@ placing was still armed — which meant the pair of buttons came and went for
 reasons invisible from the screen, and a plain selection offered exactly one
 visible outcome: delete. It still only calls `setTool('select')` when a tool was
 actually armed; with Select active there is nothing to go back to.
+
+## The desktop drawing panel is two rows, on purpose
+
+`ToolbarDesktopTools`'s `openPanel === 'draw'` `FloatingPanel` is an explicit
+`flex-col` of **two** rows — shapes + the stroke slider, then *Colour* + the
+swatches — not one line allowed to wrap (owner, 2026-09-04: *"when opening the
+drawing panel show the colours on a second line of the popup, don't extend it
+horizontally"*). Measured in a browser: **441px** wide after, about **690px**
+before.
+
+⚠️ **`flex-wrap` on the single row did nothing at all.** A `FloatingPanel` is
+positioned and **content-sized**: there is no width constraint for wrapping to
+resolve against, so the row just grew to fit and the panel grew with it. Wrapping
+only ever happens against a bound. If you want a floating panel to break, give it
+the rows yourself (or a `max-w`); adding `flex-wrap` reviews as a fix and changes
+nothing on screen. The colours row keeps `flex-wrap` because it *is* bounded — by
+the width the first row establishes.
 
 ## Redaction
 
@@ -1077,6 +1111,34 @@ word, ready to copy. Three boundaries, all deliberate:
   double-tap is already zoom-adjacent, and switching tools under a finger is a
   wider change than the ask.
 
+### ⚠️ The selectable text layer sits BELOW the page's own widgets
+
+`.pdf-text-select--active` is at **z 10**, and that number is load-bearing. The
+whole page-sized layer is `pointer-events: auto` while *Select text* is on, so
+anything it covers stops being clickable — silently. The stack, front to back:
+
+| Layer | z | Why there |
+|---|---|---|
+| `FormFieldLayer` (fillable widgets) | 20 | a widget is the thing being clicked, whichever selection tool is on |
+| `LinkLayer` (the PDF's own hyperlinks) | 15 | above the stage, below a widget drawn over a link |
+| `.pdf-text-select--active` | **10** | above the Konva stage, below both of the above |
+| Konva annotation `Stage` | *(none)* | no `z-index` of its own, so 10 clears it |
+
+It sat at **30** until 2026-09-04 (owner: *"when the select tool is active you
+should still be able to click a text input field and it change to text"*), which
+put it over both. The failure mode is the reason this has its own heading: the
+field still **looked** right, still hover-styled, and the click just did
+nothing — the caret went into the transparent text on top of it instead of
+opening the field to type in. Nothing errors, nothing logs, and the widget you
+are staring at is not the element being hit.
+
+ⓘ **It became a real bug the day the tool started switching by itself.** With
+the plain *Select* tool the fields always worked, and a reader who chose *Select
+text* by hand could be expected to choose their way back out. Double-click-a-word
+lands them in *Select text* without asking, so the state has to be one where the
+page is still usable. Measured on the live pre-change build: fields worked under
+*Select*, were dead under *Select text*.
+
 ### Why it needs `lib/wordSelect.ts` and cannot live in the handler
 
 The two halves are in different components. The Konva annotation Stage is what
@@ -1135,6 +1197,15 @@ under a `pdf/` folder).
 ⓘ A **negative control** was run on 2026-09-04: with the `onDblClick` body
 short-circuited, only the two "double-clicking a word" checks go red and the
 blank-space and annotation pairs stay green — which is the point of having them.
+
+**The stacking fix is pinned by the same file** (2026-09-04, taking it to **10
+checks**): the fixture PDF now carries a `pdf-lib` text field, and with *Select
+text* active the run asserts the field is still there, that clicking it opens it
+to type in, and that typed characters land in it (`document.activeElement.value`,
+not a class name). Its own negative control was run — put the text layer back to
+`z-index: 30` and exactly the last two go red, which is the right blast radius:
+the field renders either way, so a check that only counted it would never have
+caught this.
 
 ## Following the PDF's own links
 
