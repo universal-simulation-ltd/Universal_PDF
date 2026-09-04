@@ -1,4 +1,5 @@
 import { PDFDocument } from 'pdf-lib'
+import { isHeicFile } from './heicSniff'
 import { pdfjsLib } from './pdfjs'
 import type { ZipEntry } from './zip'
 
@@ -121,19 +122,9 @@ async function fileToPngBytes(file: File): Promise<Uint8Array> {
   }
 }
 
-const HEIC_EXT_RE = /\.(heic|heif)$/i
-const HEIC_MIME = new Set(['image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence'])
-
-/**
- * Is this the thing an iPhone hands you?
- *
- * ⚠️ The extension test is not belt-and-braces, it is the one that fires. A
- * `.heic` copied off a phone routinely arrives with `file.type === ''` on
- * Windows, because the OS has no MIME registered for it.
- */
-function isHeic(file: File): boolean {
-  return HEIC_MIME.has(file.type.toLowerCase()) || HEIC_EXT_RE.test(file.name)
-}
+// Is this the thing a phone hands you? Name, MIME *and* the file's own first
+// bytes — see heicSniff.ts, which explains why the first two are not enough on
+// Android and is the same file in Converter and Compress.
 
 // A photo goes into a PDF as JPEG, not PNG. `fileToPngBytes` above would work,
 // but a 24MP capture is ~50MB as PNG against ~3MB as JPEG for a picture nobody
@@ -181,7 +172,7 @@ export async function imagesToPdf(files: File[]): Promise<Uint8Array> {
       img = await out.embedJpg(new Uint8Array(await file.arrayBuffer()))
     } else if (isPng) {
       img = await out.embedPng(new Uint8Array(await file.arrayBuffer()))
-    } else if (isHeic(file)) {
+    } else if (await isHeicFile(file)) {
       // Before the generic branch: `fileToPngBytes` decodes through an <img>,
       // and no engine but Safari's will read a HEIC that way — so a photo off a
       // phone used to fail here with "Could not decode", on every desktop.
