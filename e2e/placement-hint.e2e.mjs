@@ -110,6 +110,27 @@ const pageBox = await pageCanvas.boundingBox()
 console.log('\nthe banner only exists while something is armed')
 check('no banner with a freshly opened document', (await anyBanner.count()) === 0)
 
+// ── A plain tool is not an armed payload ────────────────────────────────────
+// Owner, 2026-09-04: the Text hint is "not needed - it's expected", and of the
+// tick/cross ones "i don't want them to". Picking a tool and clicking the page
+// to use it is not a state anybody has to be told about; the banner is for a
+// payload that is armed and INVISIBLE. Text is the one driven here because it
+// has its own toolbar button — tick and cross share the branch that was removed
+// with it.
+console.log('\npicking a plain tool says nothing')
+await page.click('button[title^="Add text"]:visible')
+await page.waitForTimeout(500)
+check(
+  'the Text tool is on',
+  ((await page.locator('button[title^="Add text"]:visible').getAttribute('class')) ?? '').includes(
+    'bg-orange-700',
+  ),
+)
+check('and puts up no banner', (await anyBanner.count()) === 0, await bannerText())
+// Back to Select, so the sections below start where they used to.
+await page.click('button[title^="Select"]:visible')
+await page.waitForTimeout(300)
+
 // ── A QR armed for placement announces itself ───────────────────────────────
 console.log('\n"Add to page" in the QR dialog arms a placement, and says so')
 await page.click('button[title="Add a QR code"]')

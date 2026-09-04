@@ -81,17 +81,16 @@ export default function PlacementHint() {
         },
       }
     }
-    // ⚠️ No banner for the Text tool (owner, 2026-09-04: "not needed — it's
-    // expected"). The tools below it need one because the thing about to land
-    // is invisible until it lands; picking Text and clicking the page to type
-    // is the one case nobody has to be told.
-    if (tool === 'tick' || tool === 'cross') {
-      return {
-        label: `${verb} the page to place a ${tool === 'tick' ? 'tick' : 'cross'}`,
-        detail: 'Stays on until you pick another tool',
-        cancel: () => useAnnotationStore.getState().setTool('select'),
-      }
-    }
+    // ⚠️ NO BANNER FOR THE PLAIN TOOLS — Text, Tick and Cross (owner,
+    // 2026-09-04: "not needed - it's expected", and of tick/cross "i don't want
+    // them to"). Picking a tool from the toolbar and clicking the page to use it
+    // is not a state anybody has to be told about.
+    //
+    // What is left above is the whole rule: a banner exists for a payload that
+    // is ARMED AND INVISIBLE — a saved signature, a generated QR code, an
+    // uploaded picture, a queued name/details/date — where the app looks
+    // identical to the moment before and the next tap drops something anyway.
+    // Don't add one for a tool.
     return null
   })()
 

@@ -448,24 +448,23 @@ It covers every state where a single tap places something:
 | a name/details/date piece queued (`pendingExtras`) | where the *name* / *details* / *date* should go, the text itself, and how many follow |
 | a generated code armed (`tool: 'image'` + `uploadedImageQr`) | place your QR code |
 | a picture armed (`tool: 'image'` + `uploadedImageSrc`) | place your image |
-| `tick` / `cross` | what a tap adds, and that the tool stays on |
+That is the whole list. ⚠️ **A plain tool never gets a banner — Text, Tick and
+Cross have none** (owner, 2026-09-04: *"click the page to add a text box hint not
+needed — it's expected"*, and of tick/cross *"i don't want them to"*). Their
+branches were deleted, and a comment stands in their place so nobody "restores
+the missing ones" for consistency.
 
-⚠️ **There is deliberately no banner for the Text tool** (owner, 2026-09-04:
-*"click the page to add a text box hint not needed — it's expected"*). The
-`tool === 'text'` case was removed; the comment left in its place says why the
-others survive, so nobody "restores the missing one" for consistency. The test
-for whether a state deserves a banner is **whether the thing about to land is
-invisible until it lands** — a signature, a QR code, a picture, a queued
-name/details/date — and picking *Text* and clicking to type is the one case
-nobody has to be told.
+The test for whether a state deserves a banner is **whether the payload is armed
+and INVISIBLE**: a saved signature, a generated QR code, an uploaded picture, a
+queued name/details/date, where the screen is identical to the moment before and
+the next tap drops something anyway. Picking a tool off the toolbar is not that —
+the tool lights up, and clicking the page to use it is what the user just asked
+for. (The 2026-08-30 ask that created the banner named the signature parts and
+the QR code, which is exactly what survived.)
 
-ⓘ **Known, pre-existing, unfixed (2026-09-04): picking Tick or Cross from the
-drawing panel shows no banner**, even though `PlacementHint` still has that case
-and the table above still claims it. Reproduced identically on the live build
-from *before* the Text removal, so it is not fallout from it — something about
-how those two are armed from that panel means the state the hint reads never
-matches. James has been told and has not asked for it; don't assume the row
-above is proof it works.
+ⓘ The tick/cross removal also closed a gap rather than opening one: picking
+either from the drawing panel had never actually shown its banner, on the build
+before this one too. The row is gone, so the docs and the screen agree again.
 
 Four things about it are load-bearing:
 
