@@ -81,12 +81,10 @@ export default function PlacementHint() {
         },
       }
     }
-    if (tool === 'text') {
-      return {
-        label: `${verb} the page to add a text box`,
-        cancel: () => useAnnotationStore.getState().setTool('select'),
-      }
-    }
+    // ⚠️ No banner for the Text tool (owner, 2026-09-04: "not needed — it's
+    // expected"). The tools below it need one because the thing about to land
+    // is invisible until it lands; picking Text and clicking the page to type
+    // is the one case nobody has to be told.
     if (tool === 'tick' || tool === 'cross') {
       return {
         label: `${verb} the page to place a ${tool === 'tick' ? 'tick' : 'cross'}`,

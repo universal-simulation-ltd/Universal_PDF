@@ -22,6 +22,9 @@
 //   • A double-click on BLANK page space leaves the tool alone — the switch is
 //     a consequence of hitting text, not of double-clicking.
 //   • A double-click ON an annotation belongs to the annotation: no switch.
+//   • Landing in Select text must not kill the page's own fillable fields —
+//     clicking one still opens it to type in (the text layer sits BELOW the
+//     widgets, see styles/textlayer.css).
 //
 // Negative control (2026-09-04, run): with AnnotationLayer's `onDblClick` body
 // short-circuited to a no-op, the two checks under "double-clicking a word" go
@@ -77,6 +80,9 @@ async function testPdf() {
   const font = await doc.embedFont(StandardFonts.Helvetica)
   const page = doc.addPage([595, 842])
   page.drawText('Double click selects one word.', { x: 60, y: 760, size: 24, font })
+  // A fillable field, for the "the page's own widgets stay on top" check.
+  const field = doc.getForm().createTextField('your_name')
+  field.addToPage(page, { x: 60, y: 600, width: 240, height: 28, font })
   return Buffer.from(await doc.save())
 }
 
@@ -181,6 +187,29 @@ await page.mouse.dblclick(wordBox.x, wordBox.y)
 await page.waitForTimeout(900)
 check('leaves the Select tool alone', /Select \/ move/.test(await groupTitle()), await groupTitle())
 check('and selects no text', (await selection()) === '')
+
+// ── The page's own widgets stay on top of the selectable text ───────────────
+// The tool now switches on its own, so the state a fillable field has to
+// survive is "Select text, which the reader never picked".
+console.log('\nfilling in a form field while Select text is active')
+await pickTool('Select text')
+const field = page.locator('div[title^="Click to fill"]').first()
+check('the field is still there', (await field.count()) === 1)
+const fieldBox = await field.boundingBox()
+await page.mouse.click(fieldBox.x + fieldBox.width / 2, fieldBox.y + fieldBox.height / 2)
+await page.waitForTimeout(400)
+check(
+  'clicking it opens it to type in',
+  (await page.locator('input[type=text]:visible').count()) > 0,
+  'no input — the text layer is over the field again',
+)
+await page.keyboard.type('Jane')
+await page.waitForTimeout(300)
+check(
+  'and what you type lands in the field',
+  (await page.evaluate(() => document.activeElement?.value ?? null)) === 'Jane',
+  await page.evaluate(() => document.activeElement?.tagName ?? 'nothing focused'),
+)
 
 await browser.close()
 

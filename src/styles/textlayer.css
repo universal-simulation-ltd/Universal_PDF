@@ -86,11 +86,20 @@
   user-select: none;
 }
 
-/* Active "Select text" tool: lift above the annotation Stage + form fields and
-   let the browser's native text selection (and Ctrl/Cmd+C copy) work. */
+/* Active "Select text" tool: lift above the annotation Stage so the browser's
+   native text selection (and Ctrl/Cmd+C copy) works.
+ *
+ * ⚠️ ABOVE THE STAGE, BELOW THE PAGE'S OWN WIDGETS. The Konva Stage has no
+ * z-index of its own, so 10 clears it, while the links (15) and the fillable
+ * form fields (20) stay on top. It sat at 30 until 2026-09-04, and the cost was
+ * that selecting text made every form field on the page dead: clicking one put
+ * a caret in the transparent text instead of opening the field to type in. A
+ * widget is the thing being clicked, whichever selection tool is active — and
+ * that matters far more now the tool switches on its own when you double-click
+ * a word (see lib/wordSelect). */
 .pdf-text-select.pdf-text-select--active {
   pointer-events: auto;
   user-select: text;
   cursor: text;
-  z-index: 30;
+  z-index: 10;
 }

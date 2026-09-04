@@ -624,35 +624,45 @@ export function ToolbarDesktopTools() {
         </div>
         {openPanel === 'draw' && (
           <FloatingPanel anchorRef={drawToolRef} panelRef={panelContentRef}>
-          <div className="bg-slate-800 border border-slate-600 rounded-lg shadow-xl px-3 py-2 flex items-center gap-2 gap-y-2 flex-wrap">
-            {DRAW_SHAPES.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => setTool(s.id)}
-                title={s.label}
-                className={`w-9 h-9 rounded flex items-center justify-center text-lg font-semibold text-white transition-colors ${
-                  tool === s.id ? 'bg-orange-700' : 'hover:bg-slate-700'
-                }`}
-              >
-                {s.icon}
-              </button>
-            ))}
-            <div className="w-px h-6 bg-slate-600 mx-1" />
-            <span className="text-xs text-slate-400">Stroke</span>
-            <input
-              type="range"
-              min={1}
-              max={10}
-              step={0.5}
-              value={strokeWidth}
-              onChange={(e) => setStrokeWidth(parseFloat(e.target.value))}
-              className="w-20"
-            />
-            <span className="text-xs text-slate-300 w-12 tabular-nums text-right">{strokeWidth.toFixed(1)}px</span>
-            <div className="w-px h-6 bg-slate-600 mx-1" />
-            <span className="text-xs text-slate-400">Colour</span>
-            {COLORS.map((c) => colorSwatch(c.hex, c.name))}
-            <ColorPickerTrigger />
+          {/* ⚠️ Two ROWS, not one wrapping line (owner, 2026-09-04: "show the
+              colours on a second line of the popup, don't extend it
+              horizontally"). The shapes + stroke slider are one row and the
+              colours the next, so the panel stays roughly as wide as the
+              toolbar button it hangs off instead of running away across the
+              screen. flex-wrap on a single row didn't do this: the panel is
+              content-sized, so it just grew. */}
+          <div className="bg-slate-800 border border-slate-600 rounded-lg shadow-xl px-3 py-2 flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              {DRAW_SHAPES.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => setTool(s.id)}
+                  title={s.label}
+                  className={`w-9 h-9 rounded flex items-center justify-center text-lg font-semibold text-white transition-colors ${
+                    tool === s.id ? 'bg-orange-700' : 'hover:bg-slate-700'
+                  }`}
+                >
+                  {s.icon}
+                </button>
+              ))}
+              <div className="w-px h-6 bg-slate-600 mx-1" />
+              <span className="text-xs text-slate-400">Stroke</span>
+              <input
+                type="range"
+                min={1}
+                max={10}
+                step={0.5}
+                value={strokeWidth}
+                onChange={(e) => setStrokeWidth(parseFloat(e.target.value))}
+                className="w-20"
+              />
+              <span className="text-xs text-slate-300 w-12 tabular-nums text-right">{strokeWidth.toFixed(1)}px</span>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-slate-400">Colour</span>
+              {COLORS.map((c) => colorSwatch(c.hex, c.name))}
+              <ColorPickerTrigger />
+            </div>
           </div>
           </FloatingPanel>
         )}
