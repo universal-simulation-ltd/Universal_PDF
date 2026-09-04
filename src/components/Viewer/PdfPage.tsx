@@ -2,6 +2,7 @@ import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { PDFDocumentProxy, PDFPageProxy } from '../../lib/pdfjs'
 import AnnotationLayer from './AnnotationLayer'
 import FormFieldLayer from './FormFieldLayer'
+import LinkLayer from './LinkLayer'
 import SearchHighlightLayer from './SearchHighlightLayer'
 import TextSelectLayer from './TextSelectLayer'
 import XfaPage from './XfaPage'
@@ -257,6 +258,10 @@ function PdfPage({ doc, pageIndex, scale, isXfa, active, onSized }: Props) {
           {size && active && page && (
             <TextSelectLayer page={page} pageIndex={pageIndex} scale={scale} />
           )}
+          {/* The page's own hyperlinks. Above the annotation stage so a link
+              can be clicked, below the form fields so a widget drawn over one
+              still wins. */}
+          {size && active && page && <LinkLayer doc={doc} page={page} scale={scale} />}
           {size && active && page && (
             <FormFieldLayer
               page={page}

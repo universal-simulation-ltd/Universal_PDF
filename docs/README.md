@@ -1136,6 +1136,92 @@ under a `pdf/` folder).
 short-circuited, only the two "double-clicking a word" checks go red and the
 blank-space and annotation pairs stay green — which is the point of having them.
 
+## Following the PDF's own links
+
+A PDF stores a hyperlink as an **annotation** — a rectangle plus either a URI
+action (open the web) or a destination (jump inside this document). None of that
+is part of the page's drawn content, so rasterizing the page, which is all the
+canvas ever did, produces a *picture* of underlined blue text and nothing that
+answers a click. Until 2026-09-04 (owner: *"universal pdf — links don't seem to
+be clickable?"*) that was the whole story: no viewer code read those annotations
+at all, and every link in every document was dead.
+
+`LinkLayer` reads them back and puts a real `<a>` (external) or `<button>`
+(internal) over each rectangle. Its shape copies `FormFieldLayer`: a full-page
+container that is inert (`pointer-events: none`) with one interactive box per
+link, so everything *between* the links falls straight through to the Konva
+annotation stage underneath. It sits at **z 15** — above the stage, below the
+form fields at z 20, because a widget drawn over a link is the thing being
+clicked.
+
+This also closes a round trip the app had open on itself: the 🔗 button in the
+text editor bakes a `/Link` annot on export (`export.ts`), and reopening that
+export gave you back an underline you could not click.
+
+### The rules, and why each one
+
+- ⚠️ **A URI comes out of the file, so the file chooses the destination.**
+  `safeLinkUrl()` (`lib/links.ts`) allows `http:`, `https:`, `mailto:` and `tel:`
+  and drops everything else — `javascript:` and `data:` above all, which would
+  run **in the app's own origin**, where the user's document is. PDF.js already
+  screens what it puts in `url` (the raw string stays in `unsafeUrl`), but this
+  is the gate the viewer actually opens, so it checks for itself rather than
+  inheriting someone else's policy. A link we won't follow is not drawn as a
+  box at all, rather than drawn as one that silently does nothing.
+- **External links open in a new tab** (`target="_blank"`, `rel="noopener
+  noreferrer"`). Navigating the tab itself would throw away the open document —
+  with its unsaved annotations and half-filled form fields in it.
+- ⚠️ **Only *Select* and *Hand* make the boxes live.** Under a drawing tool they
+  go `pointer-events: none`. A highlight dragged across a hyperlink has to draw;
+  a box that swallowed the gesture would be a worse bug than the one being
+  fixed. *Select text* is excluded for the same reason — a drag over a link is a
+  text selection.
+- ⚠️ **A pan that starts on a link must not follow it.** The Hand tool pans by
+  dragging the *scroll container*, which is an **ancestor** of these boxes — so
+  the pan works whatever it starts on, and the browser then delivers a click to
+  the link the finger went down on. Grabbing the page by a hyperlink would
+  navigate away. The layer records the pointer-down point and ignores a click
+  that moved more than 5 px.
+- ⚠️ **`viewport.convertToViewportRectangle()`, never a hand-rolled Y flip.** The
+  annotation rect is in PDF points with the origin bottom-left; the flip is the
+  obvious part, `/Rotate` is not. The viewport carries the page rotation too, so
+  a link stays on its words in a document that was scanned sideways —
+  screenshotted and confirmed on a `/Rotate 90` page.
+- Boxes are stored in **scale-1 viewport coordinates** and multiplied by the live
+  `scale` when drawn, so zooming re-renders without re-reading the annotations.
+  (`doc.getPage()` hands back a cached proxy, so the effect's `page` identity is
+  stable across a zoom and it does not re-run.)
+
+An internal link resolves its destination **once, up front** — a name through
+`doc.getDestination()`, then the page ref through `doc.getPageIndex()` — so the
+click itself is synchronous. It lands via the same `scrollIntoView` on
+`[data-page-index]` the page navigator uses; every page keeps its layout box
+whether or not it currently holds pixels, so a jump to page 300 of a long
+document works before that page has rendered.
+
+ⓘ Desktop: `electron/main.cjs`'s `setWindowOpenHandler` gained `mailto:`/`tel:`
+alongside http(s). Left on `'allow'` they opened an empty `BrowserWindow` on a
+scheme Chromium can't render; handed to `shell.openExternal` they open the mail
+or phone app, which is what the same link does in a browser.
+
+### Testing it
+
+`npm run test:link-click` drives a real browser (Playwright, borrowed from a
+sibling Universal app) against a **fixture built the way `export.ts` writes its
+own** — `pdf-lib` has no API for link annots, so the test writes the raw `/Link`
+dicts. 8 checks: the two followable links render *and only those two*, the
+`javascript:` one is refused, the external link opens a new tab at the URL the
+PDF names while the document stays put on the original tab, the internal link
+scrolls page 2 into view, and the boxes are live under *Select* and inert under
+the *Highlighter*. The file header gives the exact commands (the built base path
+is `/pdf/`, so `dist` has to sit under a `pdf/` folder).
+
+ⓘ A **negative control** was run on 2026-09-04: with `<LinkLayer>` removed from
+`PdfPage`, 6 of the 8 go red. The two that stay green are the two *absence*
+assertions — "the javascript: URI is refused" and "the document is still open" —
+which is why the first is paired with the count of boxes that **do** render, or
+it would pass forever on a page with no link layer at all.
+
 ## Zoom and page rendering
 
 Two rules from a 2026-08-26 bug (a page rendered blank white with only its

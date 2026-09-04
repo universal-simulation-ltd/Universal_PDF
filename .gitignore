@@ -28,3 +28,6 @@ public/sample.pdf
 
 # Internal project notes — not published (matches the other Universal Apps repos)
 CLAUDE.md
+
+# Scratch: where the e2e docs say to stage a build under a /pdf/ base path.
+srv/

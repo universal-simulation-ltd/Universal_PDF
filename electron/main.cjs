@@ -212,8 +212,16 @@ function createWindow() {
 
   // External links (e.g. the UNI SIM navbar) open in the system browser rather
   // than inside the app window.
+  // mailto:/tel: are here because a PDF's own link annotations can carry them
+  // (see LinkLayer) and they arrive through this handler as target=_blank. Left
+  // to 'allow' they would open an empty BrowserWindow on a scheme Chromium
+  // can't render; handed to the OS they open the mail/phone app, which is what
+  // the same link does in a browser.
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('http://') || url.startsWith('https://')) {
+    if (
+      url.startsWith('http://') || url.startsWith('https://') ||
+      url.startsWith('mailto:') || url.startsWith('tel:')
+    ) {
       shell.openExternal(url)
       return { action: 'deny' }
     }
