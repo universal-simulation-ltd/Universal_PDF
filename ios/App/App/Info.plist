@@ -103,6 +103,7 @@
 	     stale one visible. -->
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
+		<string>unisim-ergo-assess</string>
 		<string>unisim-cyber-assess</string>
 		<string>unisim-workplace-assess</string>
 		<string>unisim-fire-assess</string>
