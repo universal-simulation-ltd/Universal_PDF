@@ -13,10 +13,19 @@
 //   • It names what is about to land — signature vs QR code vs the next of the
 //     name/details/date pieces — because the four states look identical.
 //   • It goes when the thing lands, not on a timer.
-//   • ⚠️ It must NOT eat the tap it is asking for. It floats over the top of the
-//     page, so everything but Cancel is pointer-events:none — a placement made
-//     UNDER the banner is the assertion for that, since a lookalike CSS check
-//     would pass on a banner whose child re-enabled events.
+//   • ⚠️ It must NOT eat the tap it is asking for. It floats over the page, so
+//     everything but its buttons is pointer-events:none — a placement made
+//     THROUGH THE MIDDLE OF THE CARD is the assertion for that, since a
+//     lookalike CSS check would pass on a card whose child re-enabled events.
+//
+// And since 2026-09-05 (owner: "needs to be more prominent - maybe in the
+// centre of the screen, with a don't show again option"):
+//
+//   • It is a card in the MIDDLE of the document area, not a pill at the top.
+//     The click-through assertion above matters far more now that the card sits
+//     exactly where the user is aiming.
+//   • "Don't show again" hides it for good (localStorage) and, unlike Cancel,
+//     leaves the placement ARMED — it is a display preference, not a way out.
 //
 // Negative control (2026-08-30, run): with `<PlacementHint />` taken back out of
 // App.tsx, the four QR checks go red and the run then ABORTS at Cancel — there
@@ -200,14 +209,26 @@ const sigText = await bannerText()
 check('the pad closes onto a banner', sigText.length > 0)
 check('which says the signature is what lands', /signature/i.test(sigText), sigText)
 
-// Drop the signature UNDER the banner. This is the pointer-events assertion:
-// the banner sits at the top of the document area, so a click there has to
-// reach the page through it.
-const bannerBox = await page.locator('[role="status"]').first().boundingBox()
+// Drop the signature THROUGH the card. This is the pointer-events assertion:
+// the card sits over the middle of the document area, so a click on it has to
+// reach the page underneath.
+//
+// ⚠️ Measure the CARD (`[data-placement-hint]`), not the `[role="status"]`
+// wrapper — the wrapper spans the whole document area in order to centre the
+// card, so its own box says nothing about where the card actually is.
+const bannerBox = await page.locator('[data-placement-hint]').first().boundingBox()
+const shell = await page.locator('[role="status"]').first().boundingBox()
 check(
-  'the banner floats over the document, not beside it',
-  bannerBox.y < pageBox.y + 80 && bannerBox.x > pageBox.x && bannerBox.x < pageBox.x + pageBox.width,
-  `banner at ${Math.round(bannerBox.x)},${Math.round(bannerBox.y)} vs page ${Math.round(pageBox.x)},${Math.round(pageBox.y)}`,
+  'the card floats over the document, not beside it',
+  bannerBox.x > pageBox.x &&
+    bannerBox.x + bannerBox.width < pageBox.x + pageBox.width &&
+    bannerBox.y > pageBox.y,
+  `card at ${Math.round(bannerBox.x)},${Math.round(bannerBox.y)} vs page ${Math.round(pageBox.x)},${Math.round(pageBox.y)}`,
+)
+check(
+  'and sits in the middle of it rather than tucked against the top edge',
+  Math.abs((bannerBox.y + bannerBox.height / 2) - (shell.y + shell.height / 2)) < 8,
+  `card centre ${Math.round(bannerBox.y + bannerBox.height / 2)} vs area centre ${Math.round(shell.y + shell.height / 2)}`,
 )
 await page.mouse.click(bannerBox.x + bannerBox.width * 0.5, bannerBox.y + bannerBox.height * 0.5)
 await page.waitForTimeout(600)
@@ -230,6 +251,47 @@ check('the details line is named on its own turn', /details/i.test(seen[1]), see
 check('and the date on its own turn', /date/i.test(seen[2]), seen[2])
 check('the banner goes when the last piece lands', seen[3] === '', `still reads: ${seen[3]}`)
 
+// ── "Don't show again" ──────────────────────────────────────────────────────
+// Arm a QR code again (the shortest route back to a banner), then turn the card
+// off for good and prove BOTH halves: the card goes, and the placement it was
+// describing is still armed — the tap must still place a QR code.
+console.log('\n"Don\'t show again" silences the card without disarming the placement')
+await page.locator('button[title="Add a QR code"]').click()
+await page.waitForTimeout(400)
+await page.locator('input[type="text"], input[type="url"]').first().fill('https://unisim.co.uk')
+await page.locator('button:has-text("Add to page")').click()
+await page.waitForTimeout(700)
+check('a card is up again', (await anyBanner.count()) > 0)
+
+await page.locator('button:has-text("Don\'t show again")').click()
+await page.waitForTimeout(400)
+check('the card goes', (await anyBanner.count()) === 0)
+check(
+  'and the choice is remembered',
+  await page.evaluate(() => localStorage.getItem('universal-pdf-placement-hint-dismissed') === '1'),
+)
+
+const before = await page.evaluate(() => {
+  const K = window.Konva
+  return (K?.stages ?? []).reduce((n, st) => n + st.find('Image').filter((i) => !!i.id()).length, 0)
+})
+await page.mouse.click(pageBox.x + pageBox.width * 0.5, pageBox.y + 300)
+await page.waitForTimeout(700)
+const after = await page.evaluate(() => {
+  const K = window.Konva
+  return (K?.stages ?? []).reduce((n, st) => n + st.find('Image').filter((i) => !!i.id()).length, 0)
+})
+check('the placement it was announcing is still armed', after === before + 1, `${before} -> ${after} images`)
+
+// And it stays gone across a reload — the whole point of persisting it.
+await page.reload({ waitUntil: 'load' })
+await page.waitForTimeout(500)
+check(
+  'and it is still off after a reload',
+  await page.evaluate(() => localStorage.getItem('universal-pdf-placement-hint-dismissed') === '1'),
+)
+
 await browser.close()
+
 console.log(failures.length ? `\n${failures.length} FAILED:\n  ${failures.join('\n  ')}` : '\nall checks passed')
 process.exit(failures.length ? 1 : 0)

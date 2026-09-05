@@ -170,6 +170,20 @@ const MAX_PLACEMENT_FRACTION = 0.5
 // enough to sit inside a table cell or a form field without being re-dragged.
 const TAP_LINE_LENGTH_PX = 140
 
+// The same idea for the Box and Circle tools (James, 2026-09-05: "if single
+// tapping show a generic circle they can modify / Rectangle too"). Display
+// pixels again, capped against the page by fitPlacement like every other
+// tapped placement. The circle is SQUARE — a tapped "circle" that arrived as
+// an oval would read as a bug, and the Transformer can be dragged into an oval
+// in one gesture if that is what was wanted.
+const TAP_RECT_SIZE_PX = { width: 180, height: 120 }
+const TAP_CIRCLE_SIZE_PX = 140
+
+// ⚠️ Redact is deliberately NOT in this list. It carries the same "a tap gets
+// thrown away" guard, but a solid black block appearing at a guessed size over
+// text is not the harmless default a box outline is — James named Line, Circle
+// and Rectangle, and redaction was left to be asked about.
+
 function fitPlacement(
   w: number,
   h: number,
@@ -209,6 +223,69 @@ function isHighlighter(a: Annotation): boolean {
 // DrawAnnotation down to `never` at the call sites.
 function isLine(a: Annotation): boolean {
   return a.type === 'draw' && a.shape === 'line' && a.points.length >= 4
+}
+
+// The colour shortcut carried by the contextual pills (James, 2026-09-05: "The
+// stroke popup also should show a couple of colours with it e.g. black, white,
+// colour wheel — doesn't have to be the full set that shows in the colour
+// popup"). Two swatches and a wheel, not the toolbar's nine: the pill floats
+// against the annotation itself and has to stay small enough not to cover it,
+// and the full palette is one tap away in the toolbar for anyone who wants it.
+//
+// `setColor` is the store's own action, which repaints the SELECTED annotation
+// and sets the default for the next one in a single history step — so the pill
+// needs no update() of its own, and works the same as the toolbar swatches.
+const PILL_COLORS: { hex: string; name: string }[] = [
+  { hex: '#000000', name: 'Black' },
+  { hex: '#ffffff', name: 'White' }
+]
+
+function ColorCluster({
+  color,
+  setColor
+}: {
+  color: string
+  setColor: (c: string) => void
+}) {
+  // The wheel shows as "chosen" whenever the colour in play is not one of the
+  // two swatches, so the cluster always says which of the three is live.
+  const isCustom = !PILL_COLORS.some((c) => c.hex === color)
+  return (
+    <>
+      {PILL_COLORS.map((c) => (
+        <button
+          key={c.hex}
+          type="button"
+          title={c.name}
+          aria-label={c.name}
+          // The text pill is rendered while a text box may be being edited, so
+          // the same "don't blur the editor" guard the style buttons use.
+          onMouseDown={(e) => { e.stopPropagation(); e.preventDefault() }}
+          onClick={(e) => { e.stopPropagation(); setColor(c.hex) }}
+          className={`w-6 h-6 rounded-full border-2 flex-shrink-0 transition-transform ${
+            color === c.hex ? 'border-orange-600 scale-110' : 'border-slate-300 hover:scale-105'
+          }`}
+          style={{ backgroundColor: c.hex }}
+        />
+      ))}
+      <label
+        title="More colours"
+        onMouseDown={(e) => { e.stopPropagation(); e.preventDefault() }}
+        onClick={(e) => e.stopPropagation()}
+        className={`w-6 h-6 rounded-full cursor-pointer border-2 flex-shrink-0 overflow-hidden transition-transform ${
+          isCustom ? 'border-orange-600 scale-110' : 'border-slate-300 hover:scale-105'
+        }`}
+        style={{ background: 'conic-gradient(red, yellow, lime, cyan, blue, magenta, red)' }}
+      >
+        <input
+          type="color"
+          value={color}
+          onChange={(e) => setColor(e.target.value)}
+          className="sr-only"
+        />
+      </label>
+    </>
+  )
 }
 
 // True if the click landed on one of our line endpoint grabbers, so the Stage
@@ -582,6 +659,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const setTool = useAnnotationStore((s) => s.setTool)
   const setLineSnap = useAnnotationStore((s) => s.setLineSnap)
   const setStrokeWidth = useAnnotationStore((s) => s.setStrokeWidth)
+  const setColor = useAnnotationStore((s) => s.setColor)
   const setFontSize = useAnnotationStore((s) => s.setFontSize)
 
   // Two fingers are down on the viewer for a pinch-zoom (see PdfViewer). While
@@ -919,6 +997,21 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     return [cx - half, y, cx + half, y]
   }
 
+  // Where a TAPPED box or circle lands: the default size centred on the tap,
+  // capped against the page and nudged back on so a tap near an edge doesn't
+  // leave half the shape hanging off it. Same contract as tapLinePoints.
+  function tapBox(x: number, y: number, w: number, h: number) {
+    const fit = fitPlacement(w / scale, h / scale, pageW, pageH)
+    const clamp = (v: number, size: number, page: number) =>
+      Math.min(Math.max(v - size / 2, 0), Math.max(page - size, 0))
+    return {
+      x: clamp(x, fit.width, pageW),
+      y: clamp(y, fit.height, pageH),
+      width: fit.width,
+      height: fit.height
+    }
+  }
+
   // Commit a one-shot placement at a point the user actually tapped.
   function commitTapPlacement(pos: { x: number; y: number }) {
     // Mid-sequence placement: dropping the name/date for a "separate"
@@ -1192,42 +1285,30 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           color,
           strokeWidth: strokeWidth / scale
         })
-      } else if (tool === 'rect') {
+      } else if (tool === 'rect' || tool === 'ellipse') {
+        // Swept out, the shape is the rectangle the drag described. Tapped, it
+        // is a default-sized one centred on the tap — see TAP_RECT_SIZE_PX for
+        // why neither tool throws a tap away any more. `add` selects it either
+        // way, so the Transformer is already on it to be resized or rotated.
         const [x1, y1, x2, y2] = currentLine
-        const x = Math.min(x1, x2)
-        const y = Math.min(y1, y2)
-        const w = Math.abs(x2 - x1)
-        const h = Math.abs(y2 - y1)
-        if (w > 4 && h > 4) {
-          add({
-            id: crypto.randomUUID(),
-            pageIndex,
-            type: 'rect',
-            x,
-            y,
-            width: w,
-            height: h,
-            color
-          })
-        }
-      } else if (tool === 'ellipse') {
-        const [x1, y1, x2, y2] = currentLine
-        const x = Math.min(x1, x2)
-        const y = Math.min(y1, y2)
-        const w = Math.abs(x2 - x1)
-        const h = Math.abs(y2 - y1)
-        if (w > 4 && h > 4) {
-          add({
-            id: crypto.randomUUID(),
-            pageIndex,
-            type: 'ellipse',
-            x,
-            y,
-            width: w,
-            height: h,
-            color
-          })
-        }
+        const dragged = Math.abs(x2 - x1) > TAP_SLOP_PX / scale && Math.abs(y2 - y1) > TAP_SLOP_PX / scale
+        const box = dragged
+          ? {
+              x: Math.min(x1, x2),
+              y: Math.min(y1, y2),
+              width: Math.abs(x2 - x1),
+              height: Math.abs(y2 - y1)
+            }
+          : tool === 'rect'
+            ? tapBox(x1, y1, TAP_RECT_SIZE_PX.width, TAP_RECT_SIZE_PX.height)
+            : tapBox(x1, y1, TAP_CIRCLE_SIZE_PX, TAP_CIRCLE_SIZE_PX)
+        add({
+          id: crypto.randomUUID(),
+          pageIndex,
+          type: tool,
+          ...box,
+          color
+        })
       } else if (tool === 'redact') {
         const [x1, y1, x2, y2] = currentLine
         const x = Math.min(x1, x2)
@@ -2507,7 +2588,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             onMouseDown={(e) => { e.stopPropagation(); e.preventDefault() }}
             onPointerDown={(e) => e.stopPropagation()}
             style={{ position: 'absolute', left, top, zIndex: 21 }}
-            className="inline-flex items-center gap-0.5 bg-white rounded-full shadow-lg border border-slate-300 px-1 py-1"
+            // pr-2: the colour cluster's swatches are round and grow to 110%
+            // when active, so the flush px-1 that suits the square buttons
+            // clipped the wheel against the pill's own rounded edge.
+            className="inline-flex items-center gap-0.5 bg-white rounded-full shadow-lg border border-slate-300 pl-1 pr-2 py-1"
           >
             <button
               type="button"
@@ -2531,6 +2615,13 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             {styleBtn(allHave('italic'), () => applyStyle('italic'), 'I', 'Italic', 'italic font-semibold')}
             {styleBtn(allHave('underline'), () => applyStyle('underline'), 'U', 'Underline', 'underline font-semibold')}
             {styleBtn(anyLink, () => applyStyle('link'), '🔗', editingThis ? 'Link selected text' : (anyLink ? 'Edit link' : 'Add link'), 'text-sm')}
+            <span className="w-px h-6 bg-slate-200 mx-0.5" />
+            {/* ⚠️ Colour is a WHOLE-ANNOTATION property, unlike bold/italic/
+                underline/link — see TextRun in types/annotations.ts. So this
+                repaints the entire text box even mid-edit with part of it
+                selected, which is why it sits after the separator rather than
+                among the run-level toggles. */}
+            <ColorCluster color={color} setColor={setColor} />
           </div>
         )
       })()}
@@ -2575,6 +2666,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               className="w-20"
             />
             <span className="text-xs text-slate-600 tabular-nums w-10 text-right">{strokeWidth.toFixed(1)}px</span>
+            <span className="w-px h-5 bg-slate-200" />
+            <ColorCluster color={color} setColor={setColor} />
             <span className="w-px h-5 bg-slate-200" />
             <button
               type="button"

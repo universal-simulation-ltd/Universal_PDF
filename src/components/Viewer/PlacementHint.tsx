@@ -1,6 +1,32 @@
+import { useState } from 'react'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { useSignatureStore } from '../../stores/signatureStore'
 import { useCoarsePointer } from '../../hooks/useCoarsePointer'
+
+// "Don't show again" is PERMANENT and has no way back, matching the ruling on
+// the mobile welcome coach-mark (James, 2026-09-01: a prompt that reappears
+// after you have read it "is not onboarding, it is a nag"). Cancel is the other
+// button and means something else entirely — abandon the armed placement — so
+// the two are never collapsed into one.
+const DISMISSED_KEY = 'universal-pdf-placement-hint-dismissed'
+
+function isDismissed(): boolean {
+  try {
+    return localStorage.getItem(DISMISSED_KEY) === '1'
+  } catch {
+    // Private mode / blocked site data. Showing the card is the safe answer:
+    // the state it describes is otherwise invisible.
+    return false
+  }
+}
+
+function persistDismissed() {
+  try {
+    localStorage.setItem(DISMISSED_KEY, '1')
+  } catch {
+    /* ignore — it stays hidden for this session either way */
+  }
+}
 
 // The banner that says a placement is ARMED and waiting for a tap.
 //
@@ -16,6 +42,16 @@ import { useCoarsePointer } from '../../hooks/useCoarsePointer'
 //
 // It is deliberately not a toast: it must stay up for exactly as long as the
 // state it describes, and go the instant the thing lands. Nothing is timed.
+//
+// ⚠️ It sits in the MIDDLE of the document area, not under the toolbar (James,
+// 2026-09-05: "the tooltip that appears at the top for signature placement etc
+// needs to be more prominent - maybe in the centre of the screen, with a don't
+// show again option"). A pill tucked against the top edge is exactly where a
+// browser puts its own chrome, and it was being read as decoration by the
+// people it was written for. Covering the page is affordable *because* the
+// thing it announces ends the moment the page is tapped — the card is never up
+// for longer than one gesture — and the whole overlay stays
+// `pointer-events-none` but for its buttons, so that gesture still lands.
 
 type Prompt = {
   /** The instruction itself. */
@@ -35,6 +71,9 @@ const EXTRA_NOUN: Record<'name' | 'details' | 'date', string> = {
 }
 
 export default function PlacementHint() {
+  // Read once on mount: nothing else in the app writes this key, so there is
+  // no state to keep in step with.
+  const [dismissed, setDismissed] = useState(isDismissed)
   const tool = useAnnotationStore((s) => s.tool)
   const uploadedImageSrc = useAnnotationStore((s) => s.uploadedImageSrc)
   const uploadedImageQr = useAnnotationStore((s) => s.uploadedImageQr)
@@ -65,8 +104,14 @@ export default function PlacementHint() {
     // Both of the tools below do NOTHING on a tap without their payload, so the
     // payload — not the tool — is what gates the banner.
     if (tool === 'signature' && activeSignature) {
+      // A stamp is armed through the same tool and the same library — the
+      // " Stamp" name suffix is how the Sign menu and the stamp picker tell the
+      // two apart, so the card names what is actually about to land rather
+      // than calling an APPROVED stamp a signature. It matters more now the
+      // card is the centre of the screen than it did as a top-edge pill.
+      const isStamp = activeSignature.name.endsWith(' Stamp')
       return {
-        label: `${verb} the page to place your signature`,
+        label: `${verb} the page to place your ${isStamp ? 'stamp' : 'signature'}`,
         preview: activeSignature.dataUrl,
         cancel: () => useAnnotationStore.getState().setTool('select'),
       }
@@ -94,59 +139,72 @@ export default function PlacementHint() {
     return null
   })()
 
-  if (!prompt) return null
+  if (!prompt || dismissed) return null
 
   return (
-    // ⚠️ pointer-events-none on everything but the Cancel button. This floats over
-    // the top of the page, and the whole point of the state it announces is that
-    // the next tap on the page places something — a banner that ate that tap
-    // would be worse than no banner.
+    // ⚠️ pointer-events-none on everything but the buttons. This floats over the
+    // page, and the whole point of the state it announces is that the next tap
+    // on the page places something — an overlay that ate that tap would be
+    // worse than no overlay at all. It spans the whole document area only to
+    // centre the card; nothing but the two buttons is clickable.
     <div
       role="status"
       aria-live="polite"
-      className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 z-30 max-w-[92%]"
+      className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center p-4"
     >
-      {/* ⚠️ `w-max max-w-full` is what makes this readable on a phone, and it is
-          not decoration. The pill is content-sized, so a label merely allowed to
-          wrap collapses to MIN-content — "Tap the page to place your QR code"
-          came out one word per line, seven lines tall, on a 390px screen.
-          w-max asks for the single-line width first and the max-w clamps it, so
-          it wraps only when it genuinely has to. rounded-2xl (not -full) is so
-          the two-line case still looks like a banner rather than a lozenge.
-          This is the one screen where the banner is the ONLY feedback there is:
-          no hover, so no cursor ghost. */}
       {/* data-placement-hint is how the toolbar's floating option panels find
-          this pill: they drop below it rather than covering the one bit of
-          feedback telling the user a tap is armed. */}
+          this card: they drop below it rather than covering the one bit of
+          feedback telling the user a tap is armed. Centred, they rarely have to
+          — but the panel is measured, not assumed, so the rule still holds if a
+          tall one ever reaches this far down. */}
       <div
         data-placement-hint
-        className="flex w-max max-w-full items-center gap-2.5 rounded-2xl bg-white/95 backdrop-blur px-3.5 py-2 shadow-lg ring-1 ring-orange-200"
+        className="flex w-max max-w-full flex-col items-center gap-3 rounded-2xl bg-white/95 px-6 py-5 text-center shadow-2xl ring-2 ring-orange-400 backdrop-blur"
       >
-        <span
-          aria-hidden="true"
-          className="shrink-0 w-2 h-2 rounded-full bg-orange-500 animate-pulse motion-reduce:animate-none"
-        />
+        <span className="flex items-center gap-2.5">
+          <span
+            aria-hidden="true"
+            className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-orange-500 motion-reduce:animate-none"
+          />
+          {/* ⚠️ `w-max max-w-full` on the card, and the label allowed to wrap
+              inside it: the card is content-sized, so a label merely allowed to
+              wrap collapses to MIN-content — "Tap the page to place your QR
+              code" came out one word per line, seven lines tall, on a 390px
+              screen. Asking for the single-line width first and clamping it
+              means it wraps only when it genuinely has to. */}
+          <span className="text-[15px] font-semibold leading-snug text-slate-900">
+            {prompt.label}
+          </span>
+        </span>
         {prompt.preview && (
           <img
             src={prompt.preview}
             alt=""
             aria-hidden="true"
-            className="shrink-0 h-6 w-auto max-w-[72px] object-contain"
+            className="max-h-14 w-auto max-w-[180px] object-contain"
           />
         )}
-        <span className="min-w-0 flex-1 text-[13px] leading-tight">
-          <span className="block font-semibold text-slate-900">{prompt.label}</span>
-          {prompt.detail && (
-            <span className="block text-slate-500 truncate">{prompt.detail}</span>
-          )}
+        {prompt.detail && (
+          <span className="max-w-[260px] truncate text-[13px] text-slate-500">{prompt.detail}</span>
+        )}
+        <span className="pointer-events-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={prompt.cancel}
+            className="rounded-full bg-slate-100 px-4 py-1.5 text-[13px] font-semibold text-slate-700 hover:bg-slate-200"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => { persistDismissed(); setDismissed(true) }}
+            // Hides the card and leaves the placement ARMED — it is a display
+            // preference, not a way out of the state. Cancel is the way out.
+            className="rounded-full px-3 py-1.5 text-[13px] font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+          >
+            Don't show again
+          </button>
         </span>
-        <button
-          type="button"
-          onClick={prompt.cancel}
-          className="pointer-events-auto shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100"
-        >
-          Cancel
-        </button>
       </div>
     </div>
   )

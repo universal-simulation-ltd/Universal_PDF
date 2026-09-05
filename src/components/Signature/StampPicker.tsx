@@ -25,13 +25,34 @@ const STAMPS: StampDef[] = [
 // Palette offered in the custom-stamp creator.
 const STAMP_COLORS = ['#dc2626', '#ea580c', '#ca8a04', '#16a34a', '#2563eb', '#7c3aed', '#9f1239', '#0f172a']
 
+// The stamp's LOGICAL size — the aspect ratio a placed stamp is fitted to, and
+// the numbers the drawing below is written in.
+const STAMP_W = 240
+const STAMP_H = 96
+
+// ⚠️ …but it is rasterised at this multiple of that (James, 2026-09-05: "the
+// preset stamps lose a lot of quality on stretch, maybe they need to be SVG?").
+// A stamp is placed as an ordinary `image` annotation, and every path it
+// travels — the Konva canvas, `pdf-lib`'s embedPng on export, the `.unipdf`
+// backup, the hosted upload — takes a raster. Making the stamp itself an SVG
+// would have to be undone at each of those, so instead the raster simply
+// carries enough pixels to survive being stretched: at 4x, a stamp dragged out
+// to a third of an A4 page still exports at roughly 300dpi, where the 1x
+// version went visibly soft the moment it grew past the size it was dropped at.
+//
+// Everything below is drawn in logical units and scaled once by ctx.scale, so
+// the geometry, the stroke weights and the font all supersample together — do
+// NOT hard-code a device pixel anywhere in here.
+const STAMP_SUPERSAMPLE = 4
+
 function renderStampDataUrl(text: string, color: string, shape: Shape): string {
-  const W = 240
-  const H = 96
+  const W = STAMP_W
+  const H = STAMP_H
   const canvas = document.createElement('canvas')
-  canvas.width = W
-  canvas.height = H
+  canvas.width = W * STAMP_SUPERSAMPLE
+  canvas.height = H * STAMP_SUPERSAMPLE
   const ctx = canvas.getContext('2d')!
+  ctx.scale(STAMP_SUPERSAMPLE, STAMP_SUPERSAMPLE)
   ctx.clearRect(0, 0, W, H)
 
   // Choose font size based on text length
@@ -94,7 +115,11 @@ export default function StampPicker() {
 
   function pickStamp(text: string, color: string, shape: Shape, label: string) {
     const dataUrl = renderStampDataUrl(text, color, shape)
-    const id = addSignature({ name: label + ' Stamp', dataUrl, width: 240, height: 96 })
+    // Logical size, not the raster's: `width`/`height` are only ever read as
+    // an aspect ratio when the stamp is placed (see AnnotationLayer), so the
+    // supersampled pixels must not leak into it or every stamp would drop at
+    // STAMP_SUPERSAMPLE times its intended size.
+    const id = addSignature({ name: label + ' Stamp', dataUrl, width: STAMP_W, height: STAMP_H })
     setActive(id)
     setTool('signature')
     closeStampPicker()
@@ -120,7 +145,7 @@ export default function StampPicker() {
     const text = newText.trim().toUpperCase()
     if (!text) return
     const dataUrl = renderStampDataUrl(text, newColor, newShape)
-    addSignature({ name: text + ' Stamp', dataUrl, width: 240, height: 96 })
+    addSignature({ name: text + ' Stamp', dataUrl, width: STAMP_W, height: STAMP_H })
     resetCreator()
   }
 
