@@ -1,0 +1,243 @@
+{
+  "app": "universal-pdf",
+  "appVersion": "0.6.19",
+  "generated": "2026-09-05",
+  "noticesCount": 48,
+  "ships": [
+    {
+      "name": "@capacitor/*",
+      "title": "Capacitor",
+      "licence": "MIT",
+      "repo": "https://github.com/ionic-team/capacitor",
+      "description": "wraps the web app as a real iPhone and Android app",
+      "authors": [
+        "Ionic Team"
+      ],
+      "source": "overlay"
+    },
+    {
+      "name": "heic-to",
+      "version": "1.5.2",
+      "licence": "LGPL-3.0",
+      "repo": "https://github.com/hoppergee/heic-to",
+      "homepage": "https://github.com/hoppergee/heic-to",
+      "description": "opens iPhone HEIC photos",
+      "authors": [
+        "Hopper Gee"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "konva",
+      "title": "Konva",
+      "version": "9.3.22",
+      "licence": "MIT",
+      "repo": "https://github.com/konvajs/konva",
+      "homepage": "http://konvajs.org/",
+      "description": "the 2D canvas engine your annotations are drawn on",
+      "authors": [
+        "Anton Lavrenov"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "pdf-lib",
+      "version": "1.17.1",
+      "licence": "MIT",
+      "repo": "https://github.com/Hopding/pdf-lib",
+      "homepage": "https://pdf-lib.js.org",
+      "description": "creates and modifies the PDF itself — signing, redaction and form filling",
+      "authors": [
+        "Andrew Dillon"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "pdfjs-dist",
+      "title": "PDF.js",
+      "version": "4.10.38",
+      "licence": "Apache-2.0",
+      "repo": "https://github.com/mozilla/pdf.js",
+      "homepage": "https://mozilla.github.io/pdf.js/",
+      "description": "renders every page you look at",
+      "authors": [
+        "Mozilla"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "qr-code-styling",
+      "version": "1.9.2",
+      "licence": "MIT",
+      "repo": "https://github.com/kozakdenys/qr-code-styling",
+      "homepage": "https://qr-code-styling.com",
+      "description": "draws the styled QR codes",
+      "authors": [
+        "Denys Kozak"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "react",
+      "title": "React",
+      "version": "18.3.1",
+      "licence": "MIT",
+      "repo": "https://github.com/facebook/react",
+      "homepage": "https://reactjs.org/",
+      "description": "the UI library every Universal App is built from",
+      "authors": [
+        "Jordan Walke"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "react-dom",
+      "title": "React DOM",
+      "version": "18.3.1",
+      "licence": "MIT",
+      "repo": "https://github.com/facebook/react",
+      "homepage": "https://reactjs.org/",
+      "description": "renders React to the browser DOM",
+      "authors": [
+        "Jordan Walke"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "react-konva",
+      "title": "react-konva",
+      "version": "18.2.16",
+      "licence": "MIT",
+      "repo": "https://github.com/konvajs/react-konva",
+      "description": "connects React to the Konva canvas",
+      "authors": [
+        "Anton Lavrenov"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "tesseract.js",
+      "title": "Tesseract.js",
+      "version": "5.1.1",
+      "licence": "Apache-2.0",
+      "repo": "https://github.com/naptha/tesseract.js",
+      "homepage": "https://github.com/naptha/tesseract.js",
+      "description": "reads text out of scanned pages, on your machine",
+      "authors": [
+        "Jerome Wu",
+        "Kevin Kwok"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "zustand",
+      "title": "Zustand",
+      "version": "5.0.13",
+      "licence": "MIT",
+      "repo": "https://github.com/pmndrs/zustand",
+      "homepage": "https://github.com/pmndrs/zustand",
+      "description": "holds the editor's state",
+      "authors": [
+        "Paul Henschel"
+      ],
+      "source": "node_modules"
+    }
+  ],
+  "builds": [
+    {
+      "name": "@capacitor/*",
+      "title": "Capacitor",
+      "licence": "MIT",
+      "repo": "https://github.com/ionic-team/capacitor",
+      "description": "wraps the web app as a real iPhone and Android app",
+      "authors": [
+        "Ionic Team"
+      ],
+      "source": "overlay"
+    },
+    {
+      "name": "@types/*",
+      "title": "DefinitelyTyped",
+      "licence": "MIT",
+      "repo": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+      "description": "the community type definitions TypeScript builds against",
+      "authors": [
+        "Boris Yankov"
+      ],
+      "source": "overlay"
+    },
+    {
+      "name": "electron",
+      "title": "Electron",
+      "version": "33.4.11",
+      "licence": "MIT",
+      "repo": "https://github.com/electron/electron",
+      "authors": [
+        "OpenJS Foundation"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "electron-builder",
+      "title": "electron-builder",
+      "version": "25.1.8",
+      "licence": "MIT",
+      "repo": "https://github.com/electron-userland/electron-builder",
+      "homepage": "https://github.com/electron-userland/electron-builder",
+      "authors": [
+        "Vladimir Krivosheev"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "tailwindcss",
+      "title": "Tailwind CSS",
+      "version": "4.3.0",
+      "licence": "MIT",
+      "repo": "https://github.com/tailwindlabs/tailwindcss",
+      "homepage": "https://tailwindcss.com",
+      "description": "the CSS framework the interfaces are styled with",
+      "authors": [
+        "Adam Wathan"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "typescript",
+      "title": "TypeScript",
+      "version": "5.9.3",
+      "licence": "Apache-2.0",
+      "repo": "https://github.com/microsoft/TypeScript",
+      "homepage": "https://www.typescriptlang.org/",
+      "authors": [
+        "Microsoft"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "vite",
+      "title": "Vite",
+      "version": "6.4.2",
+      "licence": "MIT",
+      "repo": "https://github.com/vitejs/vite",
+      "homepage": "https://vite.dev",
+      "description": "the build tool and dev server behind every web app in the suite",
+      "authors": [
+        "Evan You"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "vite-plugin-pwa",
+      "title": "vite-plugin-pwa",
+      "version": "0.21.2",
+      "licence": "MIT",
+      "repo": "https://github.com/vite-pwa/vite-plugin-pwa",
+      "homepage": "https://github.com/vite-pwa/vite-plugin-pwa#readme",
+      "authors": [
+        "Anthony Fu"
+      ],
+      "source": "node_modules"
+    }
+  ]
+}

@@ -8,6 +8,12 @@ import { LANGS, persistLang, readSavedLang, type LangCode } from '../../lib/lang
 import { OfficeImportError, PDF_OR_OFFICE_ACCEPT, toViewablePdf } from '../../lib/officeToPdf'
 import { RedactIcon } from '../icons/RedactIcon'
 import { AboutAppDialog, useCloseAppMenu } from '@unisim/sdk'
+// Generated — `node ../unisim-workspace/Universal_Apps/scripts/gen-credits.mjs .`
+// after any dependency change. Never edit it by hand: it is read off the
+// installed tree, so a hand-kept list drifts from the lockfile the first time
+// anyone upgrades anything, and a credits list naming a package we removed is
+// worse than no list at all.
+import credits from '../../generated/credits.json'
 
 /**
  * The one category the dropdown has expanded, or `null` for all collapsed.
@@ -874,6 +880,8 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
       subject="Your PDF"
       except="backup and send-to-sign"
       version={__APP_VERSION__}
+      credits={credits}
+      noticesHref="https://github.com/universal-simulation-ltd/Universal_PDF/blob/main/THIRD-PARTY-NOTICES.md"
     />
   )
 
