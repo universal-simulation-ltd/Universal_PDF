@@ -164,6 +164,12 @@ const PLACEMENT_TOOLS = new Set<Tool>([
 // scaling both sides together so the aspect ratio survives.
 const MAX_PLACEMENT_FRACTION = 0.5
 
+// A line dropped by a single tap rather than swept out by a drag is this long,
+// in display pixels (so it looks the same at any zoom). Long enough to read as
+// a deliberate line and to leave the two endpoint grabbers clearly apart, short
+// enough to sit inside a table cell or a form field without being re-dragged.
+const TAP_LINE_LENGTH_PX = 140
+
 function fitPlacement(
   w: number,
   h: number,
@@ -901,6 +907,18 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // wobble in a real tap on glass still does.
   const TAP_SLOP_PX = 10
 
+  // Where a TAPPED (rather than dragged) line lands: a horizontal starter line
+  // centred on the tap, capped against the page like every other display-pixel
+  // placement (see fitPlacement) and nudged back on-page when the tap was near
+  // an edge. Horizontal by design — that already satisfies the 45° constraint,
+  // so a line placed with rigid mode on never starts out crooked.
+  function tapLinePoints(x: number, y: number): number[] {
+    const length = fitPlacement(TAP_LINE_LENGTH_PX / scale, 0, pageW, pageH).width
+    const half = length / 2
+    const cx = Math.min(Math.max(x, half), Math.max(pageW - half, half))
+    return [cx - half, y, cx + half, y]
+  }
+
   // Commit a one-shot placement at a point the user actually tapped.
   function commitTapPlacement(pos: { x: number; y: number }) {
     // Mid-sequence placement: dropping the name/date for a "separate"
@@ -1152,17 +1170,28 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         // A straight line is stored as a two-point free-draw stroke, so it
         // reuses all of draw's rendering, selection, move and PDF-export paths.
         const [x1, y1, x2, y2] = currentLine
-        if (Math.hypot(x2 - x1, y2 - y1) > 4) {
-          add({
-            id: crypto.randomUUID(),
-            pageIndex,
-            type: 'draw',
-            shape: 'line',
-            points: [x1, y1, x2, y2],
-            color,
-            strokeWidth: strokeWidth / scale
-          })
-        }
+        // ⚠️ A single tap used to draw NOTHING: both points were the same
+        // point, the length test threw it away, and the tool was
+        // indistinguishable from broken (owner, 2026-09-05: "a few ppl have
+        // clicked once and thought it wasn't working"). A tap now drops a
+        // default-length line — the same answer `sigfield` already gives a
+        // stray tap — and `add` selects it, so the endpoint grabbers are
+        // sitting on it ready to be stretched into place.
+        //
+        // The threshold is the one-shot placement slop, converted from CSS
+        // pixels to page units, rather than the old bare 4: below it the user
+        // was aiming at a point, not sweeping out a length, and a 6px stub is
+        // no more use than nothing.
+        const dragged = Math.hypot(x2 - x1, y2 - y1) > TAP_SLOP_PX / scale
+        add({
+          id: crypto.randomUUID(),
+          pageIndex,
+          type: 'draw',
+          shape: 'line',
+          points: dragged ? [x1, y1, x2, y2] : tapLinePoints(x1, y1),
+          color,
+          strokeWidth: strokeWidth / scale
+        })
       } else if (tool === 'rect') {
         const [x1, y1, x2, y2] = currentLine
         const x = Math.min(x1, x2)
