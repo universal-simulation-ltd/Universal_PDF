@@ -472,7 +472,7 @@ infinite render loop and replaced the app with *"Something went wrong"* — see
 *A `FloatingPanel` positions itself on the NODE, never in state* below. There is
 no route to it today because of this removal, and the loop was fixed anyway.
 
-Four things about it are load-bearing:
+Five things about it are load-bearing:
 
 - ⚠️ **It is not a toast.** It is up for exactly as long as the armed state and
   goes the moment the thing lands. Nothing about it is timed, and there is no
@@ -481,6 +481,21 @@ Four things about it are load-bearing:
   page, so everything but Cancel is `pointer-events: none`. `e2e/placement-hint`
   asserts this by dropping a signature *through* the banner rather than by
   reading the CSS, which would pass on a child that re-enabled events.
+- ⚠️ **The card is see-through** (James, 2026-09-06: *"make this popup
+  transparent so you can click behind it and still see the signature /
+  object"*). It was `bg-white/95` + `backdrop-blur`, and centred on the page
+  that is an opaque plate over the exact spot the user is being told to tap —
+  hiding the target, and `AnnotationLayer`'s cursor-following ghost of the thing
+  about to land. It is `bg-white/45` with **no backdrop blur**: the blur was
+  doing more of the hiding than the alpha was, since it smears what is behind it
+  at any opacity. Don't put one back. Legibility comes from a white text halo
+  (`[text-shadow:0_0_3px_#fff,0_0_9px_#fff]`) rather than an opaque background,
+  so the label survives a dark photo or a filled table cell underneath, and the
+  orange ring plus the drop shadow carry the prominence the 2026-09-05 ask
+  wanted now that the fill no longer does. The **two buttons keep a solid fill**
+  — they are the only part of the card that takes a pointer, so the opaque strip
+  is exactly where a tap hits a button and everything transparent around it
+  passes through to the page.
 - ⚠️ **The two tools that need a payload are gated on the payload, not the
   tool.** `tool: 'image'` with nothing armed places nothing on a tap; a banner
   there would be an instruction that does not work.
