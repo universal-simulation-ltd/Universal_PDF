@@ -1,4 +1,4 @@
-import { useOrg, useOrgBranding } from '@unisim/sdk'
+import { textOn, useOrg, useOrgBranding } from '@unisim/sdk'
 
 /**
  * "You are signed in on behalf of ___" — the org's mark and name, for the
@@ -28,8 +28,9 @@ export default function CompanyBadge() {
   const mark = branding.icon_url ?? branding.logo_url ?? null
   const initials = org.name.trim().slice(0, 2).toUpperCase() || '?'
   // The tenant's own colour where they have set one, the suite orange where
-  // they haven't. Ink on top either way — white on the brand orange has never
-  // reached AA (see BRAND.onOrange in the SDK).
+  // they haven't. The tile is an identity mark, so its colour is kept exactly
+  // and the LETTERS move: ink or white, whichever contrasts more (ink on the
+  // suite orange — white there has never reached AA; white on a navy).
   const tile = branding.brand_color ?? '#fe8c01'
 
   return (
@@ -46,8 +47,8 @@ export default function CompanyBadge() {
       ) : (
         <span
           aria-hidden="true"
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[11px] font-bold text-slate-900"
-          style={{ background: tile }}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[11px] font-bold"
+          style={{ background: tile, color: textOn(tile) }}
         >
           {initials}
         </span>
