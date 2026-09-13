@@ -1762,6 +1762,40 @@ its trigger carries `aria-expanded` **and** `aria-controls`; with no
 `packages/sdk/README.md` → *"Collapsibles that show what is inside them"* and
 `Docs_UNI_SIM/landmines.md`.
 
+## Deleting your account, and the other App Store requirements
+
+App Review 5.1.1(v): the suite's sign-in creates an account for any email it
+doesn't recognise, so an app that offers it must also let people delete the
+account from inside the app. `components/Header/DeleteAccountDialog.tsx` does
+that (2026-09-13). The dialog only asks; the platform's `delete-account` edge
+function does the work, and it deletes the Universal ID in **every** UNI·SIM
+product, which is why the dialog says "everywhere" and asks for `delete-all`
+(James's wording for the same screen in the Ergo Assess iPhone app).
+
+- **Two ways in, both only when a real account is signed in:** a row under the
+  company badge in the profile menu (a document open), and a small link under
+  the privacy note on the start screen (the landing navbar has no `extras`
+  slot, and a phone starts on that screen).
+- **It is a portal.** Both callers sit in a stacking context (the tools bar is
+  `relative z-[45]`, the landing navbar's wrapper `z-50`), so a `fixed` dialog
+  rendered in place would be capped at its parent's level.
+- **Success signs out locally only.** The account no longer exists, so a global
+  sign-out would call the server as nobody.
+- `npm run test:delete-account` intercepts the function. It proves the app's
+  half; the function's half was proved on prod from the Ergo app.
+
+**The iOS privacy manifest** is `ios/App/App/PrivacyInfo.xcprivacy`. It declares
+the sign-in email and id, a PDF the user stores or sends to sign, and the one
+"app opened" event, and `@capacitor/filesystem`'s file-date reads (C617.1),
+since that plugin ships no manifest of its own. Keep it in step with
+`PRIVACY.md` and the App Store Connect answers.
+
+⚠️ **Still open, and not fixable in this repo:** the SDK's sign-in dialog shows
+"Continue with Google / Microsoft" in the native app too. Guideline 4.8 then
+asks for Sign in with Apple (or an equivalent), and Google refuses OAuth inside
+an embedded web view anyway. The fix belongs in `@unisim/sdk`'s
+`SignInDialog`.
+
 ## Suite context
 
 This repo is one part of the **Universal Simulation suite** (the open-source

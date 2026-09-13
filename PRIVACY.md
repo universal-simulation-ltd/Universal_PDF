@@ -75,7 +75,9 @@ you will see requests, and a privacy page that pretended otherwise would look
 like a lie.
 
 - **Signing in.** Only if you choose to. A Universal ID gets you the suite's
-  shared account, storage and settings.
+  shared account, storage and settings. You can delete it from inside the app:
+  **Delete my account** in the profile menu, or under the privacy note on the
+  start screen. That deletes it in every UNI·SIM app, not only this one.
 - **"You opened the app".** When you are signed in, the app records one event
   saying the app was opened, so your account's activity page is accurate. It
   does not include anything about your file — not its name, not its size.

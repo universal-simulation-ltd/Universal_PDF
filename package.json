@@ -74,6 +74,8 @@
     "test:redact-covers": "node e2e/redact-covers-match.e2e.mjs",
     "test:image-border": "node e2e/image-border.e2e.mjs",
     "test:reset-defaults": "node e2e/reset-defaults.e2e.mjs",
+    "test:delete-account": "node e2e/delete-account.e2e.mjs",
+    "test:delete-account-call": "node --experimental-strip-types scripts/deleteAccount.test.mjs",
     "test:place-ghost": "node e2e/place-ghost.e2e.mjs",
     "test:scrub-export": "node e2e/scrub-export.e2e.mjs",
     "test:merge-guard": "node e2e/merge-guard.e2e.mjs"
