@@ -415,7 +415,10 @@ export default function PdfViewer() {
       // underneath it.
       done?.()
       restoreAnchor(el!, anchor!)
-      content!.style.transformOrigin = `${el!.scrollLeft + anchor!.screenX}px ${el!.scrollTop + anchor!.screenY}px`
+      // Same content-coordinate conversion as the gestures' `draw()`:
+      // transform-origin is measured from the content's own box, which the
+      // centring margins move away from the scroll origin.
+      content!.style.transformOrigin = `${el!.scrollLeft + anchor!.screenX - content!.offsetLeft}px ${el!.scrollTop + anchor!.screenY - content!.offsetTop}px`
       content!.style.transform = `scale(${k})`
     }
 
@@ -484,12 +487,20 @@ export default function PdfViewer() {
       // the anchored point stays exactly under the fingers.
       //
       // Scaling about the anchor, with the transform origin at the content's
-      // top-left: the anchored point is (scroll at the start + anchor) in
-      // content coordinates, and this translation is what holds it in place.
-      const anchoredX = pinch.scrollLeft + pinch.anchorX
-      const anchoredY = pinch.scrollTop + pinch.anchorY
-      const tx = pinch.anchorX + el.scrollLeft - pinch.ratio * anchoredX
-      const ty = pinch.anchorY + el.scrollTop - pinch.ratio * anchoredY
+      // top-left: the anchored point is (scroll at the start + anchor), less
+      // where the content box itself starts, in content coordinates — and this
+      // translation is what holds it in place.
+      //
+      // ⚠️ `offsetTop`/`offsetLeft` are NOT always 0. The content is centred in
+      // the viewport with auto margins whenever it is smaller than the viewport
+      // (see the wrapper's own comment), which is exactly the case a pinch on a
+      // phone starts from. Dropping them scales about a point the margin's
+      // height away from the fingers, so the document slides out from under
+      // them as it grows.
+      const anchoredX = pinch.scrollLeft + pinch.anchorX - content.offsetLeft
+      const anchoredY = pinch.scrollTop + pinch.anchorY - content.offsetTop
+      const tx = pinch.anchorX + el.scrollLeft - content.offsetLeft - pinch.ratio * anchoredX
+      const ty = pinch.anchorY + el.scrollTop - content.offsetTop - pinch.ratio * anchoredY
       content.style.transform = `translate(${tx}px, ${ty}px) scale(${pinch.ratio})`
     }
 
@@ -629,10 +640,10 @@ export default function PdfViewer() {
       if (!gesture || !el || !content) return
       if (el.scrollLeft !== gesture.scrollLeft) el.scrollLeft = gesture.scrollLeft
       if (el.scrollTop !== gesture.scrollTop) el.scrollTop = gesture.scrollTop
-      const anchoredX = gesture.scrollLeft + gesture.anchorX
-      const anchoredY = gesture.scrollTop + gesture.anchorY
-      const tx = gesture.anchorX + el.scrollLeft - gesture.ratio * anchoredX
-      const ty = gesture.anchorY + el.scrollTop - gesture.ratio * anchoredY
+      const anchoredX = gesture.scrollLeft + gesture.anchorX - content.offsetLeft
+      const anchoredY = gesture.scrollTop + gesture.anchorY - content.offsetTop
+      const tx = gesture.anchorX + el.scrollLeft - content.offsetLeft - gesture.ratio * anchoredX
+      const ty = gesture.anchorY + el.scrollTop - content.offsetTop - gesture.ratio * anchoredY
       content.style.transform = `translate(${tx}px, ${ty}px) scale(${gesture.ratio})`
     }
 
@@ -965,10 +976,22 @@ export default function PdfViewer() {
       <div className="relative flex-1 min-h-0">
         <div
           ref={scrollRef}
-          className="absolute inset-0 overflow-auto bg-slate-200"
+          className="absolute inset-0 overflow-auto bg-slate-200 flex flex-col"
           style={{ cursor: handCursor }}
         >
-          <div ref={contentRef} className="flex flex-col items-center gap-6 py-6 px-4">
+          {/* ⚠️ CENTRED WITH AUTO MARGINS, NOT `justify-center`. A document
+              shorter than the viewport — one page on a phone, or anything
+              zoomed out — used to sit against the top with the rest of the
+              screen empty below it. Auto margins are the only centring that is
+              safe inside a scroll container: they absorb free space only while
+              it is positive, so the moment the pages are taller than the
+              viewport they resolve to 0 and the document goes back to starting
+              at the top, fully scrollable. `justify-content: center` would
+              instead split the overflow above and below and put the top of page
+              1 somewhere no scroll position can reach.
+              `shrink-0` keeps a tall document at its own height rather than
+              letting the flex column compress it. */}
+          <div ref={contentRef} className="flex flex-col items-center gap-6 py-6 px-4 shrink-0 my-auto">
             {fitted && Array.from({ length: numPages }, (_, i) => (
               <PdfPage
                 key={i}

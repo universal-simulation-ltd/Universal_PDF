@@ -146,7 +146,7 @@ export default function LivePreview() {
       </div>
 
       <div
-        className="flex-1 min-h-0 overflow-auto bg-slate-200"
+        className="flex-1 min-h-0 overflow-auto bg-slate-200 flex flex-col"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {error ? (
@@ -158,7 +158,10 @@ export default function LivePreview() {
             {building ? 'Building preview…' : 'Loading…'}
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-6 py-6 px-4">
+          // Auto margins, not `justify-center`: a preview shorter than the
+          // overlay is centred, and one taller than it still starts at the top
+          // with every page reachable. See the viewer's own note.
+          <div className="flex flex-col items-center gap-6 py-6 px-4 shrink-0 my-auto">
             {Array.from({ length: doc.numPages }, (_, i) => (
               <PreviewPage
                 key={i}
