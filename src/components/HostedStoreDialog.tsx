@@ -2,6 +2,9 @@ import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useUniversal, useUser, useCredits, useHostedUploads, useAppFreeToken, type HostedUpload } from '@unisim/sdk'
 import { usePdfStore } from '../stores/pdfStore'
+// App Review 3.1.1: the phone app must not point people to buying tokens on
+// the web. The web and desktop builds keep the link and the wording.
+import { isNativeShell } from '../lib/nativeOpen'
 import { storeCurrentPdf, deleteHostedPdf, openHostedPdf, HostedObjectMissingError } from '../lib/hostedStore'
 import { downloadBackup, importBackup } from '../lib/pdfBackup'
 
@@ -85,7 +88,7 @@ export default function HostedStoreDialog() {
       if (!res.ok) {
         setError(
           res.error === 'no_credits'
-            ? 'You have no tokens left. Get more to keep storing PDFs online.'
+            ? (isNativeShell() ? 'You have no tokens left.' : 'You have no tokens left. Get more to keep storing PDFs online.')
             : res.error ?? 'Could not store this PDF.',
         )
       } else {
@@ -257,12 +260,14 @@ export default function HostedStoreDialog() {
                     <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
                       <p className="text-sm text-amber-800">
                         {freeToken === 'held'
-                          ? 'Your free PDF token is in use — delete the stored PDF below to get it back, or add tokens.'
+                          ? `Your free PDF token is in use — delete the stored PDF below to get it back${isNativeShell() ? '' : ', or add tokens'}.`
                           : 'You have no tokens left.'}
                       </p>
-                      <a href={GET_TOKENS_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded-lg bg-orange-700 px-3.5 py-2 text-sm font-semibold text-white hover:bg-orange-800">
-                        Get tokens →
-                      </a>
+                      {!isNativeShell() && (
+                        <a href={GET_TOKENS_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded-lg bg-orange-700 px-3.5 py-2 text-sm font-semibold text-white hover:bg-orange-800">
+                          Get tokens →
+                        </a>
+                      )}
                     </div>
                   )
                 ) : (

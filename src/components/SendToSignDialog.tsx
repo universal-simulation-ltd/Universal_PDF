@@ -13,6 +13,9 @@ import {
   type SignRequest,
 } from '@unisim/sdk'
 import { usePdfStore } from '../stores/pdfStore'
+// App Review 3.1.1: the phone app must not point people to buying tokens on
+// the web. The web and desktop builds keep the link and the wording.
+import { isNativeShell } from '../lib/nativeOpen'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { storeCurrentPdf, currentPdfBytes } from '../lib/hostedStore'
 import {
@@ -178,7 +181,7 @@ export default function SendToSignDialog() {
       if (!stored.ok || !stored.uploadId) {
         setError(
           stored.error === 'no_credits'
-            ? 'You have no tokens left. Get more to store this PDF online for signing.'
+            ? (isNativeShell() ? 'You have no tokens left.' : 'You have no tokens left. Get more to store this PDF online for signing.')
             : stored.error ?? 'Could not store this PDF.',
         )
         return
@@ -595,12 +598,14 @@ export default function SendToSignDialog() {
                   <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
                     <p className="text-sm text-amber-800">
                       {freeToken === 'held'
-                        ? 'Your free PDF token is in use — delete the stored PDF (Actions → Back up / store) to get it back, or add tokens.'
+                        ? `Your free PDF token is in use — delete the stored PDF (Actions → Back up / store) to get it back${isNativeShell() ? '' : ', or add tokens'}.`
                         : 'You have no tokens left.'}
                     </p>
-                    <a href={GET_TOKENS_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded-lg bg-orange-700 px-3.5 py-2 text-sm font-semibold text-white hover:bg-orange-800">
-                      Get tokens →
-                    </a>
+                    {!isNativeShell() && (
+                      <a href={GET_TOKENS_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded-lg bg-orange-700 px-3.5 py-2 text-sm font-semibold text-white hover:bg-orange-800">
+                        Get tokens →
+                      </a>
+                    )}
                   </div>
                 )}
               </div>
