@@ -197,37 +197,56 @@ try {
   // notice saying so. On macOS it used to reach pdf.js as a "PDF" and come back
   // as "Failed to load PDF"; on Windows it never reached the page at all,
   // because the command-line filter took `.pdf` and nothing else.
+  //
+  // ⚠️ Each of these is an INDEPENDENT open, so each gets a window of its own —
+  // only documents opened together share one, as tabs (electron/main.cjs). So a
+  // probe looks for the document across every app window, alerts are collected
+  // from every window as they are raised (a new window has no stub of ours to
+  // call), and each open waits out the window in which files count as opened
+  // together.
   const win = reopened ?? (await appWindow(app))
   if (win) {
-    // Recorded rather than shown: a real alert() is modal and would stall the
-    // renderer this test is asking questions of. Installed by every probe, not
-    // once, because a reload of the page takes the stub with it.
-    const opened = () =>
-      win
-        .evaluate(async () => {
-          if (!window.__alerts) {
-            window.__alerts = []
-            window.alert = (message) => window.__alerts.push(String(message))
-          }
-          const { usePdfStore } = await import('/src/stores/pdfStore.ts')
-          const s = usePdfStore.getState()
-          return { name: s.fileName, notice: s.importNotice, alerts: window.__alerts.slice() }
-        })
-        // A reload mid-call is "not yet" — see the PDF check above.
-        .catch(() => ({ name: null, notice: null, alerts: [] }))
-    const alerts = () => win.evaluate(() => (window.__alerts ?? []).splice(0)).catch(() => [])
-    await opened()
+    // Recorded and dismissed rather than left up: a real alert() is modal and
+    // would stall the renderer this test is asking questions of.
+    const raised = []
+    const watch = (page) =>
+      page.on('dialog', (d) => {
+        raised.push(d.message())
+        d.dismiss().catch(() => {})
+      })
+    app.windows().forEach(watch)
+    app.on('window', watch)
+    const alerts = async () => raised.splice(0)
+    const pages = () => app.windows().filter((w) => w.url().startsWith('http') && !w.isClosed())
+    // What every app window has open, and the alerts so far.
+    const opened = async () => {
+      const docs = []
+      for (const page of pages()) {
+        const s = await page
+          .evaluate(async () => {
+            const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+            const s = usePdfStore.getState()
+            return { name: s.fileName, notice: s.importNotice }
+          })
+          // A reload mid-call is "not yet" — see the PDF check above.
+          .catch(() => null)
+        if (s) docs.push(s)
+      }
+      return { docs, alerts: raised.slice() }
+    }
+    const find = (state, name) => state.docs.find((d) => d.name === name) ?? null
     // Long, because the first conversion may be LibreOffice building its
     // private profile — several seconds on a cold machine.
-    async function waitFor(pred, tries = 300) {
+    async function waitFor(name, tries = 300) {
       let last = null
       for (let i = 0; i < tries; i++) {
         last = await opened()
-        if (pred(last) || last.alerts.length) return last
+        if (find(last, name) || last.alerts.length) return { ...(find(last, name) ?? {}), alerts: last.alerts }
         await new Promise((r) => setTimeout(r, 200))
       }
-      return last
+      return { alerts: last?.alerts ?? [] }
     }
+    const independently = () => new Promise((r) => setTimeout(r, 2000))
     const secondLaunch = (filePath) =>
       // Exactly what Windows delivers when "Open with" starts a second copy:
       // the new process's argv, forwarded to the one holding the lock. In dev
@@ -237,27 +256,35 @@ try {
       }, [ELECTRON_BIN, ROOT, filePath])
 
     console.log('\nmacOS: Finder hands over a .docx')
+    await independently()
     await app.evaluate(({ app: electronApp }, filePath) => {
       electronApp.emit('open-file', { preventDefault() {} }, filePath)
     }, DOCX)
-    const docx = await waitFor((s) => s.name === 'rich.pdf')
+    const docx = await waitFor('rich.pdf')
     check('the .docx is converted and opens as rich.pdf', docx?.name === 'rich.pdf', `loaded ${docx?.name}`)
     check('with the notice saying it was converted', /^Converted /.test(docx?.notice ?? ''), docx?.notice)
     check('and no alert', (await alerts()).length === 0, docx?.alerts.join(' | '))
 
     console.log('\nWindows: "Open with" starts a second copy with an .odt on its command line')
+    await independently()
     await secondLaunch(ODT)
-    const odt = await waitFor((s) => s.name === 'orientation.pdf')
+    const odt = await waitFor('orientation.pdf')
     check('the .odt reaches the page and opens as orientation.pdf', odt?.name === 'orientation.pdf', `loaded ${odt?.name}`)
     check('with the notice saying it was converted', /^Converted /.test(odt?.notice ?? ''), odt?.notice)
     check('and no alert', (await alerts()).length === 0, odt?.alerts.join(' | '))
 
     console.log('\nWindows: an older .doc gets advice rather than silence')
+    await independently()
     await secondLaunch(LEGACY_DOC)
-    const legacy = await waitFor(() => false, 150)
+    await waitFor('(never)', 150)
     const advice = (await alerts()).join(' | ')
     check('the user is told to save it as .docx', /save it as \.docx/i.test(advice), advice || 'no alert')
-    check('and the open document is left alone', legacy?.name === 'orientation.pdf', `now ${legacy?.name}`)
+    const after = await opened()
+    check(
+      'and the documents already open are left alone',
+      !!find(after, 'orientation.pdf') && !!find(after, 'rich.pdf'),
+      after.docs.map((d) => d.name).join(', ')
+    )
   }
 } finally {
   await app.close().catch(() => {})

@@ -73,6 +73,11 @@ contextBridge.exposeInMainWorld('desktop', {
     }
     if (filePath) ipcRenderer.send('open-folder:set', filePath)
   },
+  // Whether this window is showing a document (or a tab of them). The main
+  // process sends a PDF opened from the OS to a window on the start screen when
+  // there is one, and builds a new window otherwise — it cannot see which a
+  // window is from outside.
+  setDocumentOpen: (open) => ipcRenderer.send('document:set-open', !!open),
   // Unsaved-changes guard. `set` keeps the main process told whether closing
   // the window would lose a file; `onCloseRequest` is main asking the question
   // it holds the × for; `allowClose` is the answer that lets it through.
@@ -84,9 +89,9 @@ contextBridge.exposeInMainWorld('desktop', {
   // Whether this app is the system's default .pdf handler, and the request to
   // become it. Request-response rather than a pushed event: the app asks when
   // it has somewhere to put the answer.
-  defaultApp: {
-    status: () => ipcRenderer.invoke('default-app:status'),
-    makeDefault: () => ipcRenderer.invoke('default-app:set'),
+  defaultApp: {
+    status: () => ipcRenderer.invoke('default-app:status'),
+    makeDefault: () => ipcRenderer.invoke('default-app:set'),
   },
   // Convert a Word / OpenDocument file with the user's own LibreOffice, giving
   // a faithful copy of Word's layout instead of the built-in re-typeset one.

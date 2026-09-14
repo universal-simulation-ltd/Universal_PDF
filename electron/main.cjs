@@ -17,20 +17,48 @@ const DEV_SERVER_URL = process.env.ELECTRON_START_URL
 // kind of app the window they are looking at is.
 const WINDOW_TITLE = 'Universal PDF: Welcome to PDFs that just work.'
 
-let mainWindow = null
+// ── Windows ─────────────────────────────────────────────────────────────────
+// One window per document the user opened on its own, and one window — with a
+// tab per file — for documents opened TOGETHER (James, 2026-09-14: "if the user
+// ... opens multiple PDFs on Windows / Mac with open with... then introduce
+// tabs ... Otherwise, if someone has a PDF open, and then opens a separate pdf
+// independently it should be in a new window").
+//
+// ⚠️ "Together" has to be worked out from TIMING, because neither OS says so.
+// macOS sends one `open-file` event per selected file, back to back. Windows is
+// worse: the association is registered as `"Universal PDF.exe" "%1"`, so a
+// multi-selection opened from Explorer launches one PROCESS per file, and each
+// one reaches this process as a separate `second-instance` a beat apart. So a
+// file arriving within `BATCH_MS` of the previous one joins that one's window;
+// anything later is an independent open.
+//
+// Tabs themselves are entirely the renderer's business (src/stores/tabStore.ts).
+// All this side decides is which WINDOW a file goes to.
+const BATCH_MS = 1500
 
-// Whether mainWindow's renderer has finished loading. `webContents.send` before
-// that point goes nowhere — the preload's buffer only covers the gap between
-// preload and React, not the gap before preload runs — so anything arriving
-// earlier waits in `pendingPdfPath` instead of being fired into the void.
-let windowLoaded = false
+// Everything this process tracks per window, keyed by the BrowserWindow.
+//   loaded       the renderer has finished loading. `webContents.send` before
+//                that goes nowhere — the preload's buffer only covers the gap
+//                between preload and React — so files wait in `pending`.
+//   pending      paths handed over before the window could take them.
+//   hasDocument  whether the window is showing anything. Reported by the
+//                renderer, and set here the moment a file is sent so a second
+//                open cannot pick the window in the gap before it answers.
+//   unsaved      closing the window would lose amendments (renderer-owned).
+//   allowClose   the renderer has answered the close question; let it through.
+//   openFolder   the folder this window's documents came off the disk from.
+const windows = new Map()
 
-// PDF the app was launched with (double-click / "Open with → Universal PDF"),
-// held until the window has finished loading.
-let pendingPdfPath = null
+// The window taking the files of the batch in progress, and the timer that
+// ends the batch.
+let batch = null
 
-// Folder the open document came off the disk from, or null when it did not come
-// off the disk at all. Every save dialog starts here.
+// Paths handed over before `ready`, when no window can be built yet. macOS
+// sends a launch's documents as `open-file` events that can arrive that early.
+let startupPaths = []
+
+// Folder the most recent document came off the disk from, in ANY window — the
+// fallback for a window that has not opened one of its own yet.
 //
 // Someone who opened a contract out of a client folder is saving the signed
 // copy back beside it — not into the same pile as every browser download they
@@ -41,13 +69,13 @@ let pendingPdfPath = null
 // the preload can resolve (`webUtils.getPathForFile`).
 //
 // A document that never came off the disk — a recent replayed from storage, a
-// converted file, the example PDF — leaves this ALONE rather than clearing it.
-// It is the last folder the user actually chose a document from, which is the
-// same "remember where I was working" every desktop app keeps, and a better
+// converted file, the example PDF — leaves these ALONE rather than clearing
+// them. It is the last folder the user actually chose a document from, which is
+// the same "remember where I was working" every desktop app keeps, and a better
 // guess than falling back to ~/Downloads mid-session.
 let lastOpenFolder = null
 
-function rememberOpenFolder(filePath) {
+function rememberOpenFolder(win, filePath) {
   if (!filePath) return
   try {
     const folder = path.dirname(filePath)
@@ -55,27 +83,23 @@ function rememberOpenFolder(filePath) {
     // document opened off a USB stick, then pulled out) would open the dialog
     // on nothing at all. A path we cannot see is simply not an answer, and the
     // previous one stands.
-    if (fs.existsSync(folder)) lastOpenFolder = folder
+    if (!fs.existsSync(folder)) return
+    lastOpenFolder = folder
+    const state = win && windows.get(win)
+    if (state) state.openFolder = folder
   } catch {
     // Unreadable path — keep whatever we had.
   }
 }
 
-// `name` placed in the open document's folder. Falls back to the bare filename,
-// which is Electron's cue to use its own default folder.
-function suggestedSavePath(name) {
+// `name` placed in the folder `win`'s documents came from. Falls back to the
+// bare filename, which is Electron's cue to use its own default folder.
+function suggestedSavePath(name, win) {
   const base = path.basename(String(name || 'document.pdf'))
-  return lastOpenFolder ? path.join(lastOpenFolder, base) : base
+  const state = win && windows.get(win)
+  const folder = (state && state.openFolder) || lastOpenFolder
+  return folder ? path.join(folder, base) : base
 }
-
-// Whether the open document has amendments that no saved file contains. Owned
-// by the renderer — it is the only side that knows what is on the page — and
-// pushed here over `unsaved:set` whenever the answer changes.
-let unsavedChanges = false
-
-// Set when the renderer has answered the question below and the close should
-// now go through untouched. Cleared for each new window.
-let allowClose = false
 
 // What the page can do something with when the OS hands it a document: a PDF,
 // a Word or OpenDocument file it converts on the way in (exactly as if it had
@@ -91,17 +115,23 @@ const OPENABLE_DOCUMENT = /\.(pdf|docx|odt|doc|rtf|pages)$/i
 
 // Windows passes the document path as a plain argument after the executable
 // (plus the app-dir argument when running unpackaged via `electron .`).
-// Chromium switches all start with `-`, so skip those.
-function documentPathFromArgv(argv) {
-  const args = argv.slice(app.isPackaged ? 1 : 2)
-  const candidate = args.find((a) => !a.startsWith('-') && OPENABLE_DOCUMENT.test(a))
-  if (!candidate) return null
-  try {
-    return fs.existsSync(candidate) ? candidate : null
-  } catch {
-    return null
-  }
+// Chromium switches all start with `-`, so skip those. Every document, not
+// just the first: a launcher that passes several at once (xdg-open with `%F`)
+// means them all.
+function documentPathsFromArgv(argv) {
+  return argv
+    .slice(app.isPackaged ? 1 : 2)
+    .filter((a) => !a.startsWith('-') && OPENABLE_DOCUMENT.test(a))
+    .filter((candidate) => {
+      try {
+        return fs.existsSync(candidate)
+      } catch {
+        return false
+      }
+    })
 }
+
+const isLive = (win) => !!win && !win.isDestroyed() && windows.has(win)
 
 // The renderer is fully sandboxed (no Node access), so the main process reads
 // the bytes off disk and ships them over IPC; the preload bridge hands them to
@@ -111,7 +141,9 @@ function sendPdf(win, filePath) {
     const bytes = fs.readFileSync(filePath)
     // Read succeeded, so this folder exists and holds the document now on
     // screen — where its exports should be offered back.
-    rememberOpenFolder(filePath)
+    rememberOpenFolder(win, filePath)
+    const state = windows.get(win)
+    if (state) state.hasDocument = true
     win.webContents.send('open-pdf', { name: path.basename(filePath), bytes })
   } catch (err) {
     console.error('Failed to read PDF passed from the OS:', err)
@@ -122,62 +154,113 @@ function sendPdf(win, filePath) {
   }
 }
 
-// Hand a PDF to the window if it can receive one, and hold it otherwise.
+// Hand a PDF to a window if it can receive one, and hold it otherwise.
 // `did-finish-load` flushes whatever is held.
-function deliverPdf(filePath) {
-  if (mainWindow && windowLoaded) sendPdf(mainWindow, filePath)
-  else pendingPdfPath = filePath
+function deliverPdf(win, filePath) {
+  const state = windows.get(win)
+  if (!state) return
+  if (state.loaded) sendPdf(win, filePath)
+  else state.pending.push(filePath)
 }
 
-// Bring the existing window back in front of whatever the user is looking at.
-// `focus()` alone only raises the window WITHIN an app that is already
-// frontmost, and an app being handed a document by Finder or Explorer usually
-// is not — so the app itself has to be raised too.
-function revealMainWindow() {
-  if (!mainWindow || mainWindow.isDestroyed()) return
-  if (mainWindow.isMinimized()) mainWindow.restore()
-  if (!mainWindow.isVisible()) mainWindow.show()
-  mainWindow.focus()
+// Bring a window back in front of whatever the user is looking at. `focus()`
+// alone only raises the window WITHIN an app that is already frontmost, and an
+// app being handed a document by Finder or Explorer usually is not — so the app
+// itself has to be raised too.
+function revealWindow(win) {
+  if (!isLive(win)) return
+  if (win.isMinimized()) win.restore()
+  if (!win.isVisible()) win.show()
+  win.focus()
   // macOS only: `steal` is what lets a background app pull itself forward.
   if (process.platform === 'darwin') app.focus({ steal: true })
 }
 
-// A document handed over by the OS — double-click, "Open with → Universal PDF",
-// or a second launch on Windows/Linux.
-//
-// ⚠️ The window has to be CREATED here when there is none, and that is not
-// an edge case: macOS keeps an app running after its last window closes (see
-// `window-all-closed`), so "running, no window" is the ordinary state of a
-// Universal PDF that has been used once already. Handing the document to
-// `deliverPdf` and stopping there parked it in `pendingPdfPath` while NOTHING
-// appeared on screen — the app was frontmost, the menu bar said so, and the
-// document only surfaced when a Dock click happened to run `activate` and
-// build the window that flushed it.
-function openFromOs(filePath) {
-  if (filePath) deliverPdf(filePath)
-  // Before `ready` there is no window to make; `whenReady` is moments away and
-  // createWindow() picks `pendingPdfPath` up on its own.
-  if (!app.isReady()) return
-  if (mainWindow && !mainWindow.isDestroyed()) revealMainWindow()
-  else createWindow()
+// A window sitting on the start screen, which can take a document rather than
+// having a new window built beside it — the one in front first. Without this,
+// the first PDF double-clicked after launching the app from the Dock or the
+// Start menu would open a SECOND window next to an empty one.
+function emptyWindow() {
+  for (const win of [BrowserWindow.getFocusedWindow(), ...windows.keys()]) {
+    if (!isLive(win)) continue
+    const state = windows.get(win)
+    if (!state.hasDocument && state.pending.length === 0) return win
+  }
+  return null
 }
 
-function createWindow() {
+function extendBatch(win) {
+  if (batch) clearTimeout(batch.timer)
+  batch = {
+    win,
+    timer: setTimeout(() => {
+      batch = null
+    }, BATCH_MS)
+  }
+}
+
+// Documents handed over by the OS — double-click, "Open with → Universal PDF",
+// or a second launch on Windows/Linux.
+//
+// ⚠️ A window has to be CREATED here when there is none, and that is not an
+// edge case: macOS keeps an app running after its last window closes (see
+// `window-all-closed`), so "running, no window" is the ordinary state of a
+// Universal PDF that has been used once already. Parking the document until
+// something else built a window is how double-clicking a PDF once did nothing
+// at all until the Dock icon was clicked.
+function openFromOs(filePaths) {
+  if (filePaths.length === 0) {
+    // A second launch with no document (the Start menu again): bring back what
+    // is there rather than doing nothing, or open a window if there is none.
+    if (!app.isReady()) return
+    const existing = [...windows.keys()].find(isLive)
+    if (existing) revealWindow(existing)
+    else createWindow()
+    return
+  }
+  // Before `ready` there is no window to make; `whenReady` is moments away and
+  // hands these back here.
+  if (!app.isReady()) {
+    startupPaths.push(...filePaths)
+    return
+  }
+  for (const filePath of filePaths) {
+    const joining = batch && isLive(batch.win) ? batch.win : null
+    const win = joining || emptyWindow() || createWindow({ launching: true })
+    deliverPdf(win, filePath)
+    extendBatch(win)
+    // A window built just now reveals itself once it has something to show
+    // (`ready-to-show`); one that was already up is raised here.
+    if (windows.get(win).loaded) revealWindow(win)
+  }
+}
+
+function createWindow({ launching = false } = {}) {
   // Fill the display's full working height (screen minus taskbar) on launch —
   // PDFs are portrait documents, so vertical space is what matters. Width
   // stays at the comfortable 1280 default (clamped to the work area on small
   // screens). y pins the window to the top of the work area so the full
   // height is actually visible.
   const { workArea } = screen.getPrimaryDisplay()
+  const width = Math.min(1280, workArea.width)
+  // A second window steps along from the one in front, so it does not land
+  // exactly on top of it — a new window in precisely the old one's place looks
+  // like the old one's document was replaced.
+  const front = [BrowserWindow.getFocusedWindow()].find(isLive) || [...windows.keys()].filter(isLive).pop()
+  let x
+  if (front) {
+    x = front.getBounds().x + 32
+    if (x + width > workArea.x + workArea.width) x = workArea.x
+  }
   // Launched by double-clicking a PDF? The renderer needs to know at its FIRST
   // paint, because the file itself cannot arrive until the bundle has loaded.
   // Without this the app paints the landing page, then throws it away a beat
   // later when the document lands — the front door flashing past on the way to
   // a document the user already chose.
-  const launching = !!pendingPdfPath
   const win = new BrowserWindow({
-    width: Math.min(1280, workArea.width),
+    width,
     height: workArea.height,
+    ...(x !== undefined ? { x } : {}),
     y: workArea.y,
     minWidth: 640,
     minHeight: 480,
@@ -199,9 +282,15 @@ function createWindow() {
   // so `title` above would last only until the bundle finished loading.
   win.on('page-title-updated', (event) => event.preventDefault())
 
-  mainWindow = win
-  windowLoaded = false
-  allowClose = false
+  const state = {
+    loaded: false,
+    pending: [],
+    hasDocument: launching,
+    unsaved: false,
+    allowClose: false,
+    openFolder: null,
+  }
+  windows.set(win, state)
 
   // ⚠️ The window's × is held here, in the main process, and NOT by the page's
   // `beforeunload`: Electron shows no dialog for that event, it merely refuses
@@ -209,21 +298,19 @@ function createWindow() {
   // the close is cancelled once, the renderer is asked, and its answer comes
   // back as `unsaved:allow-close`.
   //
-  // This covers ⌘Q / Alt+F4 as well: quitting closes the window, and a
+  // This covers ⌘Q / Alt+F4 as well: quitting closes each window, and a
   // cancelled window close cancels the quit with it.
   win.on('close', (event) => {
-    if (allowClose || !unsavedChanges) return
+    if (state.allowClose || !state.unsaved) return
     event.preventDefault()
     win.webContents.send('unsaved:close-request', {})
   })
 
   win.on('closed', () => {
-    if (mainWindow === win) {
-      mainWindow = null
-      windowLoaded = false
-      // Whatever was unsaved went with the window; a second window would
-      // otherwise inherit a stale "yes" and refuse to close.
-      unsavedChanges = false
+    windows.delete(win)
+    if (batch && batch.win === win) {
+      clearTimeout(batch.timer)
+      batch = null
     }
   })
 
@@ -235,15 +322,13 @@ function createWindow() {
   }
   win.once('ready-to-show', reveal)
 
-  // Deliver the launch file once the bundle is loaded; the preload bridge
-  // buffers it if React hasn't subscribed yet.
+  // Deliver whatever was handed over while the bundle loaded; the preload
+  // bridge buffers it if React hasn't subscribed yet.
   win.webContents.on('did-finish-load', () => {
-    windowLoaded = true
+    state.loaded = true
     reveal()
-    if (pendingPdfPath) {
-      const filePath = pendingPdfPath
-      pendingPdfPath = null
-      sendPdf(win, filePath)
+    if (state.pending.length > 0) {
+      for (const filePath of state.pending.splice(0)) sendPdf(win, filePath)
     } else {
       // Nothing inbound. Said out loud rather than left to a timeout, because
       // this also covers a manual reload (⌘R) of a window that was started with
@@ -295,61 +380,75 @@ function createWindow() {
       shell.openExternal(url)
     }
   })
+
+  return win
 }
 
-// Opening a PDF while the app is already running must reuse the existing
-// window (Windows/Linux launch a second process for it — forward the argv
-// and quit the newcomer).
+// The window an IPC message came from, or null if it is not one of ours.
+function senderWindow(event) {
+  const win = BrowserWindow.fromWebContents(event.sender)
+  return isLive(win) ? win : null
+}
+
+// Opening a PDF while the app is already running is routed through the one
+// process that is (Windows/Linux launch a second process for it — forward the
+// argv and quit the newcomer), which decides which window it belongs in.
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {
   app.quit()
 } else {
-  pendingPdfPath = documentPathFromArgv(process.argv)
+  startupPaths = documentPathsFromArgv(process.argv)
 
   app.on('second-instance', (_event, argv) => {
-    openFromOs(documentPathFromArgv(argv))
+    openFromOs(documentPathsFromArgv(argv))
   })
 
   // macOS delivers OS-opened files as an event (possibly before `ready`).
   app.on('open-file', (event, filePath) => {
     event.preventDefault()
-    openFromOs(filePath)
+    openFromOs([filePath])
   })
 
-  // Whether this app owns .pdf on the machine, and the attempt to make it so.
-  // Both live in the main process because every route to the answer is an OS
-  // call (Launch Services, xdg-mime, the registry) that a sandboxed renderer
-  // has no way to reach.
-  // The unsaved-changes guard's two halves — see `win.on('close')` above.
   // The page reporting which file it just opened — see `lastOpenFolder`. A
   // send, not an invoke: nothing waits on the answer, and an open must never
   // be held up by bookkeeping about where a later save might go.
-  ipcMain.on('open-folder:set', (_event, filePath) => {
-    rememberOpenFolder(typeof filePath === 'string' ? filePath : null)
+  ipcMain.on('open-folder:set', (event, filePath) => {
+    rememberOpenFolder(senderWindow(event), typeof filePath === 'string' ? filePath : null)
   })
 
-  ipcMain.on('unsaved:set', (_event, dirty) => {
-    unsavedChanges = !!dirty
+  // Whether the window is showing anything — see `emptyWindow`.
+  ipcMain.on('document:set-open', (event, open) => {
+    const win = senderWindow(event)
+    if (win) windows.get(win).hasDocument = !!open
   })
-  ipcMain.on('unsaved:allow-close', () => {
-    allowClose = true
-    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close()
+
+  // The unsaved-changes guard's two halves — see `win.on('close')` above.
+  ipcMain.on('unsaved:set', (event, dirty) => {
+    const win = senderWindow(event)
+    if (win) windows.get(win).unsaved = !!dirty
+  })
+  ipcMain.on('unsaved:allow-close', (event) => {
+    const win = senderWindow(event)
+    if (!win) return
+    windows.get(win).allowClose = true
+    win.close()
   })
 
   // "Save and exit" — the renderer builds the PDF, the main process owns the
   // Save dialog and the write. A cancelled dialog is reported as such rather
   // than as an error: it means "I have changed my mind about leaving".
-  ipcMain.handle('save-pdf', async (_event, payload) => {
+  ipcMain.handle('save-pdf', async (event, payload) => {
     const bytes = payload && payload.bytes
     if (!bytes) return { ok: false, error: 'There was nothing to save.' }
     const suggestedName =
       payload && typeof payload.suggestedName === 'string' ? payload.suggestedName : 'document.pdf'
+    const parent = senderWindow(event)
     try {
-      const { canceled, filePath } = await dialog.showSaveDialog(mainWindow ?? undefined, {
+      const { canceled, filePath } = await dialog.showSaveDialog(parent ?? undefined, {
         title: 'Save PDF',
         // Beside the document that was opened, not in ~/Downloads — see
         // `lastOpenFolder`.
-        defaultPath: suggestedSavePath(suggestedName),
+        defaultPath: suggestedSavePath(suggestedName, parent),
         filters: [{ name: 'PDF', extensions: ['pdf'] }],
       })
       if (canceled || !filePath) return { ok: false, cancelled: true }
@@ -375,6 +474,10 @@ if (!gotLock) {
     return res.ok ? { ok: true, bytes: new Uint8Array(res.bytes), version: res.version } : res
   })
 
+  // Whether this app owns .pdf on the machine, and the attempt to make it so.
+  // Both live in the main process because every route to the answer is an OS
+  // call (Launch Services, xdg-mime, the registry) that a sandboxed renderer
+  // has no way to reach.
   ipcMain.handle('default-app:status', () => defaultApp.status())
 
   ipcMain.handle('default-app:set', () => defaultApp.makeDefault())
@@ -409,12 +512,16 @@ if (!gotLock) {
     // stages every download in AppData and moves it in when it is whole;
     // `suggestedSavePath` still decides where the dialog opens.
     downloads.installAll(session.defaultSession, suggestedSavePath)
-    // Guarded, because `open-file` can arrive before this runs and builds the
-    // window itself — an unguarded call would answer one document with two
-    // windows.
-    if (!mainWindow) createWindow()
+    // The launch's own documents, if it had any, go through the same routing
+    // as every later one — so several opened together share the first window
+    // as tabs. Guarded, because `open-file` can land between `ready` and this
+    // callback and build the window itself — an unguarded createWindow() would
+    // answer one document with two windows.
+    const launchPaths = startupPaths.splice(0)
+    if (launchPaths.length > 0) openFromOs(launchPaths)
+    else if (windows.size === 0) createWindow()
     app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+      if (windows.size === 0) createWindow()
     })
   })
 

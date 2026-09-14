@@ -106,12 +106,37 @@ async function appWindow(app, { timeout = 30000 } = {}) {
   return null
 }
 
+// ⚠️ A profile of its own, or the test cannot run while the INSTALLED Universal
+// PDF is open: both would use the same user-data folder, the installed copy
+// holds the single-instance lock, and this launch would forward its argv to it
+// and quit.
+const PROFILE = mkdtempSync(join(tmpdir(), 'upt-save-folder-profile-'))
+
 const app = await playwright._electron.launch({
   executablePath: ELECTRON_BIN,
-  args: [ROOT],
+  args: [ROOT, `--user-data-dir=${PROFILE}`],
   cwd: ROOT,
   env
 })
+
+// The app window showing `name`, whichever window that is — polled, because a
+// document handed over by the OS builds its window and loads a beat later.
+async function windowShowing(name, { timeout = 30000 } = {}) {
+  const deadline = Date.now() + timeout
+  while (Date.now() < deadline) {
+    for (const page of app.windows().filter((w) => w.url().startsWith('http') && !w.isClosed())) {
+      const open = await page
+        .evaluate(async () => {
+          const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+          return usePdfStore.getState().fileName
+        })
+        .catch(() => null)
+      if (open === name) return page
+    }
+    await new Promise((r) => setTimeout(r, 200))
+  }
+  return null
+}
 
 // The Save dialog, replaced by a recorder. Every save from here on is answered
 // as "cancelled", which is a normal outcome the app already handles — so
@@ -184,18 +209,28 @@ try {
   )
 
   console.log('\nThe OS hands a PDF over (double-click / "Open with")')
+  // A document is already open, so this is an independent open and gets a
+  // window of its own (electron/main.cjs — only documents opened together share
+  // one, as tabs). Each window's saves then belong beside its OWN document.
   await app.evaluate(({ app: electronApp }, filePath) => {
     // Exactly the shape Electron delivers: a preventable event and a path.
     electronApp.emit('open-file', { preventDefault() {} }, filePath)
   }, FIXTURE)
-  const osName = await openFileName(win, 'sample.pdf')
-  check('the handed-over document opens', osName === 'sample.pdf', `opened ${osName}`)
+  const osWin = await windowShowing('sample.pdf')
+  check('the handed-over document opens, in a window of its own', !!osWin && osWin !== win)
 
-  const osSave = await defaultPathForSave(win, 'sample-1.pdf')
+  const osSave = osWin ? await defaultPathForSave(osWin, 'sample-1.pdf') : null
   check(
     'the dialog follows it there, and the pathless bytes have not wiped the folder',
     osSave === join(FIXTURE_DIR, 'sample-1.pdf'),
     `defaultPath was ${JSON.stringify(osSave)}`
+  )
+
+  const firstAgain = await defaultPathForSave(win, 'picked-2.pdf')
+  check(
+    'while the first window still saves beside its own document',
+    firstAgain === join(PICKED_DIR, 'picked-2.pdf'),
+    `defaultPath was ${JSON.stringify(firstAgain)}`
   )
 
   console.log('\nAn export leaves the page as an ordinary download')
@@ -208,7 +243,8 @@ try {
   await app.evaluate(() => {
     globalThis.__savePaths = []
   })
-  await win.evaluate(() => {
+  // From the window holding the handed-over document, whose folder it should use.
+  await (osWin ?? win).evaluate(() => {
     const blob = new Blob([new Uint8Array([37, 80, 68, 70])], { type: 'application/pdf' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')

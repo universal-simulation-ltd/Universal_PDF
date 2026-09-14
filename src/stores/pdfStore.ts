@@ -51,7 +51,7 @@ function clearDocumentState() {
   useSignatureStore.getState().setPendingExtras([])
 }
 
-function setHashSlug(slug: string | null) {
+export function setHashSlug(slug: string | null) {
   if (typeof window === 'undefined') return
   const target = slug ? `#${slug}` : ''
   if (window.location.hash === target) return
@@ -61,7 +61,7 @@ function setHashSlug(slug: string | null) {
   window.history.replaceState(null, '', url)
 }
 
-function readHashSlug(): string | null {
+export function readHashSlug(): string | null {
   if (typeof window === 'undefined') return null
   const h = window.location.hash.replace(/^#/, '').trim()
   return /^[a-z0-9]{4,16}$/i.test(h) ? h : null
@@ -632,16 +632,102 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   }
 }))
 
+/**
+ * A document opened straight into a BACKGROUND tab — parsed, recorded in
+ * recents, its signature boxes recovered — without touching any of the live
+ * stores, which belong to the tab on screen. `loadFile` is the on-screen
+ * equivalent; the two must agree on what "opening a file" does, so a change to
+ * one wants the same change here.
+ *
+ * A locked file comes back with `lockedFile` set and no document: the password
+ * is asked for when its tab is first brought forward, not while the user is
+ * reading something else.
+ */
+export interface OffscreenDocument {
+  doc: PDFDocumentProxy | null
+  numPages: number
+  fileName: string
+  sourceBytes: ArrayBuffer | null
+  isXfa: boolean
+  importNotice: string | null
+  lockedFile: PdfState['lockedFile']
+  /** Signature-request boxes recovered from the file — its starting annotations. */
+  annotations: Annotation[]
+  /** The recents slug, once IndexedDB has answered. Null for a locked file. */
+  slug: Promise<string | null>
+}
+
+export async function openDocumentOffscreen(
+  file: File,
+  options?: { notice?: string }
+): Promise<OffscreenDocument> {
+  const notice = options?.notice ?? null
+  const buf = await file.arrayBuffer()
+  if (isEncryptedPdf(new Uint8Array(buf))) {
+    return {
+      doc: null,
+      numPages: 0,
+      fileName: file.name,
+      sourceBytes: null,
+      isXfa: false,
+      importNotice: notice,
+      lockedFile: { file, notice: options?.notice, error: null },
+      annotations: [],
+      slug: Promise.resolve(null)
+    }
+  }
+  const doc = await loadPdf(buf.slice(0)).promise
+  rememberOpenFolder(file)
+  let annotations: Annotation[] = []
+  try {
+    annotations = await readEmbeddedSigFields(buf.slice(0))
+  } catch {
+    // Best-effort, as in loadFile.
+  }
+  const slug = saveRecent(file.name, buf)
+    .then(async (s) => {
+      await usePdfStore.getState().refreshRecents()
+      return s
+    })
+    .catch(() => null)
+  return {
+    doc,
+    numPages: doc.numPages,
+    fileName: file.name,
+    sourceBytes: buf,
+    isXfa: doc.isPureXfa,
+    importNotice: notice,
+    lockedFile: null,
+    annotations,
+    slug
+  }
+}
+
 // ── Edit auto-save ─────────────────────────────────────────────────────────
 // Persist the open document's annotations + form values to its recents entry,
 // debounced, whenever they change — so closing and reopening the file (from the
 // recents list or a refresh) restores the work, signature-request boxes and
 // all. Selection / tool changes don't touch the annotation array reference, so
 // they're skipped here.
+//
+// ⚠️ The write is captured at SCHEDULE time — name and edits together — and
+// flushed at once if a different document turns up before the debounce runs
+// out. Reading both at FIRE time was fine while a window held one document;
+// with tabs, switching away inside the 600 ms wrote the incoming tab's edits
+// and silently dropped the last half-second of the outgoing one's.
 if (typeof window !== 'undefined') {
   let timer: number | null = null
   let lastAnns: unknown = null
   let lastForms: unknown = null
+  let pending: { name: string; edits: RecentEdits } | null = null
+
+  const flush = () => {
+    if (timer !== null) clearTimeout(timer)
+    timer = null
+    const write = pending
+    pending = null
+    if (write) void updateRecentEdits(write.name, write.edits)
+  }
 
   const schedule = () => {
     const anns = useAnnotationStore.getState().annotations
@@ -651,16 +737,10 @@ if (typeof window !== 'undefined') {
     lastForms = forms
     const { doc, fileName } = usePdfStore.getState()
     if (!doc || !fileName) return
+    if (pending && pending.name !== fileName) flush()
+    pending = { name: fileName, edits: { annotations: anns, formValues: forms } }
     if (timer !== null) clearTimeout(timer)
-    timer = window.setTimeout(() => {
-      timer = null
-      const name = usePdfStore.getState().fileName
-      if (!name) return
-      void updateRecentEdits(name, {
-        annotations: useAnnotationStore.getState().annotations,
-        formValues: useFormStore.getState().values
-      })
-    }, 600)
+    timer = window.setTimeout(flush, 600)
   }
 
   useAnnotationStore.subscribe(schedule)

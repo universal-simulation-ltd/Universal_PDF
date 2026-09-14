@@ -78,13 +78,65 @@ export function noteStructuralEdit(): void {
  * offering to save, which is the safe direction.
  */
 export function hasUnsavedChanges(): boolean {
-  if (structuralEdits !== savedStructuralEdits) return true
-  const annotations = useAnnotationStore.getState().annotations
-  const formValues = useFormStore.getState().values
-  if (annotations !== savedAnnotations && !(annotations.length === 0 && (savedAnnotations?.length ?? 0) === 0)) {
+  return isAmended(
+    captureSavedBaseline(),
+    useAnnotationStore.getState().annotations,
+    useFormStore.getState().values
+  )
+}
+
+/**
+ * Everything this module knows about one document — the baseline AND the
+ * structural-edit counter it is compared against.
+ *
+ * ⚠️ Per DOCUMENT, which is why it can be lifted out at all. With tabs, a
+ * window holds several documents but these module variables only ever describe
+ * the one on screen; `stores/tabStore.ts` captures the pair when a tab goes to
+ * the background and puts it back when it returns, so a tab that was amended
+ * is still amended when you come back to it (and one that was saved is not).
+ */
+export interface SavedBaseline {
+  annotations: Annotation[] | null
+  formValues: FormFieldValue[] | null
+  structuralEdits: number
+  savedStructuralEdits: number
+}
+
+export function captureSavedBaseline(): SavedBaseline {
+  return {
+    annotations: savedAnnotations,
+    formValues: savedFormValues,
+    structuralEdits,
+    savedStructuralEdits
+  }
+}
+
+/** Make `baseline` the state of the document now on screen. */
+export function restoreSavedBaseline(baseline: SavedBaseline): void {
+  savedAnnotations = baseline.annotations
+  savedFormValues = baseline.formValues
+  structuralEdits = baseline.structuralEdits
+  savedStructuralEdits = baseline.savedStructuralEdits
+  notify()
+}
+
+/**
+ * The same question as `hasUnsavedChanges`, asked of a document that is NOT on
+ * screen — a background tab, whose edits and baseline both live in a snapshot.
+ * Same reference-identity rules; see above.
+ */
+export function isAmended(
+  baseline: SavedBaseline,
+  annotations: Annotation[],
+  formValues: FormFieldValue[]
+): boolean {
+  if (baseline.structuralEdits !== baseline.savedStructuralEdits) return true
+  const saved = baseline.annotations
+  if (annotations !== saved && !(annotations.length === 0 && (saved?.length ?? 0) === 0)) {
     return true
   }
-  if (formValues !== savedFormValues && !(formValues.length === 0 && (savedFormValues?.length ?? 0) === 0)) {
+  const savedForms = baseline.formValues
+  if (formValues !== savedForms && !(formValues.length === 0 && (savedForms?.length ?? 0) === 0)) {
     return true
   }
   return false

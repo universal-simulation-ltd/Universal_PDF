@@ -1,15 +1,11 @@
 import { useRef, useState } from 'react'
 import { DropAnywhere, DropRing, PrivacyNote, useFileDrop } from '@unisim/sdk'
+import { openFiles as openFilesInTabs } from '../../stores/tabStore'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { createExamplePdfFile } from '../../lib/examplePdf'
 import { compressPdf, type CompressQuality, type CompressResult } from '../../lib/export'
-import {
-  isPdfFile,
-  OfficeImportError,
-  PDF_OR_OFFICE_ACCEPT,
-  toViewablePdf
-} from '../../lib/officeToPdf'
+import { isPdfFile, PDF_OR_OFFICE_ACCEPT } from '../../lib/officeToPdf'
 import CompressResultModal from '../Compress/CompressResultModal'
 import BatchCompressModal, { type BatchSource } from '../Compress/BatchCompressModal'
 import MergeDialog from '../Convert/MergeDialog'
@@ -131,7 +127,8 @@ export default function LandingPage() {
     // tool if it did), and a `Promise<boolean>` isn't a `Promise<void>`.
     onFiles: (files) => { void openFiles(files) },
     accept: PDF_OR_OFFICE_ACCEPT,
-    multiple: false,
+    // Several at once open as tabs — the first on screen, the rest behind it.
+    multiple: true,
     pageWide: true,
     disabled: modalOpen,
     label: 'Drop a PDF, Word or OpenDocument file here, or click to browse',
@@ -206,18 +203,14 @@ export default function LandingPage() {
   // point of not simply rejecting everything that isn't a PDF here.
   // Returns whether a document ended up open, so a caller that wants to hand
   // the user straight to a tool doesn't arm it over a failed load.
+  //
+  // Several files at once open as tabs: the first on screen, the rest behind
+  // it (see stores/tabStore.ts, which also reports any that fail).
   async function openFiles(files: File[]): Promise<boolean> {
-    const file = files[0]
-    if (!file) return false
-    setConverting(!isPdfFile(file))
+    if (files.length === 0) return false
+    setConverting(files.some((f) => !isPdfFile(f)))
     try {
-      const { file: pdf, notice } = await toViewablePdf(file)
-      await loadFile(pdf, { notice })
-      return true
-    } catch (err) {
-      console.error(err)
-      alert(err instanceof OfficeImportError ? err.message : 'Failed to load PDF')
-      return false
+      return await openFilesInTabs(files)
     } finally {
       setConverting(false)
     }

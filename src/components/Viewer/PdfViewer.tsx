@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePdfStore } from '../../stores/pdfStore'
+import { registerViewProvider, takeRestoredView } from '../../lib/viewMemory'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { useSearchStore } from '../../stores/searchStore'
 import FileNameEditor from '../Header/FileNameEditor'
@@ -62,6 +63,9 @@ export default function PdfViewer() {
   // up. See `firstPaint` in the store.
   const [fittedDoc, setFittedDoc] = useState<typeof doc>(null)
   const fitted = !!doc && fittedDoc === doc
+  // Set when a tab comes back to the front: where its scroll box was, put back
+  // once its pages are laid out tall enough to hold it. See lib/viewMemory.ts.
+  const scrollToRestore = useRef<{ doc: typeof doc; top: number; left: number } | null>(null)
   const [zoomMenuOpen, setZoomMenuOpen] = useState(false)
   const zoomMenuRef = useRef<HTMLDivElement>(null)
 
@@ -779,6 +783,15 @@ export default function PdfViewer() {
   // one.
   useEffect(() => {
     if (!doc) return
+    // A tab coming back to the front opens where it was left, not re-fitted to
+    // page 1. See lib/viewMemory.ts.
+    const remembered = takeRestoredView(doc)
+    if (remembered) {
+      setZoom(remembered.zoom)
+      scrollToRestore.current = { doc, top: remembered.top, left: remembered.left }
+      setFittedDoc(doc)
+      return
+    }
     const el = scrollRef.current
     if (!el) { setFittedDoc(doc); return }
     let cancelled = false
@@ -800,6 +813,44 @@ export default function PdfViewer() {
     }).catch(() => { if (!cancelled) setFittedDoc(doc) })
     return () => { cancelled = true; clearTimeout(fallback) }
   }, [doc])
+
+  // Tell the tab store where the reader is, for when this document goes to a
+  // background tab. Read on demand, so it costs nothing while nobody asks.
+  useEffect(
+    () =>
+      registerViewProvider(() => {
+        const el = scrollRef.current
+        return el ? { zoom: zoomRef.current, top: el.scrollTop, left: el.scrollLeft } : null
+      }),
+    []
+  )
+
+  // Put a returning tab's scroll back. Its pages take their heights as pdf.js
+  // hands them over, so the box may not be tall enough on the first frame —
+  // try each frame until it is, and give up after about a second rather than
+  // yank the reader somewhere later.
+  useEffect(() => {
+    const target = scrollToRestore.current
+    const el = scrollRef.current
+    if (!fitted || !target || target.doc !== doc || !el) return
+    scrollToRestore.current = null
+    let frame = 0
+    let tries = 0
+    const apply = () => {
+      frame = 0
+      const fits = el.scrollHeight - el.clientHeight >= target.top - 1
+      if (fits || ++tries > 60) {
+        el.scrollTop = target.top
+        el.scrollLeft = target.left
+        return
+      }
+      frame = requestAnimationFrame(apply)
+    }
+    apply()
+    return () => {
+      if (frame) cancelAnimationFrame(frame)
+    }
+  }, [fitted, doc])
 
   // Publish the rendered document width and the document scroll-container's
   // scrollbar width as CSS custom properties so the top toolbar and the

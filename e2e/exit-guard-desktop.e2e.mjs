@@ -95,7 +95,11 @@ const ELECTRON_BIN = join(
 async function launch(extra) {
   const app = await playwright._electron.launch({
     executablePath: ELECTRON_BIN,
-    args: [ROOT],
+    // ⚠️ A profile of its own, or the test cannot run while the INSTALLED
+    // Universal PDF is open: both would use the same user-data folder, the
+    // installed copy holds the single-instance lock, and this launch would
+    // forward its argv to it and quit.
+    args: [ROOT, `--user-data-dir=${mkdtempSync(join(tmpdir(), 'unipdf-exit-profile-'))}`],
     cwd: ROOT,
     env: launchEnv(extra)
   })
@@ -158,6 +162,26 @@ function windowStillThere(app) {
   )
 }
 
+// Resolves true once the window has gone — by the app quitting, or by the
+// window itself disappearing. Start it BEFORE the action that closes it.
+//
+// ⚠️ Both, because the two platforms differ: closing the last window quits
+// the app on Windows and Linux, but macOS keeps the app running with no window
+// (`window-all-closed`). Waiting for the process alone timed out on every Mac
+// run, so these checks could only ever pass on Windows.
+function windowGoes(app, timeout) {
+  const quit = new Promise((resolve) => app.on('close', () => resolve(true)))
+  const gone = (async () => {
+    const deadline = Date.now() + timeout
+    while (Date.now() < deadline) {
+      if ((await windowStillThere(app).catch(() => 0)) === 0) return true
+      await new Promise((r) => setTimeout(r, 200))
+    }
+    return false
+  })()
+  return Promise.race([quit, gone])
+}
+
 const dialogTitle = 'Save your changes?'
 
 // ── 1. an untouched document does not hold the window ──────────────────────
@@ -165,11 +189,10 @@ console.log('\nUntouched document')
 {
   const { app, win } = await launch()
   await openExample(win)
-  const closed = new Promise((resolve) => app.on('close', () => resolve(true)))
+  const going = windowGoes(app, 5000)
   await clickWindowClose(app)
-  const wentAway = await Promise.race([closed, new Promise((r) => setTimeout(() => r(false), 5000))])
-  check('the window closes straight away', wentAway === true)
-  if (wentAway !== true) await app.close().catch(() => {})
+  check('the window closes straight away', (await going) === true)
+  await app.close().catch(() => {})
 }
 
 // ── 2. an amended document holds it, and asks ──────────────────────────────
@@ -183,7 +206,7 @@ console.log('\nAmended document')
   check('the window is still open', (await windowStillThere(app)) === 1)
   const popup = win.getByRole('dialog', { name: dialogTitle })
   check('the popup asks', await popup.isVisible().catch(() => false))
-  check('it says the window is what is closing', (await popup.innerText()).includes('shuts Universal PDF down'))
+  check('it says the window is what is closing', (await popup.innerText()).includes('closes everything open in it'))
 
   // Cancel means stay — including on the second attempt, which must ask again
   // rather than let the window through on a stale answer.
@@ -195,11 +218,10 @@ console.log('\nAmended document')
   check('asks again on the next attempt', await popup.isVisible().catch(() => false))
 
   // Exit without saving lets it through.
-  const closed = new Promise((resolve) => app.on('close', () => resolve(true)))
+  const going = windowGoes(app, 8000)
   await win.getByRole('button', { name: 'Exit without saving' }).click()
-  const wentAway = await Promise.race([closed, new Promise((r) => setTimeout(() => r(false), 8000))])
-  check('exit without saving closes the window', wentAway === true)
-  if (wentAway !== true) await app.close().catch(() => {})
+  check('exit without saving closes the window', (await going) === true)
+  await app.close().catch(() => {})
 }
 
 // ── 3. Save and exit writes a real file where the Save dialog said ─────────
@@ -226,11 +248,10 @@ const outPath = join(outDir, 'saved-on-exit.pdf')
   await app.evaluate(async ({ dialog }, filePath) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath })
   }, outPath)
-  const closed = new Promise((resolve) => app.on('close', () => resolve(true)))
+  const going = windowGoes(app, 20000)
   await win.getByRole('button', { name: /Save and exit/ }).click()
-  const wentAway = await Promise.race([closed, new Promise((r) => setTimeout(() => r(false), 20000))])
-  check('the window closes after saving', wentAway === true)
-  if (wentAway !== true) await app.close().catch(() => {})
+  check('the window closes after saving', (await going) === true)
+  await app.close().catch(() => {})
 }
 
 check('the file is on disk', existsSync(outPath))

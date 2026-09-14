@@ -69,10 +69,11 @@ import { usePdfStore } from './stores/pdfStore'
 import { useSignatureStore } from './stores/signatureStore'
 import { useAnnotationStore } from './stores/annotationStore'
 import { useFormStore } from './stores/formStore'
-import { useExitGuard } from './stores/exitGuard'
-import { hasUnsavedChanges, onSavedStateChanged } from './lib/unsavedChanges'
+import { useTabStore, anyDocumentAmended, exitEveryDocument, openFiles, openHandedOver } from './stores/tabStore'
+import { onSavedStateChanged } from './lib/unsavedChanges'
 import { CONTAINER } from './lib/layout'
-import { OfficeImportError, isConvertibleName, toViewablePdf } from './lib/officeToPdf'
+import { isConvertibleName } from './lib/officeToPdf'
+import DocumentTabs from './components/Tabs/DocumentTabs'
 import { isNativeShell, setStatusBarOverDarkChrome, subscribeNativeOpenPdf } from './lib/nativeOpen'
 import { installExternalLinkHandler } from './lib/externalLinks'
 
@@ -98,24 +99,14 @@ const DOC_RIGHT_STRIP = `max(0px, calc((100vw - var(--doc-scrollbar-width, 0px) 
 
 // A document the OS handed over — the desktop's double-click / "Open with", an
 // installed PWA's launchQueue, the iOS/Android share sheet — goes through the
-// same front door as a drop on the landing page. A PDF passes straight through;
-// a Word or OpenDocument file is converted on this device first and opens with
-// its notice; a .doc/.rtf/.pages gets the "save it as .docx" advice.
+// same front door as a drop on the landing page (`openHandedOver` / `openFiles`
+// in stores/tabStore.ts). A PDF passes straight through; a Word or OpenDocument
+// file is converted on this device first and opens with its notice; a
+// .doc/.rtf/.pages gets the "save it as .docx" advice.
 //
 // ⚠️ These paths used to call `loadFile` directly, so a .docx opened from
 // Finder or Explorer went to pdf.js as though it were a PDF and came back as
 // "Failed to load PDF" — while the same file dropped on the window converted.
-function openHandedOver(
-  file: File,
-  loadFile: (file: File, options?: { notice?: string }) => Promise<void>
-): Promise<void> {
-  return toViewablePdf(file)
-    .then(({ file: pdf, notice }) => loadFile(pdf, { notice }))
-    .catch((err) => {
-      console.error(err)
-      alert(err instanceof OfficeImportError ? err.message : 'Failed to load PDF')
-    })
-}
 
 export default function App() {
   const loadFile = usePdfStore((s) => s.loadFile)
@@ -144,7 +135,9 @@ export default function App() {
   const importNotice = usePdfStore((s) => s.importNotice)
   const dismissImportNotice = usePdfStore((s) => s.dismissImportNotice)
 
-  const requestExit = useExitGuard((s) => s.requestExit)
+  // Two or more documents in this window. A lone document has no tab strip —
+  // see stores/tabStore.ts.
+  const hasTabs = useTabStore((s) => s.tabs.length > 1)
 
   // The currently-open document as a File, for the Advanced-menu dialogs that
   // start from it (Merge with another PDF, Convert into images). A fresh copy of
@@ -173,7 +166,9 @@ export default function App() {
   // While the launch file is in flight the app is heading for the document
   // view, so it wears that view's chrome. Half the flash was the landing page's
   // navbar and footer, not just its body.
-  const showLanding = !doc && !launching
+  // With tabs, a tab asking for its password has no document yet either —
+  // and it is still a tab, not the front door.
+  const showLanding = !doc && !launching && !hasTabs
 
   useToolbarKeyboardShortcuts(!!doc)
 
@@ -200,8 +195,12 @@ export default function App() {
       // `toViewablePdf` judges it by that name and converts it. Anything else
       // keeps the PDF type it has always been given, so a PDF saved without
       // `.pdf` on its name still opens.
+      //
+      // Several opened together arrive one message each; the first goes on
+      // screen and the rest join it as tabs. The main process decides which
+      // window each file goes to — see electron/main.cjs.
       const type = isConvertibleName(name) ? '' : 'application/pdf'
-      openHandedOver(new File([bytes], name, { type }), loadFile)
+      openHandedOver(new File([bytes], name, { type }))
         // Cleared only once the load (and any conversion) has settled, so the
         // launch placeholder covers a LibreOffice run too. Dropping it the moment the
         // bytes arrive would hand one frame back to the landing page before
@@ -241,14 +240,15 @@ export default function App() {
       return
     }
     queue.setConsumer((params) => {
-      const handle = params.files?.[0]
-      if (!handle) {
+      // Several PDFs opened together ("Open with" on a multi-selection) arrive
+      // in ONE launch — the first on screen, the rest as tabs behind it.
+      const handles = params.files ?? []
+      if (handles.length === 0) {
         setLaunching(false)
         return
       }
-      handle
-        .getFile()
-        .then((file) => openHandedOver(file, loadFile))
+      Promise.all(handles.map((h) => h.getFile()))
+        .then((files) => openFiles(files))
         .catch((err) => {
           console.error(err)
           alert('Failed to load PDF')
@@ -271,7 +271,11 @@ export default function App() {
     let cancelled = false
     void subscribeNativeOpenPdf(
       (file) => {
-        openHandedOver(file, loadFile).finally(() => setLaunching(false))
+        // `openFiles`, not `openHandedOver`: a phone has no second window to
+        // send an independent document to, so one shared while another is
+        // open comes to the front in a tab of its own — the one behind it
+        // is kept, where it used to be replaced without a word.
+        openFiles([file]).finally(() => setLaunching(false))
       },
       () => setLaunching(false)
     ).then((off) => {
@@ -313,19 +317,37 @@ export default function App() {
   useEffect(() => {
     const bridge = window.desktop?.unsaved
     if (!bridge) return
-    const push = () => bridge.set(!!usePdfStore.getState().doc && hasUnsavedChanges())
+    // Every tab, not just the one on screen: the × takes all of them with it.
+    const push = () => bridge.set(anyDocumentAmended())
     push()
     const offs = [
       useAnnotationStore.subscribe(push),
       useFormStore.subscribe(push),
       usePdfStore.subscribe(push),
+      useTabStore.subscribe(push),
       onSavedStateChanged(push),
-      // The window is closing for real — main asks, the popup answers, and
-      // `allowClose` is what lets the close through the second time.
-      bridge.onCloseRequest(() => requestExit('quit', () => bridge.allowClose()))
+      // The window is closing for real — main asks, the popup answers (once
+      // for each amended tab, brought forward in turn), and `allowClose` is
+      // what lets the close through the second time.
+      bridge.onCloseRequest(() => exitEveryDocument('quit', () => bridge.allowClose()))
     ]
     return () => offs.forEach((off) => off())
-  }, [requestExit])
+  }, [])
+
+  // Desktop: whether this window is showing anything. A PDF opened from the OS
+  // later goes to a window sitting on the start screen if there is one, and to
+  // a new window otherwise — and only this side knows which this one is.
+  useEffect(() => {
+    const report = window.desktop?.setDocumentOpen
+    if (!report) return
+    const push = () => {
+      const s = usePdfStore.getState()
+      report(!!s.doc || !!s.lockedFile || s.loading || launching || useTabStore.getState().tabs.length > 0)
+    }
+    push()
+    const offs = [usePdfStore.subscribe(push), useTabStore.subscribe(push)]
+    return () => offs.forEach((off) => off())
+  }, [launching])
 
   // Web: a browser tab can only be stopped by `beforeunload`, and only with the
   // browser's own wording — no three-button popup exists for it.
@@ -352,7 +374,7 @@ export default function App() {
   useEffect(() => {
     if (window.desktop || isNativeShell()) return
     function onBeforeUnload(e: BeforeUnloadEvent) {
-      if (!usePdfStore.getState().doc || !hasUnsavedChanges()) return
+      if (!anyDocumentAmended()) return
       e.preventDefault()
       // Chromium still wants the legacy assignment to raise the prompt.
       e.returnValue = ''
@@ -378,25 +400,18 @@ export default function App() {
   // page belongs to the dialog rather than the viewer behind it.
   const dialogOwnsDrop = mergeOpen || convertOpen
   const pageDrop = useFileDrop({
-    onFiles: async (files) => {
-      const file = files[0]
-      if (!file) return
-      // A page-wide target takes whatever lands on it; `accept` only ever
-      // filtered the picker, and there is no picker here — so `toViewablePdf`
-      // does the checking, converting a Word or OpenDocument file on the way
-      // through and refusing anything else with a message worth reading.
-      // Dropping onto an open document replaces it, so it is an exit like any
-      // other — the guard runs the load once the user has answered.
-      requestExit('open-another', async () => {
-      try {
-        const { file: pdf, notice } = await toViewablePdf(file)
-        await loadFile(pdf, { notice })
-      } catch (err) {
-        console.error(err)
-        alert(err instanceof OfficeImportError ? err.message : 'Failed to load PDF')
-      }
-      })
+    // A page-wide target takes whatever lands on it; `accept` only ever
+    // filtered the picker, and there is no picker here — so `openFiles` does
+    // the checking, converting a Word or OpenDocument file on the way through
+    // and refusing anything else with a message worth reading.
+    //
+    // Every file dropped onto an open document gets a tab of its own beside
+    // it. This used to REPLACE the document, behind the exit guard; nothing is
+    // thrown away now, so there is nothing to ask.
+    onFiles: (files) => {
+      void openFiles(files)
     },
+    multiple: true,
     clickToBrowse: false,
     pageWide: true,
     disabled: !doc || dialogOwnsDrop,
@@ -486,11 +501,14 @@ export default function App() {
           starts at the top of the window and the orange pulse is the only thing
           in it. The landing page keeps the light treatment, because what is
           under the bar there is a light page. */}
-      {(doc || launching) && (
+      {(doc || launching || hasTabs) && (
         <div className="bg-slate-900">
           <UniversalBar />
         </div>
       )}
+      {/* Several documents in this window: one tab each, above the tools that
+          act on whichever is in front. See stores/tabStore.ts. */}
+      {hasTabs && <DocumentTabs />}
       {doc && (
         <div className="bg-slate-900 text-white relative z-[45] overflow-x-auto" style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}>
           {/* No home button on this bar. Leaving an open document is
@@ -662,7 +680,7 @@ export default function App() {
             <PdfViewer />
             <PlacementHint />
           </>
-        ) : loading || launching ? null : (
+        ) : loading || launching || hasTabs ? null : (
           <LandingPage />
         )}
         {/* ⚠️ AN OVERLAY OVER THE MOUNTED VIEWER, NOT A BRANCH INSTEAD OF IT —
@@ -741,7 +759,7 @@ export default function App() {
       <DropAnywhere
         show={showDropHint}
         title="Drop to open"
-        hint="PDF files only — it replaces the document you have open"
+        hint="Each one opens in a tab of its own, beside the one you have open"
         icon={<span aria-hidden="true">📄</span>}
       />
 

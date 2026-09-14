@@ -11,6 +11,7 @@ A clean Progressive Web App for viewing, annotating, and signing PDFs — works 
 ## Features
 
 - **View** multi-page PDFs with zoom (50%–300%), pinch-to-zoom on touch, and a thumbnail navigator
+- **Several PDFs at once, as tabs** — drop or pick several files together (or select several in Finder / Explorer and *Open with → Universal PDF*) and each opens in a tab of its own, the first one in front. Switch with a click or Ctrl+PageDown / Ctrl+PageUp (Ctrl+Tab in the desktop app); each tab keeps its own annotations, undo and place in the document. A dot marks a tab with changes not yet saved to a file, and closing it asks first. Dropping a file on a document you already have open adds a tab rather than replacing it. In the desktop app, a PDF opened later on its own gets a window of its own
 - **Open Word and OpenDocument files** — drop a `.docx` or `.odt` on the circle and it is converted to a PDF *on your device* (nothing is uploaded), then opens ready to annotate and sign. Headings, bold/italic, bulleted and numbered lists, tables and links all come across as real, selectable text. The page layout is re-typeset rather than copied, so fonts, columns, headers/footers and floating shapes will differ — the app says so when it opens one. Word 97–2003 `.doc` is not supported; save it as `.docx` first
 - **Select text** — the *Select text* tool (in the Select ▾ menu) lets you drag over the PDF's own text and copy it (Ctrl/⌘C). Or just **double-click a word** with the *Select* tool and it switches over and highlights that word for you, ready to copy — no dragging, and double-clicking blank page or one of your own annotations leaves the tool alone
 - **Follow links** — a PDF's own hyperlinks are clickable. Web links open in a new tab (so the document you're working on stays put), and a link to another part of the same document jumps to that page. Links go inert while a drawing tool is in hand, so a highlight dragged across one still draws
@@ -116,10 +117,16 @@ npm run dist:linux         # Linux AppImage + .deb      -> release/
 The installer registers Universal PDF as a `.pdf` file handler, so it appears
 in Windows' right-click *Open with* menu (and can be made the default PDF
 app). Files opened that way — or double-clicked while it's the default — load
-straight into the editor, skipping the landing page; opening another PDF while
-the app is running reuses the existing window, and **opens one if there isn't
-one**, which on macOS is what closing the last window leaves you with (the app
-keeps running). See `openFromOs` in [`electron/main.cjs`](electron/main.cjs).
+straight into the editor, skipping the landing page. **Several opened together**
+(a multi-selection, *Open with*) share one window as tabs; **one opened on its
+own** while another document is open gets a window of its own, unless a window
+is sitting on the start screen, which takes it. Neither OS says which files were
+opened together — macOS sends one `open-file` per file and Windows starts one
+process per file — so the main process groups files that arrive within 1.5 s of
+each other. A window is **opened if there isn't one**, which on macOS is what
+closing the last window leaves you with (the app keeps running). See
+`openFromOs` in [`electron/main.cjs`](electron/main.cjs); the tabs themselves
+are `src/stores/tabStore.ts`.
 
 A Word (`.docx`) or OpenDocument (`.odt`) file handed over the same way —
 *Open with → Choose another app → Universal PDF* on Windows, *Open With →

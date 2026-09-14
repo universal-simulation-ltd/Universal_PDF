@@ -7,7 +7,8 @@ import { useSearchStore } from '../../stores/searchStore'
 import { useUndo } from '../../hooks/useUndo'
 import { useUserPrefs } from '@unisim/sdk'
 import { LANGS, persistLang, readSavedLang, type LangCode } from '../../lib/lang'
-import { OfficeImportError, PDF_OR_OFFICE_ACCEPT, toViewablePdf } from '../../lib/officeToPdf'
+import { PDF_OR_OFFICE_ACCEPT } from '../../lib/officeToPdf'
+import { openFiles } from '../../stores/tabStore'
 import { RedactIcon } from '../icons/RedactIcon'
 import { AboutAppDialog, useCloseAppMenu } from '@unisim/sdk'
 // Generated — `node ../unisim-workspace/Universal_Apps/scripts/gen-credits.mjs .`
@@ -155,7 +156,6 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const doc = usePdfStore((s) => s.doc)
   const fileName = usePdfStore((s) => s.fileName)
   const numPages = usePdfStore((s) => s.numPages)
-  const loadFile = usePdfStore((s) => s.loadFile)
   const renameFile = usePdfStore((s) => s.renameFile)
   const reset = usePdfStore((s) => s.reset)
   const requestExit = useExitGuard((s) => s.requestExit)
@@ -240,27 +240,17 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
     closeMenu()
   }
 
-  async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0]
-    // Reset the input before anything can await: the guard may hold the load
-    // behind a popup, and the same file picked twice in a row fires no `change`
-    // at all unless the value was cleared.
+  // Open… with a document already open. Every file picked gets a tab of its
+  // own beside it — it used to REPLACE the document, behind the exit guard;
+  // nothing is thrown away now, so there is nothing to ask (stores/tabStore.ts).
+  // Same front door as the landing page: a Word or OpenDocument file is
+  // converted on-device first, and its notice rides along with the load.
+  function onPick(e: React.ChangeEvent<HTMLInputElement>) {
+    // Materialised before the value is cleared — `files` is a LIVE list and
+    // empties with it. Cleared so the same file picked twice still fires.
+    const files = Array.from(e.target.files ?? [])
     e.target.value = ''
-    if (!f) return
-    // ⚠️ Guarded at the LOAD, not at the picker. Asking before the file dialog
-    // opens would make "Cancel" mean two different things a click apart, and
-    // would ask the question of someone who then picks nothing.
-    requestExit('open-another', async () => {
-      try {
-        // Same front door as the landing page: a Word or OpenDocument file is
-        // converted on-device first, and its notice rides along with the load.
-        const { file, notice } = await toViewablePdf(f)
-        await loadFile(file, { notice })
-      } catch (err) {
-        console.error(err)
-        alert(err instanceof OfficeImportError ? err.message : 'Failed to load PDF')
-      }
-    })
+    if (files.length > 0) void openFiles(files)
   }
 
   // Header variant lives inside <UniversalAppsNavBar />'s white chrome —
@@ -478,6 +468,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
       ref={fileInputRef}
       type="file"
       accept={PDF_OR_OFFICE_ACCEPT}
+      multiple
       hidden
       onChange={onPick}
     />

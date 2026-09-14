@@ -125,7 +125,9 @@ function install(session) {
     const asked = dialog
       .showSaveDialog(parent, {
         title: 'Save file',
-        defaultPath: suggestPath(suggested),
+        // The window matters: each window's documents came from their own
+        // folder, and an export belongs beside the one it was made from.
+        defaultPath: suggestPath(suggested, parent),
         filters: filtersFor(suggested),
       })
       .catch((err) => {

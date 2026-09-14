@@ -9,6 +9,8 @@ import { hasUnsavedChanges } from '../lib/unsavedChanges'
 export type ExitIntent =
   /** Actions → File → Close PDF. */
   | 'close'
+  /** The × on one of several tabs — the other documents stay open. */
+  | 'close-tab'
   /** Opening (or dropping) a different PDF over the top of this one. */
   | 'open-another'
   /**

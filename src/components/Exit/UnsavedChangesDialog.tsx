@@ -17,6 +17,7 @@ import { RedactIcon } from '../icons/RedactIcon'
 // so it names the consequence rather than the button that got here.
 const WHAT_HAPPENS: Record<ExitIntent, string> = {
   close: 'Closing it returns you to the start screen.',
+  'close-tab': 'Closing its tab leaves your other PDFs open.',
   'open-another': 'Opening another PDF replaces what is on screen.',
   // ⚠️ These two say what the operation DOES to the amendments, not just that
   // the document is replaced. Merge and convert build the new file from the
@@ -24,7 +25,9 @@ const WHAT_HAPPENS: Record<ExitIntent, string> = {
   // was previously discoverable only by losing an afternoon's markup to it.
   merge: 'The merged PDF is built from the files themselves, so your annotations stay with this document rather than moving onto the result.',
   convert: 'The converted PDF is built fresh, so your annotations stay with this document rather than moving onto the result.',
-  quit: 'Closing the window shuts Universal PDF down.'
+  // Not "shuts Universal PDF down": with a window per document, closing one
+  // leaves the others running.
+  quit: 'Closing the window closes everything open in it.'
 }
 
 export default function UnsavedChangesDialog() {

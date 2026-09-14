@@ -46,6 +46,13 @@ declare global {
        */
       rememberOpenedFile(file: File | null): void
       /**
+       * Tell the main process whether this window is showing a document. A
+       * PDF opened from the OS goes to a window on the start screen when there
+       * is one, and to a new window otherwise. Optional so a renderer loaded
+       * into an older shell still runs.
+       */
+      setDocumentOpen?(open: boolean): void
+      /**
        * The unsaved-changes guard. The main process holds the window's × when
        * `set(true)` was the last thing it heard, asks the renderer over
        * `onCloseRequest`, and closes for real when `allowClose()` answers.
