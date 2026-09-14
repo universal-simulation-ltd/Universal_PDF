@@ -10,6 +10,8 @@ import {
   updateSignRequestRecipient,
   deleteSignRequest,
   SignInDialog,
+  Chip,
+  ValueChip,
   type SignRequest,
 } from '@unisim/sdk'
 import { usePdfStore } from '../stores/pdfStore'
@@ -28,11 +30,13 @@ import {
 } from '../lib/signRequestClient'
 
 // Human labels for a request's signing state (either-order two-party flow).
-const STATUS_UI: Record<string, { label: string; cls: string }> = {
-  pending: { label: 'Awaiting signatures', cls: 'bg-slate-200 text-slate-600' },
-  partially_signed: { label: 'Partly signed', cls: 'bg-amber-100 text-amber-700' },
-  signed: { label: 'Completed', cls: 'bg-emerald-100 text-emerald-700' },
-  completed: { label: 'Completed', cls: 'bg-emerald-100 text-emerald-700' },
+// A toned state is a Value chip (the tone fills its key); the neutral one is
+// a plain Orbit chip.
+const STATUS_UI: Record<string, { label: string; tone?: 'good' | 'warn' }> = {
+  pending: { label: 'Awaiting signatures' },
+  partially_signed: { label: 'Partly signed', tone: 'warn' },
+  signed: { label: 'Completed', tone: 'good' },
+  completed: { label: 'Completed', tone: 'good' },
 }
 
 const HUB_LOGIN_URL = 'https://app.unisim.co.uk/login'
@@ -403,9 +407,9 @@ export default function SendToSignDialog() {
               <div className="rounded-xl border border-orange-200 bg-white p-4">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-semibold text-slate-900">1 · Save online &amp; create the link</span>
-                  <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-orange-700">
-                    {freeToken === 'available' ? 'Free token' : `${tokens} token${tokens === 1 ? '' : 's'}`}
-                  </span>
+                  {freeToken === 'available'
+                    ? <Chip size="sm">Free token</Chip>
+                    : <ValueChip size="sm" label={tokens}>token{tokens === 1 ? '' : 's'}</ValueChip>}
                 </div>
 
                 {!doc ? (
@@ -668,7 +672,9 @@ export default function SendToSignDialog() {
                               {r.recipient_email ? `to ${r.recipient_email} · ` : ''}{new Date(r.created_at).toLocaleDateString()}
                             </span>
                           </span>
-                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${ui.cls}`}>{ui.label}</span>
+                          {ui.tone
+                            ? <ValueChip size="sm" tone={ui.tone} className="shrink-0">{ui.label}</ValueChip>
+                            : <Chip size="sm" className="shrink-0">{ui.label}</Chip>}
                           {r.cert_id && (
                             <a
                               href={certLink(r.cert_id)}

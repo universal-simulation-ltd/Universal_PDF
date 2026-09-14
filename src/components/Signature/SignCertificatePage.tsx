@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useUniversal, verifyPdfSignCert, type SignCertificate } from '@unisim/sdk'
+import { useUniversal, verifyPdfSignCert, ValueChip, type SignCertificate } from '@unisim/sdk'
 import { certificateDownload } from '../../lib/signRequestClient'
 
 /**
@@ -95,9 +95,9 @@ export default function SignCertificatePage({ certId }: { certId: string }) {
               <h1 className="mt-1 truncate text-xl font-bold text-slate-900">{cert.doc_name ?? 'document.pdf'}</h1>
               <p className="mt-0.5 text-xs text-slate-400">Issued {fmt(cert.created_at)}</p>
             </div>
-            <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${completed ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+            <ValueChip tone={completed ? 'good' : 'warn'} className="shrink-0">
               {completed ? 'Fully signed' : 'In progress'}
-            </span>
+            </ValueChip>
           </div>
 
           {/* Parties */}

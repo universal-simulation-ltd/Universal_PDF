@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useUniversal, useUser, useCredits, useHostedUploads, useAppFreeToken, type HostedUpload } from '@unisim/sdk'
+import { Chip, useUniversal, useUser, useCredits, useHostedUploads, useAppFreeToken, type HostedUpload } from '@unisim/sdk'
 import { usePdfStore } from '../stores/pdfStore'
 // App Review 3.1.1: the phone app must not point people to buying tokens on
 // the web. The web and desktop builds keep the link and the wording.
@@ -167,7 +167,7 @@ export default function HostedStoreDialog() {
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-slate-900">Save to browser</span>
-              <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600">Local · temporary</span>
+              <Chip size="sm">Local · temporary</Chip>
             </div>
             <p className="mt-1 text-xs text-slate-500">
               This PDF is already kept on this device automatically, so a refresh reopens it. It stays in this browser and never leaves it.
@@ -178,7 +178,7 @@ export default function HostedStoreDialog() {
           <div className="rounded-xl border border-slate-200 bg-white p-4">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-slate-900">Save to desktop</span>
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600">Re-import later</span>
+              <Chip size="sm">Re-import later</Chip>
             </div>
             <p className="mt-1 text-xs text-slate-500">
               Download this PDF and your annotations as one backup file. Import it any time — on any device — to carry on editing exactly where you left off.
@@ -223,7 +223,7 @@ export default function HostedStoreDialog() {
           <div className="rounded-xl border border-orange-200 bg-white p-4">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-slate-900">Hosted by UNI SIM</span>
-              <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-orange-700">Universal subscription</span>
+              <Chip size="sm">Universal subscription</Chip>
             </div>
             <p className="mt-1 text-xs text-slate-500">
               Keep this PDF online against your Universal ID. One token per upload — delete it and your token comes straight back.
