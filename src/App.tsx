@@ -447,6 +447,11 @@ export default function App() {
             productLogo={<ProductLogo />}
             suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
             contentClassName={CONTAINER}
+            // PDF draws its own "Delete my account" row (Universal_PDF@6b411b3,
+            // for the store launch). SDK 0.141.7 added one to the account
+            // panel, on by default in a native shell — so without this the
+            // phone apps showed the row twice.
+            showDeleteAccount={false}
           />
           {/* The SDK's <UpdateNotice /> ("new version — reload") used to sit
               here. Off for now with the other top banners (James,
