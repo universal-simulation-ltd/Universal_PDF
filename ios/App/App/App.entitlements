@@ -10,5 +10,12 @@
 	<array>
 		<string>$(AppIdentifierPrefix)co.uk.unisim.suite</string>
 	</array>
+	<!-- Sign in with Apple's native sheet — @unisim/sdk nativeOAuth. The App ID
+	     needs the "Sign in with Apple" capability too, or a DEVICE build fails
+	     to provision (simulator builds do not check). -->
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
 </dict>
 </plist>
