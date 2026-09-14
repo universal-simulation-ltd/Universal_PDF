@@ -783,7 +783,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                   <InfoRow
                     icon="✏️"
                     label="Free draw"
-                    info="Drag a box over anything to redact it. Pick the fill from the toolbar colours."
+                    info="Drag a box over anything to redact it, or tap to drop one. Pick the fill from the toolbar colours."
                     onSelect={() => { setSelected(null); setColor('#000000'); setTool('redact'); closeMenu() }}
                     className="border-t border-slate-100"
                   />

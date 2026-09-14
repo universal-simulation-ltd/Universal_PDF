@@ -4,6 +4,7 @@ import type { FormFieldValue } from '../stores/formStore'
 import { hexToPdfRgb } from './colors'
 import { fontBase, type PdfBaseFont } from './fonts'
 import { LINE_HEIGHT, layoutText } from './textLayout'
+import { runUnderlined } from './textRuns'
 import { pdfjsLib, type PDFDocumentProxy } from './pdfjs'
 import { redactFillHex } from './redactGate'
 import { saveBlob } from '@unisim/media/save'
@@ -298,8 +299,9 @@ export async function buildAnnotatedPdfBytes(
                 })
                 // pdf-lib has no underline; a link also shows as an underline (its
                 // colour is deliberately left as the text colour). Draw the rule
-                // just below the baseline, rotated with the text.
-                if (run.underline || run.link) {
+                // just below the baseline, rotated with the text. The canvas and
+                // the editor draw a link the same way — see runUnderlined.
+                if (runUnderlined(run)) {
                   const uy = lineY + a.fontSize * 0.98
                   const [ux1, uy1] = rotatePoint(rx, uy, a.x, a.y, rad)
                   const [ux2, uy2] = rotatePoint(rx + runW, uy, a.x, a.y, rad)

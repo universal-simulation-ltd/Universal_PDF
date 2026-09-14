@@ -17,14 +17,21 @@
 //   • "The preset stamps lose a lot of quality on stretch" — the stamp raster
 //     is supersampled, so its pixel size is a multiple of its logical 240x96.
 //
-// ⚠️ Redact is deliberately NOT covered: it keeps the old discard-a-tap guard,
-// because a black block appearing at a guessed size over text is not the
-// harmless default an outline is, and James named Line, Circle and Rectangle.
-// If that is ever changed, this file is where the case belongs.
+//   • Redact, 2026-09-14 (James: "Tap drops a box"). It was the one drag tool
+//     left throwing a tap away. A tap now drops a redaction a line of body text
+//     tall and a word or two wide (page points — see lib/tapPlacement.ts),
+//     selected, resizable afterwards, and baked into the export exactly like a
+//     drawn one: the page rasterised with a black block and its text gone. A
+//     swept redaction is still exactly what was swept.
+//
+// ⚠️ The Redact case arms the tool through `window.__stores` (a DEV-build
+// hook), as the Redact → Free draw menu row does: black, nothing selected.
 //
 // Negative control (2026-09-05, run): with the rect/ellipse hunk in
 // AnnotationLayer reverted to `if (w > 4 && h > 4)`, the six tap checks go red
-// and the drag + colour + stamp cases stay green.
+// and the drag + colour + stamp cases stay green. (2026-09-14, run): with the
+// redact hunk reverted the same way, the Redact tap checks go red and its swept
+// case stays green.
 
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -246,6 +253,149 @@ check(
   !!swept && Math.abs(swept.w - 300) < 3 && Math.abs(swept.h - 130) < 3,
   swept && `${swept.w} x ${swept.h}`,
 )
+
+// ── Redact ──────────────────────────────────────────────────────────────────
+console.log('\na single tap with Redact drops a redaction box')
+// A clean page, so the tap can only land on the redaction tool's own gesture —
+// the circle above sits over the word this taps.
+await page.evaluate(() => {
+  const s = window.__stores.ann.getState()
+  s.clearAll()
+  s.setSelected(null)
+  s.setColor('#000000')
+  s.setTool('redact')
+})
+await page.waitForTimeout(300)
+const zoom = await page.evaluate(
+  () => window.Konva.stages.find((s) => s.container().closest('[data-page-index="0"]')).scaleX(),
+)
+// "Invoice" is drawn at x 60, baseline 102 (page points from the top), 18pt —
+// so its middle is about (88, 96).
+const TAP_PT = { x: 88, y: 96 }
+await tapAt(TAP_PT.x * zoom, TAP_PT.y * zoom)
+const redacts = () =>
+  page.evaluate(() => {
+    const s = window.__stores.ann.getState()
+    return { list: s.annotations.filter((a) => a.type === 'redact'), selected: s.selectedIds }
+  })
+const afterTap = await redacts()
+const tapped = afterTap.list[0]
+check('a redaction landed on the page', afterTap.list.length === 1, JSON.stringify(afterTap.list))
+check(
+  'a line of body text tall and a word or two wide',
+  !!tapped && tapped.height >= 14 && tapped.height <= 20 && tapped.width >= 48 && tapped.width <= 120,
+  tapped && `${tapped.width} x ${tapped.height}pt`,
+)
+check(
+  'centred on the tap',
+  !!tapped && Math.abs(tapped.x + tapped.width / 2 - TAP_PT.x) < 1 && Math.abs(tapped.y + tapped.height / 2 - TAP_PT.y) < 1,
+  tapped && `centre ${(tapped.x + tapped.width / 2).toFixed(1)},${(tapped.y + tapped.height / 2).toFixed(1)}`,
+)
+check('filled black, the colour the tool was armed with', tapped?.fill === '#000000', tapped?.fill)
+check('and selected, so its handles are already on it', !!tapped && afterTap.selected.includes(tapped.id))
+// The same record a drawn redaction is — nothing marks it as "tapped", so
+// nothing downstream (export, backup, undo) can treat it differently.
+check(
+  'it is an ordinary redaction record',
+  !!tapped && JSON.stringify(Object.keys(tapped).sort()) === JSON.stringify(['fill', 'height', 'id', 'pageIndex', 'type', 'width', 'x', 'y']),
+  tapped && Object.keys(tapped).join(','),
+)
+
+console.log('\na swept redaction is still exactly what was swept')
+{
+  const sx = Math.round(pageBox.x + 300 * zoom)
+  const sy = Math.round(pageBox.y + 300 * zoom)
+  await page.mouse.move(sx, sy)
+  await page.mouse.down()
+  await page.mouse.move(sx + 60 * zoom, sy + 20 * zoom, { steps: 5 })
+  await page.mouse.move(sx + 150 * zoom, sy + 40 * zoom, { steps: 8 })
+  await page.mouse.up()
+  await page.waitForTimeout(450)
+}
+const swRedact = (await redacts()).list.find((a) => Math.abs(a.x - 300) < 2)
+check(
+  'the swept redaction is the size dragged, not the tap default',
+  !!swRedact && Math.abs(swRedact.width - 150) < 2 && Math.abs(swRedact.height - 40) < 2,
+  swRedact && `${swRedact.width.toFixed(1)} x ${swRedact.height.toFixed(1)}pt`,
+)
+
+console.log('\nand the tapped box burns in on export like a drawn one')
+const burnt = await page.evaluate(async () => {
+  const { buildAnnotatedPdfBytes } = await import('/src/lib/export.ts')
+  const pdfjsLib = await import('/node_modules/pdfjs-dist/build/pdf.mjs')
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/node_modules/pdfjs-dist/build/pdf.worker.mjs'
+  const st = window.__stores
+  const anns = st.ann.getState().annotations
+  const bytes = await buildAnnotatedPdfBytes(st.pdf.getState().sourceBytes.slice(0), anns, 1)
+  const doc = await pdfjsLib.getDocument({ data: bytes }).promise
+  const p = await doc.getPage(1)
+  const text = (await p.getTextContent()).items.map((i) => i.str).join(' ')
+  const S = 2
+  const vp = p.getViewport({ scale: S })
+  const c = document.createElement('canvas')
+  c.width = Math.round(vp.width)
+  c.height = Math.round(vp.height)
+  const ctx = c.getContext('2d')
+  await p.render({ canvasContext: ctx, viewport: vp }).promise
+  const px = (x, y) => Array.from(ctx.getImageData(Math.round(x * S), Math.round(y * S), 1, 1).data.slice(0, 3))
+  const [tap, swept] = anns.filter((a) => a.type === 'redact')
+  const inside = (b) => [
+    px(b.x + 2, b.y + 2), px(b.x + b.width - 2, b.y + 2), px(b.x + 2, b.y + b.height - 2),
+    px(b.x + b.width - 2, b.y + b.height - 2), px(b.x + b.width / 2, b.y + b.height / 2),
+  ]
+  return {
+    text,
+    tapInside: inside(tap),
+    tapAbove: px(tap.x + tap.width / 2, tap.y - 6),
+    sweptInside: inside(swept),
+  }
+})
+const black = (rgb) => rgb.every((v) => v <= 10)
+check('the exported page has no text left on it to lift', !/Invoice|4471/.test(burnt.text), JSON.stringify(burnt.text))
+check('the tapped box is solid black corner to corner in the file', burnt.tapInside.every(black), JSON.stringify(burnt.tapInside))
+check('and stops at its edge — the paper above it is still white', burnt.tapAbove.every((v) => v >= 235), JSON.stringify(burnt.tapAbove))
+check('exactly as the swept one is', burnt.sweptInside.every(black), JSON.stringify(burnt.sweptInside))
+
+console.log('\nthe tapped redaction can be picked up and resized afterwards')
+await page.evaluate(() => {
+  const s = window.__stores.ann.getState()
+  s.setSelected(null)
+  s.setTool('select')
+})
+await page.waitForTimeout(300)
+await page.mouse.click(
+  pageBox.x + (tapped.x + tapped.width / 2) * zoom,
+  pageBox.y + (tapped.y + tapped.height / 2) * zoom,
+)
+await page.waitForTimeout(400)
+check(
+  'a click with Select selects it',
+  (await redacts()).selected.includes(tapped.id),
+  JSON.stringify((await redacts()).selected),
+)
+const anchor = await page.evaluate(() => {
+  const stage = window.Konva.stages.find((s) => s.container().closest('[data-page-index="0"]'))
+  const a = stage.findOne('.bottom-right')
+  if (!a || !a.isVisible()) return null
+  const r = a.getClientRect()
+  const c = stage.container().getBoundingClientRect()
+  return { x: c.left + r.x + r.width / 2, y: c.top + r.y + r.height / 2 }
+})
+check('its resize handle is showing', !!anchor)
+if (anchor) {
+  await page.mouse.move(anchor.x, anchor.y)
+  await page.mouse.down()
+  await page.mouse.move(anchor.x + 30 * zoom, anchor.y + 10 * zoom, { steps: 6 })
+  await page.mouse.move(anchor.x + 60 * zoom, anchor.y + 20 * zoom, { steps: 6 })
+  await page.mouse.up()
+  await page.waitForTimeout(450)
+  const resized = (await redacts()).list.find((a) => a.id === tapped.id)
+  check(
+    'dragging the handle makes it bigger',
+    !!resized && resized.width > tapped.width + 40 && resized.height > tapped.height + 10,
+    resized && `${tapped.width} x ${tapped.height} → ${resized.width.toFixed(1)} x ${resized.height.toFixed(1)}pt`,
+  )
+}
 
 // ── The line pill's colours ─────────────────────────────────────────────────
 console.log('\nthe line pill can repaint the line it is attached to')

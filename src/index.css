@@ -337,3 +337,18 @@ body {
     font-size: 16px;
   }
 }
+
+/* ---------- A link in the text editor looks the way it will export ----------
+
+   Tailwind's preflight gives every `a` `text-decoration: inherit`, so a link
+   made with the text editor's 🔗 button showed as plain text while you typed
+   and only gained its underline when the edit committed. The export
+   (lib/export.ts) and the committed canvas both draw a link as an underline in
+   the text's own colour — no blue, no change of weight — so the editor does
+   exactly that too (James, 2026-09-14: "show styling as it will appear in
+   export"). The one rule all three follow is `runUnderlined` in
+   lib/textRuns.ts; e2e/link-style.e2e.mjs measures them against each other. */
+.upd-text-editor a {
+  color: inherit;
+  text-decoration: underline;
+}

@@ -34,7 +34,8 @@ import { inkColorFor, renderInkSignature } from '../../lib/renderInk'
 import { requestWordSelect } from '../../lib/wordSelect'
 import { isPaleFill, redactFillHex } from '../../lib/redactGate'
 import { FONT_CSS } from '../../lib/fonts'
-import { effectiveRuns, runFontStyle, runHasStyle, runsToPlainText, runsToHtml, parseRunsFromDom, mergeRuns } from '../../lib/textRuns'
+import { effectiveRuns, runFontStyle, runHasStyle, runUnderlined, runsToPlainText, runsToHtml, parseRunsFromDom, mergeRuns } from '../../lib/textRuns'
+import { centreOnTap, tapRedactBox } from '../../lib/tapPlacement'
 import { LINE_HEIGHT, layoutText, textBoxSize } from '../../lib/textLayout'
 import type { Annotation, DrawAnnotation, ImageAnnotation, ImageBorder, SignatureData, SignatureFieldAnnotation, SigAlign, TextAnnotation, Tool, TextRun } from '../../types/annotations'
 import type { QrPlacement } from '../../lib/qr/design'
@@ -190,10 +191,10 @@ const TAP_CIRCLE_SIZE_PX = 140
 // the gesture is not invisible while it waits.
 const MARQUEE_HOLD_MS = 350
 
-// ⚠️ Redact is deliberately NOT in this list. It carries the same "a tap gets
-// thrown away" guard, but a solid black block appearing at a guessed size over
-// text is not the harmless default a box outline is — James named Line, Circle
-// and Rectangle, and redaction was left to be asked about.
+// Redact answers a tap too, since 2026-09-14 (James: "Tap drops a box") — it
+// was the last drag tool still throwing a tap away. Its default is NOT here: a
+// redaction covers the document's text, so it is sized in page points rather
+// than display pixels. See TAP_REDACT_SIZE_PT in lib/tapPlacement.ts.
 
 // The caption every redaction box wears, and where it goes.
 //
@@ -1235,14 +1236,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // leave half the shape hanging off it. Same contract as tapLinePoints.
   function tapBox(x: number, y: number, w: number, h: number) {
     const fit = fitPlacement(w / scale, h / scale, pageW, pageH)
-    const clamp = (v: number, size: number, page: number) =>
-      Math.min(Math.max(v - size / 2, 0), Math.max(page - size, 0))
-    return {
-      x: clamp(x, fit.width, pageW),
-      y: clamp(y, fit.height, pageH),
-      width: fit.width,
-      height: fit.height
-    }
+    return centreOnTap(x, y, fit.width, fit.height, pageW, pageH)
   }
 
   // Commit a one-shot placement at a point the user actually tapped.
@@ -1559,20 +1553,31 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           color
         })
       } else if (tool === 'redact') {
+        // A tap drops a default-sized redaction centred on it (James,
+        // 2026-09-14: "Tap drops a box") — the answer Line, Box and Circle
+        // already give a tap. It used to fall to the `w > 4 && h > 4` guard
+        // below and vanish, so the tool looked dead. `add` selects it, so the
+        // Transformer is on it ready to be stretched over the rest of the text,
+        // and it is an ordinary redaction from then on: same type, same
+        // burn-in on export.
+        //
+        // Only a TAP changes. A sweep is kept exactly as drawn, and a sweep
+        // that travelled but collapsed to a sliver is still discarded.
         const [x1, y1, x2, y2] = currentLine
-        const x = Math.min(x1, x2)
-        const y = Math.min(y1, y2)
+        const tapped = Math.hypot(x2 - x1, y2 - y1) <= TAP_SLOP_PX / scale
         const w = Math.abs(x2 - x1)
         const h = Math.abs(y2 - y1)
-        if (w > 4 && h > 4) {
+        const box = tapped
+          ? tapRedactBox(x1, y1, pageW, pageH)
+          : w > 4 && h > 4
+            ? { x: Math.min(x1, x2), y: Math.min(y1, y2), width: w, height: h }
+            : null
+        if (box) {
           add({
             id: crypto.randomUUID(),
             pageIndex,
             type: 'redact',
-            x,
-            y,
-            width: w,
-            height: h,
+            ...box,
             fill: color
           })
         }
@@ -2308,7 +2313,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                             fontSize={a.fontSize}
                             fontFamily={cssFamily}
                             fontStyle={runFontStyle(run)}
-                            textDecoration={run.underline || run.link ? 'underline' : ''}
+                            // A link is drawn as the export draws it: an
+                            // underline in the text's own colour. Styling only
+                            // — it is not clickable on the canvas.
+                            textDecoration={runUnderlined(run) ? 'underline' : ''}
                           />
                         ))
                       )}
@@ -4113,6 +4121,9 @@ function TextEditor({
   return (
     <div
       ref={ref}
+      // Hooks the `.upd-text-editor a` rule in index.css, which gives a link
+      // the underline the export will draw — Tailwind's preflight strips it.
+      className="upd-text-editor"
       contentEditable
       suppressContentEditableWarning
       onBlur={() => {

@@ -132,6 +132,17 @@ function walk(node: Node, ctx: RunStyle, out: TextRun[]): void {
   }
 }
 
+// Whether a run is drawn with an underline. A link IS an underline, in the
+// text's own colour — no blue, no change of weight. That is how the export
+// draws it (lib/export.ts), and the committed canvas (AnnotationLayer's Konva
+// Text) and the open editor (the `.upd-text-editor a` rule in index.css) follow
+// the same rule, so a link looks on screen the way it will in the file (James,
+// 2026-09-14: "show styling as it will appear in export"). Only the exported
+// file makes it clickable — on the canvas it is styling alone.
+export function runUnderlined(r: TextRun): boolean {
+  return !!(r.underline || r.link)
+}
+
 // Konva `fontStyle` string for one run's bold/italic toggles.
 export function runFontStyle(r: TextRun): string {
   const parts: string[] = []
