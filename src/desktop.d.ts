@@ -6,8 +6,12 @@ declare global {
   interface Window {
     desktop?: {
       /**
-       * Subscribe to PDFs the user opened via the OS (double-click or
+       * Subscribe to documents the user opened via the OS (double-click or
        * "Open with → Universal PDF"). Returns an unsubscribe function.
+       *
+       * Despite the name, not always a PDF: a Word or OpenDocument file (or a
+       * .doc/.rtf/.pages, which gets advice) arrives as the bytes on disk,
+       * unconverted, and `name` is what says which it is.
        */
       onOpenPdf(
         cb: (payload: { name: string; bytes: Uint8Array<ArrayBuffer> }) => void

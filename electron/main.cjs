@@ -77,12 +77,24 @@ let unsavedChanges = false
 // now go through untouched. Cleared for each new window.
 let allowClose = false
 
+// What the page can do something with when the OS hands it a document: a PDF,
+// a Word or OpenDocument file it converts on the way in (exactly as if it had
+// been dropped on the window), and the older .doc / .rtf / .pages it answers
+// with "save it as .docx first" rather than nothing at all.
+//
+// ⚠️ Mirrors `isConvertibleName` in src/lib/officeToPdf.ts. This used to be
+// `.pdf` alone, so a .docx sent with "Open with → Universal PDF" on Windows was
+// thrown away right here and the app opened on its landing page as if it had
+// been given nothing — while the same file dropped on the window converted
+// fine. A format added there and not here brings exactly that back.
+const OPENABLE_DOCUMENT = /\.(pdf|docx|odt|doc|rtf|pages)$/i
+
 // Windows passes the document path as a plain argument after the executable
 // (plus the app-dir argument when running unpackaged via `electron .`).
 // Chromium switches all start with `-`, so skip those.
-function pdfPathFromArgv(argv) {
+function documentPathFromArgv(argv) {
   const args = argv.slice(app.isPackaged ? 1 : 2)
-  const candidate = args.find((a) => !a.startsWith('-') && /\.pdf$/i.test(a))
+  const candidate = args.find((a) => !a.startsWith('-') && OPENABLE_DOCUMENT.test(a))
   if (!candidate) return null
   try {
     return fs.existsSync(candidate) ? candidate : null
@@ -292,10 +304,10 @@ const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {
   app.quit()
 } else {
-  pendingPdfPath = pdfPathFromArgv(process.argv)
+  pendingPdfPath = documentPathFromArgv(process.argv)
 
   app.on('second-instance', (_event, argv) => {
-    openFromOs(pdfPathFromArgv(argv))
+    openFromOs(documentPathFromArgv(argv))
   })
 
   // macOS delivers OS-opened files as an event (possibly before `ready`).

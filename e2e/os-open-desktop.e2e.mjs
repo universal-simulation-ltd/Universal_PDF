@@ -17,8 +17,14 @@
 // (Launch Services cannot be driven from a test). The event is emitted onto
 // `app` directly, which is exactly where Electron delivers it, so what is under
 // test is our handler: does a document arriving with no window build one.
+//
+// The second half is a Word / OpenDocument file handed over the same way — by
+// Finder's `open-file`, and by Windows's second launch with the path on its
+// command line. Either has to open exactly as a drop on the window does:
+// converted on this device, not refused, and a legacy .doc answered with advice.
 
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
@@ -26,6 +32,13 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, '..')
 const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:5174/'
 const FIXTURE = join(HERE, 'fixtures', 'sample.pdf')
+const DOCX = join(HERE, 'fixtures', 'rich.docx')
+const ODT = join(HERE, 'fixtures', 'orientation.odt')
+
+// A Word 97–2003 file needs only its OLE2 signature to be recognised as one —
+// the page refuses it with advice before reading any further.
+const LEGACY_DOC = join(mkdtempSync(join(tmpdir(), 'unipdf-os-open-')), 'minutes.doc')
+writeFileSync(LEGACY_DOC, Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1, 0, 0, 0, 0]))
 
 const PLAYWRIGHT_CANDIDATES = [
   '../../Universal_Beam/node_modules/playwright/index.js',
@@ -95,9 +108,16 @@ async function appWindow(app, { timeout = 30000 } = {}) {
   return null
 }
 
+// ⚠️ A profile of its own, or the test cannot run while the INSTALLED Universal
+// PDF is open: both use `~/Library/Application Support/universal-pdf`, so the
+// installed copy holds the single-instance lock, this launch forwards its argv
+// to it and quits with exit 0, and Playwright reports only "Target page,
+// context or browser has been closed".
+const PROFILE = mkdtempSync(join(tmpdir(), 'unipdf-os-open-profile-'))
+
 const app = await playwright._electron.launch({
   executablePath: ELECTRON_BIN,
-  args: [ROOT],
+  args: [ROOT, `--user-data-dir=${PROFILE}`],
   cwd: ROOT,
   env
 })
@@ -124,7 +144,13 @@ try {
       if (!w.getURL().startsWith('devtools:')) w.close()
     }
   })
-  for (let i = 0; i < 50 && (await mainWindowExists()); i++) {
+  // ⚠️ Wait for PLAYWRIGHT to see the page go as well, not just the main
+  // process: until its close event lands, `app.windows()` still lists the dead
+  // first page, `appWindow` below hands it straight back as the "new" window,
+  // and the next evaluate fails with "Target page, context or browser has been
+  // closed". A slow dev server (Vite re-optimising after a lockfile change) is
+  // enough to open that gap.
+  for (let i = 0; i < 50 && ((await mainWindowExists()) || (first && !first.isClosed())); i++) {
     await new Promise((r) => setTimeout(r, 200))
   }
   check('no app window is left', !(await mainWindowExists()))
@@ -153,13 +179,85 @@ try {
 
     let named = null
     for (let i = 0; i < 150 && !named; i++) {
-      named = await reopened.evaluate(async () => {
-        const { usePdfStore } = await import('/src/stores/pdfStore.ts')
-        return usePdfStore.getState().fileName
-      })
+      named = await reopened
+        .evaluate(async () => {
+          const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+          return usePdfStore.getState().fileName
+        })
+        // A cold dev server reloads the page once it has re-optimised its deps,
+        // destroying the context mid-call. That is "not yet", not a failure.
+        .catch(() => null)
       if (!named) await new Promise((r) => setTimeout(r, 200))
     }
     check('the handed-over PDF is the document it loads', named === 'sample.pdf', `loaded ${named}`)
+  }
+
+  // ── A Word / OpenDocument file handed over by the OS ───────────────────────
+  // It has to open the way a DROP opens it: converted on this device, with the
+  // notice saying so. On macOS it used to reach pdf.js as a "PDF" and come back
+  // as "Failed to load PDF"; on Windows it never reached the page at all,
+  // because the command-line filter took `.pdf` and nothing else.
+  const win = reopened ?? (await appWindow(app))
+  if (win) {
+    // Recorded rather than shown: a real alert() is modal and would stall the
+    // renderer this test is asking questions of. Installed by every probe, not
+    // once, because a reload of the page takes the stub with it.
+    const opened = () =>
+      win
+        .evaluate(async () => {
+          if (!window.__alerts) {
+            window.__alerts = []
+            window.alert = (message) => window.__alerts.push(String(message))
+          }
+          const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+          const s = usePdfStore.getState()
+          return { name: s.fileName, notice: s.importNotice, alerts: window.__alerts.slice() }
+        })
+        // A reload mid-call is "not yet" — see the PDF check above.
+        .catch(() => ({ name: null, notice: null, alerts: [] }))
+    const alerts = () => win.evaluate(() => (window.__alerts ?? []).splice(0)).catch(() => [])
+    await opened()
+    // Long, because the first conversion may be LibreOffice building its
+    // private profile — several seconds on a cold machine.
+    async function waitFor(pred, tries = 300) {
+      let last = null
+      for (let i = 0; i < tries; i++) {
+        last = await opened()
+        if (pred(last) || last.alerts.length) return last
+        await new Promise((r) => setTimeout(r, 200))
+      }
+      return last
+    }
+    const secondLaunch = (filePath) =>
+      // Exactly what Windows delivers when "Open with" starts a second copy:
+      // the new process's argv, forwarded to the one holding the lock. In dev
+      // that argv is `electron <app dir> <document>`.
+      app.evaluate(({ app: electronApp }, argv) => {
+        electronApp.emit('second-instance', { preventDefault() {} }, argv)
+      }, [ELECTRON_BIN, ROOT, filePath])
+
+    console.log('\nmacOS: Finder hands over a .docx')
+    await app.evaluate(({ app: electronApp }, filePath) => {
+      electronApp.emit('open-file', { preventDefault() {} }, filePath)
+    }, DOCX)
+    const docx = await waitFor((s) => s.name === 'rich.pdf')
+    check('the .docx is converted and opens as rich.pdf', docx?.name === 'rich.pdf', `loaded ${docx?.name}`)
+    check('with the notice saying it was converted', /^Converted /.test(docx?.notice ?? ''), docx?.notice)
+    check('and no alert', (await alerts()).length === 0, docx?.alerts.join(' | '))
+
+    console.log('\nWindows: "Open with" starts a second copy with an .odt on its command line')
+    await secondLaunch(ODT)
+    const odt = await waitFor((s) => s.name === 'orientation.pdf')
+    check('the .odt reaches the page and opens as orientation.pdf', odt?.name === 'orientation.pdf', `loaded ${odt?.name}`)
+    check('with the notice saying it was converted', /^Converted /.test(odt?.notice ?? ''), odt?.notice)
+    check('and no alert', (await alerts()).length === 0, odt?.alerts.join(' | '))
+
+    console.log('\nWindows: an older .doc gets advice rather than silence')
+    await secondLaunch(LEGACY_DOC)
+    const legacy = await waitFor(() => false, 150)
+    const advice = (await alerts()).join(' | ')
+    check('the user is told to save it as .docx', /save it as \.docx/i.test(advice), advice || 'no alert')
+    check('and the open document is left alone', legacy?.name === 'orientation.pdf', `now ${legacy?.name}`)
   }
 } finally {
   await app.close().catch(() => {})

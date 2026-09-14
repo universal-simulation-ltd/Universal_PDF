@@ -72,7 +72,7 @@ import { useFormStore } from './stores/formStore'
 import { useExitGuard } from './stores/exitGuard'
 import { hasUnsavedChanges, onSavedStateChanged } from './lib/unsavedChanges'
 import { CONTAINER } from './lib/layout'
-import { OfficeImportError, toViewablePdf } from './lib/officeToPdf'
+import { OfficeImportError, isConvertibleName, toViewablePdf } from './lib/officeToPdf'
 import { isNativeShell, setStatusBarOverDarkChrome, subscribeNativeOpenPdf } from './lib/nativeOpen'
 import { installExternalLinkHandler } from './lib/externalLinks'
 
@@ -96,6 +96,26 @@ const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_PDF'
 const DOC_WIDTH = 'clamp(600px, var(--doc-display-width, 80rem), 80rem)'
 const DOC_RIGHT_STRIP = `max(0px, calc((100vw - var(--doc-scrollbar-width, 0px) - ${DOC_WIDTH}) / 2 - 0.75rem))`
 
+// A document the OS handed over — the desktop's double-click / "Open with", an
+// installed PWA's launchQueue, the iOS/Android share sheet — goes through the
+// same front door as a drop on the landing page. A PDF passes straight through;
+// a Word or OpenDocument file is converted on this device first and opens with
+// its notice; a .doc/.rtf/.pages gets the "save it as .docx" advice.
+//
+// ⚠️ These paths used to call `loadFile` directly, so a .docx opened from
+// Finder or Explorer went to pdf.js as though it were a PDF and came back as
+// "Failed to load PDF" — while the same file dropped on the window converted.
+function openHandedOver(
+  file: File,
+  loadFile: (file: File, options?: { notice?: string }) => Promise<void>
+): Promise<void> {
+  return toViewablePdf(file)
+    .then(({ file: pdf, notice }) => loadFile(pdf, { notice }))
+    .catch((err) => {
+      console.error(err)
+      alert(err instanceof OfficeImportError ? err.message : 'Failed to load PDF')
+    })
+}
 
 export default function App() {
   const loadFile = usePdfStore((s) => s.loadFile)
@@ -176,13 +196,14 @@ export default function App() {
     const desktop = window.desktop
     if (!desktop) return
     const offOpen = desktop.onOpenPdf(({ name, bytes }) => {
-      const file = new File([bytes], name, { type: 'application/pdf' })
-      loadFile(file)
-        .catch((err) => {
-          console.error(err)
-          alert('Failed to load PDF')
-        })
-        // Cleared only once the load has settled: dropping it the moment the
+      // Untyped when the name says Word/OpenDocument (or .doc/.rtf/.pages), so
+      // `toViewablePdf` judges it by that name and converts it. Anything else
+      // keeps the PDF type it has always been given, so a PDF saved without
+      // `.pdf` on its name still opens.
+      const type = isConvertibleName(name) ? '' : 'application/pdf'
+      openHandedOver(new File([bytes], name, { type }), loadFile)
+        // Cleared only once the load (and any conversion) has settled, so the
+        // launch placeholder covers a LibreOffice run too. Dropping it the moment the
         // bytes arrive would hand one frame back to the landing page before
         // the store's own `loading` picks up — the same flash, one step later.
         .finally(() => setLaunching(false))
@@ -227,7 +248,7 @@ export default function App() {
       }
       handle
         .getFile()
-        .then((file) => loadFile(file))
+        .then((file) => openHandedOver(file, loadFile))
         .catch((err) => {
           console.error(err)
           alert('Failed to load PDF')
@@ -250,12 +271,7 @@ export default function App() {
     let cancelled = false
     void subscribeNativeOpenPdf(
       (file) => {
-        loadFile(file)
-          .catch((err) => {
-            console.error(err)
-            alert('Failed to load PDF')
-          })
-          .finally(() => setLaunching(false))
+        openHandedOver(file, loadFile).finally(() => setLaunching(false))
       },
       () => setLaunching(false)
     ).then((off) => {

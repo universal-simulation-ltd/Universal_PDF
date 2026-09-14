@@ -121,6 +121,13 @@ the app is running reuses the existing window, and **opens one if there isn't
 one**, which on macOS is what closing the last window leaves you with (the app
 keeps running). See `openFromOs` in [`electron/main.cjs`](electron/main.cjs).
 
+A Word (`.docx`) or OpenDocument (`.odt`) file handed over the same way —
+*Open with → Choose another app → Universal PDF* on Windows, *Open With →
+Other…* on a Mac — is converted and opened exactly as if it had been dropped on
+the window, and a `.doc` gets the same "save it as .docx" advice. The installer
+does not add the app to those types' *Open with* list itself; it registers
+`.pdf` only.
+
 **Saving follows the document.** A PDF opened from a folder on the machine —
 by double-click, drag-and-drop or the file chooser — offers to save back into
 **that folder** rather than Electron's default `~/Downloads`, and that applies
