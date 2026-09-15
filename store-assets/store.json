@@ -1,0 +1,15 @@
+{
+  "app": "Universal PDF",
+  "icon": "../ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png",
+  "captures": "draw",
+  "devices": ["iphone", "ipad", "android"],
+  "screens": [
+    { "id": "01-hero", "layout": "hero-open", "raw": ["04-signed", "06-more-tools"] },
+    { "id": "02-hero", "layout": "hero-close", "raw": "06-more-tools" },
+    { "id": "03-fill-in", "layout": "feature", "raw": "02-fill-form", "hot": 0 },
+    { "id": "04-sign", "layout": "feature", "raw": "03-draw-signature", "hot": 0 },
+    { "id": "05-mark-up", "layout": "feature", "raw": "05-annotate", "hot": 0 },
+    { "id": "06-tools", "layout": "feature", "raw": "06-more-tools", "hot": 0 },
+    { "id": "07-private", "layout": "feature", "raw": "01-start", "hot": 0 }
+  ]
+}

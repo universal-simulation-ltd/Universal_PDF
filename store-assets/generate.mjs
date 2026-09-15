@@ -20,9 +20,13 @@
 // app's own form layer. Every name, address and number on it is made up (the
 // phone number is from Ofcom's range reserved for fiction).
 //
-// Output (committed): ios/iphone-6.9 (1320x2868), ios/ipad-13 (2064x2752),
-// android/phone (1080x2340), play/feature-graphic.png (1024x500) and
-// play/icon-512.png (512x512, from the iOS app icon).
+// Output (committed): the real captures, raw/iphone (1320x2580), raw/ipad
+// (2064x2664) and raw/android (1080x2172). The UNI·SIM store kit frames them
+// into the store screenshots in out/, drawing the status bar and home
+// indicator they leave out. store.json says which capture each screen shows,
+// strings/en-GB.json every word on it:
+//
+//   node ../../Docs_UNI_SIM/store-kit/build.mjs store-assets
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -31,15 +35,17 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 const here = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(here, '..')
 const dist = path.join(root, 'dist')
-const ICON = path.join(root, 'ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png')
 const { chromium } = await import(
   process.env.PLAYWRIGHT ? pathToFileURL(process.env.PLAYWRIGHT).href : 'playwright'
 )
 
+// Each device's screen less the status bar and home indicator the store kit
+// draws (its layouts.mjs, CLASSES[…].insets): iPhone 17 Pro Max 956 pt less
+// 62 + 34, iPad 13" 1376 pt less 24 + 20, an Android phone 780 dp less 32 + 24.
 const DEVICES = [
-  { key: 'iphone', dir: 'ios/iphone-6.9', width: 440, height: 956, dpr: 3 },
-  { key: 'ipad', dir: 'ios/ipad-13', width: 1032, height: 1376, dpr: 2 },
-  { key: 'android', dir: 'android/phone', width: 360, height: 780, dpr: 3 },
+  { key: 'iphone', dir: 'raw/iphone', width: 440, height: 860, dpr: 3 },
+  { key: 'ipad', dir: 'raw/ipad', width: 1032, height: 1332, dpr: 2 },
+  { key: 'android', dir: 'raw/android', width: 360, height: 724, dpr: 3 },
 ]
 const ORIGIN = 'https://app.test'
 const TYPES = {
@@ -309,33 +315,6 @@ async function serve(ctx) {
   })
 }
 
-async function featureGraphic(browser, icon) {
-  const page = await browser.newPage({ viewport: { width: 1024, height: 500 }, deviceScaleFactor: 1 })
-  await page.setContent(`<!doctype html><html><body style="margin:0">
-  <div style="width:1024px;height:500px;box-sizing:border-box;display:flex;align-items:center;gap:56px;padding:0 80px;
-    background:linear-gradient(135deg,#fe8c01,#e05504);font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#fff">
-    <img src="data:image/png;base64,${icon.toString('base64')}" style="width:240px;height:240px;border-radius:54px;
-      box-shadow:0 24px 48px -16px rgba(80,30,0,.55);outline:6px solid rgba(255,255,255,.9)">
-    <div>
-      <div style="font-size:26px;font-weight:800;letter-spacing:.18em;opacity:.9">UNIVERSAL</div>
-      <div style="font-size:92px;font-weight:900;line-height:1;margin:4px 0 22px">PDF</div>
-      <div style="font-size:34px;font-weight:600;line-height:1.25;max-width:560px">Fill in, sign and mark up PDFs, on your device.</div>
-    </div>
-  </div></body></html>`)
-  const buf = await page.screenshot()
-  await page.close()
-  return buf
-}
-
-async function playIcon(browser, icon) {
-  const page = await browser.newPage({ viewport: { width: 512, height: 512 }, deviceScaleFactor: 1 })
-  await page.setContent(`<style>html,body{margin:0}</style><img src="data:image/png;base64,${icon.toString('base64')}" style="display:block;width:512px;height:512px">`)
-  // omitBackground keeps an alpha channel: Play asks for a 32-bit PNG.
-  const buf = await page.screenshot({ omitBackground: true })
-  await page.close()
-  return buf
-}
-
 const only = process.argv.slice(2)
 const devices = DEVICES.filter((d) => !process.env.DEVICE || process.env.DEVICE.split(',').includes(d.key))
 const browser = await chromium.launch()
@@ -383,13 +362,6 @@ for (const dev of devices) {
     console.log(`${ok ? 'OK ' : 'BAD'} ${dev.dir}/${name}.png ${w}x${h}${colourType === 2 ? '' : ' has alpha'}${errors.length ? ` (page errors: ${errors.length})` : ''}`)
     await ctx.close()
   }
-}
-if (!only.length && !process.env.DEVICE) {
-  const icon = await readFile(ICON)
-  await mkdir(path.join(here, 'play'), { recursive: true })
-  await writeFile(path.join(here, 'play/feature-graphic.png'), await featureGraphic(browser, icon))
-  await writeFile(path.join(here, 'play/icon-512.png'), await playIcon(browser, icon))
-  console.log('OK  play/feature-graphic.png 1024x500, play/icon-512.png 512x512')
 }
 await browser.close()
 if (bad) {

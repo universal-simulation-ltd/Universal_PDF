@@ -1,0 +1,42 @@
+{
+  "01-hero": {
+    "headline": ["PDFs that", "*just work.*"],
+    "sub": {
+      "phone": "Fill in, sign and mark up PDFs,\nright on your phone.",
+      "ipad": "Fill in, sign and mark up PDFs,\nright on your iPad."
+    }
+  },
+  "02-hero": {
+    "headline": ["All the tools,", "built in"],
+    "badges": ["Fill in forms", "Sign", "Redact", "Compress & merge"],
+    "sub": "Built by James Markey\nand the UNI·SIM team"
+  },
+  "03-fill-in": {
+    "headline": ["Type straight", "into the form"],
+    "caption": "The PDF's own form fields, filled in on the page",
+    "chips": ["Form fields", "Text anywhere", "Pictures", "QR codes"]
+  },
+  "04-sign": {
+    "headline": ["Sign with", "your finger"],
+    "caption": "Draw it once, then put it on the line",
+    "chips": ["Draw", "Import", "Name & date", "Stamp"]
+  },
+  "05-mark-up": {
+    "headline": ["Mark it up"],
+    "caption": "Highlights and notes, saved into the PDF",
+    "chips": ["Highlighter", "Text", "Free drawing", "Ticks & crosses", "Lines, boxes & circles", "Redact"]
+  },
+  "06-tools": {
+    "headline": ["More than", "an editor"],
+    "caption": "One PDF or several",
+    "chips": ["Compress", "Merge", "PDF to images", "Images to PDF", "Make searchable", "Word to PDF", "Password lock"]
+  },
+  "07-private": {
+    "headline": ["Your files", "stay yours"],
+    "caption": "Nothing is uploaded unless you choose to",
+    "chips": ["No ads", "No tracking", "No account needed", "Open source"]
+  },
+  "feature-graphic": {
+    "tagline": ["Fill in, sign and mark up PDFs.", "On your phone."]
+  }
+}
