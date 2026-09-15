@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The window background behind the web view.
+
+     It only shows once `android.adjustMarginsForEdgeToEdge` is on (in
+     capacitor.config.ts): Capacitor then insets the web view by the status-bar,
+     navigation-bar and camera-cutout margins, and those strips show the
+     WINDOW's background, not the page's. Universal PDF has no dark colourway,
+     so its navbar is white on every phone and the strips are white to match. -->
+<resources>
+    <color name="unisimWindowBackground">#ffffff</color>
+</resources>
