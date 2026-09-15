@@ -26,12 +26,7 @@
     "caption": "Highlights and notes, saved into the PDF",
     "chips": ["Highlighter", "Text", "Free drawing", "Ticks & crosses", "Lines, boxes & circles", "Redact"]
   },
-  "06-tools": {
-    "headline": ["More than", "an editor"],
-    "caption": "One PDF or several",
-    "chips": ["Compress", "Merge", "PDF to images", "Images to PDF", "Make searchable", "Word to PDF", "Password lock"]
-  },
-  "07-private": {
+  "06-private": {
     "headline": ["Your files", "stay yours"],
     "caption": "Nothing is uploaded unless you choose to",
     "chips": ["No ads", "No tracking", "No account needed", "Open source"]
