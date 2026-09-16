@@ -1,0 +1,59 @@
+{
+  "language": "en-GB",
+  "details": {
+    "defaultLanguage": "en-GB",
+    "contactEmail": "inbox@unisim.co.uk",
+    "contactWebsite": "https://www.unisim.co.uk"
+  },
+  "listing": {
+    "title": "Universal PDF",
+    "shortDescription": "Fill in, sign and mark up PDFs on your phone. No ads, no tracking.",
+    "fullDescription": [
+      "Universal PDF opens, fills in, signs and marks up PDFs on your phone. The work happens on the device: your document is not uploaded to be shown or edited, and there is no copy on our servers unless you press a button that says so.",
+      "",
+      "FILL IN AND SIGN",
+      "• Type straight into a PDF's form fields.",
+      "• Draw your signature, or import one, and place it on the page.",
+      "• Add your name, the date or a stamp with it.",
+      "• Add \"Sign here\" boxes and send the document to someone else to sign (needs a Universal ID).",
+      "",
+      "MARK IT UP",
+      "• Highlighter, free drawing and text.",
+      "• Ticks, crosses, lines, boxes and circles.",
+      "• Place pictures and QR codes on a page.",
+      "• Redact text so it cannot be read by people or by machines.",
+      "",
+      "MORE TOOLS",
+      "• Compress one PDF or several.",
+      "• Merge PDFs into one.",
+      "• Turn PDF pages into PNG or JPG images, and images into a PDF.",
+      "• Make a scanned PDF searchable.",
+      "• Open Word (.docx) and OpenDocument (.odt) files as PDFs.",
+      "• Turn pasted Markdown into a PDF.",
+      "• Lock a PDF with a password.",
+      "• Present a document full screen.",
+      "",
+      "YOUR FILES STAY YOURS",
+      "• Opening, filling in, signing and marking up happen on your phone.",
+      "• Recent files are remembered on this device only.",
+      "• No ads, no tracking, no third-party analytics.",
+      "• A Universal ID is optional. It adds online backup and send to sign, and you can delete the account from inside the app.",
+      "",
+      "Universal PDF is free and open source (AGPL-3.0). The code, and a page explaining exactly what leaves your device and when, are on GitHub: github.com/universal-simulation-ltd/Universal_PDF",
+      "",
+      "Built by James Markey and the UNI·SIM team."
+    ]
+  },
+  "images": {
+    "icon": "out/play/icon-512.png",
+    "featureGraphic": "out/en-GB/play/feature-graphic.png",
+    "phoneScreenshots": [
+      "out/en-GB/android/01-hero.png",
+      "out/en-GB/android/02-hero.png",
+      "out/en-GB/android/03-fill-in.png",
+      "out/en-GB/android/04-sign.png",
+      "out/en-GB/android/05-mark-up.png",
+      "out/en-GB/android/06-private.png"
+    ]
+  }
+}
