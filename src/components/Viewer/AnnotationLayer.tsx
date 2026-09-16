@@ -3037,9 +3037,22 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         const by = bbox.y * scale
         const bw = bbox.width * scale
         const bh = bbox.height * scale
-        const CHIP_W = 300
-        const CHIP_H = 44
+        // ⚠️ AN ESTIMATE OF THE CONTENT'S OWN WIDTH, NOT A WIDTH IMPOSED ON IT.
+        // It was 300 and the pill was given `width: CHIP_W`, so the row — label
+        // + None + three widths + two styles + three colour swatches — ran a
+        // clear 100px past its own white background, and because ColorCluster's
+        // circles are `flex-shrink-0` they were the part left hanging outside
+        // it (James, 2026-09-16, placing a QR code on the Android build: "the
+        // colour choices go outside the format pill"). The pill sizes to its
+        // content now; this number only centres and clamps it, the way the text
+        // pill above has always used its own.
+        const CHIP_W = 406
         const GAP = 10
+        // Narrower than the pill needs: it wraps to two rows rather than
+        // running off a phone screen, so the flip-above test has to expect the
+        // taller box.
+        const wraps = CHIP_W + GAP * 2 > width
+        const CHIP_H = wraps ? 84 : 44
         const left = Math.min(
           Math.max(bx + bw / 2 - CHIP_W / 2, GAP),
           Math.max(GAP, width - CHIP_W - GAP)
@@ -3080,9 +3093,12 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
 
         return (
           <div
-            style={{ position: 'absolute', left, top, zIndex: 22, width: CHIP_W }}
+            style={{ position: 'absolute', left, top, zIndex: 22, maxWidth: Math.max(0, width - GAP * 2) }}
             onMouseDown={(e) => e.stopPropagation()}
-            className="h-11 rounded-full bg-white shadow-lg border border-slate-300 flex items-center gap-1 px-2"
+            // rounded-[22px] rather than rounded-full: at the one-row height
+            // (44px) the two are identical, and it is the wrapped two-row case
+            // that rounded-full turns into a lozenge.
+            className="min-h-11 rounded-[22px] bg-white shadow-lg border border-slate-300 flex flex-wrap items-center justify-center gap-1 px-2 py-1"
           >
             <span className="text-[11px] font-medium text-slate-500 pl-1 pr-0.5">Border</span>
             {/* None is a real choice, not the absence of one — it clears the key

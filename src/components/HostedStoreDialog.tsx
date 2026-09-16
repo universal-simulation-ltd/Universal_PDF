@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Chip, useUniversal, useUser, useCredits, useHostedUploads, useAppFreeToken, type HostedUpload } from '@unisim/sdk'
+import { Chip, SignInDialog, useUniversal, useUser, useCredits, useHostedUploads, useAppFreeToken, type HostedUpload } from '@unisim/sdk'
 import { usePdfStore } from '../stores/pdfStore'
 // App Review 3.1.1: the phone app must not point people to buying tokens on
 // the web. The web and desktop builds keep the link and the wording.
@@ -8,6 +8,13 @@ import { isNativeShell } from '../lib/nativeOpen'
 import { storeCurrentPdf, deleteHostedPdf, openHostedPdf, HostedObjectMissingError } from '../lib/hostedStore'
 import { downloadBackup, importBackup } from '../lib/pdfBackup'
 
+// ⚠️ The HREF ONLY — never a plain navigation. In a Capacitor shell an
+// <a> to another origin is handed to the system browser, so the tap left the
+// app for a Custom Tab, signed in there, and (a bare /login honours no
+// ?return=) landed on the Assess portal with the app still signed out —
+// which is exactly what James hit on the Android build, 2026-09-16. The row
+// opens the SDK's in-app <SignInDialog /> instead; the href survives so a
+// middle- or ctrl-click on the web still opens the hub in a tab.
 const SIGNIN_URL = 'https://app.unisim.co.uk/login'
 // Was /subscription.html until 2026-09-07, when the marketing site split its
 // one pricing page in two. The token card moved to /everyday; /subscription is
@@ -42,11 +49,13 @@ export default function HostedStoreDialog() {
   // the entry they are about — there can be several in the list, and a message
   // at the bottom of the panel would not say which one it meant.
   const [missingId, setMissingId] = useState<string | null>(null)
+  const [signInOpen, setSignInOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   if (!open) return null
 
   const signedIn = !!session?.user && session.user.is_anonymous !== true
+  const native = isNativeShell()
   const tokens = credits ?? 0
   const canStore = freeToken === 'available' || tokens > 0
 
@@ -232,7 +241,29 @@ export default function HostedStoreDialog() {
             {!signedIn ? (
               <div className="mt-3 rounded-lg bg-slate-50 p-3">
                 <p className="text-sm text-slate-700">Sign in with your <strong>Universal ID</strong> to store PDFs online.</p>
-                <a href={SIGNIN_URL} className="mt-2 inline-flex rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800">
+                <a
+                  // ⚠️ No href in a native shell — `installExternalLinkHandler`
+                  // is a document-level CAPTURE listener, so it would take this
+                  // click into an in-app browser before React's onClick ran and
+                  // the guard below would stand down on `defaultPrevented`.
+                  // Without an href its `closest('a[href]')` misses the row.
+                  href={native ? undefined : SIGNIN_URL}
+                  role={native ? 'button' : undefined}
+                  tabIndex={0}
+                  onClick={(e) => {
+                    // Modified clicks keep the link's own new-tab behaviour.
+                    if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+                    e.preventDefault()
+                    setSignInOpen(true)
+                  }}
+                  onKeyDown={(e) => {
+                    if (!native) return
+                    if (e.key !== 'Enter' && e.key !== ' ') return
+                    e.preventDefault()
+                    setSignInOpen(true)
+                  }}
+                  className="mt-2 inline-flex cursor-pointer rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800"
+                >
                   Create / sign in with Universal ID →
                 </a>
               </div>
@@ -334,6 +365,15 @@ export default function HostedStoreDialog() {
           </div>
         </div>
       </div>
+
+      {/* Sits inside this panel's portal so signing in never closes it: the
+          upload card is the reason the person is signing in, and it re-renders
+          signed-in under them the moment the session lands. */}
+      <SignInDialog
+        open={signInOpen}
+        onClose={() => setSignInOpen(false)}
+        hubLoginHref={SIGNIN_URL}
+      />
     </div>,
     document.body,
   )

@@ -134,6 +134,54 @@ for (const label of ['No border', '1px border', '2px border', '4px border', 'Sol
   check(`"${label}"`, await page.locator(`button[aria-label="${label}"]`).count() > 0)
 }
 
+// ⚠️ AND THEY ARE ALL INSIDE IT. The pill carried a hard `width: 300` while its
+// own row measures ~406, and ColorCluster's circles are `flex-shrink-0` — so
+// they were the part left hanging outside the white background (James, placing
+// a QR code on the Android build, 2026-09-16: "the colour choices go outside
+// the format pill"; a placed QR is an image annotation, so this is its pill).
+// Checked at phone width too, where the row cannot fit on one line at all and
+// has to wrap instead of running off the screen.
+console.log('\nnothing hangs outside the pill')
+async function checkContained(label) {
+  await page.waitForTimeout(300)
+  const box = await pill.boundingBox()
+  const controls = pill.locator('button, label[title="More colours"]')
+  const n = await controls.count()
+  let overhang = 0
+  for (let i = 0; i < n; i++) {
+    const b = await controls.nth(i).boundingBox()
+    if (!b || !box) continue
+    overhang = Math.max(
+      overhang,
+      (b.x + b.width) - (box.x + box.width),
+      box.x - b.x,
+      (b.y + b.height) - (box.y + box.height),
+      box.y - b.y,
+    )
+  }
+  // 1px of slack: the live swatch wears `scale-110`, which is a transform and
+  // so shows up in the measured box without taking any layout room.
+  check(`${label}: every control is inside the pill`, n > 0 && overhang <= 1.5,
+    `${n} controls, worst overhang ${overhang.toFixed(1)}px`)
+  return box
+}
+await checkContained('desktop (1400px)')
+await page.setViewportSize({ width: 390, height: 844 })
+const phoneBox = await checkContained('phone (390px)')
+// …and the pill itself stays within the rendered page it is clamped to. ⚠️ The
+// page, not the viewport: `left` is clamped against the page's own width, and
+// a PDF zoomed wider than the window scrolls horizontally with the pill on it.
+const pageBoxNow = await page.locator('[data-page-index="0"]').first().boundingBox()
+check('phone: the pill stays inside the page it belongs to',
+  !!(phoneBox && pageBoxNow
+    && phoneBox.x >= pageBoxNow.x - 1.5
+    && phoneBox.x + phoneBox.width <= pageBoxNow.x + pageBoxNow.width + 1.5),
+  phoneBox && pageBoxNow
+    ? `pill ${Math.round(phoneBox.x)}..${Math.round(phoneBox.x + phoneBox.width)}, page ${Math.round(pageBoxNow.x)}..${Math.round(pageBoxNow.x + pageBoxNow.width)}`
+    : 'no pill')
+await page.setViewportSize({ width: 1400, height: 900 })
+await page.waitForTimeout(300)
+
 console.log('\nsetting a border changes what is drawn')
 const before = await page.locator('[data-page-index="0"] canvas').first().screenshot()
 await page.click('button[aria-label="4px border"]')
