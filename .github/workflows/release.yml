@@ -92,6 +92,19 @@ jobs:
             os: ubuntu-latest
             script: dist:linux
             artifacts: universal-pdf-linux
+          # ARM64 Linux — a Raspberry Pi 4/5 on a 64-bit OS, and ARM laptops
+          # (James, 2026-09-16). Built NATIVELY on GitHub's arm64 runner rather
+          # than cross-built on the x64 one: `dist:linux` packages for the host
+          # architecture, so the same script yields arm64 AppImage + deb here,
+          # named `-linux-arm64` beside the x64 job's `-linux-x86_64` / `-amd64`,
+          # so the two never overwrite each other in the release. Its own matrix
+          # entry on purpose: with fail-fast off, a broken ARM build cannot cost
+          # the x64 Linux release. ⓘ Untested on hardware until someone runs it
+          # on a Pi — the download page says so.
+          - name: Linux ARM64 AppImage + deb
+            os: ubuntu-24.04-arm
+            script: dist:linux
+            artifacts: universal-pdf-linux-arm64
 
     steps:
       - uses: actions/checkout@v5
@@ -116,6 +129,17 @@ jobs:
       # notarize, and electron-builder's notarize step then fails the whole
       # build rather than degrading. Better to ship the known-unsigned artefact
       # than to ship nothing.
+      # ⚠️ electron-builder's bundled `fpm` (what makes the .deb) is an x86-64
+      # binary, so on the arm64 runner the deb target fails with an exec-format
+      # error. USE_SYSTEM_FPM tells it to use a native fpm installed here.
+      - name: Native fpm for the ARM64 Linux .deb
+        if: matrix.os == 'ubuntu-24.04-arm'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ruby ruby-dev build-essential
+          sudo gem install --no-document fpm
+          echo "USE_SYSTEM_FPM=true" >> "$GITHUB_ENV"
+
       - name: Decide whether the macOS build can be signed
         id: signing
         if: matrix.os == 'macos-14'
