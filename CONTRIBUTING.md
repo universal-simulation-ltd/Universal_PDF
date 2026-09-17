@@ -55,6 +55,25 @@ than being merged on the assumption above.
 - If you are proposing something large, open an issue first. It is kinder than
   writing a lot of code that turns out to be pointed the wrong way.
 
+## Translations
+
+Every word the app shows lives in `src/i18n/<language>/<namespace>.ts`:
+English (`en`), French, Spanish, Italian, German, Portuguese (`pt-BR` and
+`pt-PT`, two separate languages) and Turkish.
+
+- **Adding a label:** add the key to `src/i18n/en/` first, then to every other
+  language. English defines the shape, so `npm run typecheck` fails until each
+  language has it.
+- **In a component:** `const t = useT()`, then `t('menu.language')`. Outside
+  React (stores, `src/lib`): `getT()('lib.…')`, at call time. A file that plain
+  node unit-tests imports `../i18n/runtime.ts`, with the extension.
+- **Sentences are whole keys** with `{placeholders}`, never glued fragments;
+  counts use `_one`/`_other` keys through `t.plural`.
+- **Words:** `src/i18n/GLOSSARY.md` fixes the terms (and each language's address
+  form), and the store listings use the same ones.
+- `npm run test:language` checks the app follows the browser language and the
+  Actions → Language row.
+
 ## Security
 
 Please do **not** open a public issue for a security problem. Email
