@@ -18,6 +18,7 @@
 // That is why the staging path is set first and the user is asked afterwards.
 
 const { app, dialog, BrowserWindow } = require('electron')
+const { t } = require('./strings.cjs')
 const path = require('node:path')
 const fs = require('node:fs')
 const crypto = require('node:crypto')
@@ -124,7 +125,7 @@ function install(session) {
     const parent = BrowserWindow.fromWebContents(webContents) ?? undefined
     const asked = dialog
       .showSaveDialog(parent, {
-        title: 'Save file',
+        title: t('saveFile'),
         // The window matters: each window's documents came from their own
         // folder, and an export belongs beside the one it was made from.
         defaultPath: suggestPath(suggested, parent),
@@ -144,7 +145,7 @@ function install(session) {
       if (canceled || !filePath) return discard()
       if (state !== 'completed') {
         await discard()
-        dialog.showErrorBox('The file could not be saved', `“${suggested}” did not finish downloading.`)
+        dialog.showErrorBox(t('notSaved'), t('notDownloaded', { name: suggested }))
         return
       }
 
@@ -154,8 +155,8 @@ function install(session) {
         console.error('Could not move the finished download into place:', err)
         await discard()
         dialog.showErrorBox(
-          'The file could not be saved',
-          `“${suggested}” could not be written to ${path.dirname(filePath)}.`,
+          t('notSaved'),
+          t('notWritten', { name: suggested, folder: path.dirname(filePath) }),
         )
       }
     })

@@ -5,6 +5,7 @@
 //   node store-assets/generate.mjs        # every screen, every device
 //   node store-assets/generate.mjs 03     # only screens whose name starts 03
 //   DEVICE=iphone node store-assets/generate.mjs
+//   LOCALE=fr-FR node store-assets/generate.mjs   # raw/fr-FR/<device>/, the app in French
 //
 // Needs Playwright's Chromium. It is not a dependency of this repo, so either
 // `npm i --no-save playwright && npx playwright install chromium`, or point
@@ -315,23 +316,37 @@ async function serve(ctx) {
   })
 }
 
+// The store locale being captured, and the app language it shows. The app is
+// DRIVEN in English either way — every selector above is an English label — and
+// switched to LOCALE's language just before the capture (window.__pdfSetLanguage,
+// see <I18nRoot>). en-GB keeps writing to raw/<device>/, as before.
+const LOCALE = process.env.LOCALE || 'en-GB'
+const APP_LANGUAGE = {
+  'en-GB': 'en-gb', 'fr-FR': 'fr', 'es-ES': 'es', 'it-IT': 'it', 'de-DE': 'de',
+  'pt-BR': 'pt-BR', 'pt-PT': 'pt-PT', 'tr-TR': 'tr',
+}[LOCALE]
+if (!APP_LANGUAGE) throw new Error(`No app language for LOCALE=${LOCALE}`)
+const rawDir = (dev) => (LOCALE === 'en-GB' ? dev.dir : dev.dir.replace(/^raw\//, `raw/${LOCALE}/`))
+
 const only = process.argv.slice(2)
 const devices = DEVICES.filter((d) => !process.env.DEVICE || process.env.DEVICE.split(',').includes(d.key))
 const browser = await chromium.launch()
 const pdf = await samplePdf()
 let bad = 0
 for (const dev of devices) {
-  await mkdir(path.join(here, dev.dir), { recursive: true })
+  await mkdir(path.join(here, rawDir(dev)), { recursive: true })
   for (const [name, run] of Object.entries(SCREENS)) {
     if (only.length && !only.some((p) => name.startsWith(p))) continue
     const ctx = await browser.newContext({
       viewport: { width: dev.width, height: dev.height }, deviceScaleFactor: dev.dpr,
-      isMobile: true, hasTouch: true, colorScheme: 'light', locale: 'en-GB',
+      isMobile: true, hasTouch: true, colorScheme: 'light', locale: LOCALE,
     })
     // The one-off "welcome" toast a phone sees on its first document: dismissed,
     // as it would be after the first open, so it doesn't sit over the page.
     await ctx.addInitScript(() => {
       try { localStorage.setItem('universal-pdf-mobile-welcome-dismissed', '1') } catch {}
+      // Start in English whatever the browser locale: the script's selectors are English.
+      try { localStorage.setItem('universal:language', 'en-gb') } catch {}
       // The start screen's "Download it for offline use — Windows · macOS ·
       // Android · iPhone" row is for the website. It is below the fold on a
       // phone but in full view on an iPad, and a store screenshot of the app
@@ -351,15 +366,19 @@ for (const dev of devices) {
     try {
       await run(page, { dev, pdf })
     } catch (err) {
-      console.error(`FAIL ${dev.dir}/${name}: ${err.message.split('\n')[0]}`)
+      console.error(`FAIL ${rawDir(dev)}/${name}: ${err.message.split('\n')[0]}`)
       bad++
     }
+    if (APP_LANGUAGE !== 'en-gb') {
+      await page.evaluate((l) => window.__pdfSetLanguage?.(l), APP_LANGUAGE)
+      await page.waitForTimeout(500)
+    }
     const buf = await page.screenshot()
-    await writeFile(path.join(here, dev.dir, `${name}.png`), buf)
+    await writeFile(path.join(here, rawDir(dev), `${name}.png`), buf)
     const { w, h, colourType } = pngInfo(buf)
     const ok = w === dev.width * dev.dpr && h === dev.height * dev.dpr && colourType === 2
     if (!ok) bad++
-    console.log(`${ok ? 'OK ' : 'BAD'} ${dev.dir}/${name}.png ${w}x${h}${colourType === 2 ? '' : ' has alpha'}${errors.length ? ` (page errors: ${errors.length})` : ''}`)
+    console.log(`${ok ? 'OK ' : 'BAD'} ${rawDir(dev)}/${name}.png ${w}x${h}${colourType === 2 ? '' : ' has alpha'}${errors.length ? ` (page errors: ${errors.length})` : ''}`)
     await ctx.close()
   }
 }

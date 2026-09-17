@@ -5,6 +5,7 @@ const defaultApp = require('./defaultApp.cjs')
 const previewPane = require('./previewPane.cjs')
 const libreOffice = require('./libreOffice.cjs')
 const downloads = require('./downloads.cjs')
+const strings = require('./strings.cjs')
 const { installHubHandoff } = require('@unisim/sdk/electron')
 
 // Set by `npm run electron:dev` to load the live Vite dev server. When unset
@@ -417,6 +418,9 @@ if (!gotLock) {
   })
 
   // Whether the window is showing anything — see `emptyWindow`.
+  // The suite language, from the renderer, for the dialogs this process shows.
+  ipcMain.on('language:set', (_event, lang) => strings.setLanguage(lang))
+
   ipcMain.on('document:set-open', (event, open) => {
     const win = senderWindow(event)
     if (win) windows.get(win).hasDocument = !!open
@@ -439,13 +443,13 @@ if (!gotLock) {
   // than as an error: it means "I have changed my mind about leaving".
   ipcMain.handle('save-pdf', async (event, payload) => {
     const bytes = payload && payload.bytes
-    if (!bytes) return { ok: false, error: 'There was nothing to save.' }
+    if (!bytes) return { ok: false, error: strings.t('nothingToSave') }
     const suggestedName =
       payload && typeof payload.suggestedName === 'string' ? payload.suggestedName : 'document.pdf'
     const parent = senderWindow(event)
     try {
       const { canceled, filePath } = await dialog.showSaveDialog(parent ?? undefined, {
-        title: 'Save PDF',
+        title: strings.t('savePdf'),
         // Beside the document that was opened, not in ~/Downloads — see
         // `lastOpenFolder`.
         defaultPath: suggestedSavePath(suggestedName, parent),
@@ -456,7 +460,7 @@ if (!gotLock) {
       return { ok: true, path: filePath }
     } catch (err) {
       console.error('Failed to save the PDF:', err)
-      return { ok: false, error: err.message || 'The PDF could not be written.' }
+      return { ok: false, error: err.message || strings.t('pdfNotWritten') }
     }
   })
 

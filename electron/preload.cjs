@@ -78,6 +78,8 @@ contextBridge.exposeInMainWorld('desktop', {
   // there is one, and builds a new window otherwise — it cannot see which a
   // window is from outside.
   setDocumentOpen: (open) => ipcRenderer.send('document:set-open', !!open),
+  // The suite language, for the Save dialogs the main process draws itself.
+  setLanguage: (lang) => ipcRenderer.send('language:set', String(lang)),
   // Unsaved-changes guard. `set` keeps the main process told whether closing
   // the window would lose a file; `onCloseRequest` is main asking the question
   // it holds the × for; `allowClose` is the answer that lets it through.

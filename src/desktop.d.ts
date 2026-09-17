@@ -53,6 +53,11 @@ declare global {
        */
       setDocumentOpen?(open: boolean): void
       /**
+       * The suite language, so the Save dialogs the main process draws match
+       * the app. Optional: an older shell has no such channel.
+       */
+      setLanguage?(lang: string): void
+      /**
        * The unsaved-changes guard. The main process holds the window's × when
        * `set(true)` was the last thing it heard, asks the renderer over
        * `onCloseRequest`, and closes for real when `allowClose()` answers.

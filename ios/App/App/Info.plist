@@ -4,6 +4,17 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>fr</string>
+		<string>es</string>
+		<string>it</string>
+		<string>de</string>
+		<string>pt-BR</string>
+		<string>pt-PT</string>
+		<string>tr</string>
+	</array>
 	<key>CFBundleDisplayName</key>
         <string>Universal PDF</string>
 	<key>CFBundleExecutable</key>

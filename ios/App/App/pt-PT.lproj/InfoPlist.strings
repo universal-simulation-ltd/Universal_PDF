@@ -1,0 +1,5 @@
+/* The app name is a brand name and reads the same in every language. This file
+   exists so iOS knows the app speaks this language: without it the web view
+   reports English on a phone set to anything else, and the App Store lists the
+   app as English only. */
+"CFBundleDisplayName" = "Universal PDF";

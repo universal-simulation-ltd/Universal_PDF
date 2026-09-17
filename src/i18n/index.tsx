@@ -18,7 +18,7 @@
 // (or more) keys sharing a stem — `pages_one`, `pages_other` — read through
 // `t.plural('ns.pages', count)`, which picks the form with Intl.PluralRules
 // and passes `{count}` for you.
-import { Fragment, useMemo, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, type ReactNode } from 'react'
 import { pickTranslation, useLanguage, SUPPORTED_LANGUAGES } from '@unisim/sdk'
 import { en, type Messages } from './en'
 import { fr } from './fr'
@@ -156,10 +156,20 @@ export function useT(): Translator {
  * rendered in this same pass already see it.
  */
 export function I18nRoot({ children }: { children: ReactNode }) {
-  const { language } = useLanguage()
+  const { language, setLanguage } = useLanguage()
   if (active.lang !== language) active = makeTranslator(language)
   if (typeof document !== 'undefined' && document.documentElement.lang !== language) {
     document.documentElement.lang = language
   }
+  // The desktop shell draws its own Save dialogs; tell it which language.
+  useEffect(() => {
+    window.desktop?.setLanguage?.(language)
+  }, [language])
+  // For store-assets/generate.mjs: it drives the app in English (its selectors
+  // are English labels) and switches language just before each capture. Only
+  // what a user can already do from the Language menu.
+  useEffect(() => {
+    ;(window as unknown as { __pdfSetLanguage?: (l: Language) => void }).__pdfSetLanguage = setLanguage
+  }, [setLanguage])
   return <>{children}</>
 }
