@@ -57,14 +57,7 @@ const APP_BUILD_LABEL = (() => {
   return `${version} · ${[os, desktop ? 'desktop' : 'web'].filter(Boolean).join(' ')}`
 })()
 
-// Apply the saved language to <html lang> on first mount.
-import { persistLang, readSavedLang } from './lib/lang'
-if (typeof document !== 'undefined') {
-  document.documentElement.lang = readSavedLang()
-  // Re-run persist (no-op if unchanged) so this stays in sync if the
-  // user clears storage between sessions.
-  persistLang(readSavedLang())
-}
+// <html lang> follows the suite language — see <I18nRoot> in src/i18n.
 import { usePdfStore } from './stores/pdfStore'
 import { useSignatureStore } from './stores/signatureStore'
 import { useAnnotationStore } from './stores/annotationStore'

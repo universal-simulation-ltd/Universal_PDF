@@ -206,6 +206,10 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
           menuAlign="right"
           tier={subscription?.tier}
           actions={actions}
+          // The Actions rows carry the Language picker (FileMenu), and they are
+          // merged into this same panel — two "Language" rows would be a coin
+          // toss. Only when there ARE actions: without them this is the only one.
+          showLanguageSelector={!actions}
           // The org's mark and name, from whatever My Company → Branding
           // already holds. `extras` sits with the account rows (profile, app
           // settings, language) and above the sign-out divider, which is where

@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { UniversalProvider } from '@unisim/sdk'
+import { I18nRoot } from './i18n'
 
 console.log(`build: ${import.meta.env.VITE_BUILD_SHA}`)
 import App from './App'
@@ -66,11 +67,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
       <UniversalProvider config={universalConfig}>
-        <UsageTracker />
-        {signToken ? <SignMobilePage token={signToken} />
-          : signDocToken ? <SignRequestPage token={signDocToken} />
-          : certId ? <SignCertificatePage certId={certId} />
-          : <App />}
+        <I18nRoot>
+          <UsageTracker />
+          {signToken ? <SignMobilePage token={signToken} />
+            : signDocToken ? <SignRequestPage token={signDocToken} />
+            : certId ? <SignCertificatePage certId={certId} />
+            : <App />}
+        </I18nRoot>
       </UniversalProvider>
     </ErrorBoundary>
   </React.StrictMode>

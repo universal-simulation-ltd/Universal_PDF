@@ -5,8 +5,8 @@ import { usePdfStore } from '../../stores/pdfStore'
 import { useExitGuard } from '../../stores/exitGuard'
 import { useSearchStore } from '../../stores/searchStore'
 import { useUndo } from '../../hooks/useUndo'
-import { useUserPrefs } from '@unisim/sdk'
-import { LANGS, persistLang, readSavedLang, type LangCode } from '../../lib/lang'
+import { useLanguage, useUserPrefs } from '@unisim/sdk'
+import { LANGUAGE_OPTIONS, useT, type Language } from '../../i18n'
 import { PDF_OR_OFFICE_ACCEPT } from '../../lib/officeToPdf'
 import { openFiles } from '../../stores/tabStore'
 import { RedactIcon } from '../icons/RedactIcon'
@@ -203,7 +203,10 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   // showing it in both at once would be two inputs racing over one name.
   const [renameInHeader, setRenameInHeader] = useState(false)
   const [renameDraft, setRenameDraft] = useState('')
-  const [currentLang, setCurrentLang] = useState<LangCode>(readSavedLang())
+  // The suite language — the SDK's, which the navbar and the profile menu read
+  // too. This row replaced "Document language", which only set `<html lang>`.
+  const t = useT()
+  const { language, setLanguage } = useLanguage()
   const [showOtherHint, setShowOtherHint] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -212,7 +215,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const renameInputRef = useRef<HTMLInputElement>(null)
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null)
 
-  const currentLangOpt = LANGS.find((l) => l.code === currentLang) ?? LANGS[0]
+  const currentLangOpt = LANGUAGE_OPTIONS.find((l) => l.code === language) ?? LANGUAGE_OPTIONS[0]
 
   // Read-side aliases so each group's markup still asks a plain question.
   const fileSubOpen = openSection === 'file'
@@ -228,13 +231,8 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
     setOpenSection((current) => (current === section ? null : section))
   }
 
-  function pickLang(code: LangCode) {
-    if (code === 'other') {
-      setShowOtherHint(true)
-      return
-    }
-    setCurrentLang(code)
-    persistLang(code)
+  function pickLang(code: Language) {
+    setLanguage(code)
     setShowOtherHint(false)
     setOpenSection(null)
     closeMenu()
@@ -840,22 +838,22 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
             </>
           )}
 
-          {/* Language submenu — "Document" is load-bearing, not decoration. This
-              sets the PDF's own `document.documentElement.lang`; the SDK's
-              profile menu carries the SUITE-WIDE UI language, and since 0.78.0
-              both live in this one dropdown. Two rows called "Language" in one
-              panel is a coin toss for the user. */}
+          {/* Language submenu. It sets the SUITE language (the SDK's), so the
+              navbar, the profile menu and every label in this app change
+              together. The profile's own Language row is switched off wherever
+              this menu is merged into it (ToolbarUserProfile), so one panel
+              never offers two. It used to be "Document language", which only
+              set `<html lang>` and translated nothing. */}
           <button
             onClick={() => { toggleSection('lang'); setShowOtherHint(false) }}
             className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-sm border-t border-slate-100"
             aria-haspopup="true"
             aria-expanded={langSubOpen}
+            data-testid="menu-language"
           >
             <span aria-hidden="true">{currentLangOpt.flag}</span>
-            <span className="flex-1 text-left">Document language</span>
-            <span className="text-[11px] text-slate-500 uppercase tracking-wide mr-1">
-              {currentLangOpt.code === 'other' ? 'EN' : currentLangOpt.code}
-            </span>
+            <span className="flex-1 text-left">{t('menu.language')}</span>
+            <span className="text-[11px] text-slate-500 mr-1">{currentLangOpt.label}</span>
             <svg viewBox="0 0 12 12" className={`w-3 h-3 transition-transform ${langSubOpen ? '-rotate-90' : ''}`} aria-hidden="true">
               <path d="M4 2 L8 6 L4 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -863,33 +861,46 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
 
           {langSubOpen && (
             <div className="border-t border-slate-100 bg-slate-50/60">
-              {LANGS.map((l) => (
+              {LANGUAGE_OPTIONS.map((l) => (
                 <button
                   key={l.code}
                   type="button"
+                  lang={l.code}
                   onClick={() => pickLang(l.code)}
+                  data-testid={`menu-language-${l.code}`}
                   className={`w-full flex items-center gap-3 pl-8 pr-3 py-2 text-sm transition-colors ${
-                    l.code === currentLang
+                    l.code === language
                       ? 'text-orange-700 font-medium bg-orange-50/60'
                       : 'text-slate-700 hover:bg-white'
                   }`}
                 >
                   <span aria-hidden="true">{l.flag}</span>
                   <span className="flex-1 text-left">{l.label}</span>
-                  {l.code === currentLang && <span aria-hidden="true">✓</span>}
+                  {l.code === language && <span aria-hidden="true">✓</span>}
                 </button>
               ))}
+              <button
+                type="button"
+                onClick={() => setShowOtherHint(true)}
+                className="w-full flex items-center gap-3 pl-8 pr-3 py-2 text-sm text-slate-700 hover:bg-white"
+              >
+                <span aria-hidden="true">🌐</span>
+                <span className="flex-1 text-left">{t('menu.language_other')}</span>
+              </button>
               {showOtherHint && (
                 <div className="px-3 py-2 text-[11px] text-slate-600 border-t border-slate-100">
-                  <a
-                    href="https://www.unisim.co.uk"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-orange-700 hover:underline font-medium"
-                  >
-                    Contact UNI SIM
-                  </a>{' '}
-                  to request a language.
+                  {t.rich('menu.language_request', {
+                    link: (
+                      <a
+                        href="https://www.unisim.co.uk"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-orange-700 hover:underline font-medium"
+                      >
+                        {t('menu.language_contact')}
+                      </a>
+                    ),
+                  })}
                 </div>
               )}
             </div>
