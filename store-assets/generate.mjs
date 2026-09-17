@@ -56,6 +56,18 @@ const TYPES = {
   '.webmanifest': 'application/manifest+json', '.bcmap': 'application/octet-stream',
 }
 
+// The store locale being captured, and the app language it shows. The app is
+// DRIVEN in English either way — every selector above is an English label — and
+// switched to LOCALE's language just before the capture (window.__pdfSetLanguage,
+// see <I18nRoot>). en-GB keeps writing to raw/<device>/, as before.
+const LOCALE = process.env.LOCALE || 'en-GB'
+const APP_LANGUAGE = {
+  'en-GB': 'en-gb', 'fr-FR': 'fr', 'es-ES': 'es', 'it-IT': 'it', 'de-DE': 'de',
+  'pt-BR': 'pt-BR', 'pt-PT': 'pt-PT', 'tr-TR': 'tr',
+}[LOCALE]
+if (!APP_LANGUAGE) throw new Error(`No app language for LOCALE=${LOCALE}`)
+const rawDir = (dev) => (LOCALE === 'en-GB' ? dev.dir : dev.dir.replace(/^raw\//, `raw/${LOCALE}/`))
+
 // ── The sample document ────────────────────────────────────────────────────
 const A4 = [595.28, 841.89]
 // Where things are, in PDF points (origin bottom-left), so the script can tap them.
@@ -76,47 +88,93 @@ const FIELDS = [
   ['Date', 355, 262, 200, '14 September 2026'],
 ]
 
+// The same invented form in the store locale's language (sample-form.json):
+// a French listing should not show an English document. English keeps the
+// original drawing exactly. The FIELD NAMES stay English in every locale —
+// they are the form's identifiers, and `fill` finds each cell by them.
+const SAMPLE = LOCALE === 'en-GB' ? null : JSON.parse(await readFile(path.join(here, 'sample-form.json'), 'utf8'))[LOCALE]
+if (LOCALE !== 'en-GB' && !SAMPLE) throw new Error(`sample-form.json has no ${LOCALE}`)
+const fieldValue = (name, value) => SAMPLE?.fields[name]?.[1] ?? value
+
+async function sampleFonts(pdf) {
+  // The base-14 Helvetica writes Latin-1 only, and Turkish needs ş ğ ı İ. For
+  // a translated form, embed Arial from macOS through fontkit (neither is a
+  // dependency of this repo: `npm i --no-save @pdf-lib/fontkit`, or point
+  // FONTKIT at a copy). Anything missing falls back to Helvetica.
+  if (SAMPLE) {
+    try {
+      const fontkit = (await import(process.env.FONTKIT ? pathToFileURL(process.env.FONTKIT).href : '@pdf-lib/fontkit')).default
+      pdf.registerFontkit(fontkit)
+      const dir = '/System/Library/Fonts/Supplemental'
+      return [
+        await pdf.embedFont(await readFile(`${dir}/Arial.ttf`)),
+        await pdf.embedFont(await readFile(`${dir}/Arial Bold.ttf`)),
+      ]
+    } catch (err) {
+      console.warn(`Sample form in Helvetica (${err.message.split('\n')[0]}) — letters outside Latin-1 will be missing`)
+    }
+  }
+  return [await pdf.embedFont(StandardFonts.Helvetica), await pdf.embedFont(StandardFonts.HelveticaBold)]
+}
+
+/** Lines of `s` no wider than `max` points. */
+function wrap(s, font, size, max) {
+  const lines = []
+  let line = ''
+  for (const word of s.split(' ')) {
+    const next = line ? `${line} ${word}` : word
+    if (line && font.widthOfTextAtSize(next, size) > max) { lines.push(line); line = word } else line = next
+  }
+  return line ? [...lines, line] : lines
+}
+
 async function samplePdf() {
   const pdf = await PDFDocument.create()
-  pdf.setTitle('Allotment plot application')
-  const font = await pdf.embedFont(StandardFonts.Helvetica)
-  const bold = await pdf.embedFont(StandardFonts.HelveticaBold)
+  pdf.setTitle(SAMPLE?.subtitle ?? 'Allotment plot application')
+  const [font, bold] = await sampleFonts(pdf)
   const page = pdf.addPage(A4)
   const green = rgb(0.18, 0.4, 0.23), ink = rgb(0.12, 0.14, 0.16), grey = rgb(0.4, 0.44, 0.48), line = rgb(0.78, 0.8, 0.82)
   const text = (s, x, y, size = 10.5, f = font, color = ink) => page.drawText(s, { x, y, size, font: f, color })
+  const T = (key, en) => SAMPLE?.[key] ?? en
 
   page.drawRectangle({ x: 0, y: 766, width: A4[0], height: 76, color: green })
   page.drawCircle({ x: 62, y: 804, size: 20, color: rgb(0.62, 0.81, 0.42) })
-  text('RA', 51, 799, 13, bold, green)
-  text('Riverside Allotment Society', 96, 810, 20, bold, rgb(1, 1, 1))
-  text('Application for a plot  ·  2026–27 season', 96, 790, 11, font, rgb(0.86, 0.93, 0.86))
+  text(T('initials', 'RA'), 51, 799, 13, bold, green)
+  text(T('society', 'Riverside Allotment Society'), 96, 810, 20, bold, rgb(1, 1, 1))
+  text(T('subtitle', 'Application for a plot  ·  2026–27 season'), 96, 790, 11, font, rgb(0.86, 0.93, 0.86))
 
-  text('About the plots', 40, 736, 13, bold, green)
-  text('Plots are let for twelve months from 1 March. Tenants agree to keep at least three-', 40, 710)
-  text('quarters of the plot in cultivation, to keep shared paths clear, and to use the water', 40, 695)
-  text('butts rather than the mains taps between May and September.', 40, 680)
+  text(T('aboutTitle', 'About the plots'), 40, 736, 13, bold, green)
+  const about = SAMPLE
+    ? wrap(SAMPLE.about, font, 10.5, 515).slice(0, 3)
+    : [
+        'Plots are let for twelve months from 1 March. Tenants agree to keep at least three-',
+        'quarters of the plot in cultivation, to keep shared paths clear, and to use the water',
+        'butts rather than the mains taps between May and September.',
+      ]
+  about.forEach((l, i) => text(l, 40, 710 - 15 * i))
 
-  text('Your details', 40, 648, 13, bold, green)
+  text(T('detailsTitle', 'Your details'), 40, 648, 13, bold, green)
   const form = pdf.getForm()
   for (const [name, x, y, w] of FIELDS) {
-    text(name, x, y + 30, 9, bold, grey)
+    text(SAMPLE?.fields[name]?.[0] ?? name, x, y + 30, 9, bold, grey)
     const f = form.createTextField(name)
     f.addToPage(page, { x, y, width: w, height: 24, borderColor: line, borderWidth: 1, backgroundColor: rgb(1, 1, 1) })
   }
 
-  text('The plot you would like', 40, 470, 13, bold, green)
+  text(T('plotTitle', 'The plot you would like'), 40, 470, 13, bold, green)
   page.drawRectangle({ x: 40, y: 384, width: 12, height: 12, borderColor: grey, borderWidth: 1 })
-  text('I have read the allotment rules and agree to keep them.', 60, 386)
+  text(T('rules', 'I have read the allotment rules and agree to keep them.'), 60, 386)
   page.drawRectangle({ x: 40, y: 362, width: 12, height: 12, borderColor: grey, borderWidth: 1 })
-  text('Please add me to the seed swap mailing list.', 60, 364)
+  text(T('mailing', 'Please add me to the seed swap mailing list.'), 60, 364)
 
-  text('Signature', 40, 326, 13, bold, green)
-  text('Signed by the applicant', 40, 250, 9, bold, grey)
+  text(T('signatureTitle', 'Signature'), 40, 326, 13, bold, green)
+  text(T('signedBy', 'Signed by the applicant'), 40, 250, 9, bold, grey)
   page.drawLine({ start: { x: 40, y: 262 }, end: { x: 330, y: 262 }, thickness: 1, color: ink })
 
   page.drawLine({ start: { x: 40, y: 96 }, end: { x: 555, y: 96 }, thickness: 0.5, color: line })
-  text('Return this form to the plot secretary, Riverside Allotment Society, Mill Lane, Hexley.', 40, 78, 9, font, grey)
-  text('Page 1 of 1', 505, 60, 9, bold, grey)
+  text(T('footer', 'Return this form to the plot secretary, Riverside Allotment Society, Mill Lane, Hexley.'), 40, 78, 9, font, grey)
+  const pageLabel = T('page', 'Page 1 of 1')
+  text(pageLabel, SAMPLE ? 555 - bold.widthOfTextAtSize(pageLabel, 9) : 505, 60, 9, bold, grey)
   return Buffer.from(await pdf.save())
 }
 
@@ -145,7 +203,7 @@ async function fill(page) {
     const cell = page.locator(`[title="Click to fill: ${name}"]`).first()
     await cell.scrollIntoViewIfNeeded()
     await cell.click()
-    await page.keyboard.type(value)
+    await page.keyboard.type(fieldValue(name, value))
     await page.keyboard.press('Enter')
     await page.waitForTimeout(120)
   }
@@ -315,18 +373,6 @@ async function serve(ctx) {
     }
   })
 }
-
-// The store locale being captured, and the app language it shows. The app is
-// DRIVEN in English either way — every selector above is an English label — and
-// switched to LOCALE's language just before the capture (window.__pdfSetLanguage,
-// see <I18nRoot>). en-GB keeps writing to raw/<device>/, as before.
-const LOCALE = process.env.LOCALE || 'en-GB'
-const APP_LANGUAGE = {
-  'en-GB': 'en-gb', 'fr-FR': 'fr', 'es-ES': 'es', 'it-IT': 'it', 'de-DE': 'de',
-  'pt-BR': 'pt-BR', 'pt-PT': 'pt-PT', 'tr-TR': 'tr',
-}[LOCALE]
-if (!APP_LANGUAGE) throw new Error(`No app language for LOCALE=${LOCALE}`)
-const rawDir = (dev) => (LOCALE === 'en-GB' ? dev.dir : dev.dir.replace(/^raw\//, `raw/${LOCALE}/`))
 
 const only = process.argv.slice(2)
 const devices = DEVICES.filter((d) => !process.env.DEVICE || process.env.DEVICE.split(',').includes(d.key))

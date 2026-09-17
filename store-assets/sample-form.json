@@ -1,0 +1,345 @@
+{
+ "fr-FR": {
+  "initials": "JR",
+  "society": "Jardins familiaux de la Rivière",
+  "subtitle": "Demande de parcelle  ·  saison 2026–27",
+  "aboutTitle": "À propos des parcelles",
+  "about": "Les parcelles sont louées pour douze mois à partir du 1er mars. Les locataires s’engagent à cultiver au moins les trois quarts de la parcelle, à garder les allées communes dégagées et à utiliser les récupérateurs d’eau plutôt que les robinets entre mai et septembre.",
+  "detailsTitle": "Vos coordonnées",
+  "fields": {
+   "Full name": [
+    "Nom complet",
+    "Camille Martin"
+   ],
+   "Address": [
+    "Adresse",
+    "14 rue du Moulin, Hexley"
+   ],
+   "Postcode": [
+    "Code postal",
+    "75020"
+   ],
+   "Email": [
+    "E-mail",
+    "camille.martin@example.com"
+   ],
+   "Phone": [
+    "Téléphone",
+    "01 99 00 12 34"
+   ],
+   "Plot size": [
+    "Taille de la parcelle",
+    "Demi-parcelle (125 m²)"
+   ],
+   "Start date": [
+    "Date de début",
+    "1er mars 2027"
+   ],
+   "Date": [
+    "Date",
+    "14 septembre 2026"
+   ]
+  },
+  "plotTitle": "La parcelle souhaitée",
+  "rules": "J’ai lu le règlement des jardins et m’engage à le respecter.",
+  "mailing": "Inscrivez-moi à la liste d’échange de graines.",
+  "signatureTitle": "Signature",
+  "signedBy": "Signature du demandeur",
+  "footer": "Retournez ce formulaire au secrétariat, Jardins familiaux de la Rivière, rue du Moulin, Hexley.",
+  "page": "Page 1 sur 1"
+ },
+ "es-ES": {
+  "initials": "HR",
+  "society": "Huertos Urbanos del Río",
+  "subtitle": "Solicitud de parcela  ·  temporada 2026–27",
+  "aboutTitle": "Sobre las parcelas",
+  "about": "Las parcelas se ceden por doce meses a partir del 1 de marzo. Quienes las cultivan se comprometen a trabajar al menos tres cuartas partes de la parcela, a mantener despejados los caminos comunes y a usar los depósitos de agua de lluvia en lugar de los grifos entre mayo y septiembre.",
+  "detailsTitle": "Tus datos",
+  "fields": {
+   "Full name": [
+    "Nombre completo",
+    "Lucía Romero"
+   ],
+   "Address": [
+    "Dirección",
+    "Calle del Molino 14, Hexley"
+   ],
+   "Postcode": [
+    "Código postal",
+    "28099"
+   ],
+   "Email": [
+    "Correo electrónico",
+    "lucia.romero@example.com"
+   ],
+   "Phone": [
+    "Teléfono",
+    "600 000 123"
+   ],
+   "Plot size": [
+    "Tamaño de la parcela",
+    "Media parcela (125 m²)"
+   ],
+   "Start date": [
+    "Fecha de inicio",
+    "1 de marzo de 2027"
+   ],
+   "Date": [
+    "Fecha",
+    "14 de septiembre de 2026"
+   ]
+  },
+  "plotTitle": "La parcela que te interesa",
+  "rules": "He leído las normas del huerto y me comprometo a cumplirlas.",
+  "mailing": "Añadidme a la lista de intercambio de semillas.",
+  "signatureTitle": "Firma",
+  "signedBy": "Firma de la persona solicitante",
+  "footer": "Entrega este formulario en la secretaría de Huertos Urbanos del Río, Calle del Molino, Hexley.",
+  "page": "Página 1 de 1"
+ },
+ "it-IT": {
+  "initials": "OF",
+  "society": "Orti Comunali del Fiume",
+  "subtitle": "Domanda di assegnazione  ·  stagione 2026–27",
+  "aboutTitle": "Informazioni sugli orti",
+  "about": "Gli orti sono assegnati per dodici mesi a partire dal 1° marzo. Gli assegnatari si impegnano a coltivare almeno tre quarti dell’orto, a tenere sgombri i sentieri comuni e a usare le cisterne di acqua piovana invece dei rubinetti tra maggio e settembre.",
+  "detailsTitle": "I tuoi dati",
+  "fields": {
+   "Full name": [
+    "Nome e cognome",
+    "Giulia Ferri"
+   ],
+   "Address": [
+    "Indirizzo",
+    "Via del Mulino 14, Hexley"
+   ],
+   "Postcode": [
+    "CAP",
+    "00199"
+   ],
+   "Email": [
+    "Email",
+    "giulia.ferri@example.com"
+   ],
+   "Phone": [
+    "Telefono",
+    "333 000 0123"
+   ],
+   "Plot size": [
+    "Dimensione dell’orto",
+    "Mezzo orto (125 m²)"
+   ],
+   "Start date": [
+    "Data di inizio",
+    "1° marzo 2027"
+   ],
+   "Date": [
+    "Data",
+    "14 settembre 2026"
+   ]
+  },
+  "plotTitle": "L’orto che desideri",
+  "rules": "Ho letto il regolamento degli orti e mi impegno a rispettarlo.",
+  "mailing": "Iscrivetemi alla lista per lo scambio di semi.",
+  "signatureTitle": "Firma",
+  "signedBy": "Firma del richiedente",
+  "footer": "Consegna questo modulo alla segreteria degli Orti Comunali del Fiume, Via del Mulino, Hexley.",
+  "page": "Pagina 1 di 1"
+ },
+ "de-DE": {
+  "initials": "KF",
+  "society": "Kleingartenverein am Fluss",
+  "subtitle": "Antrag auf eine Parzelle  ·  Saison 2026/27",
+  "aboutTitle": "Über die Parzellen",
+  "about": "Die Parzellen werden für zwölf Monate ab dem 1. März verpachtet. Pächterinnen und Pächter verpflichten sich, mindestens drei Viertel der Parzelle zu bewirtschaften, die gemeinsamen Wege freizuhalten und zwischen Mai und September Regentonnen statt der Wasserhähne zu nutzen.",
+  "detailsTitle": "Deine Angaben",
+  "fields": {
+   "Full name": [
+    "Vollständiger Name",
+    "Lena Weber"
+   ],
+   "Address": [
+    "Adresse",
+    "Mühlenweg 14, Hexley"
+   ],
+   "Postcode": [
+    "Postleitzahl",
+    "10999"
+   ],
+   "Email": [
+    "E-Mail",
+    "lena.weber@example.com"
+   ],
+   "Phone": [
+    "Telefon",
+    "0151 00000123"
+   ],
+   "Plot size": [
+    "Parzellengröße",
+    "Halbe Parzelle (125 m²)"
+   ],
+   "Start date": [
+    "Beginn",
+    "1. März 2027"
+   ],
+   "Date": [
+    "Datum",
+    "14. September 2026"
+   ]
+  },
+  "plotTitle": "Deine Wunschparzelle",
+  "rules": "Ich habe die Gartenordnung gelesen und halte mich daran.",
+  "mailing": "Bitte nehmt mich in die Liste für den Saatguttausch auf.",
+  "signatureTitle": "Unterschrift",
+  "signedBy": "Unterschrift der antragstellenden Person",
+  "footer": "Bitte gib diesen Antrag beim Vorstand ab: Kleingartenverein am Fluss, Mühlenweg, Hexley.",
+  "page": "Seite 1 von 1"
+ },
+ "pt-BR": {
+  "initials": "HR",
+  "society": "Hortas Comunitárias do Rio",
+  "subtitle": "Pedido de canteiro  ·  temporada 2026–27",
+  "aboutTitle": "Sobre os canteiros",
+  "about": "Os canteiros são cedidos por doze meses a partir de 1º de março. Quem cultiva se compromete a manter pelo menos três quartos do canteiro plantados, deixar os caminhos comuns livres e usar as cisternas em vez das torneiras entre maio e setembro.",
+  "detailsTitle": "Seus dados",
+  "fields": {
+   "Full name": [
+    "Nome completo",
+    "Ana Souza"
+   ],
+   "Address": [
+    "Endereço",
+    "Rua do Moinho, 14, Hexley"
+   ],
+   "Postcode": [
+    "CEP",
+    "01099-000"
+   ],
+   "Email": [
+    "E-mail",
+    "ana.souza@example.com"
+   ],
+   "Phone": [
+    "Telefone",
+    "(11) 90000-0123"
+   ],
+   "Plot size": [
+    "Tamanho do canteiro",
+    "Meio canteiro (125 m²)"
+   ],
+   "Start date": [
+    "Data de início",
+    "1º de março de 2027"
+   ],
+   "Date": [
+    "Data",
+    "14 de setembro de 2026"
+   ]
+  },
+  "plotTitle": "O canteiro que você quer",
+  "rules": "Li as regras da horta e concordo em cumpri-las.",
+  "mailing": "Quero entrar na lista de troca de sementes.",
+  "signatureTitle": "Assinatura",
+  "signedBy": "Assinatura do solicitante",
+  "footer": "Entregue este formulário na secretaria das Hortas Comunitárias do Rio, Rua do Moinho, Hexley.",
+  "page": "Página 1 de 1"
+ },
+ "pt-PT": {
+  "initials": "HR",
+  "society": "Hortas Urbanas do Rio",
+  "subtitle": "Pedido de talhão  ·  época 2026–27",
+  "aboutTitle": "Sobre os talhões",
+  "about": "Os talhões são cedidos por doze meses a partir de 1 de março. Os utilizadores comprometem-se a cultivar pelo menos três quartos do talhão, a manter os caminhos comuns desimpedidos e a usar os depósitos de água da chuva em vez das torneiras entre maio e setembro.",
+  "detailsTitle": "Os seus dados",
+  "fields": {
+   "Full name": [
+    "Nome completo",
+    "Inês Carvalho"
+   ],
+   "Address": [
+    "Morada",
+    "Rua do Moinho, 14, Hexley"
+   ],
+   "Postcode": [
+    "Código postal",
+    "1099-000"
+   ],
+   "Email": [
+    "E-mail",
+    "ines.carvalho@example.com"
+   ],
+   "Phone": [
+    "Telefone",
+    "910 000 123"
+   ],
+   "Plot size": [
+    "Dimensão do talhão",
+    "Meio talhão (125 m²)"
+   ],
+   "Start date": [
+    "Data de início",
+    "1 de março de 2027"
+   ],
+   "Date": [
+    "Data",
+    "14 de setembro de 2026"
+   ]
+  },
+  "plotTitle": "O talhão pretendido",
+  "rules": "Li o regulamento das hortas e comprometo-me a cumpri-lo.",
+  "mailing": "Incluam-me na lista de troca de sementes.",
+  "signatureTitle": "Assinatura",
+  "signedBy": "Assinatura do requerente",
+  "footer": "Entregue este formulário na secretaria das Hortas Urbanas do Rio, Rua do Moinho, Hexley.",
+  "page": "Página 1 de 1"
+ },
+ "tr-TR": {
+  "initials": "NB",
+  "society": "Nehir Kenarı Hobi Bahçeleri",
+  "subtitle": "Parsel başvurusu  ·  2026–27 sezonu",
+  "aboutTitle": "Parseller hakkında",
+  "about": "Parseller 1 Mart’tan itibaren on iki aylığına kiralanır. Kiracılar parselin en az dörtte üçünü ekili tutmayı, ortak yolları açık bırakmayı ve mayıs ile eylül arasında şebeke musluğu yerine yağmur suyu depolarını kullanmayı kabul eder.",
+  "detailsTitle": "Bilgileriniz",
+  "fields": {
+   "Full name": [
+    "Ad soyad",
+    "Elif Yılmaz"
+   ],
+   "Address": [
+    "Adres",
+    "Değirmen Sokak No. 14, Hexley"
+   ],
+   "Postcode": [
+    "Posta kodu",
+    "34099"
+   ],
+   "Email": [
+    "E-posta",
+    "elif.yilmaz@example.com"
+   ],
+   "Phone": [
+    "Telefon",
+    "0555 000 01 23"
+   ],
+   "Plot size": [
+    "Parsel büyüklüğü",
+    "Yarım parsel (125 m²)"
+   ],
+   "Start date": [
+    "Başlangıç tarihi",
+    "1 Mart 2027"
+   ],
+   "Date": [
+    "Tarih",
+    "14 Eylül 2026"
+   ]
+  },
+  "plotTitle": "İstediğiniz parsel",
+  "rules": "Bahçe kurallarını okudum ve uymayı kabul ediyorum.",
+  "mailing": "Beni tohum takası listesine ekleyin.",
+  "signatureTitle": "İmza",
+  "signedBy": "Başvuru sahibinin imzası",
+  "footer": "Bu formu parsel sekreterliğine teslim edin: Nehir Kenarı Hobi Bahçeleri, Değirmen Sokak, Hexley.",
+  "page": "Sayfa 1 / 1"
+ }
+}
