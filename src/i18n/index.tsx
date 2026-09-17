@@ -1,9 +1,11 @@
 // The app's own translations.
 //
-// ONE language for the whole suite: the SDK's (`useLanguage()`), which it
-// resolves from the saved choice, then the device's language, then English.
-// The navbar, the profile menu and this app all read it, so a French phone gets
-// French everywhere, and changing it anywhere changes it everywhere.
+// The SDK's language (`useLanguage()`): the suite's GLOBAL language, which it
+// resolves from the saved choice, then the device's language, then English —
+// unless this app has its own, set in App preferences. `language` is already
+// that effective value, so the navbar, the profile menu and this app always
+// agree. Both pickers are the SDK's (App preferences / Global preferences in
+// the profile menu); the Actions menu's own Language row went in 2026-09-17.
 //
 // ⚠️ Until 1.0.3 the app had a separate "Document language" picker that only
 // set `<html lang>` and translated nothing, while every label was hard-coded
@@ -48,22 +50,6 @@ export type Language = (typeof SUPPORTED_LANGUAGES)[number]
 
 registerLanguages({ fr, es, it, de, 'pt-BR': ptBR, 'pt-PT': ptPT, tr: turkish })
 
-/**
- * The languages offered in the app's own picker, as their speakers write them.
- * Same codes and labels as the SDK's profile menu, so the two never disagree.
- */
-export const LANGUAGE_OPTIONS: { code: Language; label: string; flag: string }[] = [
-  { code: 'en', label: 'English (US)', flag: '🇺🇸' },
-  { code: 'en-gb', label: 'English (GB)', flag: '🇬🇧' },
-  { code: 'fr', label: 'Français', flag: '🇫🇷' },
-  { code: 'es', label: 'Español', flag: '🇪🇸' },
-  { code: 'it', label: 'Italiano', flag: '🇮🇹' },
-  { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
-  { code: 'pt-BR', label: 'Português (Brasil)', flag: '🇧🇷' },
-  { code: 'pt-PT', label: 'Português (Portugal)', flag: '🇵🇹' },
-  { code: 'tr', label: 'Türkçe', flag: '🇹🇷' },
-]
-
 export interface Translator extends BasicTranslator {
   /**
    * A sentence with React nodes in it: `t.rich('menu.contact', { link: <a…/> })`
@@ -98,7 +84,8 @@ export function useT(): Translator {
  * rendered in this same pass already see it.
  */
 export function I18nRoot({ children }: { children: ReactNode }) {
-  const { language, setLanguage } = useLanguage()
+  // `language` is the EFFECTIVE one: this app's override, else the global.
+  const { language, setAppLanguage } = useLanguage()
   setActiveLanguage(language)
   if (typeof document !== 'undefined' && document.documentElement.lang !== language) {
     document.documentElement.lang = language
@@ -109,9 +96,10 @@ export function I18nRoot({ children }: { children: ReactNode }) {
   }, [language])
   // For store-assets/generate.mjs: it drives the app in English (its selectors
   // are English labels) and switches language just before each capture. Only
-  // what a user can already do from the Language menu.
+  // what a user can already do from App preferences: it sets this app's
+  // override, which translates the app and the SDK's chrome alike.
   useEffect(() => {
-    ;(window as unknown as { __pdfSetLanguage?: (l: Language) => void }).__pdfSetLanguage = setLanguage
-  }, [setLanguage])
+    ;(window as unknown as { __pdfSetLanguage?: (l: Language) => void }).__pdfSetLanguage = setAppLanguage
+  }, [setAppLanguage])
   return <>{children}</>
 }

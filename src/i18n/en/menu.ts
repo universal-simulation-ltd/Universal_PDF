@@ -55,11 +55,6 @@ export default {
   'undo_named': 'Undo {action}', // {action} is a whole-document step, e.g. "merge"
   'redo': 'Redo',
   'clear_annotations': 'Clear all annotations',
-  // FileMenu — Language
-  'language': 'Language',
-  'language_other': 'Other…',
-  'language_request': '{link} to request a language.',
-  'language_contact': 'Contact UNI SIM',
   // CompanyBadge
   'company': 'Company', // caption above the organisation's name
   // ToolbarUserProfile

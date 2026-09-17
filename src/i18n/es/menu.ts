@@ -55,11 +55,6 @@ const menu: Messages['menu'] = {
   'undo_named': 'Deshacer {action}',
   'redo': 'Rehacer',
   'clear_annotations': 'Borrar todas las anotaciones',
-  // FileMenu — Language
-  'language': 'Idioma',
-  'language_other': 'Otro…',
-  'language_request': '{link} para solicitar un idioma.',
-  'language_contact': 'Contacta con UNI SIM',
   // CompanyBadge
   'company': 'Empresa',
   // ToolbarUserProfile

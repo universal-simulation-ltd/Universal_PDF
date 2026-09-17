@@ -55,11 +55,6 @@ const menu: Messages['menu'] = {
   'undo_named': 'Geri al: {action}',
   'redo': 'Yinele',
   'clear_annotations': 'Tüm notları temizle',
-  // FileMenu — Language
-  'language': 'Dil',
-  'language_other': 'Diğer…',
-  'language_request': 'Bir dil istemek için {link}.',
-  'language_contact': 'UNI SIM ile iletişime geçin',
   // CompanyBadge
   'company': 'Şirket',
   // ToolbarUserProfile

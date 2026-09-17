@@ -208,13 +208,15 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
           menuAlign="right"
           tier={subscription?.tier}
           actions={actions}
-          // The Actions rows carry the Language picker (FileMenu), and they are
-          // merged into this same panel — two "Language" rows would be a coin
-          // toss. Only when there ARE actions: without them this is the only one.
-          showLanguageSelector={!actions}
+          // No `showLanguageSelector`: the language lives in the SDK's App
+          // preferences (this app's override) and Global preferences rows —
+          // the Actions rows' own Language picker went in 2026-09-17. Both
+          // dialogs follow `theme` (light, the default), not `pillTheme`, so
+          // they match the light panel.
+
           // The org's mark and name, from whatever My Company → Branding
-          // already holds. `extras` sits with the account rows (profile, app
-          // settings, language) and above the sign-out divider, which is where
+          // already holds. `extras` sits with the account rows (profile, Global
+          // preferences) and above the sign-out divider, which is where
           // "who am I signed in as" belongs — not up among the app's actions.
           //
           // ⚠️ Styled LIGHT deliberately. The SDK renders `extras` as-is and
