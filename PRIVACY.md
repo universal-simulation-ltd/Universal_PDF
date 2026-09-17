@@ -82,6 +82,12 @@ like a lie.
   saying the app was opened, so your account's activity page is accurate. It
   does not include anything about your file — not its name, not its size.
   See [`src/UsageTracker.tsx`](src/UsageTracker.tsx).
+- **"This app is in use".** While the app is open and on screen, it tells our
+  server every 45 seconds that this app is in use on this device, so the menu
+  can say how many people use it and how many are using it now. That message
+  holds the app's name and a random ID made on this device, and your account
+  if you are signed in: nothing about what you are working on. See `presence.ts`
+  in `@unisim/sdk`.
 - **The changelog and update notice**, which is just fetching a list of
   releases.
 
