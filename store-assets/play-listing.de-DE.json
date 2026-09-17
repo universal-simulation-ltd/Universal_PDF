@@ -1,0 +1,59 @@
+{
+  "language": "de-DE",
+  "details": {
+    "defaultLanguage": "en-GB",
+    "contactEmail": "inbox@unisim.co.uk",
+    "contactWebsite": "https://www.unisim.co.uk"
+  },
+  "listing": {
+    "title": "Universal PDF",
+    "shortDescription": "PDFs ausfüllen, unterschreiben und kommentieren. Ohne Werbung, ohne Tracking.",
+    "fullDescription": [
+      "Universal PDF öffnet PDFs auf deinem Handy, füllt sie aus, unterschreibt und kommentiert sie. Die Arbeit passiert auf dem Gerät: Dein Dokument wird nicht hochgeladen, um angezeigt oder bearbeitet zu werden, und auf unseren Servern liegt keine Kopie, außer du tippst auf eine Schaltfläche, die genau das sagt.",
+      "",
+      "AUSFÜLLEN UND UNTERSCHREIBEN",
+      "• Schreibe direkt in die Formularfelder eines PDFs.",
+      "• Zeichne deine Unterschrift oder importiere eine und platziere sie auf der Seite.",
+      "• Füge deinen Namen, das Datum oder einen Stempel dazu.",
+      "• Füge „Hier unterschreiben“-Felder hinzu und sende das Dokument an jemand anderen zum Unterschreiben (erfordert eine Universal ID).",
+      "",
+      "KOMMENTIEREN",
+      "• Textmarker, Freihandzeichnen und Text.",
+      "• Häkchen, Kreuze, Linien, Rechtecke und Kreise.",
+      "• Platziere Bilder und QR-Codes auf einer Seite.",
+      "• Schwärze Text, sodass ihn weder Menschen noch Maschinen lesen können.",
+      "",
+      "WEITERE WERKZEUGE",
+      "• Komprimiere ein PDF oder mehrere.",
+      "• Füge PDFs zu einem zusammen.",
+      "• Wandle PDF-Seiten in PNG- oder JPG-Bilder um und Bilder in ein PDF.",
+      "• Mache ein gescanntes PDF durchsuchbar.",
+      "• Öffne Word-Dateien (.docx) und OpenDocument-Dateien (.odt) als PDF.",
+      "• Wandle eingefügtes Markdown in ein PDF um.",
+      "• Schütze ein PDF mit einem Passwort.",
+      "• Präsentiere ein Dokument im Vollbild.",
+      "",
+      "DEINE DATEIEN BLEIBEN DEINE",
+      "• Öffnen, Ausfüllen, Unterschreiben und Kommentieren passieren auf deinem Handy.",
+      "• Zuletzt verwendete Dateien merkt sich nur dieses Gerät.",
+      "• Keine Werbung, kein Tracking, keine Analysedienste von Drittanbietern.",
+      "• Eine Universal ID ist optional. Sie ergänzt Online-Sicherung und das Senden zum Unterschreiben, und du kannst das Konto direkt in der App löschen.",
+      "",
+      "Universal PDF ist kostenlos und Open Source (AGPL-3.0). Der Code und eine Seite, die genau erklärt, was dein Gerät wann verlässt, sind auf GitHub: github.com/universal-simulation-ltd/Universal_PDF",
+      "",
+      "Entwickelt von James Markey und dem UNI·SIM-Team."
+    ]
+  },
+  "images": {
+    "icon": "out/play/icon-512.png",
+    "featureGraphic": "out/de-DE/play/feature-graphic.png",
+    "phoneScreenshots": [
+      "out/de-DE/android/01-hero.png",
+      "out/de-DE/android/02-hero.png",
+      "out/de-DE/android/03-fill-in.png",
+      "out/de-DE/android/04-sign.png",
+      "out/de-DE/android/05-mark-up.png",
+      "out/de-DE/android/06-private.png"
+    ]
+  }
+}

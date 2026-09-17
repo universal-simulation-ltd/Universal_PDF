@@ -1,0 +1,84 @@
+{
+  "01-hero": {
+    "headline": [
+      "PDF que",
+      "*simplesmente funcionam.*"
+    ],
+    "sub": {
+      "phone": "Preencher, assinar e anotar PDF,\ndiretamente no telemóvel.",
+      "ipad": "Preencher, assinar e anotar PDF,\ndiretamente no iPad."
+    }
+  },
+  "02-hero": {
+    "headline": [
+      "Todas as ferramentas,",
+      "incluídas"
+    ],
+    "badges": [
+      "Preencher formulários",
+      "Assinar",
+      "Rasurar",
+      "Comprimir e juntar"
+    ],
+    "sub": "Criado por James Markey\ne pela equipa UNI·SIM"
+  },
+  "03-fill-in": {
+    "headline": [
+      "Escrever diretamente",
+      "no formulário"
+    ],
+    "caption": "Os campos do próprio PDF, preenchidos na página",
+    "chips": [
+      "Campos de formulário",
+      "Texto em qualquer lado",
+      "Imagens",
+      "Códigos QR"
+    ]
+  },
+  "04-sign": {
+    "headline": [
+      "Assinar com",
+      "o dedo"
+    ],
+    "caption": "Desenhe uma vez e coloque na linha",
+    "chips": [
+      "Desenhar",
+      "Importar",
+      "Nome e data",
+      "Carimbo"
+    ]
+  },
+  "05-mark-up": {
+    "headline": [
+      "Anotar"
+    ],
+    "caption": "Destaques e notas, guardados no PDF",
+    "chips": [
+      "Marcador",
+      "Texto",
+      "Desenho livre",
+      "Vistos e cruzes",
+      "Linhas, retângulos e círculos",
+      "Rasurar"
+    ]
+  },
+  "06-private": {
+    "headline": [
+      "Os ficheiros",
+      "continuam seus"
+    ],
+    "caption": "Nada é carregado, a não ser que o decida",
+    "chips": [
+      "Sem anúncios",
+      "Sem rastreio",
+      "Conta não obrigatória",
+      "Código aberto"
+    ]
+  },
+  "feature-graphic": {
+    "tagline": [
+      "Preencher, assinar e anotar PDF.",
+      "No telemóvel."
+    ]
+  }
+}

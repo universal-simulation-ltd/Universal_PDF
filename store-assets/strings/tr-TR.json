@@ -1,0 +1,84 @@
+{
+  "01-hero": {
+    "headline": [
+      "PDF’ler",
+      "*sorunsuz çalışır.*"
+    ],
+    "sub": {
+      "phone": "PDF’leri doldurun, imzalayın ve\nişaretleyin, doğrudan telefonda.",
+      "ipad": "PDF’leri doldurun, imzalayın ve\nişaretleyin, doğrudan iPad’de."
+    }
+  },
+  "02-hero": {
+    "headline": [
+      "Tüm araçlar",
+      "yerleşik"
+    ],
+    "badges": [
+      "Form doldurma",
+      "İmzalama",
+      "Karartma",
+      "Sıkıştırma ve birleştirme"
+    ],
+    "sub": "James Markey ve UNI·SIM ekibi\ntarafından geliştirildi"
+  },
+  "03-fill-in": {
+    "headline": [
+      "Doğrudan forma",
+      "yazın"
+    ],
+    "caption": "PDF’in kendi form alanları, sayfada doldurulur",
+    "chips": [
+      "Form alanları",
+      "Her yere metin",
+      "Resimler",
+      "QR kodlar"
+    ]
+  },
+  "04-sign": {
+    "headline": [
+      "Parmağınızla",
+      "imzalayın"
+    ],
+    "caption": "Bir kez çizin, sonra çizginin üstüne yerleştirin",
+    "chips": [
+      "Çizim",
+      "İçe aktarma",
+      "Ad ve tarih",
+      "Damga"
+    ]
+  },
+  "05-mark-up": {
+    "headline": [
+      "İşaretleyin"
+    ],
+    "caption": "Vurgular ve notlar, PDF’e kaydedilir",
+    "chips": [
+      "Vurgulayıcı",
+      "Metin",
+      "Serbest çizim",
+      "Onay ve çarpı",
+      "Çizgi, kutu ve daire",
+      "Karartma"
+    ]
+  },
+  "06-private": {
+    "headline": [
+      "Dosyalarınız",
+      "sizde kalır"
+    ],
+    "caption": "Siz seçmedikçe hiçbir şey yüklenmez",
+    "chips": [
+      "Reklam yok",
+      "İzleme yok",
+      "Hesap gerekmez",
+      "Açık kaynak"
+    ]
+  },
+  "feature-graphic": {
+    "tagline": [
+      "PDF doldurun, imzalayın, işaretleyin.",
+      "Telefonda."
+    ]
+  }
+}

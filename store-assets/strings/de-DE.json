@@ -1,0 +1,84 @@
+{
+  "01-hero": {
+    "headline": [
+      "PDFs, die",
+      "*einfach funktionieren.*"
+    ],
+    "sub": {
+      "phone": "PDFs ausfüllen, unterschreiben und\nkommentieren – direkt auf dem Handy.",
+      "ipad": "PDFs ausfüllen, unterschreiben und\nkommentieren – direkt auf dem iPad."
+    }
+  },
+  "02-hero": {
+    "headline": [
+      "Alle Werkzeuge,",
+      "eingebaut"
+    ],
+    "badges": [
+      "Formulare ausfüllen",
+      "Unterschreiben",
+      "Schwärzen",
+      "Komprimieren & zusammenfügen"
+    ],
+    "sub": "Entwickelt von James Markey\nund dem UNI·SIM-Team"
+  },
+  "03-fill-in": {
+    "headline": [
+      "Direkt ins Formular",
+      "schreiben"
+    ],
+    "caption": "Die Formularfelder des PDFs selbst, auf der Seite ausgefüllt",
+    "chips": [
+      "Formularfelder",
+      "Text überall",
+      "Bilder",
+      "QR-Codes"
+    ]
+  },
+  "04-sign": {
+    "headline": [
+      "Mit dem Finger",
+      "unterschreiben"
+    ],
+    "caption": "Einmal zeichnen, dann auf die Linie setzen",
+    "chips": [
+      "Zeichnen",
+      "Importieren",
+      "Name & Datum",
+      "Stempel"
+    ]
+  },
+  "05-mark-up": {
+    "headline": [
+      "Kommentieren"
+    ],
+    "caption": "Markierungen und Notizen, im PDF gespeichert",
+    "chips": [
+      "Textmarker",
+      "Text",
+      "Freihand",
+      "Häkchen & Kreuze",
+      "Linien, Rechtecke & Kreise",
+      "Schwärzen"
+    ]
+  },
+  "06-private": {
+    "headline": [
+      "Deine Dateien",
+      "bleiben deine"
+    ],
+    "caption": "Nichts wird hochgeladen, außer du willst es",
+    "chips": [
+      "Keine Werbung",
+      "Kein Tracking",
+      "Kein Konto nötig",
+      "Open Source"
+    ]
+  },
+  "feature-graphic": {
+    "tagline": [
+      "PDFs ausfüllen, unterschreiben, kommentieren.",
+      "Auf deinem Handy."
+    ]
+  }
+}

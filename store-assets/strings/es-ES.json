@@ -1,0 +1,84 @@
+{
+  "01-hero": {
+    "headline": [
+      "PDF que",
+      "*simplemente funcionan.*"
+    ],
+    "sub": {
+      "phone": "Rellena, firma y anota PDF,\ndirectamente en tu móvil.",
+      "ipad": "Rellena, firma y anota PDF,\ndirectamente en tu iPad."
+    }
+  },
+  "02-hero": {
+    "headline": [
+      "Todas las herramientas,",
+      "integradas"
+    ],
+    "badges": [
+      "Rellenar formularios",
+      "Firmar",
+      "Censurar",
+      "Comprimir y unir"
+    ],
+    "sub": "Creado por James Markey\ny el equipo de UNI·SIM"
+  },
+  "03-fill-in": {
+    "headline": [
+      "Escribe directamente",
+      "en el formulario"
+    ],
+    "caption": "Los propios campos del PDF, rellenados en la página",
+    "chips": [
+      "Campos de formulario",
+      "Texto donde quieras",
+      "Imágenes",
+      "Códigos QR"
+    ]
+  },
+  "04-sign": {
+    "headline": [
+      "Firma con",
+      "el dedo"
+    ],
+    "caption": "Dibújala una vez y colócala en la línea",
+    "chips": [
+      "Dibujar",
+      "Importar",
+      "Nombre y fecha",
+      "Sello"
+    ]
+  },
+  "05-mark-up": {
+    "headline": [
+      "Anótalo"
+    ],
+    "caption": "Resaltados y notas, guardados en el PDF",
+    "chips": [
+      "Resaltador",
+      "Texto",
+      "Dibujo libre",
+      "Marcas y cruces",
+      "Líneas, rectángulos y círculos",
+      "Censurar"
+    ]
+  },
+  "06-private": {
+    "headline": [
+      "Tus archivos",
+      "son tuyos"
+    ],
+    "caption": "No se sube nada salvo que tú lo elijas",
+    "chips": [
+      "Sin anuncios",
+      "Sin rastreo",
+      "Sin cuenta obligatoria",
+      "Código abierto"
+    ]
+  },
+  "feature-graphic": {
+    "tagline": [
+      "Rellena, firma y anota PDF.",
+      "En tu móvil."
+    ]
+  }
+}

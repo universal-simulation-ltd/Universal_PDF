@@ -1,0 +1,84 @@
+{
+  "01-hero": {
+    "headline": [
+      "PDF che",
+      "*funzionano e basta.*"
+    ],
+    "sub": {
+      "phone": "Compila, firma e annota i PDF,\ndirettamente sul telefono.",
+      "ipad": "Compila, firma e annota i PDF,\ndirettamente sull’iPad."
+    }
+  },
+  "02-hero": {
+    "headline": [
+      "Tutti gli strumenti,",
+      "integrati"
+    ],
+    "badges": [
+      "Compila moduli",
+      "Firma",
+      "Oscura",
+      "Comprimi e unisci"
+    ],
+    "sub": "Realizzato da James Markey\ne dal team UNI·SIM"
+  },
+  "03-fill-in": {
+    "headline": [
+      "Scrivi direttamente",
+      "nel modulo"
+    ],
+    "caption": "I campi modulo del PDF stesso, compilati sulla pagina",
+    "chips": [
+      "Campi modulo",
+      "Testo ovunque",
+      "Immagini",
+      "Codici QR"
+    ]
+  },
+  "04-sign": {
+    "headline": [
+      "Firma con",
+      "il dito"
+    ],
+    "caption": "Disegnala una volta, poi mettila sulla riga",
+    "chips": [
+      "Disegna",
+      "Importa",
+      "Nome e data",
+      "Timbro"
+    ]
+  },
+  "05-mark-up": {
+    "headline": [
+      "Annota"
+    ],
+    "caption": "Evidenziazioni e note, salvate nel PDF",
+    "chips": [
+      "Evidenziatore",
+      "Testo",
+      "Mano libera",
+      "Spunte e croci",
+      "Linee, rettangoli e cerchi",
+      "Oscura"
+    ]
+  },
+  "06-private": {
+    "headline": [
+      "I tuoi file",
+      "restano tuoi"
+    ],
+    "caption": "Non viene caricato nulla, se non lo scegli tu",
+    "chips": [
+      "Niente pubblicità",
+      "Niente tracciamento",
+      "Nessun account richiesto",
+      "Open source"
+    ]
+  },
+  "feature-graphic": {
+    "tagline": [
+      "Compila, firma e annota i PDF.",
+      "Sul tuo telefono."
+    ]
+  }
+}

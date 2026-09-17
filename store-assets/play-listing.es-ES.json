@@ -1,0 +1,59 @@
+{
+  "language": "es-ES",
+  "details": {
+    "defaultLanguage": "en-GB",
+    "contactEmail": "inbox@unisim.co.uk",
+    "contactWebsite": "https://www.unisim.co.uk"
+  },
+  "listing": {
+    "title": "Universal PDF",
+    "shortDescription": "Rellena, firma y anota PDF en tu móvil. Sin anuncios ni rastreo.",
+    "fullDescription": [
+      "Universal PDF abre, rellena, firma y anota PDF en tu móvil. Todo ocurre en el dispositivo: tu documento no se sube para mostrarlo ni editarlo, y no hay ninguna copia en nuestros servidores salvo que pulses un botón que lo indique.",
+      "",
+      "RELLENA Y FIRMA",
+      "• Escribe directamente en los campos de formulario de un PDF.",
+      "• Dibuja tu firma, o importa una, y colócala en la página.",
+      "• Añade con ella tu nombre, la fecha o un sello.",
+      "• Añade recuadros «Firma aquí» y envía el documento a otra persona para que lo firme (requiere un Universal ID).",
+      "",
+      "ANÓTALO",
+      "• Resaltador, dibujo libre y texto.",
+      "• Marcas de verificación, cruces, líneas, rectángulos y círculos.",
+      "• Coloca imágenes y códigos QR en una página.",
+      "• Censura texto para que no puedan leerlo ni personas ni máquinas.",
+      "",
+      "MÁS HERRAMIENTAS",
+      "• Comprime uno o varios PDF.",
+      "• Une varios PDF en uno.",
+      "• Convierte páginas PDF en imágenes PNG o JPG, e imágenes en PDF.",
+      "• Haz que se pueda buscar en un PDF escaneado.",
+      "• Abre archivos de Word (.docx) y OpenDocument (.odt) como PDF.",
+      "• Convierte texto Markdown pegado en un PDF.",
+      "• Bloquea un PDF con una contraseña.",
+      "• Presenta un documento a pantalla completa.",
+      "",
+      "TUS ARCHIVOS SIGUEN SIENDO TUYOS",
+      "• Abrir, rellenar, firmar y anotar se hace en tu móvil.",
+      "• Los archivos recientes solo se recuerdan en este dispositivo.",
+      "• Sin anuncios, sin rastreo, sin analíticas de terceros.",
+      "• El Universal ID es opcional. Añade la copia de seguridad en línea y el envío para firmar, y puedes eliminar la cuenta desde la propia app.",
+      "",
+      "Universal PDF es gratuito y de código abierto (AGPL-3.0). El código, y una página que explica exactamente qué sale de tu dispositivo y cuándo, están en GitHub: github.com/universal-simulation-ltd/Universal_PDF",
+      "",
+      "Creado por James Markey y el equipo de UNI·SIM."
+    ]
+  },
+  "images": {
+    "icon": "out/play/icon-512.png",
+    "featureGraphic": "out/es-ES/play/feature-graphic.png",
+    "phoneScreenshots": [
+      "out/es-ES/android/01-hero.png",
+      "out/es-ES/android/02-hero.png",
+      "out/es-ES/android/03-fill-in.png",
+      "out/es-ES/android/04-sign.png",
+      "out/es-ES/android/05-mark-up.png",
+      "out/es-ES/android/06-private.png"
+    ]
+  }
+}

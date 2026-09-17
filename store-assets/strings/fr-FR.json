@@ -1,0 +1,84 @@
+{
+  "01-hero": {
+    "headline": [
+      "Des PDF,",
+      "*tout simplement.*"
+    ],
+    "sub": {
+      "phone": "Remplissez, signez et annotez vos PDF,\ndirectement sur votre téléphone.",
+      "ipad": "Remplissez, signez et annotez vos PDF,\ndirectement sur votre iPad."
+    }
+  },
+  "02-hero": {
+    "headline": [
+      "Tous les outils,",
+      "intégrés"
+    ],
+    "badges": [
+      "Remplir des formulaires",
+      "Signer",
+      "Caviarder",
+      "Compresser et fusionner"
+    ],
+    "sub": "Conçu par James Markey\net l’équipe UNI·SIM"
+  },
+  "03-fill-in": {
+    "headline": [
+      "Saisissez directement",
+      "dans le formulaire"
+    ],
+    "caption": "Les champs du PDF lui-même, remplis sur la page",
+    "chips": [
+      "Champs de formulaire",
+      "Texte partout",
+      "Images",
+      "Codes QR"
+    ]
+  },
+  "04-sign": {
+    "headline": [
+      "Signez avec",
+      "le doigt"
+    ],
+    "caption": "Dessinez-la une fois, puis placez-la sur la ligne",
+    "chips": [
+      "Dessiner",
+      "Importer",
+      "Nom et date",
+      "Tampon"
+    ]
+  },
+  "05-mark-up": {
+    "headline": [
+      "Annotez"
+    ],
+    "caption": "Surlignages et notes, enregistrés dans le PDF",
+    "chips": [
+      "Surligneur",
+      "Texte",
+      "Dessin libre",
+      "Coches et croix",
+      "Lignes, rectangles et cercles",
+      "Caviarder"
+    ]
+  },
+  "06-private": {
+    "headline": [
+      "Vos fichiers",
+      "restent les vôtres"
+    ],
+    "caption": "Rien n’est envoyé en ligne sans votre accord",
+    "chips": [
+      "Sans publicité",
+      "Sans pistage",
+      "Aucun compte requis",
+      "Open source"
+    ]
+  },
+  "feature-graphic": {
+    "tagline": [
+      "Remplissez, signez et annotez vos PDF.",
+      "Sur votre téléphone."
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "language": "tr-TR",
+  "details": {
+    "defaultLanguage": "en-GB",
+    "contactEmail": "inbox@unisim.co.uk",
+    "contactWebsite": "https://www.unisim.co.uk"
+  },
+  "listing": {
+    "title": "Universal PDF",
+    "shortDescription": "Telefonda PDF doldurun, imzalayın ve işaretleyin. Reklam yok, izleme yok.",
+    "fullDescription": [
+      "Universal PDF, telefonda PDF’leri açar, doldurur, imzalar ve işaretler. İşlemler cihazda yapılır: belge görüntülenmek veya düzenlenmek için yüklenmez ve bunu açıkça belirten bir düğmeye basılmadıkça sunucularımızda kopyası bulunmaz.",
+      "",
+      "DOLDURMA VE İMZALAMA",
+      "• Doğrudan PDF’in form alanlarına yazın.",
+      "• İmzayı çizin ya da içe aktarın, sonra sayfaya yerleştirin.",
+      "• Yanına ad, tarih veya damga ekleyin.",
+      "• “Burayı imzalayın” kutuları ekleyin ve belgeyi imzalaması için başka birine gönderin (Universal ID gerekir).",
+      "",
+      "İŞARETLEME",
+      "• Vurgulayıcı, serbest çizim ve metin.",
+      "• Onay işaretleri, çarpılar, çizgiler, kutular ve daireler.",
+      "• Sayfaya resim ve QR kod yerleştirin.",
+      "• Metni ne insanların ne de makinelerin okuyabileceği şekilde karartın.",
+      "",
+      "DİĞER ARAÇLAR",
+      "• Bir veya birden fazla PDF’i sıkıştırın.",
+      "• PDF’leri tek bir PDF’te birleştirin.",
+      "• PDF sayfalarını PNG veya JPG görsellere, görselleri de PDF’e dönüştürün.",
+      "• Taranmış bir PDF’i aranabilir hale getirin.",
+      "• Word (.docx) ve OpenDocument (.odt) dosyalarını PDF olarak açın.",
+      "• Yapıştırılan Markdown metnini PDF’e dönüştürün.",
+      "• Bir PDF’i parolayla kilitleyin.",
+      "• Bir belgeyi tam ekranda sunun.",
+      "",
+      "DOSYALARINIZ SİZDE KALIR",
+      "• Açma, doldurma, imzalama ve işaretleme telefonda yapılır.",
+      "• Son dosyalar yalnızca bu cihazda hatırlanır.",
+      "• Reklam yok, izleme yok, üçüncü taraf analiz yok.",
+      "• Universal ID isteğe bağlıdır. Çevrimiçi yedekleme ve imzaya gönderme özelliklerini ekler; hesap uygulamanın içinden silinebilir.",
+      "",
+      "Universal PDF ücretsiz ve açık kaynaklıdır (AGPL-3.0). Kod ve cihazdan neyin ne zaman çıktığını tam olarak açıklayan bir sayfa GitHub’da: github.com/universal-simulation-ltd/Universal_PDF",
+      "",
+      "James Markey ve UNI·SIM ekibi tarafından geliştirildi."
+    ]
+  },
+  "images": {
+    "icon": "out/play/icon-512.png",
+    "featureGraphic": "out/tr-TR/play/feature-graphic.png",
+    "phoneScreenshots": [
+      "out/tr-TR/android/01-hero.png",
+      "out/tr-TR/android/02-hero.png",
+      "out/tr-TR/android/03-fill-in.png",
+      "out/tr-TR/android/04-sign.png",
+      "out/tr-TR/android/05-mark-up.png",
+      "out/tr-TR/android/06-private.png"
+    ]
+  }
+}
