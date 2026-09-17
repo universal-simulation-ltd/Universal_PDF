@@ -334,7 +334,7 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
   )
 
   return (
-    <div className="relative" ref={ref}>
+    <div className={compact ? 'relative w-full min-w-0' : 'relative'} ref={ref}>
       {compact ? (
         <button
           onClick={() => setOpen((o) => !o)}
@@ -343,7 +343,7 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
           }`}
         >
           <span className="text-xl leading-none">✍</span>
-          <span className="text-[10px] font-medium">{t('sign.menu_sign')}</span>
+          <span className="text-[10px] font-medium leading-tight tracking-tight max-w-full truncate px-0.5">{t('sign.menu_sign_short')}</span>
         </button>
       ) : (
         // Same 36px square, same hover and same armed orange as the image and

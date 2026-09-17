@@ -1061,7 +1061,7 @@ export function ToolbarMobile() {
   function mobileBtnWithPlus(id: Tool, icon: string, label: string, panel: Panel, defaultColor?: string) {
     const active = tool === id || (panel === 'draw' && isDrawShape(tool))
     return (
-      <div className="flex flex-col items-center justify-center flex-1 h-full relative">
+      <div className="flex flex-col items-center justify-center flex-auto basis-auto min-w-0 h-full relative">
         <button
           onClick={() => handleToolClick(id, panel, defaultColor)}
           onPointerDown={() => startLongPress(panel)}
@@ -1073,7 +1073,7 @@ export function ToolbarMobile() {
           }`}
         >
           <span className="text-xl leading-none">{icon}</span>
-          <span className="text-[10px] font-medium">{label}</span>
+          <span className="text-[10px] font-medium leading-tight tracking-tight max-w-full truncate px-0.5">{label}</span>
         </button>
         <button
           onClick={() => togglePanel(panel)}
@@ -1116,6 +1116,10 @@ export function ToolbarMobile() {
           paddingBottom: 'env(safe-area-inset-bottom)',
         }}
       >
+        {/* ⚠️ Slots size to their label (flex-auto, basis-auto), not eight equal
+            eighths: "QR" and "Bild" give their spare width to "Speichern" and
+            "Enregistrer", which at 360px would otherwise truncate. `min-w-0`
+            plus a truncating label is the backstop when even that isn't enough. */}
         {/* Select / Select area / Select text / Hand with + */}
         {mobileBtnWithPlus(
           selectGroupTool(tool),
@@ -1126,7 +1130,7 @@ export function ToolbarMobile() {
               ? t('viewer.toolbar.mobile_select_area')
               : tool === 'selecttext'
                 ? t('viewer.toolbar.mobile_select_text')
-                : t('viewer.toolbar.tool_select'),
+                : t('viewer.toolbar.mobile_select'),
           'select'
         )}
 
@@ -1137,9 +1141,9 @@ export function ToolbarMobile() {
         {mobileBtnWithPlus('text', 'T', t('viewer.toolbar.mobile_text'), 'text')}
 
         {/* Image upload */}
-        <label className={`flex flex-col items-center justify-center flex-1 h-full gap-0.5 cursor-pointer ${tool === 'image' ? 'text-orange-400' : 'text-slate-200'}`}>
+        <label className={`flex flex-col items-center justify-center flex-auto basis-auto min-w-0 h-full gap-0.5 cursor-pointer ${tool === 'image' ? 'text-orange-400' : 'text-slate-200'}`}>
           <PictureFrameIcon active={tool === 'image'} className="w-6 h-6" />
-          <span className="text-[10px] font-medium">{t('viewer.toolbar.mobile_image')}</span>
+          <span className="text-[10px] font-medium leading-tight tracking-tight max-w-full truncate px-0.5">{t('viewer.toolbar.mobile_image')}</span>
           <input
             type="file"
             accept="image/png,image/jpeg,image/webp,image/gif"
@@ -1151,32 +1155,32 @@ export function ToolbarMobile() {
         {/* QR — beside Image, since that's where it lands on the page. */}
         <button
           onClick={() => setQrOpen(true)}
-          className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 text-slate-200"
+          className="flex flex-col items-center justify-center flex-auto basis-auto min-w-0 h-full gap-0.5 text-slate-200"
         >
           <QrIcon className="w-6 h-6" />
-          <span className="text-[10px] font-medium">{t('viewer.toolbar.mobile_qr')}</span>
+          <span className="text-[10px] font-medium leading-tight tracking-tight max-w-full truncate px-0.5">{t('viewer.toolbar.mobile_qr')}</span>
         </button>
 
-        <div className="flex-1 h-full flex items-stretch">
+        <div className="flex-auto basis-auto min-w-0 h-full flex items-stretch">
           <SignatureMenu openUpward compact />
         </div>
 
         <button
           onClick={undo}
           disabled={!canUndo}
-          className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 text-slate-200 disabled:opacity-40"
+          className="flex flex-col items-center justify-center flex-auto basis-auto min-w-0 h-full gap-0.5 text-slate-200 disabled:opacity-40"
         >
           <span className="text-xl leading-none">↶</span>
-          <span className="text-[10px] font-medium">{t('viewer.toolbar.mobile_undo')}</span>
+          <span className="text-[10px] font-medium leading-tight tracking-tight max-w-full truncate px-0.5">{t('viewer.toolbar.mobile_undo')}</span>
         </button>
 
         <button
           onClick={() => setExportOpen(true)}
           disabled={!sourceBytes}
-          className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 text-orange-400 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex flex-col items-center justify-center flex-auto basis-auto min-w-0 h-full gap-0.5 text-orange-400 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <span className="text-xl leading-none">⤓</span>
-          <span className="text-[10px] font-medium">{t('viewer.toolbar.mobile_save')}</span>
+          <span className="text-[10px] font-medium leading-tight tracking-tight max-w-full truncate px-0.5">{t('viewer.toolbar.mobile_save')}</span>
         </button>
       </nav>
 

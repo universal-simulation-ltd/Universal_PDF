@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import { useFileDrop } from '@unisim/sdk'
+import { translateNav, useFileDrop } from '@unisim/sdk'
 import { useT } from '../../i18n'
 
 // The one control that decides whose brand a code carries.
@@ -199,7 +199,7 @@ export default function QrBrandingPanel({
 
           {!orgLogo && !orgColor && (
             <p className="text-xs text-slate-400">
-              {t('tools.qr.sign_in_hint')}
+              {t('tools.qr.sign_in_hint', { company: translateNav(t.lang, 'company.label') })}
             </p>
           )}
         </div>

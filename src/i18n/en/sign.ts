@@ -42,6 +42,7 @@ export default {
 
   // SignatureMenu
   'menu_sign': 'Sign', // toolbar button / menu name (verb)
+  'menu_sign_short': 'Sign', // phone tool bar label, one short word
   'menu_sign_title': 'Sign — place a signature, a stamp, or a “Sign here” box',
   'menu_tab_signatures': 'Signatures',
   'menu_tab_stamps': 'Stamps',
@@ -252,8 +253,8 @@ export default {
   'send_storing': 'Storing…',
   'send_store_create': 'Store online & create sign link',
   'send_store_create_token': 'Store online & create sign link (1 token)',
-  'send_token_held': 'Your free PDF token is in use — delete the stored PDF (Actions → Back up / store) to get it back, or add tokens.',
-  'send_token_held_native': 'Your free PDF token is in use — delete the stored PDF (Actions → Back up / store) to get it back.',
+  'send_token_held': 'Your free PDF token is in use — delete the stored PDF (Actions → Back up…) to get it back, or add tokens.',
+  'send_token_held_native': 'Your free PDF token is in use — delete the stored PDF (Actions → Back up…) to get it back.',
   'send_step2': '2 · Email it to someone',
   'send_step2_hint': "They'll get the PDF attached plus a button to sign it online. You'll be emailed when it's signed.",
   'send_sent_to': "✓ Sent to {to} — we'll email you at {email} once it's signed.",

@@ -263,8 +263,10 @@ check('the renamed org is shown', (await badge.first().innerText()).includes('Ac
 //
 //   • the avatar blinked to a dot on every click in the menu; and
 //   • the account rows the props drive left the panel with it, so everything
-//     below jumped ~83px — including the language <select>, which moved out
-//     from under the cursor mid-press and could not be used at all.
+//     below jumped ~83px — including the language row, which moved out from
+//     under the cursor mid-press and could not be used at all. (That row was
+//     the SDK's <select> until 1.0.3; it is the Actions menu's Language row
+//     now, which translates the app — see e2e/language.e2e.mjs.)
 //
 // Both are pinned here rather than by the pill's appearance alone, because a
 // screenshot of the resting state looks identical either way.
@@ -305,7 +307,7 @@ check(
 console.log('\nthe language row holds still while the pointer is on it')
 const panelShape = () =>
   page.evaluate(() => {
-    const el = document.querySelector('[role="menu"] select')
+    const el = document.querySelector('[data-testid="menu-language"]')
     if (!el) return null
     return {
       top: Math.round(el.getBoundingClientRect().top),
@@ -314,8 +316,8 @@ const panelShape = () =>
   })
 await openMenu()
 const atRest = await panelShape()
-const selBox = await page.locator('[role="menu"] select').first().boundingBox()
-check('the language select is in the open panel', !!atRest && !!selBox)
+const selBox = await page.getByTestId('menu-language').boundingBox()
+check('the language row is in the open panel', !!atRest && !!selBox)
 if (atRest && selBox) {
   await page.mouse.move(selBox.x + selBox.width / 2, selBox.y + selBox.height / 2)
   await page.mouse.down()

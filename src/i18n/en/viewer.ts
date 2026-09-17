@@ -60,6 +60,7 @@ export default {
   'toolbar.add_qr_code': 'Add a QR code',
   'toolbar.export': 'Export', // button, opens the save/export dialog
   // Toolbar — phone bottom bar (very short labels under icons)
+  'toolbar.mobile_select': 'Select', // phone tool bar: the Select tool, one short word
   'toolbar.mobile_select_area': 'Area', // short for "Select area"
   'toolbar.mobile_select_text': 'Text', // short for "Select text"
   'toolbar.mobile_draw': 'Draw',

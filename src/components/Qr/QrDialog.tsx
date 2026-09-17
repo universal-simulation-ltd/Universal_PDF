@@ -42,6 +42,11 @@ const QR_PRESET_KEYS: Record<string, MessageKey> = {
   Radial: 'tools.qr.preset_radial',
   Star: 'tools.qr.preset_star',
 }
+const QR_WHERE_KEYS: Record<'modules' | 'corners' | 'star', MessageKey> = {
+  modules: 'tools.qr.where_modules',
+  corners: 'tools.qr.where_corners',
+  star: 'tools.qr.where_star',
+}
 const QR_SHAPE_KEYS: Record<string, MessageKey> = {
   Square: 'tools.qr.shape_square',
   Rounded: 'tools.qr.shape_rounded',
@@ -687,7 +692,7 @@ export default function QrDialog() {
               <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
                 {issue.kind === 'inverted'
                   ? t('tools.qr.inverted')
-                  : t('tools.qr.low_contrast', { where: issue.where, ratio: formatNumber(t, issue.ratio, 1) })}
+                  : t('tools.qr.low_contrast', { where: t(QR_WHERE_KEYS[issue.where]), ratio: formatNumber(t, issue.ratio, 1) })}
               </p>
             )}
 

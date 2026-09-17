@@ -224,7 +224,7 @@ export default {
   'qr.colour_too_light': 'That colour is too light to hold up as part of the code, so the code keeps its own eye colour. Your logo still uses it.',
   'qr.reset_org': "Reset to {org}'s branding", // {org} is the company name
   'qr.reset_company': 'Reset to my company branding',
-  'qr.sign_in_hint': 'Sign in with your Universal ID and set your logo and colour once in My Company, and they land here automatically.', // "My Company" is the name of a settings page
+  'qr.sign_in_hint': 'Sign in with your Universal ID and set your logo and colour once in {company}, and they land here automatically.', // "{company}" is the name of a settings page
 
   // QrEnlargeModal
   'qr.enlarged_label': 'Enlarged QR code for {name}',
@@ -253,7 +253,10 @@ export default {
   'qr.style': 'Style',
   'qr.design_in_universal_qr': 'Design one in Universal QR ↗',
   'qr.inverted': 'These colours make an inverted code (light on dark). Some scanners refuse those — try a preset.',
-  'qr.low_contrast': 'Low contrast on the {where} ({ratio}:1). It may scan on screen and fail in print — try a preset.', // {where} is the part of the code, {ratio} a contrast ratio
+  'qr.low_contrast': 'Low contrast on the {where} ({ratio}:1). It may scan on screen and fail in print — try a preset.', // {where} is a qr.where_* word, {ratio} a contrast ratio
+  'qr.where_modules': 'modules', // the small squares of the code
+  'qr.where_corners': 'corners', // the three corner eyes
+  'qr.where_star': 'star', // the star-shaped frame
   'qr.your_codes': 'Your Universal QR codes',
   'qr.dynamic_code': 'Dynamic code',
   'qr.dynamic_title_one': '{name} — dynamic: currently sends people to {url}, and you can change that later without reprinting. {count} scan so far.',
