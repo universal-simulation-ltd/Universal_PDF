@@ -5,6 +5,7 @@ import { useFormStore } from '../../stores/formStore'
 import { buildAnnotatedPdfBytes, downloadPdfBytes } from '../../lib/export'
 import { pdfjsLib, type PDFDocumentProxy } from '../../lib/pdfjs'
 import { layerPixelRatio, pagePixelBudget } from '../../lib/renderBudget'
+import { getT, useT } from '../../i18n'
 
 // 1:1 with the editor's PDF-point coordinate space — see ExportModal.tsx.
 const EXPORT_SCALE = 1.0
@@ -18,6 +19,7 @@ const EXPORT_SCALE = 1.0
 const PREVIEW_SCALE = 1.2
 
 export default function LivePreview() {
+  const t = useT()
   const open = usePdfStore((s) => s.previewOpen)
   const setOpen = usePdfStore((s) => s.setPreviewOpen)
   const sourceBytes = usePdfStore((s) => s.sourceBytes)
@@ -63,7 +65,7 @@ export default function LivePreview() {
       } catch (e) {
         if (myId !== buildIdRef.current) return
         console.error(e)
-        setError((e as Error).message || 'Preview failed')
+        setError((e as Error).message || getT()('app.preview_failed'))
       } finally {
         if (myId === buildIdRef.current) setBuilding(false)
       }
@@ -123,9 +125,9 @@ export default function LivePreview() {
         className="flex items-center gap-3 px-4 py-2 bg-slate-900 text-white border-b border-slate-700"
         style={{ paddingTop: 'calc(0.5rem + env(safe-area-inset-top))' }}
       >
-        <div className="font-semibold tracking-tight">Preview</div>
+        <div className="font-semibold tracking-tight">{t('app.preview_title')}</div>
         <span className="text-xs text-slate-400 hidden sm:inline">
-          {building ? 'Updating…' : 'How the exported PDF will look'}
+          {building ? t('app.preview_updating') : t('app.preview_subtitle')}
         </span>
         <div className="ml-auto flex items-center gap-2">
           <button
@@ -133,14 +135,14 @@ export default function LivePreview() {
             disabled={!bytes}
             className="px-4 h-9 rounded bg-orange-700 hover:bg-orange-800 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium"
           >
-            Download
+            {t('app.preview_download')}
           </button>
           <button
             onClick={() => setOpen(false)}
             className="px-3 h-9 rounded bg-slate-700 hover:bg-slate-600 text-sm"
-            aria-label="Close preview"
+            aria-label={t('app.preview_close_aria')}
           >
-            Close
+            {t('app.close')}
           </button>
         </div>
       </div>
@@ -151,11 +153,11 @@ export default function LivePreview() {
       >
         {error ? (
           <div className="h-full flex items-center justify-center text-red-600 px-4 text-center">
-            Preview failed: {error}
+            {t('app.preview_failed_with', { error })}
           </div>
         ) : !doc ? (
           <div className="h-full flex items-center justify-center text-slate-500">
-            {building ? 'Building preview…' : 'Loading…'}
+            {building ? t('app.preview_building') : t('app.loading')}
           </div>
         ) : (
           // Auto margins, not `justify-center`: a preview shorter than the

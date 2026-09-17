@@ -1,10 +1,10 @@
-import app from './app'
-import menu from './menu'
-import viewer from './viewer'
-import annotate from './annotate'
-import sign from './sign'
-import tools from './tools'
-import lib from './lib'
+import app from './app.ts'
+import menu from './menu.ts'
+import viewer from './viewer.ts'
+import annotate from './annotate.ts'
+import sign from './sign.ts'
+import tools from './tools.ts'
+import lib from './lib.ts'
 
 export const en = { app, menu, viewer, annotate, sign, tools, lib }
 

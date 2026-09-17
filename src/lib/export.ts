@@ -8,6 +8,7 @@ import { runUnderlined } from './textRuns'
 import { pdfjsLib, type PDFDocumentProxy } from './pdfjs'
 import { redactFillHex } from './redactGate'
 import { saveBlob } from '@unisim/media/save'
+import { getT } from '../i18n'
 
 // Custom PDF catalog key carrying the unsigned signature-request boxes, so a
 // reopened or shared file's boxes stay interactive (movable / click-to-sign) in
@@ -52,6 +53,16 @@ const WIN_ANSI_EXTRAS = new Set([
   0x201D, 0x2022, 0x2013, 0x2014, 0x02DC, 0x2122, 0x0161, 0x203A,
   0x0153, 0x017E, 0x0178
 ])
+// The standard fonts carry Latin-1 only. A letter outside it (Turkish ş ğ ı İ,
+// Polish ł, Czech č …) keeps its base letter rather than becoming "?" — the
+// translated "Sign here" label drawn into the PDF is one place that needs it.
+const FOLD: Record<string, string> = { ı: 'i', İ: 'I', ł: 'l', Ł: 'L', đ: 'd', Đ: 'D', ħ: 'h', Ħ: 'H' }
+function foldToLatin1(ch: string): string {
+  if (FOLD[ch]) return FOLD[ch]
+  const base = ch.normalize('NFD')[0]
+  const cp = base.codePointAt(0)!
+  return base !== ch && ((cp >= 0x20 && cp <= 0x7E) || (cp >= 0xA0 && cp <= 0xFF)) ? base : '?'
+}
 function sanitizeForWinAnsi(text: string): string {
   let out = ''
   for (const ch of text) {
@@ -59,7 +70,7 @@ function sanitizeForWinAnsi(text: string): string {
     if ((cp >= 0x20 && cp <= 0x7E) || (cp >= 0xA0 && cp <= 0xFF) || WIN_ANSI_EXTRAS.has(cp)) {
       out += ch
     } else {
-      out += '?'
+      out += foldToLatin1(ch)
     }
   }
   return out
@@ -551,11 +562,12 @@ export async function buildAnnotatedPdfBytes(
               borderWidth: sw(1.5),
               opacity: 0
             })
+            const t = getT()
             const parts: string[] = []
-            if (a.requireName) parts.push('Name')
-            if (a.requireDate) parts.push('Date')
-            if (a.requireLive) parts.push('Live')
-            const label = sanitizeForWinAnsi(['Sign here', ...parts].join(' • '))
+            if (a.requireName) parts.push(t('lib.sign_here_name'))
+            if (a.requireDate) parts.push(t('lib.sign_here_date'))
+            if (a.requireLive) parts.push(t('lib.sign_here_live'))
+            const label = sanitizeForWinAnsi([t('lib.sign_here'), ...parts].join(' • '))
             const size = sw(Math.min(a.height * 0.28, 18))
             // Inset from the box's top-left corner. The box is in canvas units
             // (canvas = pdf * scale); `size` is PDF units, so scale it back up to

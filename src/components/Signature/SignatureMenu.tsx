@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useSignatureStore } from '../../stores/signatureStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { usePdfStore } from '../../stores/pdfStore'
+import { useT } from '../../i18n'
 
 interface SignatureMenuProps {
   // Retained for call-site compatibility; the compact panel always sits above
@@ -76,6 +77,7 @@ function ToggleRow({
 }
 
 export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<Tab>('signatures')
   const ref = useRef<HTMLDivElement>(null)
@@ -107,9 +109,9 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
   useEffect(() => {
     if (!open) return
     function onDoc(e: MouseEvent) {
-      const t = e.target as Node
+      const target = e.target as Node
       const inside =
-        ref.current?.contains(t) || panelRef.current?.contains(t)
+        ref.current?.contains(target) || panelRef.current?.contains(target)
       if (!inside) setOpen(false)
     }
     document.addEventListener('mousedown', onDoc)
@@ -155,6 +157,10 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
   const handSigs = signatures.filter((s) => !s.name.endsWith(' Stamp'))
   const stamps = signatures.filter((s) => s.name.endsWith(' Stamp'))
   const displayList = tab === 'signatures' ? handSigs : stamps
+  // The " Stamp" suffix is how a stamp is told apart in the store, so it stays
+  // English there; it is shown in the reader's language.
+  const shownName = (name: string) =>
+    name.endsWith(' Stamp') ? t('sign.stamp_named', { name: name.slice(0, -' Stamp'.length) }) : name
 
   // Shared dropdown contents — rendered inline (compact) or into a body portal
   // (desktop). Kept in one place so both paths stay identical.
@@ -170,7 +176,7 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
               : 'text-slate-400 hover:text-slate-600'
           }`}
         >
-          Signatures
+          {t('sign.menu_tab_signatures')}
         </button>
         <button
           onClick={() => setTab('stamps')}
@@ -180,7 +186,7 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
               : 'text-slate-400 hover:text-slate-600'
           }`}
         >
-          Stamps
+          {t('sign.menu_tab_stamps')}
         </button>
         <button
           onClick={() => setTab('request')}
@@ -190,42 +196,41 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
               : 'text-slate-400 hover:text-slate-600'
           }`}
         >
-          Request
+          {t('sign.menu_tab_request')}
         </button>
       </div>
 
       {tab === 'request' ? (
         <div className="p-4 space-y-3">
           <p className="text-sm text-slate-600">
-            Drop a “Sign here” box on the page. Anyone opening this PDF in
-            Universal PDF can click the box to sign it.
+            {t('sign.menu_request_intro')}
           </p>
           <div className="space-y-2">
             <ToggleRow
-              label="Ask for name"
+              label={t('sign.menu_ask_name')}
               checked={requestName}
               onChange={setRequestName}
             />
             <ToggleRow
-              label="Ask for date"
+              label={t('sign.menu_ask_date')}
               checked={requestDate}
               onChange={setRequestDate}
             />
             <ToggleRow
-              label="Require live signature"
+              label={t('sign.menu_require_live')}
               checked={requestLive}
               onChange={setRequestLive}
-              tooltip="This stops the user from uploading an image of their signature. Signing on a phone is still allowed — that is drawn ink too."
+              tooltip={t('sign.menu_require_live_tooltip')}
             />
           </div>
           <button
             onClick={placeRequestField}
             className="w-full px-3 py-2.5 rounded-md bg-orange-700 hover:bg-orange-800 text-white text-sm font-medium"
           >
-            {tool === 'sigfield' ? 'Draw the box on the page…' : 'Place signature box'}
+            {tool === 'sigfield' ? t('sign.menu_draw_box') : t('sign.menu_place_box')}
           </button>
           <p className="text-xs text-slate-400">
-            Then drag a rectangle where the signature should go.
+            {t('sign.menu_drag_hint')}
           </p>
           {/* Hand the document to someone else instead of signing it here:
               stores it online against a Universal ID and mints a signing link
@@ -241,10 +246,10 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
                 <path d="M3 10.5c3-4.5 5-4.5 6 0s3 4.5 5-1.5" />
                 <path d="M13 4l3 3-6.5 6.5L6 14l.5-3.5L13 4z" />
               </svg>
-              Send to sign
+              {t('sign.send_to_sign')}
             </button>
             <p className="mt-1.5 text-xs text-slate-400">
-              Get a signing link, or email the document to someone.
+              {t('sign.menu_send_hint')}
             </p>
           </div>
         </div>
@@ -253,7 +258,7 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
       <div className="max-h-72 overflow-auto">
         {displayList.length === 0 ? (
           <div className="px-3 py-6 text-sm text-slate-500 text-center">
-            {tab === 'signatures' ? 'No signatures yet' : 'No saved stamps yet'}
+            {tab === 'signatures' ? t('sign.menu_no_signatures') : t('sign.menu_no_stamps')}
           </div>
         ) : (
           displayList.map((s) => (
@@ -266,18 +271,18 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
             >
               <img
                 src={s.dataUrl}
-                alt={s.name}
+                alt={shownName(s.name)}
                 className="h-10 max-w-32 object-contain bg-white"
               />
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium truncate">{s.name}</div>
+                <div className="text-sm font-medium truncate">{shownName(s.name)}</div>
               </div>
               <div className="flex flex-col gap-1">
                 <button
                   onClick={(e) => { e.stopPropagation(); remove(s.id) }}
                   className="text-slate-300 hover:text-red-600 text-sm"
-                  title="Delete"
-                  aria-label={`Delete ${s.name}`}
+                  title={t('sign.delete')}
+                  aria-label={t('sign.menu_delete_named', { name: s.name })}
                 >
                   {/* SVG, not `✕`: U+2715 is a hollow ▯?▯ box in iOS's system
                       font — see the suite landmines. The button carries the
@@ -298,13 +303,13 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
             onClick={() => { openPad(); setOpen(false) }}
             className="px-3 py-2.5 text-sm font-medium text-orange-700 hover:bg-orange-50"
           >
-            + Draw new
+            {t('sign.menu_draw_new')}
           </button>
           <button
             onClick={() => { openImport('signature'); setOpen(false) }}
             className="px-3 py-2.5 text-sm font-medium text-orange-700 hover:bg-orange-50 border-l border-slate-100"
           >
-            + Import image
+            {t('sign.menu_import_image')}
           </button>
         </div>
       ) : (
@@ -313,13 +318,13 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
             onClick={() => { openStampPicker(); setOpen(false) }}
             className="px-3 py-2.5 text-sm font-medium text-orange-700 hover:bg-orange-50"
           >
-            + Preset stamps
+            {t('sign.menu_preset_stamps')}
           </button>
           <button
             onClick={() => { openImport('stamp'); setOpen(false) }}
             className="px-3 py-2.5 text-sm font-medium text-orange-700 hover:bg-orange-50 border-l border-slate-100"
           >
-            + Import image
+            {t('sign.menu_import_image')}
           </button>
         </div>
       )}
@@ -338,7 +343,7 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
           }`}
         >
           <span className="text-xl leading-none">✍</span>
-          <span className="text-[10px] font-medium">Sign</span>
+          <span className="text-[10px] font-medium">{t('sign.menu_sign')}</span>
         </button>
       ) : (
         // Same 36px square, same hover and same armed orange as the image and
@@ -346,8 +351,8 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
         // not over in the actions group with Export.
         <button
           onClick={() => setOpen((o) => !o)}
-          title="Sign — place a signature, a stamp, or a “Sign here” box"
-          aria-label="Sign"
+          title={t('sign.menu_sign_title')}
+          aria-label={t('sign.menu_sign')}
           aria-haspopup="true"
           aria-expanded={open}
           className={`w-9 h-9 rounded flex items-center justify-center transition-colors ${

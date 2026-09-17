@@ -5,6 +5,7 @@ import {
   MIN_PIN,
   type LockMode,
 } from '../../lib/lockPassword'
+import { useT, type Translator } from '../../i18n'
 
 // The "Lock this PDF" control, shared by the export dialog and send-to-sign.
 //
@@ -44,10 +45,12 @@ export function lockIncomplete(state: LockState): boolean {
   return state.enabled && lockPasswordOf(state) === null
 }
 
-const MODES: { value: LockMode; label: string; hint: string }[] = [
-  { value: 'password', label: 'Password', hint: 'Letters, digits and punctuation' },
-  { value: 'pin', label: 'PIN', hint: `Digits only — at least ${MIN_PIN}` },
-]
+function lockModes(t: Translator): { value: LockMode; label: string; hint: string }[] {
+  return [
+    { value: 'password', label: t('tools.lock.password'), hint: t('tools.lock.password_hint') },
+    { value: 'pin', label: t('tools.lock.pin'), hint: t('tools.lock.pin_hint', { min: MIN_PIN }) },
+  ]
+}
 
 interface Props {
   value: LockState
@@ -59,6 +62,8 @@ interface Props {
 
 export default function LockFields({ value, onChange, disabled, context = 'export' }: Props) {
   const [reveal, setReveal] = useState(false)
+  const t = useT()
+  const MODES = lockModes(t)
   const pwId = useId()
   const confirmId = useId()
 
@@ -99,12 +104,12 @@ export default function LockFields({ value, onChange, disabled, context = 'expor
         />
         <span className="min-w-0">
           <span className="block text-sm font-medium text-slate-900">
-            Lock with a password
+            {t('tools.lock.title')}
           </span>
           <span className="block text-xs text-slate-500 mt-0.5">
             {context === 'send'
-              ? 'The signer is asked for it before they can open the document. Tell them separately — not in the same message.'
-              : 'Nobody can open the file without it, in any PDF app. Real encryption, not a "no printing" flag.'}
+              ? t('tools.lock.send_hint')
+              : t('tools.lock.export_hint')}
           </span>
         </span>
       </label>
@@ -142,7 +147,7 @@ export default function LockFields({ value, onChange, disabled, context = 'expor
             <div className="flex gap-2">
               <div className="min-w-0 flex-1">
                 <label htmlFor={pwId} className="sr-only">
-                  {isPin ? 'PIN' : 'Password'}
+                  {isPin ? t('tools.lock.pin') : t('tools.lock.password')}
                 </label>
                 <input
                   id={pwId}
@@ -154,7 +159,7 @@ export default function LockFields({ value, onChange, disabled, context = 'expor
                     set({ password: isPin ? e.target.value.replace(/\D/g, '') : e.target.value })
                   }
                   disabled={disabled}
-                  placeholder={isPin ? 'PIN' : 'Password'}
+                  placeholder={isPin ? t('tools.lock.pin') : t('tools.lock.password')}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-orange-700 focus:outline-none focus:ring-1 focus:ring-orange-700 disabled:opacity-50"
                 />
               </div>
@@ -165,13 +170,13 @@ export default function LockFields({ value, onChange, disabled, context = 'expor
                 aria-pressed={reveal}
                 className="shrink-0 rounded-lg bg-slate-100 px-3 text-sm font-medium text-slate-700 hover:bg-slate-200 disabled:opacity-50"
               >
-                {reveal ? 'Hide' : 'Show'}
+                {reveal ? t('tools.common.hide') : t('tools.common.show')}
               </button>
             </div>
 
             <div>
               <label htmlFor={confirmId} className="sr-only">
-                Confirm {isPin ? 'PIN' : 'password'}
+                {isPin ? t('tools.lock.confirm_pin') : t('tools.lock.confirm_password')}
               </label>
               <input
                 id={confirmId}
@@ -181,7 +186,7 @@ export default function LockFields({ value, onChange, disabled, context = 'expor
                   set({ confirm: isPin ? e.target.value.replace(/\D/g, '') : e.target.value })
                 }
                 disabled={disabled}
-                placeholder={isPin ? 'Confirm PIN' : 'Confirm password'}
+                placeholder={isPin ? t('tools.lock.confirm_pin') : t('tools.lock.confirm_password')}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-orange-700 focus:outline-none focus:ring-1 focus:ring-orange-700 disabled:opacity-50"
               />
             </div>
@@ -199,8 +204,7 @@ export default function LockFields({ value, onChange, disabled, context = 'expor
               disclosure. This is the consequence people do not anticipate. */}
           <div className="mt-2 rounded-lg bg-amber-50 px-2.5 py-2 text-xs text-amber-800">
             <span aria-hidden="true">⚠ </span>
-            Write it down somewhere safe. A locked PDF cannot be opened without its
-            password — not by us, not by anyone. There is no reset.
+            {t('tools.lock.warning')}
           </div>
         </div>
       )}

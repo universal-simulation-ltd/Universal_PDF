@@ -8,6 +8,7 @@ import FindBar from './FindBar'
 import PdfPage from './PdfPage'
 import { budgetedPageCount, maxZoomForDocument, MAX_RETAINED_PAGES } from '../../lib/renderBudget'
 import { setAnchorPage } from '../../lib/renderQueue'
+import { useT } from '../../i18n'
 
 // "100% zoom" in standard PDF viewers means physical paper size on screen.
 // CSS treats 1 inch as 96 px while a PDF point is 1/72 inch, so to render at
@@ -38,6 +39,7 @@ const FIT_TIMEOUT_MS = 600
 const LAYOUT_SETTLE_MS = 400
 
 export default function PdfViewer() {
+  const t = useT()
   const doc = usePdfStore((s) => s.doc)
   const numPages = usePdfStore((s) => s.numPages)
   const isXfa = usePdfStore((s) => s.isXfa)
@@ -942,7 +944,7 @@ export default function PdfViewer() {
             {numPages > 1 ? (
               <button
                 onClick={togglePageNav}
-                title="Show pages"
+                title={t('viewer.bar.show_pages')}
                 className={`flex items-center gap-1.5 px-2.5 h-8 rounded text-sm font-medium transition-colors ${
                   pageNavOpen
                     ? 'bg-orange-700 text-white hover:bg-orange-800'
@@ -950,11 +952,11 @@ export default function PdfViewer() {
                 }`}
               >
                 <span aria-hidden="true">☰</span>
-                <span>Pages</span>
+                <span>{t('viewer.bar.pages')}</span>
                 <span className="opacity-70 tabular-nums">{numPages}</span>
               </button>
             ) : (
-              <span className="px-1">{numPages} page</span>
+              <span className="px-1">{t.plural('viewer.bar.page_count', numPages)}</span>
             )}
           </div>
           <div className="flex justify-center min-w-0">
@@ -963,18 +965,18 @@ export default function PdfViewer() {
           <div className="flex items-center gap-2 justify-end">
             <button
               onClick={() => setPresentOpen(true)}
-              title="Present full screen (F)"
+              title={t('viewer.bar.present_title')}
               className="px-2.5 h-7 rounded border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium flex items-center gap-1.5"
             >
               <span aria-hidden="true">▶</span>
-              Present
+              {t('viewer.bar.present')}
             </button>
             <span className="w-px h-5 bg-slate-200" aria-hidden="true" />
             <button
               onClick={() => setZoom((z) => Math.max(MIN_ZOOM, +(z - ZOOM_STEP).toFixed(2)))}
               disabled={zoomDisabled}
               className={`w-7 h-7 rounded border ${zoomDisabled ? 'border-slate-200 text-slate-300 cursor-not-allowed bg-white' : 'bg-white border-slate-300 hover:bg-slate-50'}`}
-              aria-label="Zoom out"
+              aria-label={t('viewer.bar.zoom_out')}
             >
               −
             </button>
@@ -982,7 +984,7 @@ export default function PdfViewer() {
               <button
                 onClick={() => { if (atHundred) setZoomMenuOpen((o) => !o); else setZoom(1) }}
                 disabled={zoomDisabled}
-                title={atHundred ? 'Zoom presets' : 'Reset to 100% (actual size)'}
+                title={atHundred ? t('viewer.bar.zoom_presets') : t('viewer.bar.zoom_reset')}
                 aria-haspopup={atHundred ? 'menu' : undefined}
                 aria-expanded={atHundred ? zoomMenuOpen : undefined}
                 className={`w-14 text-center tabular-nums rounded border border-transparent ${zoomDisabled ? 'text-slate-300 cursor-not-allowed' : 'hover:bg-white hover:border-slate-300'}`}
@@ -1007,9 +1009,9 @@ export default function PdfViewer() {
             <button
               onClick={() => setZoom((z) => Math.min(maxZoom, +(z + ZOOM_STEP).toFixed(2)))}
               disabled={zoomInDisabled}
-              title={atMaxZoom ? `Maximum zoom for this document (${Math.round(maxZoom * 100)}%)` : 'Zoom in'}
+              title={atMaxZoom ? t('viewer.bar.zoom_max', { percent: Math.round(maxZoom * 100) }) : t('viewer.bar.zoom_in')}
               className={`w-7 h-7 rounded border ${zoomInDisabled ? 'border-slate-200 text-slate-300 cursor-not-allowed bg-white' : 'bg-white border-slate-300 hover:bg-slate-50'}`}
-              aria-label="Zoom in"
+              aria-label={t('viewer.bar.zoom_in')}
             >
               +
             </button>
@@ -1019,9 +1021,7 @@ export default function PdfViewer() {
       </div>
       {isXfa && (
         <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-800 text-center">
-          This is an Adobe XFA form. You can view and fill it; downloading saves your
-          entries. Annotation and redaction tools don't apply, and complex dynamic
-          forms may render only partially.
+          {t('viewer.bar.xfa_notice')}
         </div>
       )}
       <div className="relative flex-1 min-h-0">

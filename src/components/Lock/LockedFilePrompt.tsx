@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { usePdfStore } from '../../stores/pdfStore'
+import { useT } from '../../i18n'
 
 /**
  * Asks for the password of a locked PDF somebody has just opened.
@@ -15,6 +16,7 @@ export default function LockedFilePrompt() {
   const locked = usePdfStore((s) => s.lockedFile)
   const loadFile = usePdfStore((s) => s.loadFile)
   const cancel = usePdfStore((s) => s.cancelLockedFile)
+  const t = useT()
 
   const [password, setPassword] = useState('')
   const [reveal, setReveal] = useState(false)
@@ -60,10 +62,11 @@ export default function LockedFilePrompt() {
         onSubmit={submit}
         className="w-full max-w-sm rounded-xl bg-white p-5 shadow-2xl"
       >
-        <h2 className="text-lg font-semibold text-slate-900">This PDF is locked</h2>
+        <h2 className="text-lg font-semibold text-slate-900">{t('tools.locked.title')}</h2>
         <p className="mt-1 text-sm text-slate-600">
-          <span className="font-medium text-slate-800">{name}</span> needs its password
-          before it can be opened.
+          {t.rich('tools.locked.needs_password', {
+            name: <span className="font-medium text-slate-800">{name}</span>
+          })}
         </p>
 
         <div className="mt-4 flex gap-2">
@@ -77,8 +80,8 @@ export default function LockedFilePrompt() {
             // `current-password` and not `new-password`: this is a password the
             // user already has, so a password manager should offer to fill it.
             autoComplete="current-password"
-            placeholder="Password or PIN"
-            aria-label="Password or PIN"
+            placeholder={t('tools.locked.password_or_pin')}
+            aria-label={t('tools.locked.password_or_pin')}
             aria-invalid={locked.error ? true : undefined}
             className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-orange-700 focus:outline-none focus:ring-1 focus:ring-orange-700 disabled:opacity-50"
           />
@@ -89,7 +92,7 @@ export default function LockedFilePrompt() {
             aria-pressed={reveal}
             className="shrink-0 rounded-lg bg-slate-100 px-3 text-sm font-medium text-slate-700 hover:bg-slate-200 disabled:opacity-50"
           >
-            {reveal ? 'Hide' : 'Show'}
+            {reveal ? t('tools.common.hide') : t('tools.common.show')}
           </button>
         </div>
 
@@ -104,8 +107,7 @@ export default function LockedFilePrompt() {
             and the app cannot help them — better they learn that immediately
             than after ten minutes of trying birthdays. */}
         <p className="mt-3 text-xs text-slate-500">
-          Universal PDF cannot recover or reset this password. Without it the document
-          cannot be opened by any app.
+          {t('tools.locked.no_recovery')}
         </p>
 
         <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
@@ -114,7 +116,7 @@ export default function LockedFilePrompt() {
             disabled={!password || busy}
             className="rounded-lg bg-orange-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-orange-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {busy ? 'Unlocking…' : 'Unlock'}
+            {busy ? t('tools.locked.unlocking') : t('tools.locked.unlock')}
           </button>
           <button
             type="button"
@@ -122,7 +124,7 @@ export default function LockedFilePrompt() {
             disabled={busy}
             className="rounded-lg bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-200 disabled:opacity-50"
           >
-            Cancel
+            {t('tools.common.cancel')}
           </button>
         </div>
       </form>

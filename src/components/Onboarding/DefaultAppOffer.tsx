@@ -1,28 +1,32 @@
 import type { DefaultAppOffer as Offer } from '../../hooks/useDefaultPdfApp'
+import { useT, type Translator } from '../../i18n'
 
 // What the button will actually do. On Windows an app is not allowed to change
 // the association — see electron/defaultApp.cjs — so the label must not promise
 // a switch it cannot perform.
-function actionLabel(offer: Offer) {
-  return offer.canSet ? 'Make default' : 'Open Windows Settings'
+function actionLabel(t: Translator, offer: Offer) {
+  return offer.canSet ? t('app.default_make') : t('app.default_open_settings')
 }
 
-function explanation(offer: Offer) {
+function explanation(t: Translator, offer: Offer) {
   return offer.canSet
-    ? 'Double-clicking a PDF will open it here.'
-    : "Windows only lets you change this in Settings — we'll open it at the right page."
+    ? t('app.default_explain_set')
+    : t('app.default_explain_settings')
 }
 
 function OutcomeLine({ offer }: { offer: Offer }) {
+  const t = useT()
   if (!offer.outcome) return null
   if (offer.outcome.kind === 'done') {
-    return <p className="text-[13px] text-emerald-700">Done — PDFs now open in Universal PDF.</p>
+    return <p className="text-[13px] text-emerald-700">{t('app.default_done')}</p>
   }
   if (offer.outcome.kind === 'settings') {
     return (
       <p className="text-[13px] text-slate-600">
-        Settings is open. Choose <strong className="font-medium">Universal PDF</strong> for{' '}
-        <code className="font-mono">.pdf</code>, then come back — this will update on its own.
+        {t.rich('app.default_settings_open', {
+          app: <strong className="font-medium">Universal PDF</strong>,
+          ext: <code className="font-mono">.pdf</code>
+        })}
       </p>
     )
   }
@@ -36,6 +40,7 @@ function OutcomeLine({ offer }: { offer: Offer }) {
 export function DefaultAppBar({ offer }: { offer: Offer }) {
   // `showOffer` covers the unprompted ask; the outcome keeps the bar up long
   // enough to say what happened, including after `dismiss` marks it asked.
+  const t = useT()
   if (!offer.showOffer && !offer.outcome) return null
 
   return (
@@ -44,9 +49,9 @@ export function DefaultAppBar({ offer }: { offer: Offer }) {
         📄
       </span>
       <div className="flex-1 min-w-[15rem]">
-        <p className="text-sm font-medium text-slate-900">Open PDFs with Universal PDF?</p>
+        <p className="text-sm font-medium text-slate-900">{t('app.default_offer_title')}</p>
         {offer.outcome ? <OutcomeLine offer={offer} /> : (
-          <p className="text-[13px] text-slate-600">{explanation(offer)}</p>
+          <p className="text-[13px] text-slate-600">{explanation(t, offer)}</p>
         )}
       </div>
       {offer.available && (
@@ -57,14 +62,14 @@ export function DefaultAppBar({ offer }: { offer: Offer }) {
             disabled={offer.busy}
             className="inline-flex items-center rounded-lg bg-orange-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-orange-700 transition-colors disabled:opacity-60 disabled:cursor-wait"
           >
-            {offer.busy ? 'Working…' : actionLabel(offer)}
+            {offer.busy ? t('app.default_working') : actionLabel(t, offer)}
           </button>
           <button
             type="button"
             onClick={offer.dismiss}
             className="inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-orange-100/60 transition-colors"
           >
-            Not now
+            {t('app.default_not_now')}
           </button>
         </div>
       )}
@@ -78,14 +83,15 @@ export function DefaultAppBar({ offer }: { offer: Offer }) {
  * their mind a month later needs a way back to it that is not reinstalling.
  */
 export function DefaultAppPill({ offer, className }: { offer: Offer; className: string }) {
+  const t = useT()
   if (!offer.available) return null
   return (
     <>
       <button type="button" onClick={() => void offer.makeDefault()} disabled={offer.busy} className={className}>
         <span aria-hidden="true">📌</span>
         {offer.canSet
-          ? 'Set as default PDF app — open .pdf files here'
-          : 'Set as default PDF app — opens Windows Settings'}
+          ? t('app.default_pill_set')
+          : t('app.default_pill_settings')}
       </button>
       {/* ⚠️ Naming what currently holds .pdf is what stops this reading as a
           nag. The offer showing at all means the association is not ours; said
@@ -96,9 +102,10 @@ export function DefaultAppPill({ offer, className }: { offer: Offer; className: 
           on their own, so this can go back to naming them without warning. */}
       {offer.currentName && (
         <p className="mt-1 px-1 text-[13px] text-slate-500">
-          PDFs currently open in <strong className="font-medium">{offer.currentName}</strong>.
-          Windows needs you to pick <code className="font-mono">.pdf</code> there and press
-          Set&nbsp;default.
+          {t.rich('app.default_current_holder', {
+            name: <strong className="font-medium">{offer.currentName}</strong>,
+            ext: <code className="font-mono">.pdf</code>
+          })}
         </p>
       )}
       {offer.outcome && offer.outcome.kind === 'error' && (

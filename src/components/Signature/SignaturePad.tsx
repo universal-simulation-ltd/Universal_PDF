@@ -12,8 +12,8 @@ import {
   isUnansweredNameLine,
   DEFAULT_LABEL_SCALE,
   DEFAULT_SIG_ALIGN,
-  NAME_LINE_SEED,
-  DETAIL_BLOCK_SEED,
+  nameLineSeed,
+  detailBlockSeed,
   splitDetailBlock,
   dateLineSeed
 } from '../../lib/composeSignature'
@@ -26,6 +26,7 @@ import {
   randomToken,
   type MobileSignPayload
 } from '../../lib/mobileSign'
+import { useT } from '../../i18n'
 
 const PAD_W = 600
 const PAD_H = 240
@@ -84,6 +85,7 @@ function GatedInput({
 }
 
 export default function SignaturePad() {
+  const t = useT()
   const open = useSignatureStore((s) => s.padOpen)
   const closePad = useSignatureStore((s) => s.closePad)
   const add = useSignatureStore((s) => s.add)
@@ -156,7 +158,7 @@ export default function SignaturePad() {
       .annotations.find((a) => a.id === signingFieldId)
     if (ann?.type !== 'sigfield') return
     setIncludeDetails(!!ann.requireName)
-    if (ann.requireName) setDetailBlock((b) => (b.trim() ? b : NAME_LINE_SEED))
+    if (ann.requireName) setDetailBlock((b) => (b.trim() ? b : nameLineSeed()))
     setIncludeDate(!!ann.requireDate)
     if (ann.requireDate) setDateLine((l) => (l.trim() ? l : dateLineSeed()))
     setFieldRequiresLive(!!ann.requireLive)
@@ -193,7 +195,7 @@ export default function SignaturePad() {
               return
             }
             const count = useSignatureStore.getState().signatures.length
-            add({ name: `Signature ${count + 1}`, dataUrl: res.dataUrl, width: res.width, height: res.height })
+            add({ name: t('sign.default_signature_name', { n: count + 1 }), dataUrl: res.dataUrl, width: res.width, height: res.height })
             setTimeout(() => {
               closePad()
               // Arm the signature tool so the user can immediately place it.
@@ -342,7 +344,7 @@ export default function SignaturePad() {
   // shape is visible; the text then belongs entirely to the user.
   const toggleIncludeDetails = (v: boolean) => {
     setIncludeDetails(v)
-    if (v && !detailBlock.trim()) setDetailBlock(DETAIL_BLOCK_SEED)
+    if (v && !detailBlock.trim()) setDetailBlock(detailBlockSeed())
   }
   const toggleIncludeDate = (v: boolean) => {
     setIncludeDate(v)
@@ -433,7 +435,7 @@ export default function SignaturePad() {
       return
     }
 
-    const sigName = title.trim() || `Signature ${useSignatureStore.getState().signatures.length + 1}`
+    const sigName = title.trim() || t('sign.default_signature_name', { n: useSignatureStore.getState().signatures.length + 1 })
     const wantName = includeName && !!effectiveName
     const wantDate = includeDate
     const wantDetails = includeDetails && detailLines(details).length > 0
@@ -522,7 +524,7 @@ export default function SignaturePad() {
       <div className="bg-white rounded-lg shadow-2xl p-5 max-w-full flex max-h-[min(100%,100dvh)] flex-col">
         <div className="flex shrink-0 items-center justify-between gap-3 mb-3">
           <h2 className="text-lg font-semibold text-slate-900">
-            {mode === 'phone' ? 'Send to sign' : 'Draw signature'}
+            {mode === 'phone' ? t('sign.send_to_sign') : t('sign.pad_title_draw')}
           </h2>
           <div className="flex items-center gap-2">
             <div className="flex rounded-lg bg-slate-100 p-0.5 text-xs">
@@ -531,7 +533,7 @@ export default function SignaturePad() {
                 onClick={() => setMode('draw')}
                 className={`rounded-md px-2.5 py-1 transition ${mode === 'draw' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
               >
-                Draw
+                {t('sign.pad_mode_draw')}
               </button>
               {/* Orange + phone icon so the "send to sign" option is easy
                   to spot — signing with a mouse on desktop is fiddly. */}
@@ -543,7 +545,7 @@ export default function SignaturePad() {
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="7" y="2" width="10" height="20" rx="2.5" /><line x1="11" y1="18" x2="13" y2="18" />
                 </svg>
-                Send to sign
+                {t('sign.send_to_sign')}
               </button>
             </div>
             <button
@@ -561,8 +563,7 @@ export default function SignaturePad() {
             certificate page. */}
         {fieldRequiresLive && (
           <p className="mb-3 rounded-md bg-orange-50 border border-orange-200 px-3 py-2 text-xs text-orange-800" style={{ maxWidth: padW }}>
-            This box asks to be signed here rather than with an uploaded image.
-            Drawing it on your phone counts — that is drawn ink too.
+            {t('sign.pad_requires_live')}
           </p>
         )}
         {mode === 'phone' ? (
@@ -572,29 +573,29 @@ export default function SignaturePad() {
             <UnisimQr
               value={mobileSignUrl(token)}
               size={192}
-              label="signing on your phone"
+              label={t('sign.pad_qr_label')}
               className="rounded-lg"
               lightbox={{
-                title: "Point your phone's camera at this code",
+                title: t('sign.pad_qr_title'),
                 hint: (
                   <>
-                    Then enter this PIN on your phone:
+                    {t('sign.pad_qr_hint')}
                     <span className="mt-1 block text-2xl font-bold tracking-[0.3em] text-white">{pin}</span>
                   </>
                 )
               }}
             />
-            <p className="text-sm text-slate-600">Scan with your phone, then enter this PIN:</p>
+            <p className="text-sm text-slate-600">{t('sign.pad_scan_hint')}</p>
             <p className="text-2xl font-bold tracking-[0.3em] text-slate-900">{pin}</p>
             <p className={`text-xs ${phoneStatus === 'received' ? 'text-green-600' : 'text-slate-400'}`}>
-              {phoneStatus === 'received' ? 'Signature received ✓' : 'Waiting for your phone…'}
+              {phoneStatus === 'received' ? t('sign.pad_received') : t('sign.pad_waiting')}
             </p>
             <button
               type="button"
               onClick={cancel}
               className="mt-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm"
             >
-              Cancel
+              {t('sign.cancel')}
             </button>
           </div>
         ) : (
@@ -684,27 +685,27 @@ export default function SignaturePad() {
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Signature name (optional)"
+              placeholder={t('sign.pad_name_placeholder')}
               className="flex-1 min-w-40 px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
             <button
               onClick={clear}
               className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm"
             >
-              Clear
+              {t('sign.clear')}
             </button>
             <button
               onClick={cancel}
               className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm"
             >
-              Cancel
+              {t('sign.cancel')}
             </button>
             <button
               onClick={save}
               disabled={lines.length === 0}
               className="px-4 py-2 bg-orange-700 hover:bg-orange-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded text-sm font-medium"
             >
-              Save
+              {t('sign.save')}
             </button>
           </div>
 
@@ -718,30 +719,30 @@ export default function SignaturePad() {
               aria-controls={advancedId}
             >
               <span className={`transition-transform ${advancedOpen ? 'rotate-90' : ''}`}>▸</span>
-              Advanced options
+              {t('sign.pad_advanced')}
             </button>
 
             {advancedOpen && (
               <div id={advancedId} className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3">
-                <OptionToggle checked={realistic} onChange={setRealistic} label="Make it look more realistic" />
+                <OptionToggle checked={realistic} onChange={setRealistic} label={t('sign.pad_realistic')} />
                 {/* One box, one switch. Every line typed becomes a line under
                     the signature; the first is set larger, because it is
                     almost always the name. */}
                 <OptionToggle
                   checked={includeDetails}
                   onChange={toggleIncludeDetails}
-                  label="Add your details"
+                  label={t('sign.pad_add_details')}
                 />
                 <textarea
                   value={detailBlock}
                   onChange={(e) => setDetailBlock(e.target.value)}
                   rows={4}
-                  placeholder={DETAIL_BLOCK_SEED}
-                  aria-label="Details to show under the signature"
+                  placeholder={detailBlockSeed()}
+                  aria-label={t('sign.pad_details_label')}
                   disabled={!includeDetails}
                   className={`w-full px-3 py-2 border border-slate-300 rounded text-sm bg-white resize-y focus:outline-none focus:ring-2 focus:ring-orange-500 ${includeDetails ? '' : 'opacity-50'}`}
                 />
-                <OptionToggle checked={includeDate} onChange={toggleIncludeDate} label="Add date" />
+                <OptionToggle checked={includeDate} onChange={toggleIncludeDate} label={t('sign.pad_add_date')} />
                 {/* Seeded with today's date, then the whole line is the user's
                     to edit — wording and date alike. */}
                 <GatedInput
@@ -749,30 +750,29 @@ export default function SignaturePad() {
                   onChange={setDateLine}
                   enabled={includeDate}
                   placeholder={dateLineSeed()}
-                  label="Date line under the signature"
+                  label={t('sign.pad_date_label')}
                 />
 
                 <div className={hasExtras ? '' : 'opacity-50 pointer-events-none'}>
-                  <div className="text-xs font-medium text-slate-500 mb-1">When placed</div>
+                  <div className="text-xs font-medium text-slate-500 mb-1">{t('sign.pad_when_placed')}</div>
                   <div className="inline-flex rounded-md border border-slate-300 overflow-hidden text-sm">
                     <button
                       type="button"
                       onClick={() => setSeparatePlacement(false)}
                       className={`px-3 py-1.5 ${!separatePlacement ? 'bg-orange-700 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
                     >
-                      With signature
+                      {t('sign.pad_with_signature')}
                     </button>
                     <button
                       type="button"
                       onClick={() => setSeparatePlacement(true)}
                       className={`px-3 py-1.5 border-l border-slate-300 ${separatePlacement ? 'bg-orange-700 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
                     >
-                      Separate click
+                      {t('sign.pad_separate_click')}
                     </button>
                   </div>
                   <p className="mt-1 text-xs text-slate-400">
-                    “Separate click” places each line on a click of its own, so
-                    every one can go in a form’s own field.
+                    {t('sign.pad_separate_hint')}
                   </p>
                 </div>
               </div>

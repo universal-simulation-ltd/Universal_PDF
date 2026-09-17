@@ -1,4 +1,5 @@
 import { textOn, useOrg, useOrgBranding } from '@unisim/sdk'
+import { useT } from '../../i18n'
 
 /**
  * "You are signed in on behalf of ___" — the org's mark and name, for the
@@ -20,6 +21,7 @@ import { textOn, useOrg, useOrgBranding } from '@unisim/sdk'
  * nothing is worse than the row simply not being there.
  */
 export default function CompanyBadge() {
+  const t = useT()
   const { org } = useOrg()
   const branding = useOrgBranding()
 
@@ -55,7 +57,7 @@ export default function CompanyBadge() {
       )}
       <span className="min-w-0">
         <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-          Company
+          {t('menu.company')}
         </span>
         <span className="block truncate text-[13px] font-medium leading-tight">{org.name}</span>
       </span>

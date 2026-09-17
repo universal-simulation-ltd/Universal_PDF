@@ -1,5 +1,6 @@
 import { useId } from 'react'
 import { useFileDrop } from '@unisim/sdk'
+import { useT } from '../../i18n'
 
 // The one control that decides whose brand a code carries.
 //
@@ -50,24 +51,25 @@ export default function QrBrandingPanel({
   onError
 }: QrBrandingPanelProps) {
   const panelId = useId()
+  const t = useT()
   const drop = useFileDrop({
     onFiles: (files) => readLogo(files[0]),
     accept: 'image/*,.svg',
     multiple: false,
-    label: 'Drop a logo here, or click to choose one'
+    label: t('tools.qr.drop_label')
   })
 
   function readLogo(file: File | undefined) {
     if (!file) return
     if (!file.type.startsWith('image/')) {
-      onError('Please choose an image file (PNG, JPG or SVG).')
+      onError(t('tools.qr.not_image'))
       return
     }
     const reader = new FileReader()
     reader.onload = () => {
       if (typeof reader.result === 'string') onLogo(reader.result)
     }
-    reader.onerror = () => onError('Could not read that image.')
+    reader.onerror = () => onError(t('tools.qr.read_failed'))
     reader.readAsDataURL(file)
   }
 
@@ -99,11 +101,13 @@ export default function QrBrandingPanel({
           />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-medium text-slate-700">Custom branding</span>
+          <span className="block text-sm font-medium text-slate-700">{t('tools.qr.custom_branding')}</span>
           <span className="block text-xs text-slate-400 truncate">
             {on
-              ? 'Your mark and colour on the code'
-              : `UNI·SIM mark in the centre${orgName ? ` — switch on for ${orgName}'s` : ''}`}
+              ? t('tools.qr.branding_on')
+              : orgName
+                ? t('tools.qr.branding_off_org', { org: orgName })
+                : t('tools.qr.branding_off')}
           </span>
         </span>
       </button>
@@ -116,25 +120,25 @@ export default function QrBrandingPanel({
             <div className="flex items-center gap-3 p-2 rounded-lg border border-slate-200 bg-slate-50">
               <img
                 src={logo}
-                alt="Brand mark preview"
+                alt={t('tools.qr.mark_preview')}
                 className="w-10 h-10 rounded-md object-contain bg-white ring-1 ring-slate-200 p-1"
               />
               <span className="flex-1 min-w-0 text-xs text-slate-600 truncate">
-                {logo === orgLogo && orgName ? `${orgName}'s mark` : 'Your mark'}
+                {logo === orgLogo && orgName ? t('tools.qr.org_mark', { org: orgName }) : t('tools.qr.your_mark')}
               </span>
               <button
                 type="button"
                 onClick={drop.open}
                 className="text-xs font-medium text-slate-600 hover:text-orange-700 px-1.5 py-1"
               >
-                Replace
+                {t('tools.qr.replace')}
               </button>
               <button
                 type="button"
                 onClick={() => onLogo(null)}
                 className="text-xs font-medium text-red-600 hover:text-red-700 px-1.5 py-1"
               >
-                Remove
+                {t('tools.qr.remove')}
               </button>
             </div>
           ) : (
@@ -146,14 +150,14 @@ export default function QrBrandingPanel({
                   : 'border-slate-300 text-slate-500 hover:border-orange-400 hover:bg-orange-50/40 hover:text-orange-700'
               }`}
             >
-              <span aria-hidden="true">🖼</span> Drop your logo here, or click to choose
+              <span aria-hidden="true">🖼</span> {t('tools.qr.drop_logo')}
             </div>
           )}
 
           {/* ── The colour ────────────────────────────────────────────────── */}
           <div className="flex items-center gap-2">
             <label htmlFor="qr-brand-color" className="text-xs text-slate-600 shrink-0">
-              Brand colour
+              {t('tools.qr.brand_colour')}
             </label>
             <input
               id="qr-brand-color"
@@ -162,22 +166,21 @@ export default function QrBrandingPanel({
               onChange={(e) => onColor(e.target.value)}
               className="w-8 h-8 rounded border border-slate-300 bg-white p-0.5 cursor-pointer shrink-0"
             />
-            <span className="text-xs text-slate-400 font-mono">{color ?? 'default'}</span>
+            <span className="text-xs text-slate-400 font-mono">{color ?? t('tools.qr.default')}</span>
             {color && (
               <button
                 type="button"
                 onClick={() => onColor(null)}
                 className="ml-auto text-xs text-slate-500 hover:text-slate-800 underline-offset-2 hover:underline"
               >
-                Clear
+                {t('tools.qr.clear')}
               </button>
             )}
           </div>
 
           {colorRejected && (
             <p className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-md px-2.5 py-2">
-              That colour is too light to hold up as part of the code, so the code keeps its own
-              eye colour. Your logo still uses it.
+              {t('tools.qr.colour_too_light')}
             </p>
           )}
 
@@ -190,14 +193,13 @@ export default function QrBrandingPanel({
               }}
               className="self-start text-xs text-orange-700 hover:text-orange-800 underline-offset-2 hover:underline"
             >
-              Reset to {orgName ? `${orgName}'s` : 'my company'} branding
+              {orgName ? t('tools.qr.reset_org', { org: orgName }) : t('tools.qr.reset_company')}
             </button>
           )}
 
           {!orgLogo && !orgColor && (
             <p className="text-xs text-slate-400">
-              Sign in with your Universal ID and set your logo and colour once in My Company, and
-              they land here automatically.
+              {t('tools.qr.sign_in_hint')}
             </p>
           )}
         </div>

@@ -1,5 +1,20 @@
 import { useAnnotationStore } from '../stores/annotationStore'
 import { usePdfStore } from '../stores/pdfStore'
+import { getT, type MessageKey } from '../i18n'
+
+// The ids `snapshotDocument` is called with, and the words the menu shows for
+// them. The ids stay English — they are identifiers, not text.
+const DOC_STEP_KEYS: Record<string, MessageKey> = {
+  merge: 'lib.undo_merge',
+  convert: 'lib.undo_convert',
+  'page change': 'lib.undo_page_change',
+  'strip metadata': 'lib.undo_strip_metadata',
+}
+
+function docStepLabel(id: string): string {
+  const key = DOC_STEP_KEYS[id]
+  return key ? getT()(key) : id
+}
 
 /**
  * Undo, across BOTH histories — the annotation layer's, and the document's.
@@ -53,6 +68,6 @@ export function useUndo() {
      * undo is an ordinary annotation step, which needs no explaining.
      */
     nextDocumentUndo:
-      !canUndoAnnotations && docSteps.length > 0 ? docSteps[docSteps.length - 1].label : null
+      !canUndoAnnotations && docSteps.length > 0 ? docStepLabel(docSteps[docSteps.length - 1].label) : null
   }
 }

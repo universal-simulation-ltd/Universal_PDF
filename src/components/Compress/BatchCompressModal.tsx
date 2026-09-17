@@ -6,18 +6,9 @@ import {
   type CompressResult
 } from '../../lib/export'
 import { downloadZip } from '../../lib/zip'
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(2)} MB`
-}
-
-const QUALITY_OPTIONS: { value: CompressQuality; label: string; hint: string }[] = [
-  { value: 'light', label: 'Light', hint: 'Lossless · keeps text' },
-  { value: 'balanced', label: 'Balanced', hint: 'Smaller · pages become images' },
-  { value: 'strong', label: 'Maximum', hint: 'Smallest · lower quality' }
-]
+import { useT } from '../../i18n'
+import { formatNumber, formatSize } from '../Export/formatSize'
+import { qualityOptions } from './qualityOptions'
 
 export interface BatchSource {
   /** Original (uncompressed) PDF bytes — kept so we can re-compress at other qualities. */
@@ -46,6 +37,8 @@ export default function BatchCompressModal({
   const [progress, setProgress] = useState(0)
   const [filePct, setFilePct] = useState(0)
   const reqId = useRef(0)
+  const t = useT()
+  const QUALITY_OPTIONS = qualityOptions(t)
 
   const totalOriginal = results.reduce((n, r) => n + r.originalSize, 0)
   const totalCompressed = results.reduce((n, r) => n + r.compressedSize, 0)
@@ -57,10 +50,10 @@ export default function BatchCompressModal({
   // file, compressPdf kept the lossless bytes and says so here.
   const someFellBack = results.some((r) => r.fellBackToLossless)
   const noGainNote = someFellBack
-    ? 'Kept the lossless version where turning pages into images would have made the file bigger.'
+    ? t('tools.compress.kept_lossless_some')
     : quality === 'light'
-      ? 'Already optimised — try Balanced or Maximum for image-heavy PDFs.'
-      : 'Already optimised — these PDFs are as small as they go.'
+      ? t('tools.compress.already_optimised_try')
+      : t('tools.compress.already_optimised_many')
 
   async function changeQuality(q: CompressQuality) {
     if (q === quality || busy) return
@@ -84,7 +77,7 @@ export default function BatchCompressModal({
       if (id === reqId.current) setResults(next)
     } catch (err) {
       console.error(err)
-      if (id === reqId.current) alert('Compression failed: ' + (err as Error).message)
+      if (id === reqId.current) alert(t('tools.compress.failed', { message: (err as Error).message }))
     } finally {
       if (id === reqId.current) setBusy(false)
     }
@@ -108,11 +101,11 @@ export default function BatchCompressModal({
       <div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-lg max-h-[min(100%,100dvh)] flex flex-col">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-slate-900">
-            Compress {files.length} files
+            {t.plural('tools.compress.batch_title', files.length)}
           </h2>
           <button
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('tools.common.close')}
             className="text-slate-400 hover:text-slate-700 text-2xl leading-none w-8 h-8 flex items-center justify-center"
           >
             ×
@@ -122,7 +115,7 @@ export default function BatchCompressModal({
         {/* Compression selector — re-compresses every file */}
         <div className="mb-3">
           <div className="text-xs uppercase tracking-wide text-slate-500 font-medium mb-1.5">
-            Compression — applied to all files
+            {t('tools.compress.applied_to_all')}
           </div>
           <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-lg">
             {QUALITY_OPTIONS.map((opt) => {
@@ -155,18 +148,18 @@ export default function BatchCompressModal({
           <div className="grid grid-cols-2 divide-x divide-slate-200">
             <div className="p-4">
               <div className="text-xs uppercase tracking-wide text-slate-500 font-medium">
-                Total original
+                {t('tools.compress.total_original')}
               </div>
               <div className="mt-1 text-xl font-semibold text-slate-900 tabular-nums">
-                {formatSize(totalOriginal)}
+                {formatSize(t, totalOriginal)}
               </div>
             </div>
             <div className="p-4">
               <div className="text-xs uppercase tracking-wide text-slate-500 font-medium">
-                Total compressed
+                {t('tools.compress.total_compressed')}
               </div>
               <div className="mt-1 text-xl font-semibold text-slate-900 tabular-nums">
-                {busy ? '…' : formatSize(totalCompressed)}
+                {busy ? '…' : formatSize(t, totalCompressed)}
               </div>
             </div>
           </div>
@@ -181,9 +174,16 @@ export default function BatchCompressModal({
             ].join(' ')}
           >
             {busy
-              ? `Compressing ${Math.min(progress + 1, files.length)}/${files.length} — ${Math.round(filePct * 100)}%`
+              ? t('tools.compress.batch_progress', {
+                  current: Math.min(progress + 1, files.length),
+                  total: files.length,
+                  pct: Math.round(filePct * 100)
+                })
               : didShrink
-                ? `Saved ${formatSize(totalSaved)} (${pct.toFixed(1)}%) across ${files.length} files`
+                ? t.plural('tools.compress.batch_saved', files.length, {
+                    size: formatSize(t, totalSaved),
+                    pct: formatNumber(t, pct, 1)
+                  })
                 : noGainNote}
           </div>
         </div>
@@ -200,9 +200,9 @@ export default function BatchCompressModal({
                     {files[i].fileName}
                   </div>
                   <div className="text-xs text-slate-500 tabular-nums">
-                    {formatSize(r.originalSize)} → {busy ? '…' : formatSize(r.compressedSize)}
+                    {formatSize(t, r.originalSize)} → {busy ? '…' : formatSize(t, r.compressedSize)}
                     {!busy && saved > 0 && (
-                      <span className="text-emerald-600"> · −{rowPct.toFixed(0)}%</span>
+                      <span className="text-emerald-600"> · {t('tools.export.percent_less', { pct: formatNumber(t, rowPct, 0) })}</span>
                     )}
                   </div>
                 </div>
@@ -211,7 +211,7 @@ export default function BatchCompressModal({
                   disabled={busy}
                   className="shrink-0 text-xs font-medium text-orange-700 hover:text-orange-900 disabled:opacity-50 disabled:cursor-wait"
                 >
-                  ⬇ Save
+                  {t('tools.compress.save')}
                 </button>
               </div>
             )
@@ -223,14 +223,14 @@ export default function BatchCompressModal({
             onClick={onClose}
             className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700"
           >
-            Discard
+            {t('tools.compress.discard')}
           </button>
           <button
             onClick={downloadAll}
             disabled={busy}
             className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium disabled:opacity-60 disabled:cursor-wait"
           >
-            ⬇ Download all ({files.length}) as ZIP
+            {t('tools.compress.download_zip', { count: files.length })}
           </button>
         </div>
       </div>

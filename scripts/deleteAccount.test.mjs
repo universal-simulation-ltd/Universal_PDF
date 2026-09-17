@@ -11,7 +11,7 @@
 
 import {
   CONFIRM_PHRASE,
-  FALLBACK_ERROR,
+  fallbackError,
   deleteMyAccount,
   isConfirmed,
 } from '../src/lib/deleteAccount.ts'
@@ -86,14 +86,14 @@ console.log('\nA refused delete\n')
 {
   const client = fakeClient(async () => ({ data: null, error: httpError(502, '<html>Bad gateway</html>') }))
   const result = await deleteMyAccount(client)
-  ok(result.ok === false && result.error === FALLBACK_ERROR, 'a non-JSON answer falls back to a plain sentence')
+  ok(result.ok === false && result.error === fallbackError(), 'a non-JSON answer falls back to a plain sentence')
   ok(client.calls.signOut.length === 0, 'and does not sign out')
 }
 
 {
   const client = fakeClient(async () => ({ data: null, error: httpError(400, { ok: false }) }))
   const result = await deleteMyAccount(client)
-  ok(result.ok === false && result.error === FALLBACK_ERROR, 'a JSON answer with no sentence falls back too')
+  ok(result.ok === false && result.error === fallbackError(), 'a JSON answer with no sentence falls back too')
 }
 
 console.log('\nNo network, or no functions at all (the offline mock)\n')
@@ -101,7 +101,7 @@ console.log('\nNo network, or no functions at all (the offline mock)\n')
 {
   const client = fakeClient(async () => { throw new TypeError('Failed to fetch') })
   const result = await deleteMyAccount(client)
-  ok(result.ok === false && result.error === FALLBACK_ERROR, 'a network failure is reported, not thrown')
+  ok(result.ok === false && result.error === fallbackError(), 'a network failure is reported, not thrown')
   ok(client.calls.signOut.length === 0, 'and does not sign out')
 }
 

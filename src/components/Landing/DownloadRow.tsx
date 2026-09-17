@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import { useT } from '../../i18n'
 
 const RELEASES = 'https://github.com/universal-simulation-ltd/Universal_PDF/releases/latest'
 
@@ -59,6 +60,7 @@ const ITEM =
  * work today.
  */
 export default function DownloadRow() {
+  const t = useT()
   const [showIosHint, setShowIosHint] = useState(false)
   const iosHintId = useId()
 
@@ -71,24 +73,24 @@ export default function DownloadRow() {
         <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M4 20h16" />
         </svg>
-        Download it for offline use — it works the same
+        {t('app.download_heading')}
       </h2>
 
       <ul className="mt-1 flex flex-wrap items-center justify-center gap-x-1 gap-y-1">
         <li>
-          <a className={ITEM} href={RELEASES} rel="noopener" title="Windows installer (.exe), 64-bit">
+          <a className={ITEM} href={RELEASES} rel="noopener" title={t('app.download_windows_title')}>
             <WindowsIcon />
             Windows
           </a>
         </li>
         <li>
-          <a className={ITEM} href={RELEASES} rel="noopener" title="Disk image (.dmg) — Apple silicon and Intel">
+          <a className={ITEM} href={RELEASES} rel="noopener" title={t('app.download_macos_title')}>
             <AppleIcon />
             macOS
           </a>
         </li>
         <li>
-          <a className={ITEM} href={RELEASES} rel="noopener" title="Android package (.apk)">
+          <a className={ITEM} href={RELEASES} rel="noopener" title={t('app.download_android_title')}>
             <AndroidIcon />
             Android
           </a>
@@ -109,13 +111,15 @@ export default function DownloadRow() {
 
       {showIosHint && (
         <p id={iosHintId} className="mx-auto mt-1 max-w-sm text-[13px] text-slate-500">
-          Not on the App Store yet. In Safari, tap <strong className="font-medium">Share</strong> →{' '}
-          <strong className="font-medium">Add to Home Screen</strong> — it installs and runs offline.
+          {t.rich('app.download_ios_hint', {
+            share: <strong className="font-medium">{t('app.download_ios_share')}</strong>,
+            add: <strong className="font-medium">{t('app.download_ios_add_to_home')}</strong>
+          })}
         </p>
       )}
 
       <p className="mt-1 text-[12px] text-slate-400">
-        Free and open source, like the web version. Desktop builds are unsigned.
+        {t('app.download_footnote')}
       </p>
     </section>
   )

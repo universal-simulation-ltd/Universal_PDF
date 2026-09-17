@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useSignatureStore } from '../../stores/signatureStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { importImageAsSignature, type ImportedSignature } from '../../lib/imageSignature'
+import { useT } from '../../i18n'
 
 export default function SignatureImport() {
+  const t = useT()
   const open = useSignatureStore((s) => s.importOpen)
   const importTarget = useSignatureStore((s) => s.importTarget)
   const closeImport = useSignatureStore((s) => s.closeImport)
@@ -45,14 +47,14 @@ export default function SignatureImport() {
           const list = useSignatureStore.getState().signatures
           if (isStamp) {
             const stampCount = list.filter((s) => s.name.endsWith(' Stamp')).length
-            return `Stamp ${stampCount + 1}`
+            return t('sign.default_stamp_name', { n: stampCount + 1 })
           }
-          return `Signature ${list.length + 1}`
+          return t('sign.default_signature_name', { n: list.length + 1 })
         })
       })
       .catch((e: Error) => {
         if (cancelled) return
-        setError(e.message || 'Could not import image')
+        setError(e.message || t('sign.import_could_not'))
         setPreview(null)
       })
       .finally(() => {
@@ -69,7 +71,7 @@ export default function SignatureImport() {
     const f = e.target.files?.[0]
     if (f) {
       if (!/^image\//.test(f.type)) {
-        setError('Please choose an image file (PNG, JPG, etc.)')
+        setError(t('sign.import_not_image'))
       } else {
         setFile(f)
       }
@@ -84,10 +86,10 @@ export default function SignatureImport() {
     let finalName: string
     if (isStamp) {
       const stampCount = list.filter((s) => s.name.endsWith(' Stamp')).length
-      const base = trimmed || `Stamp ${stampCount + 1}`
+      const base = trimmed || t('sign.default_stamp_name', { n: stampCount + 1 })
       finalName = base.endsWith(' Stamp') ? base : `${base} Stamp`
     } else {
-      finalName = trimmed || `Signature ${list.length + 1}`
+      finalName = trimmed || t('sign.default_signature_name', { n: list.length + 1 })
     }
     add({
       name: finalName,
@@ -118,12 +120,12 @@ export default function SignatureImport() {
       <div className="bg-white rounded-lg shadow-2xl p-5 w-full max-w-lg flex max-h-[min(100%,100dvh)] flex-col">
         <div className="flex shrink-0 items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-slate-900">
-            {isStamp ? 'Import stamp' : 'Import signature'}
+            {isStamp ? t('sign.import_title_stamp') : t('sign.import_title_signature')}
           </h2>
           <button
             onClick={closeImport}
             className="text-slate-400 hover:text-slate-700 text-2xl leading-none w-8 h-8 flex items-center justify-center"
-            aria-label="Close"
+            aria-label={t('sign.close')}
           >
             ×
           </button>
@@ -137,7 +139,7 @@ export default function SignatureImport() {
             className="w-full p-8 border-2 border-dashed border-slate-300 hover:border-orange-500 rounded-lg text-slate-500 hover:text-orange-700 transition-colors flex flex-col items-center gap-2"
           >
             <div className="text-3xl">🖼️</div>
-            <div className="font-medium">Choose an image</div>
+            <div className="font-medium">{t('sign.import_choose')}</div>
             <div className="text-xs opacity-70">PNG, JPG, JPEG, GIF, WEBP</div>
           </button>
         ) : (
@@ -147,15 +149,15 @@ export default function SignatureImport() {
               style={{ minHeight: 160, background: previewBg }}
             >
               {busy ? (
-                <div className="text-slate-500 text-sm">Processing…</div>
+                <div className="text-slate-500 text-sm">{t('sign.import_processing')}</div>
               ) : preview ? (
                 <img
                   src={preview.dataUrl}
-                  alt="Signature preview"
+                  alt={t('sign.import_preview_alt')}
                   className="max-h-40 max-w-full object-contain"
                 />
               ) : (
-                <div className="text-slate-400 text-sm">No preview</div>
+                <div className="text-slate-400 text-sm">{t('sign.import_no_preview')}</div>
               )}
             </div>
             <div className="flex items-center gap-3 mt-3 text-sm">
@@ -165,14 +167,14 @@ export default function SignatureImport() {
                   checked={removeBg}
                   onChange={(e) => setRemoveBg(e.target.checked)}
                 />
-                Remove white background
+                {t('sign.import_remove_bg')}
               </label>
               <button
                 type="button"
                 onClick={() => inputRef.current?.click()}
                 className="ml-auto text-xs text-slate-500 hover:text-orange-700 underline-offset-2 hover:underline"
               >
-                Choose different file
+                {t('sign.import_choose_different')}
               </button>
             </div>
           </div>
@@ -193,21 +195,21 @@ export default function SignatureImport() {
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Name (optional)"
+            placeholder={t('sign.import_name_placeholder')}
             className="flex-1 min-w-40 px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
           <button
             onClick={closeImport}
             className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm"
           >
-            Cancel
+            {t('sign.cancel')}
           </button>
           <button
             onClick={save}
             disabled={!preview || busy}
             className="px-4 py-2 bg-orange-700 hover:bg-orange-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded text-sm font-medium"
           >
-            Save
+            {t('sign.save')}
           </button>
         </div>
       </div>

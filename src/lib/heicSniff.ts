@@ -20,6 +20,8 @@
  * type-stripping without dragging a browser module in behind it.
  */
 
+import { getT } from '../i18n/runtime.ts'
+
 const HEIC_EXT_RE = /\.(heic|heif)$/i
 const HEIC_MIME = new Set([
   'image/heic',
@@ -69,14 +71,12 @@ export function heicFromBytes(bytes: Uint8Array): boolean {
  */
 export async function headOf(file: File, n = 32): Promise<Uint8Array> {
   if (file.size === 0) {
-    throw new Error(`${file.name} came through empty — try adding it again`)
+    throw new Error(getT()('lib.image_empty', { name: file.name }))
   }
   try {
     return new Uint8Array(await file.slice(0, n).arrayBuffer())
   } catch {
-    throw new Error(
-      `${file.name} could not be read from this device — if it lives in the cloud, open it in your photos app first so it downloads`,
-    )
+    throw new Error(getT()('lib.image_unreadable', { name: file.name }))
   }
 }
 

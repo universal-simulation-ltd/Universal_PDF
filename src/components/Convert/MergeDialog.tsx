@@ -3,6 +3,8 @@ import { mergePdfs } from '../../lib/convert'
 import { downloadPdfBytes } from '../../lib/export'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useExitGuard } from '../../stores/exitGuard'
+import { useT } from '../../i18n'
+import { formatSize } from '../Export/formatSize'
 
 interface Props {
   onClose: () => void
@@ -15,12 +17,6 @@ interface Item {
   file: File
   /** Stable key so reordering doesn't remount rows / lose focus. */
   key: string
-}
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(2)} MB`
 }
 
 // Merge several PDFs into one. Files accumulate in an ordered list the user can
@@ -38,6 +34,7 @@ export default function MergeDialog({ onClose, initialFile }: Props) {
   const loadFile = usePdfStore((s) => s.loadFile)
   const snapshotDocument = usePdfStore((s) => s.snapshotDocument)
   const requestExit = useExitGuard((s) => s.requestExit)
+  const t = useT()
 
   function addFiles(fileList: FileList | File[]) {
     const pdfs = Array.from(fileList).filter(
@@ -79,7 +76,7 @@ export default function MergeDialog({ onClose, initialFile }: Props) {
       onClose()
     } catch (err) {
       console.error(err)
-      alert('Merge failed: ' + (err as Error).message)
+      alert(t('tools.merge.failed', { message: (err as Error).message }))
     } finally {
       setBusy(false)
     }
@@ -109,7 +106,7 @@ export default function MergeDialog({ onClose, initialFile }: Props) {
       })
     } catch (err) {
       console.error(err)
-      alert('Merge failed: ' + (err as Error).message)
+      alert(t('tools.merge.failed', { message: (err as Error).message }))
     } finally {
       setBusy(false)
     }
@@ -126,18 +123,18 @@ export default function MergeDialog({ onClose, initialFile }: Props) {
     >
       <div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-lg max-h-[min(100%,100dvh)] flex flex-col">
         <div className="flex items-center justify-between mb-1">
-          <h2 className="text-lg font-semibold text-slate-900">Merge PDFs</h2>
+          <h2 className="text-lg font-semibold text-slate-900">{t('tools.merge.title')}</h2>
           <button
             onClick={onClose}
             disabled={busy}
-            aria-label="Close"
+            aria-label={t('tools.common.close')}
             className="text-slate-400 hover:text-slate-700 text-2xl leading-none w-8 h-8 flex items-center justify-center disabled:opacity-50"
           >
             ×
           </button>
         </div>
         <p className="text-sm text-slate-500 mb-3">
-          Combine files into one PDF. Drag to add, reorder, then merge — nothing leaves your device.
+          {t('tools.merge.intro')}
         </p>
 
         {/* Drop / add zone */}
@@ -172,7 +169,7 @@ export default function MergeDialog({ onClose, initialFile }: Props) {
           ].join(' ')}
         >
           <span aria-hidden="true">＋</span>
-          {dragOver ? 'Drop PDFs to add' : 'Add PDFs…'}
+          {dragOver ? t('tools.merge.drop') : t('tools.merge.add')}
         </button>
         <input
           ref={inputRef}
@@ -190,7 +187,7 @@ export default function MergeDialog({ onClose, initialFile }: Props) {
         <div className="mt-3 flex-1 overflow-y-auto rounded-lg border border-slate-200 divide-y divide-slate-100 min-h-[3rem]">
           {items.length === 0 ? (
             <div className="px-3 py-6 text-center text-sm text-slate-400">
-              No files yet — add two or more PDFs to merge.
+              {t('tools.merge.empty')}
             </div>
           ) : (
             items.map((it, i) => (
@@ -201,14 +198,14 @@ export default function MergeDialog({ onClose, initialFile }: Props) {
                     {it.file.name}
                   </div>
                   <div className="text-xs text-slate-500 tabular-nums">
-                    {formatSize(it.file.size)}
+                    {formatSize(t, it.file.size)}
                   </div>
                 </div>
                 <div className="flex items-center gap-0.5 shrink-0">
                   <button
                     onClick={() => move(i, -1)}
                     disabled={i === 0 || busy}
-                    aria-label={`Move ${it.file.name} up`}
+                    aria-label={t('tools.merge.move_up', { name: it.file.name })}
                     className="w-7 h-7 rounded hover:bg-slate-100 text-slate-500 disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     ↑
@@ -216,7 +213,7 @@ export default function MergeDialog({ onClose, initialFile }: Props) {
                   <button
                     onClick={() => move(i, 1)}
                     disabled={i === items.length - 1 || busy}
-                    aria-label={`Move ${it.file.name} down`}
+                    aria-label={t('tools.merge.move_down', { name: it.file.name })}
                     className="w-7 h-7 rounded hover:bg-slate-100 text-slate-500 disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     ↓
@@ -224,7 +221,7 @@ export default function MergeDialog({ onClose, initialFile }: Props) {
                   <button
                     onClick={() => remove(it.key)}
                     disabled={busy}
-                    aria-label={`Remove ${it.file.name}`}
+                    aria-label={t('tools.merge.remove', { name: it.file.name })}
                     className="w-7 h-7 rounded hover:bg-red-50 hover:text-red-600 text-slate-400 disabled:opacity-30"
                   >
                     ×
@@ -241,21 +238,21 @@ export default function MergeDialog({ onClose, initialFile }: Props) {
             disabled={busy}
             className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700 disabled:opacity-50"
           >
-            Cancel
+            {t('tools.common.cancel')}
           </button>
           <button
             onClick={onMergeOpen}
             disabled={!canMerge}
             className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Merge &amp; open
+            {t('tools.merge.merge_open')}
           </button>
           <button
             onClick={onMergeDownload}
             disabled={!canMerge}
             className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {busy ? 'Merging…' : `⬇ Merge ${items.length || ''} & download`}
+            {busy ? t('tools.merge.merging') : t('tools.merge.merge_download', { count: items.length || '' })}
           </button>
         </div>
       </div>

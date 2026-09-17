@@ -7,6 +7,7 @@ import { currentPdfBytes } from '../../lib/hostedStore'
 import { downloadPdfBytes } from '../../lib/export'
 import { beginSignRequest, loadSignRequest, submitSignedPdf, certLink } from '../../lib/signRequestClient'
 import SignRequestGate from './SignRequestGate'
+import { useT } from '../../i18n'
 
 /**
  * Recipient side of "Send to sign" (opened via `?signdoc=<token>` from the
@@ -17,6 +18,7 @@ import SignRequestGate from './SignRequestGate'
  * sender via the pdf-sign-request Edge Function; no account needed.
  */
 export default function SignRequestPage({ token }: { token: string }) {
+  const t = useT()
   const { supabase } = useUniversal()
   const loadFile = usePdfStore((s) => s.loadFile)
   const doc = usePdfStore((s) => s.doc)
@@ -73,18 +75,18 @@ export default function SignRequestPage({ token }: { token: string }) {
       const res = await loadSignRequest(supabase, token, sess)
       if (!res.ok || !res.signedUrl) {
         setError(
-          res.code === 'expired' ? 'This signing link has expired. Ask the sender for a fresh one.'
-          : res.code === 'already_signed' ? 'You have already signed this document — nothing left to do.'
-          : res.code === 'completed' ? 'This document is now fully signed by everyone — nothing left to do.'
-          : res.code === 'deleted' ? 'The sender has removed this document, so it can no longer be signed.'
-          : res.error ?? 'This signing link is invalid.',
+          res.code === 'expired' ? t('sign.request_expired')
+          : res.code === 'already_signed' ? t('sign.request_already_signed_nothing')
+          : res.code === 'completed' ? t('sign.request_completed_nothing')
+          : res.code === 'deleted' ? t('sign.request_deleted')
+          : res.error ?? t('sign.request_invalid'),
         )
         setPhase('error')
         return
       }
       try {
         const pdfRes = await fetch(res.signedUrl)
-        if (!pdfRes.ok) throw new Error(`Could not download the document (${pdfRes.status}).`)
+        if (!pdfRes.ok) throw new Error(t('sign.request_download_failed', { status: pdfRes.status }))
         const blob = await pdfRes.blob()
         const name = res.docName ?? 'document.pdf'
         setDocName(name)
@@ -107,7 +109,7 @@ export default function SignRequestPage({ token }: { token: string }) {
     const anns = useAnnotationStore.getState().annotations
     const signedBoxes = anns.filter((a) => a.type === 'sigfield' && a.signed).length
     const hasWork = anns.some((a) => a.type !== 'sigfield') || signedBoxes > 0
-    if (!hasWork && !window.confirm('You haven’t signed or added anything yet. Send it back as-is?')) return
+    if (!hasWork && !window.confirm(t('sign.request_confirm_empty'))) return
 
     setPhase('submitting')
     setError(null)
@@ -118,16 +120,16 @@ export default function SignRequestPage({ token }: { token: string }) {
       const res = await submitSignedPdf(supabase, token, bytes, anns, sessionOverride ?? session)
       if (!res.ok) {
         if (res.code === 'verification_expired' || res.code === 'verification_required') {
-          setError('Your confirmation expired. Confirm your email again and your signature will be sent.')
+          setError(t('sign.request_verification_expired'))
           setReverify(true)
           setPhase('ready')
           return
         }
         setError(res.code === 'already_signed'
-          ? 'You have already signed this document.'
+          ? t('sign.request_already_signed')
           : res.code === 'completed'
-            ? 'This document is already fully signed by everyone.'
-            : res.error ?? 'Could not send the signed document back.')
+            ? t('sign.request_already_completed')
+            : res.error ?? t('sign.request_could_not_send_back'))
         setPhase('ready')
         return
       }
@@ -185,10 +187,10 @@ export default function SignRequestPage({ token }: { token: string }) {
     return (
       <main className="flex min-h-svh flex-col items-center justify-center gap-3 bg-slate-100 p-6 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-3xl">🔏</div>
-        <h1 className="text-lg font-semibold text-slate-900">Can't open this document</h1>
+        <h1 className="text-lg font-semibold text-slate-900">{t('sign.request_cant_open')}</h1>
         <p className="max-w-sm text-sm text-slate-500">{error}</p>
         <a href={import.meta.env.BASE_URL} className="mt-2 rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800">
-          Open Universal PDF
+          {t('sign.open_universal_pdf')}
         </a>
       </main>
     )
@@ -198,12 +200,12 @@ export default function SignRequestPage({ token }: { token: string }) {
     return (
       <main className="flex min-h-svh flex-col items-center justify-center gap-3 bg-slate-900 p-6 text-center text-white">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-600/20 text-3xl">✓</div>
-        <h1 className="text-lg font-semibold">{outcome.completed ? 'Fully signed' : 'Your signature is in'}</h1>
+        <h1 className="text-lg font-semibold">{outcome.completed ? t('sign.request_fully_signed') : t('sign.request_signature_in')}</h1>
         <p className="max-w-sm text-sm text-slate-400">
           {outcome.completed ? (
-            <>Every party has now signed <strong className="text-slate-200">{docName}</strong> — everyone's been notified.</>
+            t.rich('sign.request_done_completed', { doc: <strong className="text-slate-200">{docName}</strong> })
           ) : (
-            <>Your signature on <strong className="text-slate-200">{docName}</strong> is recorded. It now goes to the other party to counter-sign; everyone's notified once it's complete.</>
+            t.rich('sign.request_done_partial', { doc: <strong className="text-slate-200">{docName}</strong> })
           )}
         </p>
         <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
@@ -212,11 +214,11 @@ export default function SignRequestPage({ token }: { token: string }) {
             onClick={downloadCopy}
             className="rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold hover:bg-orange-800"
           >
-            Download your copy
+            {t('sign.request_download_copy')}
           </button>
           {outcome.certId && (
             <a href={certLink(outcome.certId)} className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800">
-              View the certificate
+              {t('sign.request_view_cert')}
             </a>
           )}
         </div>
@@ -231,7 +233,7 @@ export default function SignRequestPage({ token }: { token: string }) {
       {phase === 'loading' && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/40">
           <div className="rounded-xl bg-white px-6 py-4 text-sm font-medium text-slate-700 shadow-xl">
-            Loading document…
+            {t('sign.request_loading')}
           </div>
         </div>
       )}
@@ -242,20 +244,20 @@ export default function SignRequestPage({ token }: { token: string }) {
           <div className="rounded-2xl border border-orange-200 bg-white p-4 shadow-2xl">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="text-sm font-bold text-slate-900">You've been asked to sign</p>
+                <p className="text-sm font-bold text-slate-900">{t('sign.request_asked')}</p>
                 <p className="mt-0.5 truncate text-xs text-slate-500">{docName}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setBanner(false)}
-                aria-label="Hide"
+                aria-label={t('sign.request_hide')}
                 className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
               >
                 <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" /></svg>
               </button>
             </div>
             <p className="mt-2 text-xs text-slate-500">
-              Tap a <strong>Sign here</strong> box (or use the Sign tool) to add your signature, then send it back.
+              {t.rich('sign.request_hint', { box: <strong>{t('sign.request_sign_here')}</strong> })}
             </p>
             {error && <p className="mt-2 text-xs text-rose-600">{error}</p>}
             <button
@@ -264,7 +266,7 @@ export default function SignRequestPage({ token }: { token: string }) {
               disabled={phase === 'submitting'}
               className="mt-3 w-full rounded-lg bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
             >
-              {phase === 'submitting' ? 'Sending back…' : 'Finish & send back to sender'}
+              {phase === 'submitting' ? t('sign.request_sending_back') : t('sign.request_finish_send')}
             </button>
           </div>
         </div>
@@ -276,7 +278,7 @@ export default function SignRequestPage({ token }: { token: string }) {
           onClick={() => setBanner(true)}
           className="fixed bottom-20 right-3 z-[60] rounded-full bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white shadow-2xl hover:bg-orange-800 md:bottom-4 md:right-4"
         >
-          Finish signing →
+          {t('sign.request_finish_signing')}
         </button>
       )}
     </>

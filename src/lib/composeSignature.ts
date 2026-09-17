@@ -6,6 +6,7 @@
 // however the composite is produced, so re-editing never shifts the ink.
 
 import { formatSigningDate } from './signature'
+import { getT } from '../i18n'
 import type { SignatureData, SignatureLabelOptions, SigAlign } from '../types/annotations'
 
 // The label font. Matches the pad's original baked labels.
@@ -28,14 +29,31 @@ export const DEFAULT_SIG_ALIGN: SigAlign = 'left'
 // and the double-tap modal: turning a switch on with nothing typed pre-fills
 // the box so the expected shape is visible. An untouched seed never bakes —
 // see the unanswered-prompt filters below.
+//
+// ⚠️ The constants are the ENGLISH seeds, kept for callers that have not moved
+// to the functions below, which give the seed in the current language. Both
+// are recognised as unanswered prompts, whichever language wrote them.
 export const NAME_LINE_SEED = 'Signed by: '
 export const DETAILS_SEED = 'Role: \nEmail: \nPhone: '
+
+export function nameLineSeed(): string {
+  return `${getT()('lib.sig_signed_by')} `
+}
+
+export function detailsSeed(): string {
+  const t = getT()
+  return `${t('lib.sig_role')} \n${t('lib.sig_email')} \n${t('lib.sig_phone')} `
+}
 
 // Name and details are ONE box in both dialogs — "Add your details" — because
 // they are one thing to the person filling them in: the lines under their
 // signature. The split below is a rendering detail, kept only because the first
 // line is set larger than the rest.
 export const DETAIL_BLOCK_SEED = `${NAME_LINE_SEED}\n${DETAILS_SEED}`
+
+export function detailBlockSeed(): string {
+  return `${nameLineSeed()}\n${detailsSeed()}`
+}
 
 /** The first line is the name; everything after it is the smaller detail lines. */
 export function splitDetailBlock(block: string | undefined): {
@@ -55,14 +73,21 @@ export function joinDetailBlock(name?: string, details?: string): string {
 // The date line starts as "Signed on <today>" and is thereafter the user's own
 // text, editable in full — the date included.
 export function dateLineSeed(): string {
-  return `Signed on ${formatSigningDate()}`
+  return getT()('lib.sig_signed_on', { date: formatSigningDate() })
 }
 
 // True when a name line is still the untouched "Signed by: " seed — an
 // unanswered prompt, not a name. Used both when composing and when deciding
 // whether there is a name to place separately.
 export function isUnansweredNameLine(line: string): boolean {
-  return /^signed by:?$/i.test(line.trim())
+  const typed = stripColon(line)
+  return typed === 'signed by' || typed === stripColon(getT()('lib.sig_signed_by'))
+}
+
+// A label compared the way the seeds are: trimmed, case-folded, and without the
+// trailing colon (a half-deleted "Signed by" is still the prompt).
+function stripColon(label: string): string {
+  return label.trim().replace(/:$/, '').trim().toLocaleLowerCase()
 }
 
 export function loadImage(src: string): Promise<HTMLImageElement> {
@@ -84,6 +109,15 @@ const MAX_DETAIL_LINES = 6
 // bakes into the signature.
 const UNFILLED_TEMPLATE_LINE = /^(role|email|phone):$/i
 
+function isUnfilledTemplateLine(line: string): boolean {
+  if (UNFILLED_TEMPLATE_LINE.test(line)) return true
+  const t = getT()
+  const typed = line.trim().toLocaleLowerCase()
+  return [t('lib.sig_role'), t('lib.sig_email'), t('lib.sig_phone')].some(
+    (label) => typed === label.trim().toLocaleLowerCase()
+  )
+}
+
 // The detail lines a details string implies: blank lines and unfilled template
 // labels dropped, so a trailing newline or an untouched "Phone:" never adds a
 // line that looks like a rendering fault.
@@ -92,7 +126,7 @@ export function detailLines(details: string | undefined): string[] {
   return details
     .split(/\r?\n/)
     .map((line) => line.trim())
-    .filter((line) => line && !UNFILLED_TEMPLATE_LINE.test(line))
+    .filter((line) => line && !isUnfilledTemplateLine(line))
     .slice(0, MAX_DETAIL_LINES)
 }
 

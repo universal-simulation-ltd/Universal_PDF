@@ -105,6 +105,7 @@ function InfoRow({
   indent?: string
   className?: string
 }) {
+  const t = useT()
   const [showInfo, setShowInfo] = useState(false)
   return (
     <div className={className}>
@@ -124,7 +125,7 @@ function InfoRow({
             setShowInfo((v) => !v)
           }}
           aria-expanded={showInfo}
-          aria-label={`What does "${label}" do?`}
+          aria-label={t('menu.info_help', { label })}
           className={`shrink-0 self-center mr-2 w-6 h-6 rounded-full border text-[11px] font-semibold transition-colors ${
             showInfo
               ? 'border-orange-300 bg-orange-50 text-orange-700'
@@ -395,7 +396,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
       <div className={wrapperClass}>
         {showLabel && (
           <label className="block text-[11px] uppercase tracking-wide text-slate-500 font-medium mb-1">
-            Rename PDF
+            {t('menu.rename_pdf')}
           </label>
         )}
         <input
@@ -412,7 +413,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
             }
           }}
           className="w-full px-2 py-1.5 text-sm rounded border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-          aria-label="New file name"
+          aria-label={t('menu.rename_new_name')}
         />
         <div className="mt-2 flex justify-end gap-2">
           <button
@@ -420,7 +421,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
             onClick={() => setRenameOpen(false)}
             className="px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-200 rounded"
           >
-            Cancel
+            {t('menu.cancel')}
           </button>
           <button
             type="button"
@@ -428,7 +429,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
             disabled={!renameDraft.trim() || renameDraft.trim() === fileName}
             className="px-3 py-1 text-xs font-medium text-white bg-orange-700 hover:bg-orange-800 rounded disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Save
+            {t('menu.save')}
           </button>
         </div>
       </div>
@@ -486,15 +487,15 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
               width; shortenFileName keeps the tail readable inside it. */}
           {doc && fileName && (
             <div className="px-3 py-2 border-b border-slate-100 bg-slate-50/60">
-              <div className="text-[10px] uppercase tracking-wide text-slate-400 font-medium">Current file</div>
+              <div className="text-[10px] uppercase tracking-wide text-slate-400 font-medium">{t('menu.current_file')}</div>
               {canRename && renameOpen && renameInHeader ? (
                 renameEditor('mt-1', false)
               ) : (
                 <button
                   type="button"
                   onClick={() => startRename(true)}
-                  title={`${fileName} — click to rename`}
-                  aria-label={`Rename ${fileName}`}
+                  title={t('menu.current_file_title', { name: fileName })}
+                  aria-label={t('menu.current_file_rename', { name: fileName })}
                   className="group w-full max-w-[13.5rem] flex items-center gap-1.5 text-left"
                 >
                   <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800 group-hover:text-orange-700 transition-colors">
@@ -516,7 +517,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
               className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-orange-50 hover:text-orange-700 text-sm"
             >
               <span aria-hidden="true">📄</span>
-              <span className="flex-1 text-left font-medium">Open PDF…</span>
+              <span className="flex-1 text-left font-medium">{t('menu.open_pdf')}</span>
             </button>
           )}
 
@@ -528,7 +529,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
             aria-expanded={fileSubOpen}
           >
             <span aria-hidden="true">🗂</span>
-            <span className="flex-1 text-left">File</span>
+            <span className="flex-1 text-left">{t('menu.file')}</span>
             <svg viewBox="0 0 12 12" className={`w-3 h-3 transition-transform ${fileSubOpen ? '-rotate-90' : ''}`} aria-hidden="true">
               <path d="M4 2 L8 6 L4 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -542,7 +543,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                   className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
                 >
                   <span aria-hidden="true">🏠</span>
-                  <span className="flex-1 text-left">Close PDF</span>
+                  <span className="flex-1 text-left">{t('menu.close_pdf')}</span>
                 </button>
               )}
 
@@ -552,7 +553,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                   className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
                 >
                   <span aria-hidden="true">📄</span>
-                  <span className="flex-1 text-left">Open another PDF…</span>
+                  <span className="flex-1 text-left">{t('menu.open_another_pdf')}</span>
                 </button>
               )}
 
@@ -562,7 +563,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                 className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
               >
                 <span aria-hidden="true">💾</span>
-                <span className="flex-1 text-left">{doc ? 'Back up…' : 'Backups…'}</span>
+                <span className="flex-1 text-left">{doc ? t('menu.back_up') : t('menu.backups')}</span>
               </button>
 
               {canRename && !renameOpen && (
@@ -571,7 +572,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                   className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
                 >
                   <span aria-hidden="true">✎</span>
-                  <span className="flex-1 text-left">Rename PDF</span>
+                  <span className="flex-1 text-left">{t('menu.rename_pdf')}</span>
                 </button>
               )}
 
@@ -591,7 +592,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                 aria-expanded={viewSubOpen}
               >
                 <span aria-hidden="true">👁</span>
-                <span className="flex-1 text-left">View</span>
+                <span className="flex-1 text-left">{t('menu.view')}</span>
                 <svg viewBox="0 0 12 12" className={`w-3 h-3 transition-transform ${viewSubOpen ? '-rotate-90' : ''}`} aria-hidden="true">
                   <path d="M4 2 L8 6 L4 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -605,7 +606,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                       className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
                     >
                       <span aria-hidden="true">☰</span>
-                      <span className="flex-1 text-left">Pages</span>
+                      <span className="flex-1 text-left">{t('menu.pages')}</span>
                       <span className="text-[11px] text-slate-400 tabular-nums">{numPages}</span>
                     </button>
                   )}
@@ -615,7 +616,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                       className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
                     >
                       <span aria-hidden="true">▶</span>
-                      <span className="flex-1 text-left">Present</span>
+                      <span className="flex-1 text-left">{t('menu.present')}</span>
                     </button>
                   )}
                   {showFind && (
@@ -624,7 +625,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                       className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
                     >
                       <span aria-hidden="true">🔍</span>
-                      <span className="flex-1 text-left">Find</span>
+                      <span className="flex-1 text-left">{t('menu.find')}</span>
                       <span className="text-[11px] text-slate-400 tracking-wide">Ctrl+F</span>
                     </button>
                   )}
@@ -645,7 +646,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                 aria-expanded={advancedSubOpen}
               >
                 <span aria-hidden="true">⚙️</span>
-                <span className="flex-1 text-left">Advanced</span>
+                <span className="flex-1 text-left">{t('menu.advanced')}</span>
                 <svg viewBox="0 0 12 12" className={`w-3 h-3 transition-transform ${advancedSubOpen ? '-rotate-90' : ''}`} aria-hidden="true">
                   <path d="M4 2 L8 6 L4 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -656,21 +657,21 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                   {!isXfa && (
                     <InfoRow
                       icon="🔎"
-                      label="Make searchable (OCR)"
-                      info="Read a scanned PDF on-device so you can find & select its text."
+                      label={t('menu.ocr')}
+                      info={t('menu.ocr_info')}
                       onSelect={() => { setOcrOpen(true); closeMenu() }}
                     />
                   )}
                   <InfoRow
                     icon="⧉"
-                    label="Merge with another PDF"
-                    info="Combine this file with others — reorder before you export."
+                    label={t('menu.merge')}
+                    info={t('menu.merge_info')}
                     onSelect={() => { setMergeOpen(true); closeMenu() }}
                   />
                   <InfoRow
                     icon="⇄"
-                    label="Convert into images"
-                    info="Render each page to PNG or JPG (a ZIP for multiple pages)."
+                    label={t('menu.convert')}
+                    info={t('menu.convert_info')}
                     onSelect={() => { setConvertOpen(true); closeMenu() }}
                   />
                   {/* ⚠️ NOT in the Export dialog, and not two rows here
@@ -684,15 +685,15 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                   {!isXfa && (
                     <InfoRow
                       icon="🔒"
-                      label="Advanced export"
-                      info="Flatten the pages into pictures, lock it with a password, keep or strip the metadata."
+                      label={t('menu.advanced_export')}
+                      info={t('menu.advanced_export_info')}
                       onSelect={() => { setAdvancedExportOpen(true); closeMenu() }}
                     />
                   )}
                   <InfoRow
                     icon="🏷"
-                    label="Document metadata"
-                    info="See who and what this file names — then scrub it."
+                    label={t('menu.metadata')}
+                    info={t('menu.metadata_info')}
                     onSelect={() => { setMetadataOpen(true); closeMenu() }}
                   />
                   {/* ⚠️ This app keeps its OWN Advanced section, so it gets the
@@ -701,8 +702,8 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                       dropdown would be worse than either. */}
                   <InfoRow
                     icon="ℹ"
-                    label="About this app"
-                    info="What it does, what it never sends, and which build you are on."
+                    label={t('menu.about')}
+                    info={t('menu.about_info')}
                     onSelect={() => { setAboutOpen(true); closeMenu() }}
                   />
                   {/* Reset defaults — the way back from "Don't show again"
@@ -720,8 +721,8 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                       on harmful ones. The label says what comes back. */}
                   <InfoRow
                     icon="↺"
-                    label={resetDone ? 'Defaults restored' : 'Reset defaults'}
-                    info="Bring back the tips you dismissed with “Don’t show again”. Your documents are untouched."
+                    label={resetDone ? t('menu.defaults_restored') : t('menu.reset_defaults')}
+                    info={t('menu.reset_defaults_info')}
                     onSelect={() => {
                       void resetPrefs().then(() => {
                         setResetDone(true)
@@ -746,7 +747,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                 aria-expanded={redactSubOpen}
               >
                 <RedactIcon size={16} className="text-slate-700" />
-                <span className="flex-1 text-left">Redact</span>
+                <span className="flex-1 text-left">{t('menu.redact')}</span>
                 <svg viewBox="0 0 12 12" className={`w-3 h-3 transition-transform ${redactSubOpen ? '-rotate-90' : ''}`} aria-hidden="true">
                   <path d="M4 2 L8 6 L4 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -757,8 +758,8 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                   {!isXfa && (
                     <InfoRow
                       icon="🔍"
-                      label="Find and redact"
-                      info="Search the text and black out every match."
+                      label={t('menu.find_and_redact')}
+                      info={t('menu.find_and_redact_info')}
                       onSelect={() => { openForRedact(); closeMenu() }}
                     />
                   )}
@@ -771,8 +772,8 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                       other had chosen. */}
                   <InfoRow
                     icon="✏️"
-                    label="Free draw"
-                    info="Drag a box over anything to redact it, or tap to drop one. Pick the fill from the toolbar colours."
+                    label={t('menu.free_draw')}
+                    info={t('menu.free_draw_info')}
                     onSelect={() => { setSelected(null); setColor('#000000'); setTool('redact'); closeMenu() }}
                     className="border-t border-slate-100"
                   />
@@ -793,7 +794,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                 aria-expanded={editSubOpen}
               >
                 <span aria-hidden="true">↶</span>
-                <span className="flex-1 text-left">Undo / Redo</span>
+                <span className="flex-1 text-left">{t('menu.undo_redo')}</span>
                 <svg viewBox="0 0 12 12" className={`w-3 h-3 transition-transform ${editSubOpen ? '-rotate-90' : ''}`} aria-hidden="true">
                   <path d="M4 2 L8 6 L4 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -812,7 +813,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                           row that just says "Undo" gives no way to tell
                           "un-draw that box" from "put the whole pre-merge
                           document back". */}
-                      {nextDocumentUndo ? `Undo ${nextDocumentUndo}` : 'Undo'}
+                      {nextDocumentUndo ? t('menu.undo_named', { action: nextDocumentUndo }) : t('menu.undo')}
                     </span>
                     <span className="text-[11px] text-slate-400 tracking-wide">Ctrl+Z</span>
                   </button>
@@ -822,7 +823,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                     className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed border-t border-slate-100"
                   >
                     <span aria-hidden="true">↷</span>
-                    <span className="flex-1 text-left">Redo</span>
+                    <span className="flex-1 text-left">{t('menu.redo')}</span>
                     <span className="text-[11px] text-slate-400 tracking-wide">Ctrl+Y</span>
                   </button>
                   <button
@@ -831,7 +832,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                     className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-red-600 hover:bg-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed border-t border-slate-100"
                   >
                     <span aria-hidden="true">🗑</span>
-                    <span className="flex-1 text-left">Clear all annotations</span>
+                    <span className="flex-1 text-left">{t('menu.clear_annotations')}</span>
                   </button>
                 </div>
               )}
@@ -947,7 +948,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
         aria-haspopup="true"
         aria-expanded={open}
       >
-        Actions
+        {t('menu.actions')}
         <svg viewBox="0 0 12 12" className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true">
           <path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>

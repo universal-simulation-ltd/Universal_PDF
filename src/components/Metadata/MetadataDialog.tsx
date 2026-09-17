@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { readPdfMetadata, type PdfMetadata } from '../../lib/pdfMetadata'
 import { usePdfStore } from '../../stores/pdfStore'
+import { getT, intlLocale, useT } from '../../i18n'
 
 // "Advanced → Document metadata": show everything the open PDF says about
 // itself, then let the user strip it. Read and rewrite both run on the bytes
@@ -15,6 +16,7 @@ interface Props {
 
 export default function MetadataDialog({ sourceBytes, onClose }: Props) {
   const scrubMetadata = usePdfStore((s) => s.scrubMetadata)
+  const t = useT()
 
   const [phase, setPhase] = useState<Phase>('reading')
   const [meta, setMeta] = useState<PdfMetadata | null>(null)
@@ -41,7 +43,7 @@ export default function MetadataDialog({ sourceBytes, onClose }: Props) {
       .catch((err) => {
         console.error(err)
         if (!liveRef.current) return
-        setError((err as Error).message || 'Could not read this PDF’s metadata')
+        setError((err as Error).message || getT()('tools.metadata.read_failed'))
         setPhase('error')
       })
     return () => {
@@ -60,7 +62,7 @@ export default function MetadataDialog({ sourceBytes, onClose }: Props) {
     } catch (err) {
       console.error(err)
       if (!liveRef.current) return
-      setError((err as Error).message || 'Could not strip the metadata')
+      setError((err as Error).message || t('tools.metadata.strip_failed'))
       setPhase('error')
     }
   }
@@ -79,12 +81,12 @@ export default function MetadataDialog({ sourceBytes, onClose }: Props) {
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
             <span aria-hidden="true">🏷</span>
-            Document metadata
+            {t('tools.metadata.title')}
           </h2>
           {!busy && (
             <button
               onClick={onClose}
-              aria-label="Close"
+              aria-label={t('tools.common.close')}
               className="text-slate-400 hover:text-slate-700 text-2xl leading-none w-8 h-8 flex items-center justify-center"
             >
               ×
@@ -108,21 +110,18 @@ export default function MetadataDialog({ sourceBytes, onClose }: Props) {
             >
               i
             </span>
-            What is metadata?
+            {t('tools.metadata.what_is')}
           </button>
           {infoOpen && (
             <p id={infoId} className="mt-2 text-xs text-slate-600 leading-relaxed bg-slate-50 rounded-lg px-3 py-2.5">
-              Metadata is the hidden description a PDF carries about itself — who
-              wrote it, which program made it, and when it was created and last
-              edited. It travels with the file, so whoever you send it to can read
-              it. Stripping it changes nothing you can see on the page.
+              {t('tools.metadata.explainer')}
             </p>
           )}
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto">
           {phase === 'reading' && (
-            <div className="py-6 text-center text-sm text-slate-500">Reading metadata…</div>
+            <div className="py-6 text-center text-sm text-slate-500">{t('tools.metadata.reading')}</div>
           )}
 
           {phase === 'error' && (
@@ -139,8 +138,8 @@ export default function MetadataDialog({ sourceBytes, onClose }: Props) {
                   ].join(' ')}
                 >
                   {scrubbed
-                    ? 'Metadata stripped — this document no longer names an author, a program or a date.'
-                    : 'This PDF carries no metadata. Nothing to strip.'}
+                    ? t('tools.metadata.stripped')
+                    : t('tools.metadata.none')}
                 </div>
               )}
 
@@ -148,8 +147,7 @@ export default function MetadataDialog({ sourceBytes, onClose }: Props) {
                 <>
                   {identifying > 0 && (
                     <div className="rounded-lg bg-amber-50 text-amber-800 px-3 py-2 text-xs mb-3">
-                      {identifying} of these {identifying === 1 ? 'field' : 'fields'} could identify
-                      you, your organisation or your computer.
+                      {t.plural('tools.metadata.identifying', identifying)}
                     </div>
                   )}
 
@@ -159,7 +157,7 @@ export default function MetadataDialog({ sourceBytes, onClose }: Props) {
                         <dt className="text-[11px] uppercase tracking-wide text-slate-400 font-medium flex items-center gap-1.5">
                           {f.label}
                           {f.identifying && (
-                            <span className="text-amber-600 normal-case tracking-normal" title="Can identify you">
+                            <span className="text-amber-600 normal-case tracking-normal" title={t('tools.metadata.can_identify')}>
                               ⚠
                             </span>
                           )}
@@ -170,13 +168,14 @@ export default function MetadataDialog({ sourceBytes, onClose }: Props) {
                     {meta.xmpBytes > 0 && (
                       <div className="px-3 py-2 bg-white">
                         <dt className="text-[11px] uppercase tracking-wide text-slate-400 font-medium">
-                          XMP packet
+                          {t('tools.metadata.xmp_packet')}
                         </dt>
                         <dd className="text-sm text-slate-800">
-                          {meta.xmpBytes.toLocaleString()} bytes of embedded XML
+                          {t.plural('tools.metadata.xmp_bytes', meta.xmpBytes, {
+                            count: meta.xmpBytes.toLocaleString(intlLocale(t.lang))
+                          })}
                           <span className="block text-[11px] text-slate-500">
-                            An extra metadata block — often repeats the author and tool, and can
-                            carry edit history.
+                            {t('tools.metadata.xmp_hint')}
                           </span>
                         </dd>
                       </div>
@@ -187,7 +186,7 @@ export default function MetadataDialog({ sourceBytes, onClose }: Props) {
 
               {meta.encrypted && (
                 <p className="mt-3 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
-                  This PDF is encrypted, so its metadata can be read but not rewritten.
+                  {t('tools.metadata.encrypted')}
                 </p>
               )}
             </>
@@ -200,7 +199,7 @@ export default function MetadataDialog({ sourceBytes, onClose }: Props) {
             disabled={busy}
             className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700 disabled:opacity-50"
           >
-            {scrubbed ? 'Done' : 'Close'}
+            {scrubbed ? t('tools.common.done') : t('tools.common.close')}
           </button>
           {phase !== 'error' && meta?.hasAny && !meta.encrypted && (
             <button
@@ -208,7 +207,7 @@ export default function MetadataDialog({ sourceBytes, onClose }: Props) {
               disabled={busy}
               className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium disabled:opacity-50"
             >
-              {phase === 'scrubbing' ? 'Stripping…' : 'Scrub metadata'}
+              {phase === 'scrubbing' ? t('tools.metadata.stripping') : t('tools.metadata.scrub')}
             </button>
           )}
         </div>

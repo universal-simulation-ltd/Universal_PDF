@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { PDFDocumentProxy, PDFPageProxy } from '../../lib/pdfjs'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { linkLabel, safeLinkUrl, scrollToPage } from '../../lib/links'
+import { useT } from '../../i18n'
 
 // The page's own hyperlinks, made clickable.
 //
@@ -62,6 +63,7 @@ export default function LinkLayer({
   page: PDFPageProxy
   scale: number
 }) {
+  const t = useT()
   const [links, setLinks] = useState<LinkBox[]>([])
   // Which tools let a link be followed. The drawing tools deliberately do not:
   // a highlight dragged across a hyperlink has to draw, not navigate, and a box
@@ -163,7 +165,7 @@ export default function LinkLayer({
               target="_blank"
               rel="noopener noreferrer"
               title={linkLabel(l.url)}
-              aria-label={`Open link: ${linkLabel(l.url)}`}
+              aria-label={t('viewer.link.open', { label: linkLabel(l.url) })}
               style={style}
               className={className}
               onPointerDown={onPointerDown}
@@ -179,8 +181,8 @@ export default function LinkLayer({
             key={l.key}
             type="button"
             data-pdf-link={`page:${target + 1}`}
-            title={`Go to page ${target + 1}`}
-            aria-label={`Go to page ${target + 1}`}
+            title={t('viewer.link.go_to_page', { page: target + 1 })}
+            aria-label={t('viewer.link.go_to_page', { page: target + 1 })}
             style={style}
             className={className}
             onPointerDown={onPointerDown}

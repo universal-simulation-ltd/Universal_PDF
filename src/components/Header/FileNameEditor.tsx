@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { usePdfStore } from '../../stores/pdfStore'
+import { useT } from '../../i18n'
 
 export default function FileNameEditor() {
+  const t = useT()
   const fileName = usePdfStore((s) => s.fileName)
   const renameFile = usePdfStore((s) => s.renameFile)
 
@@ -57,7 +59,7 @@ export default function FileNameEditor() {
           }
         }}
         className="px-2 py-0.5 rounded bg-white text-slate-900 text-base w-56 max-w-[40vw] outline-none border border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-500"
-        aria-label="Rename file"
+        aria-label={t('menu.rename_file')}
       />
     )
   }
@@ -65,7 +67,7 @@ export default function FileNameEditor() {
   return (
     <button
       onClick={start}
-      title="Click to rename"
+      title={t('menu.click_to_rename')}
       className="group flex items-center gap-1 max-w-xs px-1.5 py-0.5 rounded text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-white border border-transparent hover:border-slate-300 transition-colors truncate"
     >
       <span className="truncate">{fileName}</span>

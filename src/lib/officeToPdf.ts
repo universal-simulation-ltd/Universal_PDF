@@ -7,7 +7,7 @@
 // mislabelled file still works, and naming the result.
 //
 // The result is a *re-typeset* document, not a facsimile of the original's page
-// layout, and callers are expected to say so (see `IMPORT_NOTICE`).
+// layout, and callers are expected to say so (see `importNotice`).
 //
 // ✅ THE STACK NO LONGER EXISTS TWICE. It did until 2026-08-20: Universal
 // Converter's Files tab shipped its own readers and a dependency-free PDF
@@ -25,6 +25,7 @@
 
 import { DEFAULT_PDF_SETTINGS, ZipArchive, docToPdf, readDocx, readOdt } from '@unisim/doc'
 import { loadFallbackFont } from './fallbackFont'
+import { getT } from '../i18n'
 
 export type OfficeFormat = 'docx' | 'odt'
 
@@ -46,11 +47,9 @@ export interface OfficeConversion {
 export class OfficeImportError extends Error {}
 
 /** Shown once a converted document is open, so nobody mistakes it for a copy. */
-export const IMPORT_NOTICE =
-  'Converted from Word — text and structure are preserved, but the original page layout may differ.'
-
-export const IMPORT_NOTICE_ODT =
-  'Converted from OpenDocument — text and structure are preserved, but the original page layout may differ.'
+export function importNotice(format: OfficeFormat): string {
+  return getT()(format === 'docx' ? 'lib.import_notice_docx' : 'lib.import_notice_odt')
+}
 
 /** File extensions the open/drop paths accept alongside PDFs. */
 export const OFFICE_EXTENSIONS = ['.docx', '.odt'] as const
@@ -97,16 +96,16 @@ function legacyFormatMessage(name: string, header: Uint8Array): string | null {
     header[0] === 0xd0 && header[1] === 0xcf && header[2] === 0x11 && header[3] === 0xe0 &&
     header[4] === 0xa1 && header[5] === 0xb1 && header[6] === 0x1a && header[7] === 0xe1
   if (isOle2 || /\.doc$/i.test(name)) {
-    return 'Word 97–2003 files (.doc) can’t be converted here. Open it in Word or LibreOffice, save it as .docx, and try again.'
+    return getT()('lib.import_legacy_doc')
   }
   const isRtf =
     header.length >= 5 &&
     String.fromCharCode(header[0], header[1], header[2], header[3], header[4]) === '{\\rtf'
   if (isRtf || /\.rtf$/i.test(name)) {
-    return 'Rich Text files (.rtf) can’t be converted here. Save it as .docx and try again.'
+    return getT()('lib.import_legacy_rtf')
   }
   if (/\.pages$/i.test(name)) {
-    return 'Pages documents can’t be converted here. Export it as Word (.docx) or PDF and try again.'
+    return getT()('lib.import_legacy_pages')
   }
   return null
 }
@@ -126,7 +125,7 @@ export async function convertOfficeFile(file: File): Promise<OfficeConversion> {
   // Both formats are ZIPs. Anything else that reached here is not one of them,
   // whatever it was called.
   if (!(header[0] === 0x50 && header[1] === 0x4b)) {
-    throw new OfficeImportError('That file isn’t a Word (.docx) or OpenDocument (.odt) document.')
+    throw new OfficeImportError(getT()('lib.import_not_office'))
   }
 
   try {
@@ -138,9 +137,7 @@ export async function convertOfficeFile(file: File): Promise<OfficeConversion> {
       : zip.has('content.xml')
         ? 'odt'
         : (() => {
-            throw new OfficeImportError(
-              'That file isn’t a Word (.docx) or OpenDocument (.odt) document.'
-            )
+            throw new OfficeImportError(getT()('lib.import_not_office'))
           })()
 
     // Read through the format we SNIFFED, not the one the name claims — which
@@ -149,7 +146,7 @@ export async function convertOfficeFile(file: File): Promise<OfficeConversion> {
     const doc = format === 'docx' ? await readDocx(file) : await readOdt(file)
 
     if (doc.blocks.length === 0) {
-      throw new OfficeImportError('That document appears to be empty — there was no text to convert.')
+      throw new OfficeImportError(getT()('lib.import_empty'))
     }
 
     // The PDF's /Title comes off the document model, not the settings — so a
@@ -182,9 +179,7 @@ export async function convertOfficeFile(file: File): Promise<OfficeConversion> {
       throw new OfficeImportError(err.message)
     }
     console.error('Office import failed', err)
-    throw new OfficeImportError(
-      `Could not convert ${file.name}. It may be password-protected or damaged.`
-    )
+    throw new OfficeImportError(getT()('lib.import_failed', { name: file.name }))
   }
 }
 
@@ -221,17 +216,15 @@ function droppedSentence(dropped: string[]): string {
   // '?' — the very thing being warned about. Past a handful, count instead.
   const LIST_LIMIT = 8
   if (dropped.length > LIST_LIMIT) {
-    return ` ${dropped.length} characters this PDF's fonts can't write were replaced with “?”.`
+    return getT().plural('lib.import_dropped_count', dropped.length)
   }
-  const shown = dropped.join(' ')
-  const plural = dropped.length > 1 ? 's' : ''
-  return ` The character${plural} ${shown} couldn't be written and ${dropped.length > 1 ? 'appear' : 'appears'} as “?”.`
+  return getT().plural('lib.import_dropped_chars', dropped.length, { chars: dropped.join(' ') })
 }
 
 /** The notice to show once a converted document is on screen. */
 export function importNoticeFor(conversion: OfficeConversion): string {
-  const base = conversion.format === 'docx' ? IMPORT_NOTICE : IMPORT_NOTICE_ODT
-  return base + droppedSentence(conversion.dropped)
+  const dropped = droppedSentence(conversion.dropped)
+  return dropped ? `${importNotice(conversion.format)} ${dropped}` : importNotice(conversion.format)
 }
 
 export function isPdfFile(file: File): boolean {
@@ -243,8 +236,9 @@ export function isPdfFile(file: File): boolean {
  * NOT say "the layout may differ", because it mostly won't — but it does name
  * the one thing that still can, which is fonts.
  */
-export const LIBREOFFICE_NOTICE =
-  'Converted with LibreOffice on this computer — the page layout should match the original. Fonts this computer doesn’t have are substituted.'
+export function libreOfficeNotice(): string {
+  return getT()('lib.import_libreoffice_notice')
+}
 
 /**
  * Convert through the user's own LibreOffice, if this is the desktop app and
@@ -277,7 +271,7 @@ async function tryLibreOffice(file: File): Promise<{ file: File; notice: string 
     const pdfName = `${safeFilename(baseName(file.name))}.pdf`
     return {
       file: new File([res.bytes as BlobPart], pdfName, { type: 'application/pdf' }),
-      notice: LIBREOFFICE_NOTICE
+      notice: libreOfficeNotice()
     }
   } catch (err) {
     // A broken bridge must never take the document with it — the built-in
@@ -304,7 +298,7 @@ async function tryLibreOffice(file: File): Promise<{ file: File; notice: string 
 export async function toViewablePdf(file: File): Promise<{ file: File; notice?: string }> {
   if (isPdfFile(file)) return { file }
   if (!isOfficeFile(file) && !ADVISED_NAME.test(file.name)) {
-    throw new OfficeImportError('Please choose a PDF, Word (.docx) or OpenDocument (.odt) file.')
+    throw new OfficeImportError(getT()('lib.import_wrong_type'))
   }
   if (isOfficeFile(file)) {
     const faithful = await tryLibreOffice(file)

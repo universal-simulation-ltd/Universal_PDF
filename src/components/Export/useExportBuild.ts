@@ -12,6 +12,7 @@ import {
   type CompressResult,
   type RasterEstimate
 } from '../../lib/export'
+import { getT } from '../../i18n'
 
 // Everything BOTH export dialogs have to do before either can offer a button:
 // bake the annotations in, work out whether there is anything to compress, and
@@ -124,7 +125,7 @@ export function useExportBuild(open: boolean, quality: CompressQuality | null): 
         }
       } catch (e) {
         if (myId !== buildIdRef.current) return
-        setError((e as Error).message || 'Export failed')
+        setError((e as Error).message || getT()('tools.export.failed_fallback'))
       } finally {
         if (myId === buildIdRef.current) setBuilding(false)
       }
@@ -163,7 +164,7 @@ export function useExportBuild(open: boolean, quality: CompressQuality | null): 
         setCompressed(comp)
       } catch (e) {
         if (myId !== compressIdRef.current) return
-        setError((e as Error).message || 'Compression failed')
+        setError((e as Error).message || getT()('tools.export.compression_failed_fallback'))
       } finally {
         if (myId === compressIdRef.current) setCompressing(false)
       }

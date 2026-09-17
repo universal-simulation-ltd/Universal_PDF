@@ -1,4 +1,5 @@
 import { PDFDict, PDFDocument, PDFName, PDFRawStream } from 'pdf-lib'
+import { getT, intlLocale, type MessageKey } from '../i18n'
 
 // Document metadata — the Info dictionary and the XMP packet — travels with a
 // PDF wherever it goes, and routinely carries the author's real name, their
@@ -30,23 +31,23 @@ export interface PdfMetadata {
 /** Info-dictionary keys pdf-lib exposes, in the order they read best. */
 const INFO_READERS: {
   key: string
-  label: string
+  label: MessageKey
   identifying?: boolean
   read: (pdf: PDFDocument) => string | Date | undefined
 }[] = [
-  { key: 'title', label: 'Title', read: (p) => p.getTitle() },
-  { key: 'author', label: 'Author', identifying: true, read: (p) => p.getAuthor() },
-  { key: 'subject', label: 'Subject', read: (p) => p.getSubject() },
-  { key: 'keywords', label: 'Keywords', read: (p) => p.getKeywords() },
-  { key: 'creator', label: 'Created with', identifying: true, read: (p) => p.getCreator() },
-  { key: 'producer', label: 'Produced by', identifying: true, read: (p) => p.getProducer() },
-  { key: 'creationDate', label: 'Created', identifying: true, read: (p) => p.getCreationDate() },
-  { key: 'modificationDate', label: 'Last modified', identifying: true, read: (p) => p.getModificationDate() },
+  { key: 'title', label: 'lib.meta_title', read: (p) => p.getTitle() },
+  { key: 'author', label: 'lib.meta_author', identifying: true, read: (p) => p.getAuthor() },
+  { key: 'subject', label: 'lib.meta_subject', read: (p) => p.getSubject() },
+  { key: 'keywords', label: 'lib.meta_keywords', read: (p) => p.getKeywords() },
+  { key: 'creator', label: 'lib.meta_creator', identifying: true, read: (p) => p.getCreator() },
+  { key: 'producer', label: 'lib.meta_producer', identifying: true, read: (p) => p.getProducer() },
+  { key: 'creationDate', label: 'lib.meta_created', identifying: true, read: (p) => p.getCreationDate() },
+  { key: 'modificationDate', label: 'lib.meta_modified', identifying: true, read: (p) => p.getModificationDate() },
 ]
 
 function formatValue(v: string | Date | undefined): string | null {
   if (v == null) return null
-  if (v instanceof Date) return Number.isNaN(v.getTime()) ? null : v.toLocaleString()
+  if (v instanceof Date) return Number.isNaN(v.getTime()) ? null : v.toLocaleString(intlLocale(getT().lang))
   const trimmed = v.trim()
   return trimmed.length > 0 ? trimmed : null
 }
@@ -82,7 +83,7 @@ export async function readPdfMetadata(sourceBytes: ArrayBuffer): Promise<PdfMeta
     }
     const value = formatValue(raw)
     if (value !== null) {
-      fields.push({ key: r.key, label: r.label, value, identifying: r.identifying })
+      fields.push({ key: r.key, label: getT()(r.label), value, identifying: r.identifying })
     }
   }
 
@@ -106,7 +107,7 @@ export async function readPdfMetadata(sourceBytes: ArrayBuffer): Promise<PdfMeta
 export async function scrubPdfMetadata(sourceBytes: ArrayBuffer): Promise<ArrayBuffer> {
   const pdf = await PDFDocument.load(sourceBytes, { updateMetadata: false })
   if (pdf.isEncrypted) {
-    throw new Error('This PDF is encrypted, so its metadata cannot be rewritten.')
+    throw new Error(getT()('lib.meta_encrypted'))
   }
 
   // Wipe every Info key, not just the ones we surface — producers are free to

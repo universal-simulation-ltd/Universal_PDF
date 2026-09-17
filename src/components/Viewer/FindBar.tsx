@@ -5,12 +5,14 @@ import { useAnnotationStore } from '../../stores/annotationStore'
 import { extractDocText, findInDoc, type PageText } from '../../lib/pdfText'
 import type { Annotation } from '../../types/annotations'
 import { RedactIcon } from '../icons/RedactIcon'
+import { useT } from '../../i18n'
 
 // Pad redaction boxes slightly past the glyph extents so no edge of the
 // original text can peek out around a baked black box (in points).
 const REDACT_PAD = 1
 
 export default function FindBar() {
+  const t = useT()
   const doc = usePdfStore((s) => s.doc)
   const query = useSearchStore((s) => s.query)
   const setQuery = useSearchStore((s) => s.setQuery)
@@ -157,7 +159,7 @@ export default function FindBar() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="Find in document"
+          placeholder={t('viewer.find.placeholder')}
           className="flex-1 min-w-0 text-sm outline-none placeholder:text-slate-400"
         />
         <span className="text-[11px] text-slate-400 tabular-nums shrink-0 min-w-[44px] text-right">
@@ -168,8 +170,8 @@ export default function FindBar() {
             type="button"
             onClick={prev}
             disabled={count === 0}
-            title="Previous match (Shift+Enter)"
-            aria-label="Previous match"
+            title={t('viewer.find.previous_title')}
+            aria-label={t('viewer.find.previous')}
             className="w-7 h-7 rounded flex items-center justify-center text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent"
           >
             <span aria-hidden="true">↑</span>
@@ -178,8 +180,8 @@ export default function FindBar() {
             type="button"
             onClick={next}
             disabled={count === 0}
-            title="Next match (Enter)"
-            aria-label="Next match"
+            title={t('viewer.find.next_title')}
+            aria-label={t('viewer.find.next')}
             className="w-7 h-7 rounded flex items-center justify-center text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent"
           >
             <span aria-hidden="true">↓</span>
@@ -187,8 +189,8 @@ export default function FindBar() {
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            title="More actions"
-            aria-label="More actions"
+            title={t('viewer.find.more_actions')}
+            aria-label={t('viewer.find.more_actions')}
             aria-expanded={expanded}
             className={`w-7 h-7 rounded flex items-center justify-center hover:bg-slate-100 ${expanded ? 'text-slate-900' : 'text-slate-500'}`}
           >
@@ -198,8 +200,8 @@ export default function FindBar() {
           <button
             type="button"
             onClick={() => setOpen(false)}
-            title="Close (Esc)"
-            aria-label="Close find"
+            title={t('viewer.find.close_title')}
+            aria-label={t('viewer.find.close')}
             className="w-7 h-7 rounded flex items-center justify-center text-slate-500 hover:bg-slate-100"
           >
             {/* SVG, not `✕`: U+2715 is a hollow ▯?▯ box in iOS's system
@@ -214,14 +216,14 @@ export default function FindBar() {
       {expanded && (
         <div className="border-t border-slate-100 bg-slate-50 px-2.5 py-2.5">
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-[11px] font-medium text-slate-500">Fill</span>
+            <span className="text-[11px] font-medium text-slate-500">{t('viewer.find.fill')}</span>
             <div className="flex items-center gap-1.5">
-              {([['#000000', 'Black'], ['#ffffff', 'White']] as const).map(([hex, name]) => (
+              {([['#000000', 'viewer.find.fill_black'], ['#ffffff', 'viewer.find.fill_white']] as const).map(([hex, nameKey]) => (
                 <button
                   key={hex}
                   type="button"
                   onClick={() => setColor(hex)}
-                  title={`${name} redaction`}
+                  title={t(nameKey)}
                   aria-pressed={color.toLowerCase() === hex}
                   className={`w-6 h-6 rounded-full border-2 transition-transform ${
                     color.toLowerCase() === hex ? 'border-orange-500 scale-110' : 'border-slate-300 hover:scale-105'
@@ -234,7 +236,7 @@ export default function FindBar() {
                   armed. */}
               {color.toLowerCase() !== '#000000' && color.toLowerCase() !== '#ffffff' && (
                 <span
-                  title={`Current colour ${color}`}
+                  title={t('viewer.find.current_colour', { color })}
                   className="w-6 h-6 rounded-full border-2 border-orange-500 scale-110"
                   style={{ backgroundColor: color }}
                 />
@@ -251,9 +253,11 @@ export default function FindBar() {
             >
               <RedactIcon size={16} className="shrink-0" />
               <span className="flex-1 min-w-0">
-                <span className="block text-sm font-medium leading-tight">Redact this 1 match</span>
+                <span className="block text-sm font-medium leading-tight">{t('viewer.find.redact_one')}</span>
                 <span className="block text-[11px] text-slate-500 group-hover:text-slate-300 leading-tight mt-0.5">
-                  {count > 0 ? `Just match ${activeIndex + 1} of ${count}` : 'The highlighted match'} — then jump to the next
+                  {count > 0
+                    ? t('viewer.find.redact_one_detail', { n: activeIndex + 1, count })
+                    : t('viewer.find.redact_one_detail_none')}
                 </span>
               </span>
             </button>
@@ -268,7 +272,9 @@ export default function FindBar() {
             {count !== 1 && (confirmingAll ? (
               <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 space-y-2">
                 <p className="text-[11px] text-amber-800 leading-snug">
-                  <strong>Double-check before proceeding.</strong> Automatic search may miss some instances — different spellings, formatting, or scanned text won't be caught. Please review the document manually after redacting.
+                  {t.rich('viewer.find.redact_all_warning', {
+                    title: <strong>{t('viewer.find.redact_all_warning_title')}</strong>
+                  })}
                 </p>
                 <div className="flex gap-2">
                   <button
@@ -276,14 +282,14 @@ export default function FindBar() {
                     onClick={redactAll}
                     className="flex-1 px-3 py-1.5 rounded-md bg-slate-900 text-white text-xs font-medium hover:bg-slate-700"
                   >
-                    Redact all {count > 0 ? count : ''} match{count === 1 ? '' : 'es'}
+                    {count > 0 ? t.plural('viewer.find.redact_all', count) : t('viewer.find.redact_all_none')}
                   </button>
                   <button
                     type="button"
                     onClick={() => setConfirmingAll(false)}
                     className="flex-1 px-3 py-1.5 rounded-md bg-white border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-50"
                   >
-                    Cancel
+                    {t('viewer.common.cancel')}
                   </button>
                 </div>
               </div>
@@ -297,10 +303,12 @@ export default function FindBar() {
                 <RedactIcon size={16} className="shrink-0" />
                 <span className="flex-1 min-w-0">
                   <span className="block text-sm font-medium leading-tight">
-                    Redact all {count > 0 ? count : ''} match{count === 1 ? '' : 'es'}
+                    {count > 0 ? t.plural('viewer.find.redact_all', count) : t('viewer.find.redact_all_none')}
                   </span>
                   <span className="block text-[11px] text-slate-500 group-hover:text-slate-300 leading-tight mt-0.5">
-                    {color.toLowerCase() === '#ffffff' ? 'Whites' : 'Blocks'} out every match — text is removed on export
+                    {color.toLowerCase() === '#ffffff'
+                      ? t('viewer.find.redact_all_detail_white')
+                      : t('viewer.find.redact_all_detail_black')}
                   </span>
                 </span>
               </button>

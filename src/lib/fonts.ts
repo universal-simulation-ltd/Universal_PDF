@@ -1,4 +1,5 @@
 import type { FontFamily } from '../types/annotations'
+import { getT } from '../i18n'
 
 // The nearest PDF "standard 14" family each on-screen font maps to on export.
 // pdf-lib can only embed the standard fonts without a fontkit dependency, so the
@@ -21,9 +22,11 @@ export interface FontDef {
 }
 
 export const FONT_DEFS: FontDef[] = [
-  { id: 'sans', label: 'Sans', preview: 'Aa', css: 'Helvetica, Arial, sans-serif', base: 'helvetica' },
-  { id: 'serif', label: 'Serif', preview: 'Aa', css: '"Times New Roman", Times, serif', base: 'times' },
-  { id: 'mono', label: 'Mono', preview: 'Aa', css: '"Courier New", Courier, monospace', base: 'courier' },
+  // The generic families are words, so they are read in the current language
+  // each time; the named typefaces are names and stay as they are.
+  { id: 'sans', get label() { return getT()('lib.font_sans') }, preview: 'Aa', css: 'Helvetica, Arial, sans-serif', base: 'helvetica' },
+  { id: 'serif', get label() { return getT()('lib.font_serif') }, preview: 'Aa', css: '"Times New Roman", Times, serif', base: 'times' },
+  { id: 'mono', get label() { return getT()('lib.font_mono') }, preview: 'Aa', css: '"Courier New", Courier, monospace', base: 'courier' },
   { id: 'georgia', label: 'Georgia', preview: 'Aa', css: 'Georgia, "Times New Roman", serif', base: 'times', extended: true },
   { id: 'verdana', label: 'Verdana', preview: 'Aa', css: 'Verdana, Geneva, sans-serif', base: 'helvetica', extended: true },
   { id: 'comic', label: 'Comic', preview: 'Aa', css: '"Comic Sans MS", "Comic Sans", cursive', base: 'helvetica', extended: true },

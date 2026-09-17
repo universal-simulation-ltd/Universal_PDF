@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PDFPageProxy } from '../../lib/pdfjs'
 import { useFormStore } from '../../stores/formStore'
+import { useT } from '../../i18n'
 
 interface FieldInfo {
   fieldName: string
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export default function FormFieldLayer({ page, pageIndex, scale, pageHeight }: Props) {
+  const t = useT()
   const [fields, setFields] = useState<FieldInfo[]>([])
   // Subscribe to the values array so the inputs re-render as the user types.
   // Subscribing to `getValue` alone returns a stable function reference and
@@ -116,7 +118,7 @@ export default function FormFieldLayer({ page, pageIndex, scale, pageHeight }: P
             ) : (
               <div
                 onClick={() => setActiveField(f.fieldName)}
-                title={`Click to fill: ${f.fieldName}`}
+                title={t('viewer.form.click_to_fill', { name: f.fieldName })}
                 className="w-full h-full flex items-center px-1 cursor-text border border-dashed border-blue-400 bg-blue-50/40 hover:bg-blue-50/80 transition-colors"
                 style={{ fontSize: Math.min(14, f.ch * 0.65) }}
               >

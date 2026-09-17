@@ -5,18 +5,9 @@ import {
   type CompressQuality,
   type CompressResult
 } from '../../lib/export'
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(2)} MB`
-}
-
-const QUALITY_OPTIONS: { value: CompressQuality; label: string; hint: string }[] = [
-  { value: 'light', label: 'Light', hint: 'Lossless · keeps text' },
-  { value: 'balanced', label: 'Balanced', hint: 'Smaller · pages become images' },
-  { value: 'strong', label: 'Maximum', hint: 'Smallest · lower quality' }
-]
+import { useT } from '../../i18n'
+import { formatNumber, formatSize } from '../Export/formatSize'
+import { qualityOptions } from './qualityOptions'
 
 interface Props {
   /** Original (uncompressed) PDF bytes — used to re-compress at other qualities. */
@@ -33,8 +24,10 @@ export default function CompressResultModal({
   fileName,
   initialResult,
   onClose,
-  discardLabel = 'Discard'
+  discardLabel
 }: Props) {
+  const t = useT()
+  const QUALITY_OPTIONS = qualityOptions(t)
   const [result, setResult] = useState<CompressResult>(initialResult)
   const [quality, setQuality] = useState<CompressQuality>(initialResult.quality)
   const [busy, setBusy] = useState(false)
@@ -50,10 +43,10 @@ export default function CompressResultModal({
   // qualities are what made it bigger, and compressPdf has already fallen back
   // to the lossless bytes rather than hand over the bloated ones.
   const noGainNote = result.fellBackToLossless
-    ? 'Kept the lossless version — turning these pages into images would have made the file bigger.'
+    ? t('tools.compress.kept_lossless')
     : quality === 'light'
-      ? 'Already optimised — try Balanced or Maximum for image-heavy PDFs.'
-      : 'Already optimised — this PDF is as small as it goes.'
+      ? t('tools.compress.already_optimised_try')
+      : t('tools.compress.already_optimised_one')
 
   async function changeQuality(q: CompressQuality) {
     if (q === quality || busy) return
@@ -69,7 +62,7 @@ export default function CompressResultModal({
       if (id === reqId.current) setResult(r)
     } catch (err) {
       console.error(err)
-      if (id === reqId.current) alert('Compression failed: ' + (err as Error).message)
+      if (id === reqId.current) alert(t('tools.compress.failed', { message: (err as Error).message }))
     } finally {
       if (id === reqId.current) setBusy(false)
     }
@@ -93,10 +86,10 @@ export default function CompressResultModal({
             still overrun the visible area once the browser chrome shows. */}
       <div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-md flex max-h-[min(100%,100dvh)] flex-col">
         <div className="flex shrink-0 items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold text-slate-900">Compression result</h2>
+          <h2 className="text-lg font-semibold text-slate-900">{t('tools.compress.result_title')}</h2>
           <button
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('tools.common.close')}
             className="text-slate-400 hover:text-slate-700 text-2xl leading-none w-8 h-8 flex items-center justify-center"
           >
             ×
@@ -107,7 +100,7 @@ export default function CompressResultModal({
         {/* Compression selector — re-compresses live */}
         <div className="mb-3">
           <div className="text-xs uppercase tracking-wide text-slate-500 font-medium mb-1.5">
-            Compression
+            {t('tools.compress.compression')}
           </div>
           <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-lg">
             {QUALITY_OPTIONS.map((opt) => {
@@ -138,15 +131,15 @@ export default function CompressResultModal({
         <div className="rounded-lg border border-slate-200 overflow-hidden">
           <div className="grid grid-cols-2 divide-x divide-slate-200">
             <div className="p-4">
-              <div className="text-xs uppercase tracking-wide text-slate-500 font-medium">Original</div>
+              <div className="text-xs uppercase tracking-wide text-slate-500 font-medium">{t('tools.compress.original')}</div>
               <div className="mt-1 text-xl font-semibold text-slate-900 tabular-nums">
-                {formatSize(result.originalSize)}
+                {formatSize(t, result.originalSize)}
               </div>
             </div>
             <div className="p-4">
-              <div className="text-xs uppercase tracking-wide text-slate-500 font-medium">Compressed</div>
+              <div className="text-xs uppercase tracking-wide text-slate-500 font-medium">{t('tools.compress.compressed')}</div>
               <div className="mt-1 text-xl font-semibold text-slate-900 tabular-nums">
-                {busy ? '…' : formatSize(result.compressedSize)}
+                {busy ? '…' : formatSize(t, result.compressedSize)}
               </div>
             </div>
           </div>
@@ -161,15 +154,15 @@ export default function CompressResultModal({
             ].join(' ')}
           >
             {busy
-              ? `Compressing… ${Math.round(progressPct * 100)}%`
+              ? t('tools.compress.progress', { pct: Math.round(progressPct * 100) })
               : didShrink
-                ? `Saved ${formatSize(saved)} (${pct.toFixed(1)}%)`
+                ? t('tools.compress.saved', { size: formatSize(t, saved), pct: formatNumber(t, pct, 1) })
                 : noGainNote}
           </div>
         </div>
 
         <div className="mt-4 text-xs text-slate-500 truncate" title={result.fileName}>
-          Output: <span className="font-mono">{result.fileName}</span>
+          {t.rich('tools.compress.output', { name: <span className="font-mono">{result.fileName}</span> })}
         </div>
 
         </div>
@@ -178,14 +171,14 @@ export default function CompressResultModal({
             onClick={onClose}
             className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700"
           >
-            {discardLabel}
+            {discardLabel ?? t('tools.compress.discard')}
           </button>
           <button
             onClick={download}
             disabled={busy}
             className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium disabled:opacity-60 disabled:cursor-wait"
           >
-            ⬇ Download
+            {t('tools.compress.download')}
           </button>
         </div>
       </div>

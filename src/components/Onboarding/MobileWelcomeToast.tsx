@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useT } from '../../i18n'
 
 const STORAGE_KEY = 'universal-pdf-mobile-welcome-dismissed'
 const MOBILE_QUERY = '(max-width: 767px)'
@@ -20,6 +21,7 @@ function persistDismissed() {
 }
 
 export default function MobileWelcomeToast() {
+  const t = useT()
   const [mounted, setMounted] = useState(false)
   const [visible, setVisible] = useState(false)
   const boxRef = useRef<HTMLDivElement>(null)
@@ -77,7 +79,7 @@ export default function MobileWelcomeToast() {
       ref={boxRef}
       role="dialog"
       aria-live="polite"
-      aria-label="Welcome to Universal PDF"
+      aria-label={t('app.welcome_title')}
       /* z-30: below the bottom bar (z-40) and its panels (z-40/z-50) so a
          greeting can never cover a control, above the document either way. */
       className={`md:hidden fixed left-1/2 -translate-x-1/2 z-30 w-[min(92vw,360px)] transition-all duration-300 ${
@@ -89,7 +91,7 @@ export default function MobileWelcomeToast() {
         <button
           type="button"
           onClick={close}
-          aria-label="Close welcome message and don’t show it again"
+          aria-label={t('app.welcome_close_aria')}
           className="absolute top-2 right-2 w-6 h-6 inline-flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-500 text-lg leading-none"
         >
           ×
@@ -97,9 +99,9 @@ export default function MobileWelcomeToast() {
         <div className="flex items-start gap-2 pr-6">
           <span className="text-xl leading-none" aria-hidden="true">👋</span>
           <div className="text-sm">
-            <div className="font-semibold text-slate-900">Welcome to Universal PDF</div>
+            <div className="font-semibold text-slate-900">{t('app.welcome_title')}</div>
             <div className="text-slate-600 mt-0.5">
-              Your editing tools live in the toolbar below.
+              {t('app.welcome_body')}
             </div>
           </div>
         </div>
@@ -112,7 +114,7 @@ export default function MobileWelcomeToast() {
             onClick={close}
             className="text-xs font-semibold text-orange-700 hover:text-orange-800 px-3 py-1.5 rounded-full bg-orange-50 hover:bg-orange-100"
           >
-            Don't show again
+            {t('app.welcome_dont_show')}
           </button>
         </div>
         <div

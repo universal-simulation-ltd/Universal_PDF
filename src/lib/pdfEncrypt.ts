@@ -8,6 +8,7 @@
 // It takes finished bytes and returns finished bytes.
 
 import { PDFDocument, PDFName, PDFNumber, PDFHexString, PDFString, PDFArray, PDFDict, PDFStream, PDFRawStream, PDFBool, PDFRef, type PDFObject } from 'pdf-lib'
+import { getT } from '../i18n/runtime.ts'
 import { buildEncryptionValues, aesEncryptData, aesDecryptData, fileKeyFromPassword, randomBytes, checkUserPassword, PERMS_ALL, type Key } from './pdfCrypto'
 
 function toHex(bytes: Uint8Array): string {
@@ -125,7 +126,7 @@ export async function encryptPdf(
   password: string,
   options: { ownerPassword?: string } = {}
 ): Promise<LockResult> {
-  if (!password) throw new Error('A password is required to lock a PDF.')
+  if (!password) throw new Error(getT()('lib.lock_password_required'))
 
   const doc = await PDFDocument.load(bytes, { updateMetadata: false })
   const values = await buildEncryptionValues(password, options.ownerPassword || password)
@@ -178,7 +179,7 @@ export async function encryptPdf(
   // Cheap insurance against the one failure that would be invisible until a
   // recipient hit it: a file locked with a password that does not open it.
   if (!(await checkUserPassword(password, values.U))) {
-    throw new Error('Could not lock this PDF — the password check failed. Nothing has been saved.')
+    throw new Error(getT()('lib.lock_check_failed'))
   }
 
   return { bytes: out, size: out.length }
@@ -200,7 +201,7 @@ export function isEncryptedPdf(bytes: Uint8Array): boolean {
 
 /** Thrown when a locked PDF is opened without the right password. */
 export class WrongPasswordError extends Error {
-  constructor(message = 'That password does not open this PDF.') {
+  constructor(message = getT()('lib.unlock_wrong_password')) {
     super(message)
     this.name = 'WrongPasswordError'
   }
@@ -294,7 +295,7 @@ export async function decryptPdf(bytes: Uint8Array, password: string): Promise<U
   const encryptRef = context.trailerInfo.Encrypt
   const encryptDict = encryptRef ? context.lookup(encryptRef) : undefined
   if (!(encryptDict instanceof PDFDict)) {
-    throw new UnsupportedEncryptionError('This PDF is not locked.')
+    throw new UnsupportedEncryptionError(getT()('lib.unlock_not_locked'))
   }
 
   const v = encryptDict.get(PDFName.of('V'))
@@ -307,7 +308,7 @@ export async function decryptPdf(bytes: Uint8Array, password: string): Promise<U
   // garbage would be far worse than saying so.
   if (vNum !== 5 || (rNum !== 5 && rNum !== 6)) {
     throw new UnsupportedEncryptionError(
-      'This PDF uses an older encryption scheme Universal PDF cannot open. Try the app that locked it.'
+      getT()('lib.unlock_old_scheme')
     )
   }
 
@@ -316,7 +317,7 @@ export async function decryptPdf(bytes: Uint8Array, password: string): Promise<U
   const O = bytesOf(encryptDict, 'O')
   const OE = bytesOf(encryptDict, 'OE')
   if (!U || !UE || !O || !OE || U.length < 48 || O.length < 48) {
-    throw new UnsupportedEncryptionError('This PDF says it is locked but its encryption details are incomplete.')
+    throw new UnsupportedEncryptionError(getT()('lib.unlock_incomplete'))
   }
 
   const key = await fileKeyFromPassword(password, U, UE, O, OE)
@@ -347,7 +348,7 @@ export async function decryptPdf(bytes: Uint8Array, password: string): Promise<U
         // password — the file itself is damaged or truncated. Say so, because
         // the raw WebCrypto message ("The operation failed for an
         // operation-specific reason") is what the user would otherwise read.
-        throw new Error('This PDF was unlocked but part of it could not be read — the file looks damaged.')
+        throw new Error(getT()('lib.unlock_damaged'))
       }
       obj.dict.set(LENGTH, PDFNumber.of(plain.length))
       context.assign(ref, PDFRawStream.of(obj.dict, plain))

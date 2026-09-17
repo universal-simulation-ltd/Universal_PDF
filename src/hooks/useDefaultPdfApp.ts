@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { getT } from '../i18n'
 
 type DesktopApi = NonNullable<Window['desktop']>
 type DefaultAppStatus = Awaited<ReturnType<DesktopApi['defaultApp']['status']>>
@@ -89,10 +90,10 @@ export function useDefaultPdfApp() {
       } else {
         // Deliberately NOT remembered: a failure should not spend the one ask
         // this app gets.
-        setOutcome({ kind: 'error', message: result.error ?? 'Could not change the default.' })
+        setOutcome({ kind: 'error', message: result.error ?? getT()('lib.default_app_failed') })
       }
     } catch {
-      setOutcome({ kind: 'error', message: 'Could not change the default.' })
+      setOutcome({ kind: 'error', message: getT()('lib.default_app_failed') })
     } finally {
       setBusy(false)
     }

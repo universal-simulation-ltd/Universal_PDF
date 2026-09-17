@@ -25,7 +25,7 @@ import {
   sigHasLabels,
   DEFAULT_LABEL_SCALE,
   DEFAULT_SIG_ALIGN,
-  DETAIL_BLOCK_SEED,
+  detailBlockSeed,
   splitDetailBlock,
   joinDetailBlock,
   dateLineSeed
@@ -39,6 +39,7 @@ import { centreOnTap, tapRedactBox } from '../../lib/tapPlacement'
 import { LINE_HEIGHT, layoutText, textBoxSize } from '../../lib/textLayout'
 import type { Annotation, DrawAnnotation, ImageAnnotation, ImageBorder, SignatureData, SignatureFieldAnnotation, SigAlign, TextAnnotation, Tool, TextRun } from '../../types/annotations'
 import type { QrPlacement } from '../../lib/qr/design'
+import { getT, useT } from '../../i18n'
 
 // On-screen font stacks, keyed by family id (shared with the toolbar + export).
 const FONT_STACK = FONT_CSS
@@ -210,11 +211,13 @@ const MARQUEE_HOLD_MS = 350
 // Why it matters at all: a black rectangle is indistinguishable from a filled
 // shape, and the difference is the whole point — one hides pixels, the other
 // deletes the text underneath on export.
-const REDACT_HINT_TEXT = 'This will be redacted on export'
-
+//
+// The wording itself is `annotate.redact.hint`, passed in as `text` so the
+// outside-the-box width is measured on the language actually on screen.
 function redactHintGeom(
   box: { x: number; y: number; width: number; height: number },
-  pale: boolean
+  pale: boolean,
+  text: string
 ) {
   if (box.width >= 118 && box.height >= 14) {
     return {
@@ -235,7 +238,7 @@ function redactHintGeom(
   return {
     x: box.x,
     y: above ? box.y - fontSize - 3 : box.y + box.height + 3,
-    width: REDACT_HINT_TEXT.length * fontSize * 0.55,
+    width: text.length * fontSize * 0.55,
     height: fontSize + 2,
     fontSize,
     // Out on the page rather than on the block, so it takes a colour that reads
@@ -298,9 +301,9 @@ function isLine(a: Annotation): boolean {
 // `setColor` is the store's own action, which repaints the SELECTED annotation
 // and sets the default for the next one in a single history step — so the pill
 // needs no update() of its own, and works the same as the toolbar swatches.
-const PILL_COLORS: { hex: string; name: string }[] = [
-  { hex: '#000000', name: 'Black' },
-  { hex: '#ffffff', name: 'White' }
+const PILL_COLORS: { hex: string; name: 'annotate.color.black' | 'annotate.color.white' }[] = [
+  { hex: '#000000', name: 'annotate.color.black' },
+  { hex: '#ffffff', name: 'annotate.color.white' }
 ]
 
 function ColorCluster({
@@ -310,6 +313,7 @@ function ColorCluster({
   color: string
   setColor: (c: string) => void
 }) {
+  const t = useT()
   // The wheel shows as "chosen" whenever the colour in play is not one of the
   // two swatches, so the cluster always says which of the three is live.
   const isCustom = !PILL_COLORS.some((c) => c.hex === color)
@@ -319,8 +323,8 @@ function ColorCluster({
         <button
           key={c.hex}
           type="button"
-          title={c.name}
-          aria-label={c.name}
+          title={t(c.name)}
+          aria-label={t(c.name)}
           // The text pill is rendered while a text box may be being edited, so
           // the same "don't blur the editor" guard the style buttons use.
           onMouseDown={(e) => { e.stopPropagation(); e.preventDefault() }}
@@ -332,7 +336,7 @@ function ColorCluster({
         />
       ))}
       <label
-        title="More colours"
+        title={t('annotate.color.more')}
         onMouseDown={(e) => { e.stopPropagation(); e.preventDefault() }}
         onClick={(e) => e.stopPropagation()}
         className={`w-6 h-6 rounded-full cursor-pointer border-2 flex-shrink-0 overflow-hidden transition-transform ${
@@ -627,16 +631,17 @@ function SigField({
   // Double-tap a signed box to edit its name/date options (never redraws ink).
   onDblClick: () => void
 }) {
+  const t = useT()
   const img = useImage(a.signed?.src ?? '')
   const captionRef = useRef<Konva.Text>(null)
   const hintRef = useRef<Konva.Group>(null)
   const stroke = 1.5 / scale
   const radius = 4 / scale
   const parts: string[] = []
-  if (a.requireName) parts.push('Name')
-  if (a.requireDate) parts.push('Date')
-  if (a.requireLive) parts.push('Live')
-  const caption = ['Sign here', ...parts].join(' • ')
+  if (a.requireName) parts.push(t('annotate.sigfield.name'))
+  if (a.requireDate) parts.push(t('annotate.sigfield.date'))
+  if (a.requireLive) parts.push(t('annotate.sigfield.live'))
+  const caption = [t('annotate.sigfield.sign_here'), ...parts].join(' • ')
   // Fixed, small caption size — deliberately NOT derived from the box height, so
   // resizing the box never rescales (and blurs) the text. Clamped down only so
   // it can't dwarf a very small box.
@@ -672,7 +677,7 @@ function SigField({
   // The Group sits at the box centre and its children are offset around (0,0),
   // so counter-scaling it during a resize keeps the pill centred and unstretched.
   const hintFs = 12 / scale
-  const hintText = 'Click again to sign'
+  const hintText = t('annotate.sigfield.click_again')
   const hintW = hintText.length * hintFs * 0.52
   const hintH = hintFs * 1.7
   const hintPad = 7 / scale
@@ -766,6 +771,7 @@ function SigField({
 }
 
 export default function AnnotationLayer({ pageIndex, width, height, scale }: Props) {
+  const t = useT()
   const tool = useAnnotationStore((s) => s.tool)
   const color = useAnnotationStore((s) => s.color)
   const strokeWidth = useAnnotationStore((s) => s.strokeWidth)
@@ -1649,7 +1655,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   ) {
     const node = redactHintRefs.current.get(id)
     if (!node) return
-    const g = redactHintGeom(box, pale)
+    const g = redactHintGeom(box, pale, t('annotate.redact.hint'))
     node.position({ x: g.x, y: g.y })
     node.width(g.width)
     node.height(g.height)
@@ -2368,7 +2374,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 // A sibling rather than a Group wrapping both: `common` carries
                 // the Transformer ref, and the resize handler reads width() /
                 // height() off that node — a Group reports neither.
-                const hint = redactHintGeom(a, pale)
+                const hint = redactHintGeom(a, pale, t('annotate.redact.hint'))
                 return (
                   <Fragment key={a.id}>
                     <Rect
@@ -2395,7 +2401,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                       y={hint.y}
                       width={hint.width}
                       height={hint.height}
-                      text={REDACT_HINT_TEXT}
+                      text={t('annotate.redact.hint')}
                       fontSize={hint.fontSize}
                       fontFamily={FONT_STACK.sans}
                       fill={hint.fill}
@@ -2817,8 +2823,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           <>
             <button
               type="button"
-              title="Delete"
-              aria-label="Delete selected object"
+              title={t('annotate.selection.delete')}
+              aria-label={t('annotate.selection.delete_aria')}
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => { e.stopPropagation(); remove(selected.id) }}
               style={{ position: 'absolute', left, top, zIndex: 21 }}
@@ -2835,10 +2841,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               type="button"
               title={
                 PLACEMENT_TOOLS.has(tool)
-                  ? 'Done — keep this and go back to Select'
-                  : 'Done — keep this and deselect'
+                  ? t('annotate.selection.done_to_select')
+                  : t('annotate.selection.done_deselect')
               }
-              aria-label="Confirm and deselect"
+              aria-label={t('annotate.selection.confirm_aria')}
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation()
@@ -2862,8 +2868,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               // it to bring back up. (Double-tapping the code does the same.)
               <button
                 type="button"
-                title="Edit this QR code — link, style or branding"
-                aria-label="Edit this QR code"
+                title={t('annotate.selection.qr_edit_title')}
+                aria-label={t('annotate.selection.qr_edit_aria')}
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => { e.stopPropagation(); openQrEditor(selected.id, placedQr) }}
                 style={{ position: 'absolute', left, top: top + 36, zIndex: 21 }}
@@ -2892,7 +2898,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         if (draggingId) return null
         const selected = annotations.find((a) => a.id === selectedId)
         if (!selected || selected.type !== 'text') return null
-        const t = selected
+        const ta = selected
         const bbox = getAnnotationBBox(selected)
         const bx = bbox.x * scale
         const by = bbox.y * scale
@@ -2935,8 +2941,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         )
         // Style buttons apply to the highlighted range while editing (via the
         // editor's execCommand handle) and to the whole text otherwise.
-        const editingThis = editingId === t.id
-        const runs = effectiveRuns(t)
+        const editingThis = editingId === ta.id
+        const runs = effectiveRuns(ta)
         const allHave = (k: 'bold' | 'italic' | 'underline') => runs.length > 0 && runs.every((r) => r[k])
         const anyLink = runs.some((r) => r.link)
         // Commit a fresh run set to the whole annotation (collapsing to plain
@@ -2944,7 +2950,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         const writeRuns = (rs: TextRun[]) => {
           const merged = mergeRuns(rs)
           const styled = merged.length > 1 || (merged[0] && runHasStyle(merged[0]))
-          update(t.id, {
+          update(ta.id, {
             text: runsToPlainText(merged),
             runs: styled ? merged : undefined,
             bold: undefined,
@@ -2956,7 +2962,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         const applyWhole = (kind: 'bold' | 'italic' | 'underline' | 'link') => {
           if (kind === 'link') {
             const cur = runs.find((r) => r.link)?.link ?? ''
-            const next = window.prompt('Link URL (leave blank to remove):', cur || 'https://')
+            const next = window.prompt(t('annotate.text.link_prompt'), cur || 'https://')
             if (next === null) return
             const url = next.trim()
             writeRuns(runs.map((r) => ({ ...r, link: url ? url : undefined })))
@@ -2983,22 +2989,22 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             className="inline-flex items-center gap-0.5 bg-white rounded-full shadow-lg border border-slate-300 pl-1 pr-2 py-1"
           >
             <FontSizeStepper
-              value={Math.round(t.fontSize * scale)}
+              value={Math.round(ta.fontSize * scale)}
               min={8}
               max={144}
               onCommit={(px) => {
                 // Absolute, on THIS box: the number in the field is the size the
                 // text ends up, whatever it was before and whatever the zoom is
                 // (annotations store points, the pill talks display pixels).
-                update(t.id, { fontSize: px / scale } as Partial<Annotation>)
+                update(ta.id, { fontSize: px / scale } as Partial<Annotation>)
                 setDefaultFontSize(px)
               }}
             />
             <span className="w-px h-6 bg-slate-200 mx-0.5" />
-            {styleBtn(allHave('bold'), () => applyStyle('bold'), 'B', 'Bold', 'font-bold')}
-            {styleBtn(allHave('italic'), () => applyStyle('italic'), 'I', 'Italic', 'italic font-semibold')}
-            {styleBtn(allHave('underline'), () => applyStyle('underline'), 'U', 'Underline', 'underline font-semibold')}
-            {styleBtn(anyLink, () => applyStyle('link'), '🔗', editingThis ? 'Link selected text' : (anyLink ? 'Edit link' : 'Add link'), 'text-sm')}
+            {styleBtn(allHave('bold'), () => applyStyle('bold'), t('annotate.text.bold_letter'), t('annotate.text.bold'), 'font-bold')}
+            {styleBtn(allHave('italic'), () => applyStyle('italic'), t('annotate.text.italic_letter'), t('annotate.text.italic'), 'italic font-semibold')}
+            {styleBtn(allHave('underline'), () => applyStyle('underline'), t('annotate.text.underline_letter'), t('annotate.text.underline'), 'underline font-semibold')}
+            {styleBtn(anyLink, () => applyStyle('link'), '🔗', editingThis ? t('annotate.text.link_selection') : (anyLink ? t('annotate.text.edit_link') : t('annotate.text.add_link')), 'text-sm')}
             <span className="w-px h-6 bg-slate-200 mx-0.5" />
             {/* ⚠️ Colour is a WHOLE-ANNOTATION property, unlike bold/italic/
                 underline/link — see TextRun in types/annotations.ts. So this
@@ -3100,11 +3106,11 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             // that rounded-full turns into a lozenge.
             className="min-h-11 rounded-[22px] bg-white shadow-lg border border-slate-300 flex flex-wrap items-center justify-center gap-1 px-2 py-1"
           >
-            <span className="text-[11px] font-medium text-slate-500 pl-1 pr-0.5">Border</span>
+            <span className="text-[11px] font-medium text-slate-500 pl-1 pr-0.5">{t('annotate.image.border')}</span>
             {/* None is a real choice, not the absence of one — it clears the key
                 entirely rather than writing width 0, so an image that never had
                 a border and one whose border was removed export identically. */}
-            {pillBtn(!border, () => setBorder(undefined), 'None', 'No border', 'text-xs')}
+            {pillBtn(!border, () => setBorder(undefined), t('annotate.image.border_none'), t('annotate.image.border_none_title'), 'text-xs')}
             <span className="w-px h-6 bg-slate-200 mx-0.5" />
             {WIDTHS.map((w) => pillBtn(
               !!border && Math.abs(border.width * scale - w) < 0.01,
@@ -3114,7 +3120,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 style: border?.style ?? 'solid',
               }),
               `${w}`,
-              `${w}px border`,
+              t('annotate.image.border_width', { width: w }),
               'text-xs tabular-nums',
             ))}
             <span className="w-px h-6 bg-slate-200 mx-0.5" />
@@ -3126,7 +3132,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 style: 'solid',
               }),
               <span className="block w-5 border-t-2 border-current" />,
-              'Solid',
+              t('annotate.image.border_solid'),
             )}
             {pillBtn(
               border?.style === 'dashed',
@@ -3136,7 +3142,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 style: 'dashed',
               }),
               <span className="block w-5 border-t-2 border-dashed border-current" />,
-              'Dashed',
+              t('annotate.image.border_dashed'),
             )}
             <span className="w-px h-6 bg-slate-200 mx-0.5" />
             {/* ⚠️ NOT ColorCluster's `setColor`: that is the store action, which
@@ -3185,7 +3191,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             }}
             className="inline-flex items-center gap-2 bg-white rounded-full shadow-lg border border-slate-300 px-3 py-1.5 whitespace-nowrap"
           >
-            <span className="text-xs text-slate-500 font-medium">Stroke</span>
+            <span className="text-xs text-slate-500 font-medium">{t('annotate.line.stroke')}</span>
             <input
               type="range"
               min={1}
@@ -3202,12 +3208,12 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             <button
               type="button"
               onClick={toggleSnap}
-              title="Rigid line — snap to horizontal, vertical or diagonal (hold Shift while dragging an end for a one-off snap)"
+              title={t('annotate.line.snap_title')}
               className={`px-2.5 h-7 rounded-full text-xs font-medium transition-colors ${
                 lineSnap ? 'bg-orange-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
-              Snap {lineSnap ? 'On' : 'Off'}
+              {lineSnap ? t('annotate.line.snap_on') : t('annotate.line.snap_off')}
             </button>
           </div>
         )
@@ -3251,7 +3257,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             }}
             className="inline-flex items-center gap-2 bg-white rounded-full shadow-lg border border-slate-300 pl-3 pr-2 py-1.5 whitespace-nowrap"
           >
-            <span className="text-xs text-slate-500 font-medium">Colour</span>
+            <span className="text-xs text-slate-500 font-medium">{t('annotate.shape.colour')}</span>
             {/* ⚠️ The SELECTED object's colour, not the store's current default
                 — the two drift apart the moment you select something you drew
                 earlier, and a pill showing the wrong swatch as active is worse
@@ -3279,8 +3285,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         return (
           <button
             type="button"
-            title={`Delete ${selectedOnPage.length} objects`}
-            aria-label={`Delete ${selectedOnPage.length} selected objects`}
+            title={t.plural('annotate.selection.delete_many', selectedOnPage.length)}
+            aria-label={t.plural('annotate.selection.delete_many_aria', selectedOnPage.length)}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => { e.stopPropagation(); removeMany(selectedIds) }}
             style={{
@@ -3317,8 +3323,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         return (
           <button
             type="button"
-            title="Send to sign — email this document as a signature request"
-            aria-label="Send to sign"
+            title={t('annotate.sigfield.send_title')}
+            aria-label={t('annotate.sigfield.send_aria')}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => { e.stopPropagation(); usePdfStore.getState().setSendToSignOpen(true) }}
             style={{
@@ -3349,8 +3355,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         return (
           <button
             type="button"
-            title={filled ? 'Clear fill' : 'Fill with active colour'}
-            aria-label={filled ? 'Clear fill' : 'Fill with active colour'}
+            title={filled ? t('annotate.shape.fill_clear') : t('annotate.shape.fill')}
+            aria-label={filled ? t('annotate.shape.fill_clear') : t('annotate.shape.fill')}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation()
@@ -3392,8 +3398,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         return (
           <button
             type="button"
-            title="Redact — blacks out the area and permanently removes the text on export"
-            aria-label="Redact this area"
+            title={t('annotate.shape.redact_title')}
+            aria-label={t('annotate.shape.redact_aria')}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation()
@@ -3442,8 +3448,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         return (
           <button
             type="button"
-            title="Turn into a filled shape — the text underneath is NO LONGER removed on export"
-            aria-label="Turn this redaction into a filled shape"
+            title={t('annotate.redact.to_fill_title')}
+            aria-label={t('annotate.redact.to_fill_aria')}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation()
@@ -3521,11 +3527,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 <div className="flex items-start gap-3">
                   <span className="text-2xl leading-none" aria-hidden="true">⚠️</span>
                   <div>
-                    <h2 className="text-base font-semibold text-slate-900">Filling won't hide the text</h2>
+                    <h2 className="text-base font-semibold text-slate-900">{t('annotate.fill_warning.title')}</h2>
                     <p className="mt-1.5 text-sm text-slate-600">
-                      A filled box only paints over the page. The text underneath
-                      stays selectable and readable by a computer. To remove it
-                      for good, redact instead.
+                      {t('annotate.fill_warning.body')}
                     </p>
                   </div>
                 </div>
@@ -3536,7 +3540,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                     onChange={(e) => setFillWarnDontShow(e.target.checked)}
                     className="rounded border-slate-300 text-orange-600 focus:ring-orange-500"
                   />
-                  Don't show this again
+                  {t('annotate.fill_warning.dont_show')}
                 </label>
               </div>
               <div className="flex items-center justify-end gap-2 border-t border-slate-100 bg-slate-50 px-5 py-3">
@@ -3545,14 +3549,14 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                   onClick={fillAnyway}
                   className="px-3 h-9 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-200"
                 >
-                  Fill anyway
+                  {t('annotate.fill_warning.fill_anyway')}
                 </button>
                 <button
                   type="button"
                   onClick={redactInstead}
                   className="px-3 h-9 rounded-md text-sm font-medium text-white bg-orange-700 hover:bg-orange-800"
                 >
-                  Redact instead
+                  {t('annotate.fill_warning.redact_instead')}
                 </button>
               </div>
             </div>
@@ -3598,7 +3602,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         }
         // Justify three little rules per the current alignment.
         const rowW = [15, 9, 15]
-        const alignLabel = align === 'left' ? 'left' : align === 'right' ? 'right' : 'centre'
+        const alignLabel = align === 'left' ? t('annotate.sig_pill.align_left') : align === 'right' ? t('annotate.sig_pill.align_right') : t('annotate.sig_pill.align_centre')
         return (
           <div
             onMouseDown={(e) => { e.stopPropagation(); e.preventDefault() }}
@@ -3606,10 +3610,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             style={{ position: 'absolute', left, top, zIndex: 21 }}
             className="inline-flex items-center gap-0.5 bg-white rounded-full shadow-lg border border-slate-300 px-1 py-1"
           >
-            <span className="px-1.5 text-xs font-medium text-slate-500 select-none">Size</span>
+            <span className="px-1.5 text-xs font-medium text-slate-500 select-none">{t('annotate.sig_pill.size')}</span>
             <button
               type="button"
-              aria-label="Smaller labels"
+              aria-label={t('annotate.sig_pill.smaller')}
               onClick={(e) => { e.stopPropagation(); setScale(labelScale - 0.15) }}
               className="w-8 h-8 rounded-full hover:bg-slate-100 text-lg font-semibold text-slate-700 leading-none"
             >
@@ -3620,7 +3624,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             </span>
             <button
               type="button"
-              aria-label="Bigger labels"
+              aria-label={t('annotate.sig_pill.bigger')}
               onClick={(e) => { e.stopPropagation(); setScale(labelScale + 0.15) }}
               className="w-8 h-8 rounded-full hover:bg-slate-100 text-lg font-semibold text-slate-700 leading-none"
             >
@@ -3629,8 +3633,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             <span className="w-px h-6 bg-slate-200 mx-0.5" />
             <button
               type="button"
-              title={`Align labels: ${alignLabel} (click to cycle)`}
-              aria-label={`Align labels ${alignLabel}, click to change`}
+              title={t('annotate.sig_pill.align_title', { align: alignLabel })}
+              aria-label={t('annotate.sig_pill.align_aria', { align: alignLabel })}
               onClick={(e) => { e.stopPropagation(); cycleAlign() }}
               className="w-8 h-8 rounded-full hover:bg-slate-100 text-slate-700 flex items-center justify-center"
             >
@@ -3721,6 +3725,7 @@ function SignatureOptionsModal({
   onRedraw?: () => void
   onClose: () => void
 }) {
+  const t = useT()
   // ONE box for every line under the signature, the name simply being the
   // first — the same "Add your details" the pad offers. Older signatures stored
   // the name's wording separately (namePrefix); it merges in here on open and
@@ -3740,10 +3745,13 @@ function SignatureOptionsModal({
   // Older signatures stored only the wording (datePrefix); the date part seeds
   // as today and the merged line re-stores as dateText on the next edit.
   const [dateLine, setDateLine] = useState(() => {
-    const t = data.dateText?.trim()
-    if (t) return t
-    const p = data.datePrefix?.trim() ?? (data.showDate ? '' : 'Signed on')
+    const typed = data.dateText?.trim()
+    if (typed) return typed
+    // A legacy prefix is the user's own wording, kept as they wrote it; with
+    // none stored, a line that was never shown seeds "Signed on <today>".
+    const p = data.datePrefix?.trim()
     const d = formatSigningDate()
+    if (p === undefined) return data.showDate ? d : dateLineSeed()
     return p ? `${p} ${d}` : d
   })
   const [realistic, setRealistic] = useState(!!data.realistic)
@@ -3825,7 +3833,7 @@ function SignatureOptionsModal({
     setShowDetails(v)
     let block = detailBlock
     if (v && !block.trim()) {
-      block = DETAIL_BLOCK_SEED
+      block = detailBlockSeed()
       setDetailBlock(block)
     }
     sendBlock(block, v)
@@ -3878,11 +3886,11 @@ function SignatureOptionsModal({
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 pt-4 pb-2">
-          <h2 className="text-base font-semibold text-slate-900">Signature options</h2>
+          <h2 className="text-base font-semibold text-slate-900">{t('annotate.sig_options.title')}</h2>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('annotate.common.close')}
             className="text-slate-400 hover:text-slate-700 text-2xl leading-none w-8 h-8 flex items-center justify-center"
           >
             ×
@@ -3891,38 +3899,38 @@ function SignatureOptionsModal({
         <div className="px-5 pb-4 space-y-3">
           <p className="text-xs text-slate-500">
             {canRestyle
-              ? 'Changes the labels and the pen style — the strokes you drew stay exactly as drawn. Use the pill on the signature to resize or align the labels.'
-              : 'Changes the name and date only — your signature itself stays exactly as drawn. Use the pill on the signature to resize or align the labels.'}
+              ? t('annotate.sig_options.intro_restyle')
+              : t('annotate.sig_options.intro')}
           </p>
           {/* One box for every line under the signature — the first is set
               larger, being almost always the name. Same control as the pad. */}
-          <ModalToggle checked={showDetails} onChange={toggleDetails} label="Add your details" />
+          <ModalToggle checked={showDetails} onChange={toggleDetails} label={t('annotate.sig_options.add_details')} />
           <textarea
             value={detailBlock}
             onChange={(e) => changeDetailBlock(e.target.value)}
             rows={4}
-            placeholder={DETAIL_BLOCK_SEED}
-            aria-label="Details to show under the signature"
+            placeholder={detailBlockSeed()}
+            aria-label={t('annotate.sig_options.details_aria')}
             disabled={!showDetails}
             className={`w-full px-3 py-2 border border-slate-300 rounded text-sm resize-y focus:outline-none focus:ring-2 focus:ring-orange-500 ${showDetails ? '' : 'opacity-50'}`}
           />
-          <ModalToggle checked={showDate} onChange={toggleDate} label="Add date" />
+          <ModalToggle checked={showDate} onChange={toggleDate} label={t('annotate.sig_options.add_date')} />
           {/* Seeded with today's date, then the whole line is the user's to
               edit — wording and date alike. */}
           <input
             value={dateLine}
             onChange={(e) => changeDateLine(e.target.value)}
             placeholder={dateLineSeed()}
-            aria-label="Date line under the signature"
+            aria-label={t('annotate.sig_options.date_aria')}
             disabled={!showDate}
             className={`w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 ${showDate ? '' : 'opacity-50'}`}
           />
           {canRestyle && (
             <label className="flex items-center justify-between gap-2 text-sm text-slate-700 select-none cursor-pointer border-t border-slate-100 pt-3">
               <span>
-                Make it look more realistic
+                {t('annotate.sig_options.realistic')}
                 <span className="block text-xs text-slate-400 font-normal">
-                  Blue ink, uneven pressure and a hand wobble
+                  {t('annotate.sig_options.realistic_hint')}
                 </span>
               </span>
               <input
@@ -3942,7 +3950,7 @@ function SignatureOptionsModal({
               onClick={onRedraw}
               className="px-3 h-9 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-200"
             >
-              Redraw signature…
+              {t('annotate.sig_options.redraw')}
             </button>
           ) : <span />}
           <button
@@ -3950,7 +3958,7 @@ function SignatureOptionsModal({
             onClick={onClose}
             className="px-4 h-9 rounded-md text-sm font-medium text-white bg-orange-700 hover:bg-orange-800"
           >
-            Done
+            {t('annotate.common.done')}
           </button>
         </div>
       </div>
@@ -3976,6 +3984,7 @@ function FontSizeStepper({
   max: number
   onCommit: (n: number) => void
 }) {
+  const t = useT()
   const [draft, setDraft] = useState(String(value))
   // Re-sync when the size changes under us (another box selected, a corner
   // dragged) — but not while the field is focused, so typing isn't clobbered.
@@ -4016,12 +4025,12 @@ function FontSizeStepper({
   )
   return (
     <>
-      {stepBtn(-2, '−', 'Decrease text size')}
+      {stepBtn(-2, '−', t('annotate.text.size_decrease'))}
       <span className="inline-flex items-baseline">
         <input
           type="text"
           inputMode="numeric"
-          aria-label="Font size in points"
+          aria-label={t('annotate.text.size_field')}
           value={draft}
           onMouseDown={(e) => e.stopPropagation()}
           onFocus={(e) => { focusedRef.current = true; e.currentTarget.select() }}
@@ -4035,7 +4044,7 @@ function FontSizeStepper({
         />
         <span className="text-xs font-medium text-slate-500 pl-0.5">px</span>
       </span>
-      {stepBtn(2, '+', 'Increase text size')}
+      {stepBtn(2, '+', t('annotate.text.size_increase'))}
     </>
   )
 }
@@ -4104,7 +4113,7 @@ function TextEditor({
           const sel = window.getSelection()
           const saved = sel && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null
           formattingRef.current = true
-          const url = window.prompt('Link URL for the selected text (blank to remove):', '')
+          const url = window.prompt(getT()('annotate.text.link_prompt_selection'), '')
           el.focus()
           if (saved) {
             const s = window.getSelection()

@@ -7,6 +7,7 @@ import { usePdfStore } from '../stores/pdfStore'
 import { isNativeShell } from '../lib/nativeOpen'
 import { storeCurrentPdf, deleteHostedPdf, openHostedPdf, HostedObjectMissingError } from '../lib/hostedStore'
 import { downloadBackup, importBackup } from '../lib/pdfBackup'
+import { useT, intlLocale } from '../i18n'
 
 // ⚠️ The HREF ONLY — never a plain navigation. In a Capacitor shell an
 // <a> to another origin is handed to the system browser, so the tap left the
@@ -27,6 +28,7 @@ const GET_TOKENS_URL = 'https://www.unisim.co.uk/everyday'
 // the paid "Hosted by UNI·SIM" cloud option (one token per upload, refunded on
 // delete) gated behind a Universal ID. Backend: 0041 + the SDK hosted helpers.
 export default function HostedStoreDialog() {
+  const t = useT()
   const open = usePdfStore((s) => s.hostedStoreOpen)
   const setOpen = usePdfStore((s) => s.setHostedStoreOpen)
   const doc = usePdfStore((s) => s.doc)
@@ -97,8 +99,8 @@ export default function HostedStoreDialog() {
       if (!res.ok) {
         setError(
           res.error === 'no_credits'
-            ? (isNativeShell() ? 'You have no tokens left.' : 'You have no tokens left. Get more to keep storing PDFs online.')
-            : res.error ?? 'Could not store this PDF.',
+            ? (isNativeShell() ? t('sign.no_tokens_left') : t('sign.hosted_no_tokens_get_more'))
+            : res.error ?? t('sign.could_not_store'),
         )
       } else {
         setJustStored(true)
@@ -139,7 +141,7 @@ export default function HostedStoreDialog() {
     setError(null)
     try {
       const res = await deleteHostedPdf(supabase, upload)
-      if (!res.ok) setError(res.error ?? 'Could not delete this PDF.')
+      if (!res.ok) setError(res.error ?? t('sign.hosted_could_not_delete'))
       else {
         setMissingId((id) => (id === upload.id ? null : id))
         refreshCredits()
@@ -165,8 +167,8 @@ export default function HostedStoreDialog() {
           viewport on iOS. */}
       <div className="flex w-full max-w-lg max-h-[min(100%,100dvh)] flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
         <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4">
-          <h2 className="text-base font-bold text-slate-900">Back up this PDF</h2>
-          <button onClick={close} aria-label="Close" className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+          <h2 className="text-base font-bold text-slate-900">{t('sign.hosted_title')}</h2>
+          <button onClick={close} aria-label={t('sign.close')} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
             <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" /></svg>
           </button>
         </div>
@@ -175,22 +177,22 @@ export default function HostedStoreDialog() {
           {/* Tier 1 — Save to browser (local, temporary): automatic recents. */}
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-slate-900">Save to browser</span>
-              <Chip size="sm">Local · temporary</Chip>
+              <span className="text-sm font-semibold text-slate-900">{t('sign.hosted_browser')}</span>
+              <Chip size="sm">{t('sign.hosted_browser_chip')}</Chip>
             </div>
             <p className="mt-1 text-xs text-slate-500">
-              This PDF is already kept on this device automatically, so a refresh reopens it. It stays in this browser and never leaves it.
+              {t('sign.hosted_browser_body')}
             </p>
           </div>
 
           {/* Tier 2 — Save to desktop: a re-importable backup file the guest keeps. */}
           <div className="rounded-xl border border-slate-200 bg-white p-4">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-slate-900">Save to desktop</span>
-              <Chip size="sm">Re-import later</Chip>
+              <span className="text-sm font-semibold text-slate-900">{t('sign.hosted_desktop')}</span>
+              <Chip size="sm">{t('sign.hosted_desktop_chip')}</Chip>
             </div>
             <p className="mt-1 text-xs text-slate-500">
-              Download this PDF and your annotations as one backup file. Import it any time — on any device — to carry on editing exactly where you left off.
+              {t('sign.hosted_desktop_body')}
             </p>
 
             <div className="mt-3 flex flex-wrap gap-2">
@@ -203,7 +205,7 @@ export default function HostedStoreDialog() {
                 <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M10 3v10m0 0l-3.5-3.5M10 13l3.5-3.5M4 16h12" />
                 </svg>
-                Download backup
+                {t('sign.hosted_download_backup')}
               </button>
               <button
                 type="button"
@@ -214,7 +216,7 @@ export default function HostedStoreDialog() {
                 <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M10 17V7m0 0L6.5 10.5M10 7l3.5 3.5M4 4h12" />
                 </svg>
-                {importBusy ? 'Importing…' : 'Import a backup'}
+                {importBusy ? t('sign.hosted_importing') : t('sign.hosted_import_backup')}
               </button>
               <input
                 ref={fileInputRef}
@@ -224,23 +226,23 @@ export default function HostedStoreDialog() {
                 className="hidden"
               />
             </div>
-            {!doc && <p className="mt-2 text-xs text-slate-400">Open a PDF to back it up — or import a backup to restore one.</p>}
+            {!doc && <p className="mt-2 text-xs text-slate-400">{t('sign.hosted_open_to_backup_or_import')}</p>}
             {importErr && <p className="mt-2 text-sm text-rose-600">{importErr}</p>}
           </div>
 
           {/* Tier 3 — Universal subscription: paid "Hosted by UNI·SIM" cloud. */}
           <div className="rounded-xl border border-orange-200 bg-white p-4">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-slate-900">Hosted by UNI SIM</span>
-              <Chip size="sm">Universal subscription</Chip>
+              <span className="text-sm font-semibold text-slate-900">{t('sign.hosted_cloud')}</span>
+              <Chip size="sm">{t('sign.hosted_cloud_chip')}</Chip>
             </div>
             <p className="mt-1 text-xs text-slate-500">
-              Keep this PDF online against your Universal ID. One token per upload — delete it and your token comes straight back.
+              {t('sign.hosted_cloud_body')}
             </p>
 
             {!signedIn ? (
               <div className="mt-3 rounded-lg bg-slate-50 p-3">
-                <p className="text-sm text-slate-700">Sign in with your <strong>Universal ID</strong> to store PDFs online.</p>
+                <p className="text-sm text-slate-700">{t.rich('sign.hosted_sign_in', { id: <strong>Universal ID</strong> })}</p>
                 <a
                   // ⚠️ No href in a native shell — `installExternalLinkHandler`
                   // is a document-level CAPTURE listener, so it would take this
@@ -264,7 +266,7 @@ export default function HostedStoreDialog() {
                   }}
                   className="mt-2 inline-flex cursor-pointer rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800"
                 >
-                  Create / sign in with Universal ID →
+                  {t('sign.hosted_sign_in_button')}
                 </a>
               </div>
             ) : (
@@ -273,8 +275,8 @@ export default function HostedStoreDialog() {
                   <span className="text-slate-600">{user?.email}</span>
                   <span className="font-semibold text-orange-700">
                     {freeToken === 'available'
-                      ? `Free token${tokens > 0 ? ` + ${tokens} purchased` : ' available'}`
-                      : `${tokens} token${tokens === 1 ? '' : 's'}`}
+                      ? (tokens > 0 ? t('sign.hosted_free_plus_purchased', { count: tokens }) : t('sign.hosted_free_available'))
+                      : t.plural('sign.hosted_tokens', tokens)}
                   </span>
                 </div>
 
@@ -285,35 +287,35 @@ export default function HostedStoreDialog() {
                       disabled={busy}
                       className="mt-3 w-full rounded-lg bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-50"
                     >
-                      {busy ? 'Backing up…' : justStored ? '✓ Backed up' : `Back up this PDF online${freeToken === 'available' ? '' : ' (1 token)'}`}
+                      {busy ? t('sign.hosted_backing_up') : justStored ? t('sign.hosted_backed_up') : freeToken === 'available' ? t('sign.hosted_back_up_online') : t('sign.hosted_back_up_online_token')}
                     </button>
                   ) : freeToken === null ? null : (
                     <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
                       <p className="text-sm text-amber-800">
                         {freeToken === 'held'
-                          ? `Your free PDF token is in use — delete the stored PDF below to get it back${isNativeShell() ? '' : ', or add tokens'}.`
-                          : 'You have no tokens left.'}
+                          ? (isNativeShell() ? t('sign.hosted_token_held_native') : t('sign.hosted_token_held'))
+                          : t('sign.no_tokens_left')}
                       </p>
                       {!isNativeShell() && (
                         <a href={GET_TOKENS_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded-lg bg-orange-700 px-3.5 py-2 text-sm font-semibold text-white hover:bg-orange-800">
-                          Get tokens →
+                          {t('sign.get_tokens')}
                         </a>
                       )}
                     </div>
                   )
                 ) : (
-                  <p className="mt-3 text-xs text-slate-500">Open a PDF to back it up.</p>
+                  <p className="mt-3 text-xs text-slate-500">{t('sign.hosted_open_to_backup')}</p>
                 )}
 
                 {error && <p className="mt-2 text-sm text-rose-600">{error}</p>}
 
                 {/* The user's hosted PDFs */}
                 <div className="mt-4">
-                  <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">Your backups</p>
+                  <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">{t('sign.hosted_your_backups')}</p>
                   {listLoading ? (
-                    <p className="text-xs text-slate-400">Loading…</p>
+                    <p className="text-xs text-slate-400">{t('sign.loading')}</p>
                   ) : uploads.length === 0 ? (
-                    <p className="text-xs text-slate-400">None yet.</p>
+                    <p className="text-xs text-slate-400">{t('sign.none_yet')}</p>
                   ) : (
                     <ul className="space-y-2">
                       {uploads.map((u) => (
@@ -321,10 +323,10 @@ export default function HostedStoreDialog() {
                           <div className="flex items-center gap-2">
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-xs font-medium text-slate-700">{u.file_name || 'document.pdf'}</span>
-                              <span className="block text-[10px] text-slate-400">{new Date(u.created_at).toLocaleDateString()}</span>
+                              <span className="block text-[10px] text-slate-400">{new Date(u.created_at).toLocaleDateString(intlLocale(t.lang))}</span>
                             </span>
-                            <button onClick={() => onOpen(u)} disabled={busy} className="shrink-0 rounded-md bg-orange-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-800 disabled:opacity-50">Open</button>
-                            <button onClick={() => onDelete(u)} disabled={busy} className="shrink-0 rounded-md px-2 py-1.5 text-xs font-medium text-slate-400 hover:text-rose-600 disabled:opacity-50" title="Delete and refund the token">Delete</button>
+                            <button onClick={() => onOpen(u)} disabled={busy} className="shrink-0 rounded-md bg-orange-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-800 disabled:opacity-50">{t('sign.hosted_open')}</button>
+                            <button onClick={() => onDelete(u)} disabled={busy} className="shrink-0 rounded-md px-2 py-1.5 text-xs font-medium text-slate-400 hover:text-rose-600 disabled:opacity-50" title={t('sign.hosted_delete_title')}>{t('sign.delete')}</button>
                           </div>
 
                           {/* A backup with nothing behind it. Say which file,
@@ -341,9 +343,7 @@ export default function HostedStoreDialog() {
                               className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2"
                             >
                               <p className="text-[11px] leading-snug text-amber-900">
-                                <strong className="font-semibold">{u.file_name || 'document.pdf'}</strong> is listed here,
-                                but there is no file behind it — this upload never finished, so nothing was ever stored.
-                                Your token is still being held for it.
+                                {t.rich('sign.hosted_missing', { file: <strong className="font-semibold">{u.file_name || 'document.pdf'}</strong> })}
                               </p>
                               <button
                                 type="button"
@@ -351,7 +351,7 @@ export default function HostedStoreDialog() {
                                 disabled={busy}
                                 className="mt-2 inline-flex rounded-md bg-amber-700 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-amber-800 disabled:opacity-50"
                               >
-                                Remove this entry and get the token back
+                                {t('sign.hosted_remove_entry')}
                               </button>
                             </div>
                           )}

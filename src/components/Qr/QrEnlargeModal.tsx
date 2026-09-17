@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { qrDisplayName, type QrDesign } from '@unisim/qr'
 import { renderQrPng } from '../../lib/qr/render'
+import { useT } from '../../i18n'
 
 // The 224 px preview in the dialog is there to show you what the code LOOKS
 // like; this is for scanning it. Same shape as Universal QR's EnlargeModal —
@@ -23,6 +24,7 @@ export default function QrEnlargeModal({
   onClose: () => void
 }) {
   const [png, setPng] = useState<string | null>(initialPng)
+  const t = useT()
 
   useEffect(() => {
     let cancelled = false
@@ -54,12 +56,12 @@ export default function QrEnlargeModal({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label={`Enlarged QR code for ${qrDisplayName(design)}`}
+      aria-label={t('tools.qr.enlarged_label', { name: qrDisplayName(design) })}
     >
       <button
         type="button"
         onClick={onClose}
-        aria-label="Close"
+        aria-label={t('tools.common.close')}
         // ⚠️ `top` clears the notch: this overlay is positioned against the
         // VIEWPORT, so it escapes the app root's safe-area padding and a flat
         // top-4 put the only way out under the Dynamic Island.
@@ -70,10 +72,10 @@ export default function QrEnlargeModal({
 
       {/* Dismiss hints down each side — the whole backdrop is clickable. */}
       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium tracking-wide text-white/60 sm:left-6">
-        Click to dismiss
+        {t('tools.qr.click_dismiss')}
       </span>
       <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium tracking-wide text-white/60 sm:right-6">
-        Click to dismiss
+        {t('tools.qr.click_dismiss')}
       </span>
 
       {/* Clicks on the code itself don't close it, so a phone held against the
@@ -88,7 +90,7 @@ export default function QrEnlargeModal({
           {png && (
             <img
               src={png}
-              alt={`QR code for ${qrDisplayName(design)}`}
+              alt={t('tools.qr.code_for', { name: qrDisplayName(design) })}
               className="block h-full w-full object-contain"
             />
           )}
@@ -96,10 +98,9 @@ export default function QrEnlargeModal({
       </div>
 
       <div className="max-w-md text-center">
-        <p className="text-sm font-semibold text-white">Point another phone's camera at this code</p>
+        <p className="text-sm font-semibold text-white">{t('tools.qr.point_camera')}</p>
         <p className="mt-1 text-xs text-white/70">
-          Struggling? Turn your screen brightness up to max, and make sure the camera isn't in
-          close-up (macro) mode — pull back a little so the whole code is in frame.
+          {t('tools.qr.struggling')}
         </p>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { useUniversal } from '@unisim/sdk'
 import { hashSecret, randomHex, generateAccessPin } from './signAccessSecret'
+import { getT } from '../i18n'
 
 // Client wrappers for the "Send to sign" Edge Functions.
 //
@@ -65,7 +66,7 @@ export async function loadSignRequest(supabase: Supabase, token: string, session
     const body = await parseFunctionError(error)
     return { ok: false, error: body.error ?? error.message, code: body.code }
   }
-  return (data ?? { ok: false, error: 'No response' }) as LoadSignRequestResult
+  return (data ?? { ok: false, error: getT()('lib.no_response') }) as LoadSignRequestResult
 }
 
 export interface SubmitSignedResult {
@@ -98,7 +99,7 @@ export async function submitSignedPdf(
     const body = await parseFunctionError(error)
     return { ok: false, error: body.error ?? error.message, code: body.code }
   }
-  return (data ?? { ok: false, error: 'No response' }) as SubmitSignedResult
+  return (data ?? { ok: false, error: getT()('lib.no_response') }) as SubmitSignedResult
 }
 
 export interface CertDownloadResult {
@@ -118,7 +119,7 @@ export async function certificateDownload(supabase: Supabase, certId: string): P
     const body = await parseFunctionError(error)
     return { ok: false, error: body.error ?? error.message, code: body.code }
   }
-  return (data ?? { ok: false, error: 'No response' }) as CertDownloadResult
+  return (data ?? { ok: false, error: getT()('lib.no_response') }) as CertDownloadResult
 }
 
 export interface SendSignEmailResult {
@@ -146,16 +147,15 @@ export async function sendSignRequestEmail(
     const body = await parseFunctionError(error)
     return { ok: false, error: body.error ?? error.message, code: body.code }
   }
-  return (data ?? { ok: false, error: 'No response' }) as SendSignEmailResult
+  return (data ?? { ok: false, error: getT()('lib.no_response') }) as SendSignEmailResult
 }
 
 /** Prefilled mailto: draft — the fallback when the email function isn't
  *  deployed/configured. */
 export function signRequestMailto(input: { to: string; docName: string; link: string }): string {
-  const subject = `Please sign: ${input.docName}`
-  const body =
-    `Hi,\n\nI've sent you a document to sign — ${input.docName}.\n\n` +
-    `Click here to sign it online (no account needed):\n${input.link}\n\nThanks!`
+  const t = getT()
+  const subject = t('lib.sign_mail_subject', { docName: input.docName })
+  const body = t('lib.sign_mail_body', { docName: input.docName, link: input.link })
   return `mailto:${encodeURIComponent(input.to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
 }
 
@@ -203,7 +203,7 @@ export async function beginSignRequest(supabase: Supabase, token: string): Promi
     const body = await parseFunctionError(error)
     return { ok: false, error: body.error ?? error.message, code: body.code }
   }
-  return (data ?? { ok: false, error: 'No response' }) as BeginSignRequestResult
+  return (data ?? { ok: false, error: getT()('lib.no_response') }) as BeginSignRequestResult
 }
 
 export interface RequestAccessCodeResult {
@@ -234,7 +234,7 @@ export async function requestAccessCode(
     const body = await parseFunctionError(error)
     return { ok: false, error: body.error ?? error.message, code: body.code }
   }
-  return (data ?? { ok: false, error: 'No response' }) as RequestAccessCodeResult
+  return (data ?? { ok: false, error: getT()('lib.no_response') }) as RequestAccessCodeResult
 }
 
 export interface VerifyAccessResult {
@@ -260,7 +260,7 @@ export async function verifyAccess(
     const body = await parseFunctionError(error)
     return { ok: false, error: body.error ?? error.message, code: body.code }
   }
-  return (data ?? { ok: false, error: 'No response' }) as VerifyAccessResult
+  return (data ?? { ok: false, error: getT()('lib.no_response') }) as VerifyAccessResult
 }
 
 // ── Sender side: turning the protection on ──────────────────────────────────

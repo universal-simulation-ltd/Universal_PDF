@@ -4,10 +4,14 @@
 // (scripts/deleteAccount.test.mjs). The SDK's offline mock (`?mockauth=1`) has
 // no `functions` at all, so no browser test can reach a successful call.
 
+import { getT } from '../i18n/runtime.ts'
+
 export const CONFIRM_PHRASE = 'delete-all'
 
-export const FALLBACK_ERROR =
-  "Couldn't delete your account. Check your connection and try again, or email inbox@unisim.co.uk."
+/** Said when the server gives no sentence of its own. */
+export function fallbackError(): string {
+  return getT()('lib.delete_account_failed')
+}
 
 /** Forgiving of case and stray spaces; the function itself gets the exact phrase. */
 export function isConfirmed(typed: string): boolean {
@@ -33,7 +37,7 @@ async function reasonFrom(error: unknown): Promise<string> {
       if (typeof body?.error === 'string' && body.error) return body.error
     } catch { /* not JSON: fall through */ }
   }
-  return FALLBACK_ERROR
+  return fallbackError()
 }
 
 /**

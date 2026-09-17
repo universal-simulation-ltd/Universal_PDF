@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { makeSearchablePdf, type OcrProgress, type OcrResult } from '../../lib/ocr'
 import { downloadPdfBytes } from '../../lib/export'
+import { getT, useT } from '../../i18n'
 
 interface Props {
   /** Original PDF bytes to make searchable. Kept intact (a copy is OCR'd). */
@@ -18,11 +19,12 @@ interface Props {
 type Phase = 'running' | 'done' | 'error'
 
 export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Props) {
+  const t = useT()
   const [phase, setPhase] = useState<Phase>('running')
   const [progress, setProgress] = useState<OcrProgress>({
     phase: 'load',
     fraction: 0,
-    message: 'Preparing OCR engine…',
+    message: t('tools.ocr.preparing'),
   })
   const [result, setResult] = useState<OcrResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +41,7 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
       setMode(m)
       setResult(null)
       setError(null)
-      setProgress({ phase: 'load', fraction: 0, message: 'Preparing OCR engine…' })
+      setProgress({ phase: 'load', fraction: 0, message: getT()('tools.ocr.preparing') })
       setPhase('running')
       // Fresh copy per run — pdf.js detaches the ArrayBuffer it's handed.
       makeSearchablePdf(sourceBytes.slice(0), fileName, (p) => {
@@ -53,7 +55,7 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
         .catch((err) => {
           console.error(err)
           if (!liveRef.current) return
-          setError((err as Error).message || 'OCR failed')
+          setError((err as Error).message || getT()('tools.ocr.failed_fallback'))
           setPhase('error')
         })
     },
@@ -101,12 +103,12 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
         <div className="flex shrink-0 items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
             <span aria-hidden="true">🔎</span>
-            Make searchable (OCR)
+            {t('tools.ocr.title')}
           </h2>
           {phase !== 'running' && (
             <button
               onClick={onClose}
-              aria-label="Close"
+              aria-label={t('tools.common.close')}
               className="text-slate-400 hover:text-slate-700 text-2xl leading-none w-8 h-8 flex items-center justify-center"
             >
               ×
@@ -116,8 +118,7 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
         <div className="-mx-5 min-h-0 flex-1 overflow-y-auto px-5">
 
         <p className="text-xs text-slate-500 mb-4 leading-relaxed">
-          Runs entirely on your device — nothing is uploaded. The first run
-          downloads the OCR model (~15&nbsp;MB) once, then works offline.
+          {t('tools.ocr.intro')}
         </p>
 
         {phase === 'running' && (
@@ -144,19 +145,16 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
               ].join(' ')}
             >
               {alreadySearchable
-                ? 'Every page already looks like it has selectable text, so nothing was added.'
-                : `Added a searchable text layer to ${result.pagesOcred} page${
-                    result.pagesOcred === 1 ? '' : 's'
-                  }.`}
+                ? t('tools.ocr.already_searchable')
+                : t.plural('tools.ocr.added', result.pagesOcred)}
               {alreadySearchable && (
                 <span className="block text-[11px] font-normal text-slate-500 mt-0.5">
-                  If this is a scan whose text you still can’t select, run OCR on every page anyway.
+                  {t('tools.ocr.run_anyway_hint')}
                 </span>
               )}
               {!alreadySearchable && result.pagesSkipped > 0 && (
                 <span className="block text-[11px] font-normal text-emerald-600 mt-0.5">
-                  {result.pagesSkipped} page{result.pagesSkipped === 1 ? '' : 's'} already had text and{' '}
-                  {result.pagesSkipped === 1 ? 'was' : 'were'} left unchanged.
+                  {t.plural('tools.ocr.skipped', result.pagesSkipped)}
                 </span>
               )}
             </div>
@@ -166,14 +164,14 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
                 onClick={onClose}
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700"
               >
-                {alreadySearchable ? 'Close' : 'Done'}
+                {alreadySearchable ? t('tools.common.close') : t('tools.common.done')}
               </button>
               {alreadySearchable && mode === 'auto' && (
                 <button
                   onClick={() => run('all')}
                   className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium"
                 >
-                  Run OCR anyway
+                  {t('tools.ocr.run_anyway')}
                 </button>
               )}
               {!alreadySearchable && (
@@ -181,7 +179,7 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
                   onClick={download}
                   className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700"
                 >
-                  ⬇ Download
+                  {t('tools.compress.download')}
                 </button>
               )}
               {!alreadySearchable && onOpen && (
@@ -189,7 +187,7 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
                   onClick={openResult}
                   className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium"
                 >
-                  Open searchable PDF
+                  {t('tools.ocr.open')}
                 </button>
               )}
             </div>
@@ -199,14 +197,14 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
         {phase === 'error' && (
           <div className="py-1">
             <div className="rounded-lg bg-red-50 text-red-700 px-4 py-3 text-sm">
-              OCR failed: {error}
+              {t('tools.ocr.failed', { message: error ?? '' })}
             </div>
             <div className="mt-4 flex justify-end">
               <button
                 onClick={onClose}
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700"
               >
-                Close
+                {t('tools.common.close')}
               </button>
             </div>
           </div>

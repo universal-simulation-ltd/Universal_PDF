@@ -69,6 +69,7 @@ import { isConvertibleName } from './lib/officeToPdf'
 import DocumentTabs from './components/Tabs/DocumentTabs'
 import { isNativeShell, setStatusBarOverDarkChrome, subscribeNativeOpenPdf } from './lib/nativeOpen'
 import { installExternalLinkHandler } from './lib/externalLinks'
+import { getT, useT } from './i18n'
 
 const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_PDF'
 
@@ -102,6 +103,7 @@ const DOC_RIGHT_STRIP = `max(0px, calc((100vw - var(--doc-scrollbar-width, 0px) 
 // "Failed to load PDF" — while the same file dropped on the window converted.
 
 export default function App() {
+  const t = useT()
   const loadFile = usePdfStore((s) => s.loadFile)
   const doc = usePdfStore((s) => s.doc)
   const loading = usePdfStore((s) => s.loading)
@@ -202,7 +204,7 @@ export default function App() {
     })
     const offNone = desktop.onNoPdf(({ unreadable }) => {
       setLaunching(false)
-      if (unreadable) alert(`Could not open ${unreadable}`)
+      if (unreadable) alert(getT()('app.could_not_open', { name: unreadable }))
     })
     return () => {
       offOpen()
@@ -244,7 +246,7 @@ export default function App() {
         .then((files) => openFiles(files))
         .catch((err) => {
           console.error(err)
-          alert('Failed to load PDF')
+          alert(getT()('app.failed_to_load_pdf'))
         })
         .finally(() => setLaunching(false))
     })
@@ -651,9 +653,9 @@ export default function App() {
               type="button"
               onClick={dismissImportNotice}
               className="shrink-0 rounded px-2 py-0.5 hover:bg-amber-100 font-medium"
-              aria-label="Dismiss conversion notice"
+              aria-label={t('app.dismiss_notice_aria')}
             >
-              Dismiss
+              {t('app.dismiss')}
             </button>
           </div>
         </div>
@@ -692,7 +694,7 @@ export default function App() {
             this placeholder has always sat on. */}
         {(loading || launching || (doc && !firstPaint)) && (
           <div className="absolute inset-0 z-[120] bg-slate-100 flex items-center justify-center text-slate-500">
-            Loading PDF…
+            {t('app.loading_pdf')}
           </div>
         )}
       </main>
@@ -702,13 +704,19 @@ export default function App() {
           <div className={`${CONTAINER} py-4 flex flex-row items-center gap-3 sm:gap-4 text-xs text-slate-500`}>
             <div className="flex items-center gap-2">
               <span>
-                With{' '}
-                <span aria-hidden="true" className="text-orange-600">&hearts;</span>
-                <span className="sr-only">love</span>{' '}
-                from{' '}
-                <a href="https://www.unisim.co.uk" target="_blank" rel="noreferrer" className="text-slate-700 hover:text-orange-700 underline-offset-2 hover:underline">
-                  UNISIM.co.uk
-                </a>
+                {t.rich('app.footer_with_love', {
+                  heart: (
+                    <>
+                      <span aria-hidden="true" className="text-orange-600">&hearts;</span>
+                      <span className="sr-only">{t('app.footer_love_sr')}</span>
+                    </>
+                  ),
+                  link: (
+                    <a href="https://www.unisim.co.uk" target="_blank" rel="noreferrer" className="text-slate-700 hover:text-orange-700 underline-offset-2 hover:underline">
+                      UNISIM.co.uk
+                    </a>
+                  )
+                })}
               </span>
               {/* The build you are actually running. The changelog cannot tell
                   you this: the SDK fetches it live from changelog.unisim.co.uk,
@@ -725,8 +733,8 @@ export default function App() {
                 href={REPO_URL}
                 target="_blank"
                 rel="noreferrer"
-                aria-label="Universal PDF on GitHub"
-                title="View source on GitHub"
+                aria-label={t('app.github_aria')}
+                title={t('app.github_title')}
                 className="inline-flex items-center gap-1.5 text-slate-600 hover:text-slate-900 transition-colors"
               >
                 <svg
@@ -751,8 +759,8 @@ export default function App() {
           the old copy could not do. */}
       <DropAnywhere
         show={showDropHint}
-        title="Drop to open"
-        hint="Each one opens in a tab of its own, beside the one you have open"
+        title={t('app.drop_title')}
+        hint={t('app.drop_hint')}
         icon={<span aria-hidden="true">📄</span>}
       />
 
@@ -774,7 +782,7 @@ export default function App() {
           onOpen={(file) => {
             loadFile(file).catch((err) => {
               console.error(err)
-              alert('Failed to load searchable PDF')
+              alert(getT()('app.failed_to_load_searchable'))
             })
           }}
         />

@@ -3,6 +3,7 @@ import { nextExportName, previewExportName } from './exportName'
 import { currentPdfBytes } from './hostedStore'
 import { usePdfStore } from '../stores/pdfStore'
 import { markSaved } from './unsavedChanges'
+import { getT } from '../i18n'
 
 export type SaveOutcome = 'saved' | 'cancelled'
 
@@ -25,7 +26,7 @@ export type SaveOutcome = 'saved' | 'cancelled'
  */
 export async function saveCurrentPdf(): Promise<SaveOutcome> {
   const { doc, isXfa, sourceBytes, fileName } = usePdfStore.getState()
-  if (!sourceBytes && !doc) throw new Error('No PDF is open.')
+  if (!sourceBytes && !doc) throw new Error(getT()('lib.no_pdf_open'))
 
   // XFA (Adobe LiveCycle) forms: the pdf-lib pipeline cannot see values that
   // live in the XFA datasets, so pdf.js serialises the live form instead —
@@ -40,7 +41,7 @@ export async function saveCurrentPdf(): Promise<SaveOutcome> {
     const result = await savePdf(previewExportName(fileName), bytes)
     if (!result.ok) {
       if (result.cancelled) return 'cancelled'
-      throw new Error(result.error || 'The PDF could not be saved.')
+      throw new Error(result.error || getT()('lib.save_failed'))
     }
     nextExportName(fileName)
   } else {

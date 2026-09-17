@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { saveCurrentPdf } from '../lib/saveDocument'
 import { hasUnsavedChanges } from '../lib/unsavedChanges'
+import { getT } from '../i18n'
 
 /**
  * What the user was trying to do when the guard stopped them. Only the wording
@@ -89,7 +90,7 @@ export const useExitGuard = create<ExitGuardState>((set, get) => ({
         return
       }
     } catch (e) {
-      set({ saving: false, error: (e as Error).message || 'The PDF could not be saved.' })
+      set({ saving: false, error: (e as Error).message || getT()('lib.save_failed') })
       return
     }
     set({ saving: false, pending: null })

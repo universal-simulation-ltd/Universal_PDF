@@ -13,6 +13,7 @@ import { useAnnotationStore } from '../../stores/annotationStore'
 import { useFormStore } from '../../stores/formStore'
 import { onSavedStateChanged } from '../../lib/unsavedChanges'
 import { PDF_OR_OFFICE_ACCEPT } from '../../lib/officeToPdf'
+import { useT } from '../../i18n'
 
 // The strip of open documents, shown only while the window holds two or more
 // (a lone document has no tabs at all — see stores/tabStore.ts).
@@ -26,6 +27,7 @@ import { PDF_OR_OFFICE_ACCEPT } from '../../lib/officeToPdf'
 // ask before it closes.
 
 export default function DocumentTabs() {
+  const t = useT()
   const tabs = useTabStore((s) => s.tabs)
   const activeId = useTabStore((s) => s.activeId)
   const liveName = usePdfStore((s) => s.fileName ?? s.lockedFile?.file.name ?? null)
@@ -83,7 +85,7 @@ export default function DocumentTabs() {
     <div className="bg-slate-900 text-white border-b border-slate-700/70">
       <div
         role="tablist"
-        aria-label="Open PDFs"
+        aria-label={t('app.tabs_aria')}
         className="flex items-end gap-1 px-2 pt-1.5 overflow-x-auto [scrollbar-width:thin]"
       >
         {tabs.map((tab) => {
@@ -129,14 +131,14 @@ export default function DocumentTabs() {
                 {amended && (
                   <>
                     <span aria-hidden="true" className="shrink-0 w-1.5 h-1.5 rounded-full bg-amber-400" />
-                    <span className="sr-only">(changes not saved to a file)</span>
+                    <span className="sr-only">{t('app.tab_unsaved_sr')}</span>
                   </>
                 )}
               </button>
               <button
                 type="button"
-                aria-label={`Close ${name}`}
-                title="Close tab"
+                aria-label={t('app.tab_close_aria', { name })}
+                title={t('app.tab_close')}
                 onClick={() => closeTab(tab.id)}
                 className={`mr-1 shrink-0 w-5 h-5 rounded flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${
                   active ? '' : 'opacity-70 group-hover:opacity-100'
@@ -151,8 +153,8 @@ export default function DocumentTabs() {
         })}
         <button
           type="button"
-          aria-label="Open another PDF in a new tab"
-          title="Open another PDF"
+          aria-label={t('app.tab_open_another_aria')}
+          title={t('app.tab_open_another')}
           onClick={() => inputRef.current?.click()}
           className="shrink-0 mb-0.5 w-8 h-7 rounded-md flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
         >

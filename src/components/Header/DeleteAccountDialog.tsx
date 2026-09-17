@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useUniversal } from '@unisim/sdk'
 import { CONFIRM_PHRASE, deleteMyAccount, isConfirmed } from '../../lib/deleteAccount'
+import { useT } from '../../i18n'
 
 // "Delete my account": the signed-in person deletes their Universal ID, and
 // with it their account in every UNI·SIM product.
@@ -22,6 +23,7 @@ export function useCanDeleteAccount(): boolean {
 }
 
 export default function DeleteAccountDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const t = useT()
   const { supabase, session } = useUniversal()
   const [typed, setTyped] = useState('')
   const [busy, setBusy] = useState(false)
@@ -87,11 +89,10 @@ export default function DeleteAccountDialog({ open, onClose }: { open: boolean; 
         {done ? (
           <>
             <h2 id="delete-account-title" className="text-lg font-semibold text-slate-900">
-              Your account has been deleted
+              {t('menu.delete_done_title')}
             </h2>
             <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-              You&rsquo;re signed out everywhere. Universal PDF keeps working without an
-              account, and the files on this device are just as you left them.
+              {t('menu.delete_done_body')}
             </p>
             <div className="mt-4 flex justify-end">
               <button
@@ -99,43 +100,39 @@ export default function DeleteAccountDialog({ open, onClose }: { open: boolean; 
                 autoFocus
                 className="px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-slate-900 hover:bg-slate-800"
               >
-                Close
+                {t('menu.close')}
               </button>
             </div>
           </>
         ) : (
           <>
             <h2 id="delete-account-title" className="shrink-0 text-lg font-semibold text-red-800">
-              Delete your account everywhere?
+              {t('menu.delete_title')}
             </h2>
 
             <div className="-mx-5 min-h-0 flex-1 overflow-y-auto px-5">
               <p className="mt-2 text-sm text-slate-700 leading-relaxed">
-                This deletes your Universal ID
-                {email ? (
-                  <>
-                    {' '}(<span className="font-medium text-slate-900 break-all">{email}</span>)
-                  </>
-                ) : null}
-                {' '}in <span className="font-semibold">every</span> UNI·SIM app and product you
-                sign in to with it, not just in Universal PDF. It can&rsquo;t be undone.
+                {email
+                  ? t.rich('menu.delete_body_email', {
+                      email: <span className="font-medium text-slate-900 break-all">{email}</span>,
+                      every: <span className="font-semibold">{t('menu.delete_every')}</span>,
+                    })
+                  : t.rich('menu.delete_body', {
+                      every: <span className="font-semibold">{t('menu.delete_every')}</span>,
+                    })}
               </p>
               <ul className="mt-3 space-y-1.5 text-xs text-slate-600 leading-relaxed list-disc pl-4">
-                <li>Your sign-in, profile and settings are deleted.</li>
-                <li>
-                  Organisations where you are the only member are deleted, with everything
-                  stored in them.
-                </li>
-                <li>In an organisation you share, you are removed and it carries on without you.</li>
-                <li>PDFs on this device and your Recent files are not touched.</li>
-                <li>
-                  A paid subscription is not cancelled automatically. Email inbox@unisim.co.uk
-                  and we will cancel it.
-                </li>
+                <li>{t('menu.delete_point_profile')}</li>
+                <li>{t('menu.delete_point_sole_org')}</li>
+                <li>{t('menu.delete_point_shared_org')}</li>
+                <li>{t('menu.delete_point_files')}</li>
+                <li>{t('menu.delete_point_subscription')}</li>
               </ul>
 
               <label className="mt-4 block text-xs font-medium text-slate-700" htmlFor="delete-account-confirm">
-                Type <span className="font-mono font-semibold text-red-700">{CONFIRM_PHRASE}</span> to confirm
+                {t.rich('menu.delete_confirm_label', {
+                  phrase: <span className="font-mono font-semibold text-red-700">{CONFIRM_PHRASE}</span>,
+                })}
               </label>
               <input
                 id="delete-account-confirm"
@@ -166,14 +163,14 @@ export default function DeleteAccountDialog({ open, onClose }: { open: boolean; 
                 autoFocus
                 className="px-4 py-2.5 rounded-lg text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Cancel
+                {t('menu.cancel')}
               </button>
               <button
                 onClick={() => void deleteAccount()}
                 disabled={!confirmed || busy}
                 className="px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-red-700 hover:bg-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {busy ? 'Deleting…' : 'Delete my account'}
+                {busy ? t('menu.deleting') : t('menu.delete_button')}
               </button>
             </div>
           </>

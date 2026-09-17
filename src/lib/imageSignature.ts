@@ -1,3 +1,5 @@
+import { getT } from '../i18n'
+
 const MAX_DIM = 1024
 const BG_THRESHOLD = 245
 const CONTENT_THRESHOLD = 215
@@ -17,7 +19,7 @@ export async function importImageAsSignature(
   { removeBg = true }: ImportOptions = {}
 ): Promise<ImportedSignature> {
   if (!/^image\//.test(file.type)) {
-    throw new Error('Please choose an image file (PNG, JPG, etc.)')
+    throw new Error(getT()('lib.sig_image_wrong_type'))
   }
 
   const src = await fileToDataUrl(file)
@@ -25,7 +27,7 @@ export async function importImageAsSignature(
 
   let w = img.naturalWidth
   let h = img.naturalHeight
-  if (!w || !h) throw new Error('Could not read image dimensions')
+  if (!w || !h) throw new Error(getT()('lib.sig_image_no_size'))
 
   const scale = Math.min(1, MAX_DIM / Math.max(w, h))
   w = Math.max(1, Math.round(w * scale))
@@ -35,7 +37,7 @@ export async function importImageAsSignature(
   canvas.width = w
   canvas.height = h
   const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('Canvas not supported')
+  if (!ctx) throw new Error(getT()('lib.sig_image_no_canvas'))
   ctx.drawImage(img, 0, 0, w, h)
 
   const imageData = ctx.getImageData(0, 0, w, h)
@@ -74,7 +76,7 @@ export async function importImageAsSignature(
     if (!removeBg) {
       return { dataUrl: canvas.toDataURL('image/png'), width: w, height: h }
     }
-    throw new Error('Image looks blank. Try a higher-contrast scan, or turn off "Remove background".')
+    throw new Error(getT()('lib.sig_image_blank'))
   }
 
   if (removeBg) ctx.putImageData(imageData, 0, 0)
@@ -98,7 +100,7 @@ function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => resolve(String(reader.result))
-    reader.onerror = () => reject(reader.error || new Error('Could not read file'))
+    reader.onerror = () => reject(reader.error || new Error(getT()('lib.sig_image_read_failed')))
     reader.readAsDataURL(file)
   })
 }
@@ -107,7 +109,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image()
     img.onload = () => resolve(img)
-    img.onerror = () => reject(new Error('Could not decode image'))
+    img.onerror = () => reject(new Error(getT()('lib.sig_image_decode_failed')))
     img.src = src
   })
 }

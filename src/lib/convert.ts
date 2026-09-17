@@ -2,6 +2,7 @@ import { PDFDocument } from 'pdf-lib'
 import { isHeicFile } from './heicSniff'
 import { pdfjsLib } from './pdfjs'
 import type { ZipEntry } from './zip'
+import { getT } from '../i18n'
 
 // Merge / convert helpers. Everything here runs on-device — pdf-lib rebuilds
 // documents in memory and pdfjs rasterizes pages to canvases, so no bytes ever
@@ -13,7 +14,7 @@ import type { ZipEntry } from './zip'
 // Concatenate several PDFs into one, in the order given. copyPages preserves
 // each page's resources, annotations and form widgets, so pages arrive intact.
 export async function mergePdfs(sources: ArrayBuffer[]): Promise<Uint8Array> {
-  if (sources.length === 0) throw new Error('No PDFs to merge')
+  if (sources.length === 0) throw new Error(getT()('lib.merge_none'))
   const out = await PDFDocument.create()
   for (const bytes of sources) {
     const src = await PDFDocument.load(bytes)
@@ -104,7 +105,7 @@ async function fileToPngBytes(file: File): Promise<Uint8Array> {
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
       const el = new Image()
       el.onload = () => resolve(el)
-      el.onerror = () => reject(new Error(`Could not decode ${file.name}`))
+      el.onerror = () => reject(new Error(getT()('lib.image_decode_failed', { name: file.name })))
       el.src = url
     })
     const canvas = document.createElement('canvas')
@@ -153,7 +154,7 @@ async function heicToJpegBytes(file: File): Promise<Uint8Array> {
   } catch (e) {
     // Name the cause rather than blaming the file for what the decoder did.
     const why = e instanceof Error ? e.message : String(e)
-    throw new Error(`Could not decode ${file.name} — ${why}`)
+    throw new Error(getT()('lib.image_decode_failed_why', { name: file.name, reason: why }))
   }
 }
 
@@ -162,7 +163,7 @@ async function heicToJpegBytes(file: File): Promise<Uint8Array> {
 // pass-through of the original bytes); HEIC is decoded to JPEG; anything else
 // is normalized to PNG first so it can be embedded at all.
 export async function imagesToPdf(files: File[]): Promise<Uint8Array> {
-  if (files.length === 0) throw new Error('No images to convert')
+  if (files.length === 0) throw new Error(getT()('lib.images_none'))
   const out = await PDFDocument.create()
   for (const file of files) {
     const isJpeg = /\.jpe?g$/i.test(file.name) || file.type === 'image/jpeg'

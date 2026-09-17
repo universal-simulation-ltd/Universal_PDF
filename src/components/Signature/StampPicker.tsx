@@ -1,25 +1,28 @@
 import { useState } from 'react'
 import { useSignatureStore } from '../../stores/signatureStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
+import { useT, type MessageKey } from '../../i18n'
 
 type Shape = 'oval' | 'rect'
 
+// Keys, not words: the stamp's name and the word drawn on it are both in the
+// user's language, looked up when the picker renders.
 interface StampDef {
-  label: string
-  text: string
+  label: MessageKey
+  text: MessageKey
   color: string
   shape: Shape
 }
 
 const STAMPS: StampDef[] = [
-  { label: 'Approved', text: 'APPROVED', color: '#16a34a', shape: 'oval' },
-  { label: 'Confidential', text: 'CONFIDENTIAL', color: '#dc2626', shape: 'oval' },
-  { label: 'Draft', text: 'DRAFT', color: '#ea580c', shape: 'rect' },
-  { label: 'Received', text: 'RECEIVED', color: '#2563eb', shape: 'rect' },
-  { label: 'Reviewed', text: 'REVIEWED', color: '#7c3aed', shape: 'oval' },
-  { label: 'Void', text: 'VOID', color: '#dc2626', shape: 'rect' },
-  { label: 'Paid', text: 'PAID', color: '#16a34a', shape: 'rect' },
-  { label: 'Not Approved', text: 'NOT APPROVED', color: '#9f1239', shape: 'oval' },
+  { label: 'sign.stamp_approved', text: 'sign.stamp_approved_text', color: '#16a34a', shape: 'oval' },
+  { label: 'sign.stamp_confidential', text: 'sign.stamp_confidential_text', color: '#dc2626', shape: 'oval' },
+  { label: 'sign.stamp_draft', text: 'sign.stamp_draft_text', color: '#ea580c', shape: 'rect' },
+  { label: 'sign.stamp_received', text: 'sign.stamp_received_text', color: '#2563eb', shape: 'rect' },
+  { label: 'sign.stamp_reviewed', text: 'sign.stamp_reviewed_text', color: '#7c3aed', shape: 'oval' },
+  { label: 'sign.stamp_void', text: 'sign.stamp_void_text', color: '#dc2626', shape: 'rect' },
+  { label: 'sign.stamp_paid', text: 'sign.stamp_paid_text', color: '#16a34a', shape: 'rect' },
+  { label: 'sign.stamp_not_approved', text: 'sign.stamp_not_approved_text', color: '#9f1239', shape: 'oval' },
 ]
 
 // Palette offered in the custom-stamp creator.
@@ -92,6 +95,11 @@ function renderStampDataUrl(text: string, color: string, shape: Shape): string {
 }
 
 export default function StampPicker() {
+  const t = useT()
+  // Saved stamps carry an English " Stamp" suffix as their marker (see
+  // SignatureMenu); shown in the reader's language.
+  const shownName = (name: string) =>
+    name.endsWith(' Stamp') ? t('sign.stamp_named', { name: name.slice(0, -' Stamp'.length) }) : name
   const open = useSignatureStore((s) => s.stampPickerOpen)
   const closeStampPicker = useSignatureStore((s) => s.closeStampPicker)
   const addSignature = useSignatureStore((s) => s.add)
@@ -142,14 +150,14 @@ export default function StampPicker() {
   // Render the custom stamp and add it to the saved-stamps list, then drop back
   // to the grid so it shows under "Your saved stamps" (and in the Sign menu).
   function saveCustomStamp() {
-    const text = newText.trim().toUpperCase()
+    const text = newText.trim().toLocaleUpperCase(t.lang)
     if (!text) return
     const dataUrl = renderStampDataUrl(text, newColor, newShape)
     addSignature({ name: text + ' Stamp', dataUrl, width: STAMP_W, height: STAMP_H })
     resetCreator()
   }
 
-  const previewText = newText.trim().toUpperCase()
+  const previewText = newText.trim().toLocaleUpperCase(t.lang)
 
   return (
     <div
@@ -166,12 +174,12 @@ export default function StampPicker() {
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 flex max-h-[min(100%,100dvh)] flex-col">
         <div className="flex shrink-0 items-center justify-between mb-5">
           <h2 className="text-lg font-semibold text-slate-900">
-            {creating ? 'New stamp' : 'Choose a Stamp'}
+            {creating ? t('sign.stamp_new') : t('sign.stamp_choose')}
           </h2>
           <button
             onClick={() => { resetCreator(); closeStampPicker() }}
             className="text-slate-400 hover:text-slate-700 text-2xl leading-none w-8 h-8 flex items-center justify-center"
-            aria-label="Close"
+            aria-label={t('sign.close')}
           >
             ×
           </button>
@@ -181,22 +189,22 @@ export default function StampPicker() {
         {creating ? (
           <div className="flex flex-col gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Stamp text</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('sign.stamp_text')}</label>
               <input
                 autoFocus
                 value={newText}
                 onChange={(e) => setNewText(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') saveCustomStamp() }}
                 maxLength={20}
-                placeholder="e.g. URGENT"
+                placeholder={t('sign.stamp_text_placeholder')}
                 className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm uppercase placeholder:normal-case focus:outline-none focus:ring-2 focus:ring-orange-400"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Border shape</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('sign.stamp_border_shape')}</label>
               <div className="flex gap-2">
-                {([['oval', 'Oval'], ['rect', 'Rectangle']] as const).map(([sh, lbl]) => (
+                {([['oval', t('sign.stamp_shape_oval')], ['rect', t('sign.stamp_shape_rect')]] as const).map(([sh, lbl]) => (
                   <button
                     key={sh}
                     type="button"
@@ -214,7 +222,7 @@ export default function StampPicker() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Colour</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('sign.stamp_colour')}</label>
               <div className="flex gap-2 flex-wrap">
                 {STAMP_COLORS.map((c) => (
                   <button
@@ -225,18 +233,18 @@ export default function StampPicker() {
                       newColor === c ? 'ring-2 ring-offset-1 ring-slate-400 scale-110' : 'hover:scale-105'
                     }`}
                     style={{ backgroundColor: c, borderColor: c }}
-                    aria-label={`Colour ${c}`}
+                    aria-label={t('sign.stamp_colour_named', { color: c })}
                   />
                 ))}
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Preview</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('sign.stamp_preview')}</label>
               <div className="border border-slate-200 rounded-lg p-4 flex items-center justify-center bg-slate-50 min-h-[72px]">
                 {previewText
                   ? <StampPreview def={{ text: previewText, color: newColor, shape: newShape }} />
-                  : <span className="text-xs text-slate-400">Type some text to preview</span>}
+                  : <span className="text-xs text-slate-400">{t('sign.stamp_preview_empty')}</span>}
               </div>
             </div>
 
@@ -246,7 +254,7 @@ export default function StampPicker() {
                 onClick={() => resetCreator()}
                 className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900"
               >
-                Cancel
+                {t('sign.cancel')}
               </button>
               <button
                 type="button"
@@ -254,7 +262,7 @@ export default function StampPicker() {
                 disabled={!previewText}
                 className="px-4 py-2 text-sm font-medium rounded-md bg-orange-700 text-white hover:bg-orange-800 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Save to my stamps
+                {t('sign.stamp_save_mine')}
               </button>
             </div>
           </div>
@@ -264,11 +272,11 @@ export default function StampPicker() {
               {STAMPS.map((def) => (
                 <button
                   key={def.text}
-                  onClick={() => pickStamp(def.text, def.color, def.shape, def.label)}
+                  onClick={() => pickStamp(t(def.text), def.color, def.shape, t(def.label))}
                   className="border-2 rounded-lg p-3 hover:bg-slate-50 transition-colors flex items-center justify-center"
                   style={{ borderColor: def.color + '60' }}
                 >
-                  <StampPreview def={def} />
+                  <StampPreview def={{ text: t(def.text), color: def.color, shape: def.shape }} />
                 </button>
               ))}
 
@@ -277,14 +285,14 @@ export default function StampPicker() {
                 className="border-2 border-dashed border-slate-300 rounded-lg p-3 hover:bg-slate-50 hover:border-orange-400 transition-colors flex flex-col items-center justify-center gap-1 text-slate-500 min-h-[72px]"
               >
                 <span className="text-2xl leading-none">＋</span>
-                <span className="text-xs font-medium">New stamp</span>
+                <span className="text-xs font-medium">{t('sign.stamp_new')}</span>
               </button>
             </div>
 
             {savedStamps.length > 0 && (
               <div className="mt-5">
                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
-                  Your saved stamps
+                  {t('sign.stamp_saved')}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   {savedStamps.map((s) => (
@@ -293,12 +301,12 @@ export default function StampPicker() {
                         onClick={() => pickSignature(s.id)}
                         className="w-full border-2 border-slate-200 rounded-lg p-3 hover:bg-slate-50 transition-colors flex items-center justify-center min-h-[72px]"
                       >
-                        <img src={s.dataUrl} alt={s.name} className="h-12 max-w-full object-contain" />
+                        <img src={s.dataUrl} alt={shownName(s.name)} className="h-12 max-w-full object-contain" />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); removeSignature(s.id) }}
-                        title="Remove saved stamp"
-                        aria-label={`Remove ${s.name}`}
+                        title={t('sign.stamp_remove')}
+                        aria-label={t('sign.stamp_remove_named', { name: shownName(s.name) })}
                         className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white border border-slate-300 text-slate-500 hover:text-red-600 hover:border-red-300 shadow-sm flex items-center justify-center text-sm leading-none"
                       >
                         ×
@@ -310,7 +318,7 @@ export default function StampPicker() {
             )}
 
             <p className="mt-4 text-xs text-slate-400 text-center">
-              Click a stamp then click on the PDF to place it. Resize with handles.
+              {t('sign.stamp_place_hint')}
             </p>
           </>
         )}

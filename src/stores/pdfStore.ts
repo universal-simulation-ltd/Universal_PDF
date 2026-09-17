@@ -14,6 +14,7 @@ import { rememberOpenFolder } from '../lib/openFolder'
 import type { QrPlacement } from '../lib/qr/design'
 import type { Annotation } from '../types/annotations'
 import type { FormFieldValue } from './formStore'
+import { getT } from '../i18n'
 
 // Restore a recent's saved edits into the live stores. Applies whenever the
 // stored arrays EXIST (even when empty) so a deliberately-cleared document
@@ -400,8 +401,8 @@ export const usePdfStore = create<PdfState>((set, get) => ({
               notice: options?.notice,
               error:
                 e instanceof WrongPasswordError
-                  ? 'That password does not open this PDF.'
-                  : (e as Error).message || 'This PDF could not be unlocked.',
+                  ? getT()('lib.unlock_wrong_password')
+                  : (e as Error).message || getT()('lib.unlock_failed'),
             },
           })
           return

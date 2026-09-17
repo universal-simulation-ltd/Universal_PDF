@@ -31,6 +31,25 @@ import {
 } from '../../lib/qr/library'
 import QrEnlargeModal from './QrEnlargeModal'
 import type { Annotation } from '../../types/annotations'
+import { formatNumber } from '../Export/formatSize'
+import { getT, intlLocale, useT, type MessageKey } from '../../i18n'
+
+const QR_PRESET_KEYS: Record<string, MessageKey> = {
+  Classic: 'tools.qr.preset_classic',
+  Rounded: 'tools.qr.preset_rounded',
+  Dots: 'tools.qr.preset_dots',
+  Sunset: 'tools.qr.preset_sunset',
+  Radial: 'tools.qr.preset_radial',
+  Star: 'tools.qr.preset_star',
+}
+const QR_SHAPE_KEYS: Record<string, MessageKey> = {
+  Square: 'tools.qr.shape_square',
+  Rounded: 'tools.qr.shape_rounded',
+  Circle: 'tools.qr.shape_circle',
+  Squircle: 'tools.qr.shape_squircle',
+  Hexagon: 'tools.qr.shape_hexagon',
+  Star: 'tools.qr.shape_star',
+}
 
 // A simplified Universal QR: the same design model and the same six presets,
 // with a link box instead of the full studio. Generating the code produces a
@@ -138,6 +157,17 @@ export default function QrDialog() {
   const setUploadedImageSrc = useAnnotationStore((s) => s.setUploadedImageSrc)
   const setTool = useAnnotationStore((s) => s.setTool)
   const updateAnnotation = useAnnotationStore((s) => s.update)
+  const t = useT()
+  // Preset and silhouette names come from @unisim/qr in English, and the preset
+  // name is also its identifier — so they are translated only where shown.
+  const presetName_ = (name: string) => {
+    const key = QR_PRESET_KEYS[name]
+    return key ? t(key) : name
+  }
+  const shapeName = (shape: string) => {
+    const key = QR_SHAPE_KEYS[shape]
+    return key ? t(key) : shape
+  }
 
   // The design as the STYLE controls left it — presets, saved codes, the link.
   // Branding is overlaid on top rather than edited in (see `withBranding`), so
@@ -327,7 +357,7 @@ export default function QrDialog() {
         .catch((e: Error) => {
           if (cancelled) return
           setPreview(null)
-          setError(e.message || 'Could not draw that code.')
+          setError(e.message || getT()('tools.qr.draw_failed'))
         })
         .finally(() => {
           if (!cancelled) setRendering(false)
@@ -401,7 +431,7 @@ export default function QrDialog() {
       setTool('image')
       setOpen(false)
     } catch (err) {
-      setError((err as Error).message || 'Could not draw that code.')
+      setError((err as Error).message || t('tools.qr.draw_failed'))
     } finally {
       setAdding(false)
     }
@@ -417,7 +447,7 @@ export default function QrDialog() {
     if (!target || target.type !== 'image') {
       // Undone or deleted while the dialog was up. Say so rather than writing a
       // patch into nothing and closing as if it had worked.
-      setError('That code is no longer on the page — close this and add a new one.')
+      setError(t('tools.qr.no_longer_on_page'))
       return
     }
     setAdding(true)
@@ -426,7 +456,7 @@ export default function QrDialog() {
       updateAnnotation(qrEdit.id, { src: png, qr: placement() } as Partial<Annotation>)
       setOpen(false)
     } catch (err) {
-      setError((err as Error).message || 'Could not draw that code.')
+      setError((err as Error).message || t('tools.qr.draw_failed'))
     } finally {
       setAdding(false)
     }
@@ -439,7 +469,7 @@ export default function QrDialog() {
     try {
       await downloadQrPng(design)
     } catch (err) {
-      setError((err as Error).message || 'Could not save that code.')
+      setError((err as Error).message || t('tools.qr.save_failed'))
     } finally {
       setDownloading(false)
     }
@@ -469,12 +499,12 @@ export default function QrDialog() {
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex max-h-[min(100%,100dvh)] flex-col overflow-hidden">
         <div className="flex shrink-0 items-center justify-between px-6 pt-5 pb-3">
           <h2 className="text-lg font-semibold text-slate-900">
-            {qrEdit ? 'Edit this QR code' : 'Add a QR code'}
+            {qrEdit ? t('tools.qr.edit_title') : t('tools.qr.add_title')}
           </h2>
           <button
             onClick={() => setOpen(false)}
             className="text-slate-400 hover:text-slate-700 text-2xl leading-none w-8 h-8 flex items-center justify-center"
-            aria-label="Close"
+            aria-label={t('tools.common.close')}
           >
             ×
           </button>
@@ -491,7 +521,7 @@ export default function QrDialog() {
               onClick={() => preview && setEnlarged(true)}
               role={preview ? 'button' : undefined}
               tabIndex={preview ? 0 : undefined}
-              aria-label={preview ? 'Enlarge QR code for scanning' : undefined}
+              aria-label={preview ? t('tools.qr.enlarge_label') : undefined}
               onKeyDown={(e) => {
                 if (preview && (e.key === 'Enter' || e.key === ' ')) {
                   e.preventDefault()
@@ -502,14 +532,14 @@ export default function QrDialog() {
               {preview ? (
                 <img
                   src={preview}
-                  alt="QR code preview"
+                  alt={t('tools.qr.preview_alt')}
                   width={PREVIEW_SIZE}
                   height={PREVIEW_SIZE}
                   className={`w-full h-full object-contain transition-opacity ${rendering ? 'opacity-60' : ''}`}
                 />
               ) : (
                 <span className="text-xs text-slate-400 px-6 text-center">
-                  {data ? 'Drawing…' : 'Enter a link or some text to see the code'}
+                  {data ? t('tools.qr.drawing') : t('tools.qr.enter_data')}
                 </span>
               )}
 
@@ -529,7 +559,7 @@ export default function QrDialog() {
                         strokeLinecap="round"
                       />
                     </svg>
-                    Tap to enlarge
+                    {t('tools.qr.tap_enlarge')}
                   </span>
                 </div>
               )}
@@ -562,7 +592,7 @@ export default function QrDialog() {
                 >
                   <path d="M10 3v10m0 0l-3.5-3.5M10 13l3.5-3.5M4 16h12" />
                 </svg>
-                {downloading ? 'Preparing…' : 'Download PNG'}
+                {downloading ? t('tools.qr.preparing') : t('tools.qr.download_png')}
               </button>
               <button
                 type="button"
@@ -571,10 +601,10 @@ export default function QrDialog() {
                 className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md border border-slate-300 text-sm font-medium text-slate-700 hover:border-orange-400 hover:bg-orange-50/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {copied === 'ok'
-                  ? '✓ Copied to clipboard'
+                  ? t('tools.qr.copied')
                   : copied === 'fail'
-                    ? 'Copy not supported — use Download'
-                    : 'Copy PNG to clipboard'}
+                    ? t('tools.qr.copy_unsupported')
+                    : t('tools.qr.copy_png')}
               </button>
             </div>
           </div>
@@ -583,7 +613,7 @@ export default function QrDialog() {
           <div className="flex-1 min-w-0 flex flex-col gap-4">
             <div>
               <label htmlFor="qr-data" className="block text-sm font-medium text-slate-700 mb-1">
-                Link or text
+                {t('tools.qr.link_or_text')}
               </label>
               <input
                 id="qr-data"
@@ -596,7 +626,7 @@ export default function QrDialog() {
             </div>
 
             <div>
-              <div className="block text-sm font-medium text-slate-700 mb-1.5">Style</div>
+              <div className="block text-sm font-medium text-slate-700 mb-1.5">{t('tools.qr.style')}</div>
               {/* Two up on a phone — three columns truncates every name to
                   "Cla…", which is worse than one more row of scroll. */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -605,7 +635,7 @@ export default function QrDialog() {
                     key={preset.name}
                     type="button"
                     onClick={() => applyPreset(preset)}
-                    title={`${preset.name} — ${preset.shape.toLowerCase()}`}
+                    title={`${presetName_(preset.name)} — ${shapeName(preset.shape).toLocaleLowerCase(t.lang)}`}
                     className={`border-2 rounded-lg px-2 py-2 flex items-center gap-2 transition-colors ${
                       presetName === preset.name
                         ? 'border-orange-500 bg-orange-50'
@@ -614,8 +644,8 @@ export default function QrDialog() {
                   >
                     <PresetGlyph preset={preset} />
                     <span className="min-w-0 text-left">
-                      <span className="block text-xs font-medium text-slate-700 truncate">{preset.name}</span>
-                      <span className="block text-[10px] text-slate-400 truncate">{preset.shape}</span>
+                      <span className="block text-xs font-medium text-slate-700 truncate">{presetName_(preset.name)}</span>
+                      <span className="block text-[10px] text-slate-400 truncate">{shapeName(preset.shape)}</span>
                     </span>
                   </button>
                 ))}
@@ -630,7 +660,7 @@ export default function QrDialog() {
               rel="noreferrer"
               className="self-center text-xs text-orange-700 hover:text-orange-800 underline-offset-2 hover:underline"
             >
-              Design one in Universal QR ↗
+              {t('tools.qr.design_in_universal_qr')}
             </a>
 
             <QrBrandingPanel
@@ -656,8 +686,8 @@ export default function QrDialog() {
             {issue && (
               <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
                 {issue.kind === 'inverted'
-                  ? 'These colours make an inverted code (light on dark). Some scanners refuse those — try a preset.'
-                  : `Low contrast on the ${issue.where} (${issue.ratio.toFixed(1)}:1). It may scan on screen and fail in print — try a preset.`}
+                  ? t('tools.qr.inverted')
+                  : t('tools.qr.low_contrast', { where: issue.where, ratio: formatNumber(t, issue.ratio, 1) })}
               </p>
             )}
 
@@ -687,7 +717,7 @@ export default function QrDialog() {
           return (
             <div className="px-6 pb-5 border-t border-slate-100 pt-4">
               <div className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
-                Your Universal QR codes
+                {t('tools.qr.your_codes')}
               </div>
               <div className="flex gap-3 overflow-x-auto pb-1">
                 {/* Dynamic first — they are the ones worth reaching for in a
@@ -697,7 +727,11 @@ export default function QrDialog() {
                     key={`dynamic-${entry.id}`}
                     type="button"
                     onClick={() => adoptDesign(entry.design)}
-                    title={`${entry.name || 'Dynamic code'} — dynamic: currently sends people to ${entry.targetUrl}, and you can change that later without reprinting. ${entry.scanCount.toLocaleString()} scan${entry.scanCount === 1 ? '' : 's'} so far.`}
+                    title={t.plural('tools.qr.dynamic_title', entry.scanCount, {
+                      name: entry.name || t('tools.qr.dynamic_code'),
+                      url: entry.targetUrl,
+                      count: entry.scanCount.toLocaleString(intlLocale(t.lang))
+                    })}
                     className="relative shrink-0 w-20 border-2 border-orange-200 rounded-lg p-1.5 hover:border-orange-400 hover:bg-orange-50/50 transition-colors"
                   >
                     {entry.thumbnail ? (
@@ -710,8 +744,8 @@ export default function QrDialog() {
                         only this one keeps changing after it is on the page. */}
                     <span
                       className="absolute top-0.5 right-0.5 flex items-center justify-center w-4 h-4 rounded-full bg-orange-600 text-white text-[9px] font-bold leading-none"
-                      aria-label="Dynamic code — re-pointable, scans counted"
-                      title="Dynamic code — re-pointable, scans counted"
+                      aria-label={t('tools.qr.dynamic_badge')}
+                      title={t('tools.qr.dynamic_badge')}
                     >
                       ↻
                     </span>
@@ -725,7 +759,7 @@ export default function QrDialog() {
                     key={entry.id}
                     type="button"
                     onClick={() => adoptDesign(entry.design)}
-                    title={`${entry.name || 'Saved code'} — ${entry.design.data}`}
+                    title={`${entry.name || t('tools.qr.saved_code')} — ${entry.design.data}`}
                     className="shrink-0 w-20 border-2 border-slate-200 rounded-lg p-1.5 hover:border-orange-400 hover:bg-slate-50 transition-colors"
                   >
                     {entry.thumbnail ? (
@@ -745,8 +779,8 @@ export default function QrDialog() {
                     onClick={() => applyHostedEntry(entry)}
                     title={
                       entry.design
-                        ? `${entry.name || 'Saved code'} — ${entry.design.data} (saved to your account)`
-                        : `${entry.name || 'Saved code'} — saved to your account (places as an image)`
+                        ? t('tools.qr.hosted_title', { name: entry.name || t('tools.qr.saved_code'), data: entry.design.data })
+                        : t('tools.qr.hosted_png_title', { name: entry.name || t('tools.qr.saved_code') })
                     }
                     className="relative shrink-0 w-20 border-2 border-slate-200 rounded-lg p-1.5 hover:border-orange-400 hover:bg-slate-50 transition-colors"
                   >
@@ -759,12 +793,12 @@ export default function QrDialog() {
                       viewBox="0 0 20 20"
                       className="absolute top-1 right-1 w-3.5 h-3.5 text-slate-400"
                       fill="currentColor"
-                      aria-label="Saved to your account"
+                      aria-label={t('tools.qr.saved_to_account')}
                     >
                       <path d="M14.5 8.1a4.5 4.5 0 0 0-8.8-.9A3.5 3.5 0 0 0 6 14h8a3 3 0 0 0 .5-5.9z" />
                     </svg>
                     <span className="block mt-1 text-[10px] text-slate-500 truncate">
-                      {entry.name || (entry.design ? qrDisplayName(entry.design) : 'Saved code')}
+                      {entry.name || (entry.design ? qrDisplayName(entry.design) : t('tools.qr.saved_code'))}
                     </span>
                   </button>
                 ))}
@@ -776,8 +810,8 @@ export default function QrDialog() {
         <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between gap-3">
           <span className="text-xs text-slate-400">
             {qrEdit
-              ? 'The code on the page is replaced where it sits.'
-              : 'Then click the page to place it.'}
+              ? t('tools.qr.replaced_in_place')
+              : t('tools.qr.click_to_place')}
           </span>
           <div className="flex gap-2">
             <button
@@ -785,7 +819,7 @@ export default function QrDialog() {
               onClick={() => setOpen(false)}
               className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900"
             >
-              Cancel
+              {t('tools.common.cancel')}
             </button>
             <button
               type="button"
@@ -795,11 +829,11 @@ export default function QrDialog() {
             >
               {qrEdit
                 ? adding
-                  ? 'Updating…'
-                  : 'Update code'
+                  ? t('tools.qr.updating')
+                  : t('tools.qr.update')
                 : adding
-                  ? 'Adding…'
-                  : 'Add to page'}
+                  ? t('tools.qr.adding')
+                  : t('tools.qr.add_to_page')}
             </button>
           </div>
         </div>

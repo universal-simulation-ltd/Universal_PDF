@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useUniversal } from '@unisim/sdk'
 import { mobileSignChannel } from '../../lib/mobileSign'
+import { useT } from '../../i18n'
 
 /**
  * Mobile signing handoff (opened via `?sign=<token>` from the QR on desktop).
@@ -10,6 +11,7 @@ import { mobileSignChannel } from '../../lib/mobileSign'
  * Mirrors Ergo Assess's /sign-mobile page.
  */
 export default function SignMobilePage({ token }: { token: string }) {
+  const t = useT()
   const { supabase } = useUniversal()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const drawing = useRef(false)
@@ -95,8 +97,8 @@ export default function SignMobilePage({ token }: { token: string }) {
     return (
       <main className="flex min-h-svh flex-col items-center justify-center gap-3 bg-slate-900 p-6 text-center text-white">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-600/20 text-3xl">✓</div>
-        <h1 className="text-lg font-semibold">Signature sent</h1>
-        <p className="text-sm text-slate-400">You can return to Universal PDF — the signature has been applied there.</p>
+        <h1 className="text-lg font-semibold">{t('sign.mobile_sent')}</h1>
+        <p className="text-sm text-slate-400">{t('sign.mobile_sent_body')}</p>
       </main>
     )
   }
@@ -104,8 +106,8 @@ export default function SignMobilePage({ token }: { token: string }) {
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-md flex-col gap-4 bg-slate-900 p-5 text-white">
       <div>
-        <h1 className="text-lg font-semibold">Send to sign</h1>
-        <p className="mt-1 text-sm text-slate-400">Draw your signature, enter the PIN shown in Universal PDF, then send.</p>
+        <h1 className="text-lg font-semibold">{t('sign.send_to_sign')}</h1>
+        <p className="mt-1 text-sm text-slate-400">{t('sign.mobile_intro')}</p>
       </div>
 
       <canvas
@@ -119,9 +121,9 @@ export default function SignMobilePage({ token }: { token: string }) {
       />
 
       <div className="flex items-center justify-between">
-        <button type="button" onClick={clear} className="rounded-lg px-3 py-2 text-sm text-slate-400 hover:text-white">Clear</button>
+        <button type="button" onClick={clear} className="rounded-lg px-3 py-2 text-sm text-slate-400 hover:text-white">{t('sign.clear')}</button>
         <label className="flex items-center gap-2 text-sm">
-          <span className="text-slate-400">PIN</span>
+          <span className="text-slate-400">{t('sign.mobile_pin')}</span>
           <input
             inputMode="numeric"
             value={pin}
@@ -133,7 +135,7 @@ export default function SignMobilePage({ token }: { token: string }) {
       </div>
 
       {status === 'error' && (
-        <p className="text-sm text-red-400">Draw a signature and enter the 6-digit PIN shown in Universal PDF.</p>
+        <p className="text-sm text-red-400">{t('sign.mobile_error')}</p>
       )}
 
       <button
@@ -142,7 +144,7 @@ export default function SignMobilePage({ token }: { token: string }) {
         disabled={status === 'sending'}
         className="mt-1 rounded-xl bg-orange-700 py-3 text-sm font-semibold hover:bg-orange-800 disabled:opacity-60"
       >
-        {status === 'sending' ? 'Sending…' : 'Send signature to Universal PDF'}
+        {status === 'sending' ? t('sign.sending') : t('sign.mobile_send')}
       </button>
     </main>
   )

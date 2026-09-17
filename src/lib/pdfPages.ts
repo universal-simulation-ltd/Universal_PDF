@@ -1,4 +1,5 @@
 import { PDFDocument } from 'pdf-lib'
+import { getT } from '../i18n'
 
 // Rebuild the PDF so its pages appear in `newOrder`. Each entry is the
 // original page index that should occupy that slot — omitting an index
@@ -18,7 +19,7 @@ export async function applyPageOrderToPdf(
     }
   }
   if (newOrder.length === 0) {
-    throw new Error('A PDF must keep at least one page')
+    throw new Error(getT()('lib.pages_keep_one'))
   }
 
   // Strip the catalog's page tree (highest index first to keep indices stable),

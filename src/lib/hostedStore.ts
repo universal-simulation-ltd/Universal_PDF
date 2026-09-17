@@ -9,6 +9,7 @@ import { hostedPdfPath, hostedPdfPathCandidates, newObjectId } from './hostedPat
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useFormStore } from '../stores/formStore'
 import { usePdfStore } from '../stores/pdfStore'
+import { getT } from '../i18n'
 
 // "Hosted by UNI·SIM" cloud storage for Universal PDF. Local storage (the
 // IndexedDB recents) stays free + temporary; hosting keeps a PDF online against
@@ -26,7 +27,7 @@ const EXPORT_SCALE = 1.0
  *  can attach the identical bytes to its email. */
 export async function currentPdfBytes(): Promise<{ bytes: Uint8Array; fileName: string }> {
   const { sourceBytes, fileName } = usePdfStore.getState()
-  if (!sourceBytes) throw new Error('No PDF is open.')
+  if (!sourceBytes) throw new Error(getT()('lib.no_pdf_open'))
   const annotations = useAnnotationStore.getState().annotations
   const formValues = useFormStore.getState().values
   const bytes = await buildAnnotatedPdfBytes(sourceBytes.slice(0), annotations, EXPORT_SCALE, formValues)
@@ -73,7 +74,7 @@ export async function storeCurrentPdf(supabase: Supabase, orgId: string): Promis
     sizeBytes: bytes.byteLength,
   })
   if (!consumed.ok || !consumed.upload_id) {
-    return { ok: false, error: consumed.error ?? 'Could not reserve a token.' }
+    return { ok: false, error: consumed.error ?? getT()('lib.hosted_reserve_failed') }
   }
 
   // 2) Upload to hosted-uploads/<org>/pdf/<object_id>-<stem>.pdf
@@ -109,7 +110,7 @@ export async function deleteHostedPdf(supabase: Supabase, upload: HostedUpload):
   // a half-deleted upload can still be cleared.
   await supabase.storage.from(HOSTED_BUCKET).remove(hostedPdfPathCandidates(upload))
   const res = await refundHostedUpload(supabase, upload.id)
-  if (!res.ok) return { ok: false, error: res.error ?? 'Could not refund the token.' }
+  if (!res.ok) return { ok: false, error: res.error ?? getT()('lib.hosted_refund_failed') }
   return { ok: true, creditsRemaining: res.credits }
 }
 
@@ -123,7 +124,7 @@ export async function openSignedCopy(
   docName?: string | null,
 ): Promise<void> {
   const { data, error } = await supabase.storage.from(HOSTED_BUCKET).download(storagePath)
-  if (error || !data) throw new Error(error?.message ?? 'Could not download the signed PDF.')
+  if (error || !data) throw new Error(error?.message ?? getT()('lib.hosted_signed_download_failed'))
   const base = (docName ?? 'document.pdf').replace(/\.pdf$/i, '')
   const file = new File([data], `${base}-signed.pdf`, { type: 'application/pdf' })
   await usePdfStore.getState().loadFile(file)

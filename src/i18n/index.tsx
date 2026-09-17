@@ -19,8 +19,21 @@
 // `t.plural('ns.pages', count)`, which picks the form with Intl.PluralRules
 // and passes `{count}` for you.
 import { Fragment, useEffect, useMemo, type ReactNode } from 'react'
-import { pickTranslation, useLanguage, SUPPORTED_LANGUAGES } from '@unisim/sdk'
-import { en, type Messages } from './en'
+import { useLanguage, SUPPORTED_LANGUAGES } from '@unisim/sdk'
+import {
+  fill,
+  getT,
+  intlLocale,
+  lookup,
+  makeBasicTranslator,
+  registerLanguages,
+  setActiveLanguage,
+  type BasicTranslator,
+  type MessageKey,
+  type Messages,
+  type PluralKey,
+  type Vars,
+} from './runtime.ts'
 import { fr } from './fr'
 import { es } from './es'
 import { it } from './it'
@@ -29,33 +42,11 @@ import { ptBR } from './pt-BR'
 import { ptPT } from './pt-PT'
 import { tr as turkish } from './tr'
 
-export type { Messages }
+export { getT, intlLocale }
+export type { BasicTranslator, MessageKey, Messages, PluralKey, Vars }
 export type Language = (typeof SUPPORTED_LANGUAGES)[number]
 
-const DICTS: Record<string, Messages> = {
-  en,
-  fr,
-  es,
-  it,
-  de,
-  'pt-BR': ptBR,
-  'pt-PT': ptPT,
-  tr: turkish,
-}
-
-/** Every key, as `namespace.key`. */
-export type MessageKey = {
-  [N in keyof Messages]: `${N & string}.${keyof Messages[N] & string}`
-}[keyof Messages]
-
-/** The stem of every plural key: `ns.pages` for `ns.pages_one` + `ns.pages_other`. */
-export type PluralKey = MessageKey extends infer K
-  ? K extends `${infer Stem}_other`
-    ? Stem
-    : never
-  : never
-
-export type Vars = Record<string, string | number>
+registerLanguages({ fr, es, it, de, 'pt-BR': ptBR, 'pt-PT': ptPT, tr: turkish })
 
 /**
  * The languages offered in the app's own picker, as their speakers write them.
@@ -73,55 +64,18 @@ export const LANGUAGE_OPTIONS: { code: Language; label: string; flag: string }[]
   { code: 'tr', label: 'Türkçe', flag: '🇹🇷' },
 ]
 
-function lookup(lang: string, key: string): string {
-  const dot = key.indexOf('.')
-  const ns = key.slice(0, dot) as keyof Messages
-  const k = key.slice(dot + 1)
-  const dict = pickTranslation(DICTS, lang) ?? en
-  const hit = (dict[ns] as Record<string, string> | undefined)?.[k]
-  if (hit !== undefined) return hit
-  const fallback = (en[ns] as Record<string, string> | undefined)?.[k]
-  if (fallback !== undefined) return fallback
-  if (import.meta.env.DEV) console.warn(`[i18n] missing key ${key}`)
-  return key
-}
-
-function fill(s: string, vars?: Vars): string {
-  if (!vars) return s
-  return s.replace(/\{(\w+)\}/g, (m, name: string) => (name in vars ? String(vars[name]) : m))
-}
-
-/** Intl wants a BCP 47 tag; the SDK's `en-gb` is one already, case aside. */
-export function intlLocale(lang: string): string {
-  return lang === 'en' ? 'en-US' : lang
-}
-
-export interface Translator {
-  (key: MessageKey, vars?: Vars): string
-  /** A plural: `t.plural('tools.pages', 3)` → "3 pages". `{count}` is filled in. */
-  plural(stem: PluralKey, count: number, vars?: Vars): string
+export interface Translator extends BasicTranslator {
   /**
    * A sentence with React nodes in it: `t.rich('menu.contact', { link: <a…/> })`
    * for "{link} to request a language". Text around the nodes stays one string,
    * so a translator can move the link to wherever the sentence needs it.
    */
   rich(key: MessageKey, nodes: Record<string, ReactNode>, vars?: Vars): ReactNode
-  /** The active language code, for Intl formatting: `new Intl.DateTimeFormat(intlLocale(t.lang))`. */
   lang: Language
 }
 
 export function makeTranslator(lang: Language): Translator {
-  const t = ((key: MessageKey, vars?: Vars) => fill(lookup(lang, key), vars)) as Translator
-  t.plural = (stem, count, vars) => {
-    const form = new Intl.PluralRules(intlLocale(lang)).select(count)
-    const exact = `${stem}_${form}`
-    const dot = exact.indexOf('.')
-    const ns = exact.slice(0, dot) as keyof Messages
-    const dict = pickTranslation(DICTS, lang) ?? en
-    const has = (dict[ns] as Record<string, string> | undefined)?.[exact.slice(dot + 1)] !== undefined
-    const key = (has ? exact : `${stem}_other`) as MessageKey
-    return fill(lookup(lang, key), { count, ...vars })
-  }
+  const t = makeBasicTranslator(lang) as Translator
   t.rich = (key, nodes, vars) => {
     const parts = fill(lookup(lang, key), vars).split(/(\{\w+\})/)
     return parts.map((part, i) => {
@@ -129,19 +83,7 @@ export function makeTranslator(lang: Language): Translator {
       return <Fragment key={i}>{m && m[1] in nodes ? nodes[m[1]] : part}</Fragment>
     })
   }
-  t.lang = lang
   return t
-}
-
-// ── Outside React ──────────────────────────────────────────────────────────
-// Stores, lib helpers and error messages built away from a component read the
-// language the tree last rendered with, through `getT()`. <I18nRoot> keeps it
-// current.
-let active: Translator = makeTranslator('en')
-
-/** The translator for code that is not a component (stores, lib, callbacks). */
-export function getT(): Translator {
-  return active
 }
 
 /** The translator for a component. Re-renders when the language changes. */
@@ -157,7 +99,7 @@ export function useT(): Translator {
  */
 export function I18nRoot({ children }: { children: ReactNode }) {
   const { language, setLanguage } = useLanguage()
-  if (active.lang !== language) active = makeTranslator(language)
+  setActiveLanguage(language)
   if (typeof document !== 'undefined' && document.documentElement.lang !== language) {
     document.documentElement.lang = language
   }

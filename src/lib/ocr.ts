@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, degrees, type PDFFont } from 'pdf-lib'
 import { pdfjsLib, type PDFDocumentProxy } from './pdfjs'
+import { getT } from '../i18n'
 
 /**
  * In-browser OCR — turns scanned / image-only PDFs into searchable, selectable
@@ -211,7 +212,7 @@ export async function makeSearchablePdf(
   const lang = options.lang ?? 'eng'
   const outName = fileName.replace(/\.pdf$/i, '') + '-searchable.pdf'
 
-  onProgress?.({ phase: 'load', fraction: 0, message: 'Preparing OCR engine…' })
+  onProgress?.({ phase: 'load', fraction: 0, message: getT()('lib.ocr_preparing') })
 
   // pdf.js detaches any ArrayBuffer it's handed — give it its own copy and keep
   // the caller's `sourceBytes` intact for pdf-lib below.
@@ -232,7 +233,7 @@ export async function makeSearchablePdf(
   if (pagesToOcr.length === 0) {
     pdfjsDoc.destroy()
     const passthrough = new Uint8Array(sourceBytes.slice(0))
-    onProgress?.({ phase: 'build', fraction: 1, message: 'Already searchable' })
+    onProgress?.({ phase: 'build', fraction: 1, message: getT()('lib.ocr_already_searchable') })
     return { bytes: passthrough, fileName: outName, pagesOcred: 0, pagesSkipped: numPages, charsAdded: 0 }
   }
 
@@ -258,14 +259,14 @@ export async function makeSearchablePdf(
           page: currentSlot + 1,
           totalPages: pagesToOcr.length,
           fraction: LOAD_WEIGHT + perPage * (currentSlot + (m.progress || 0)),
-          message: `Reading page ${currentSlot + 1} of ${pagesToOcr.length}…`,
+          message: getT()('lib.ocr_reading_page', { page: currentSlot + 1, total: pagesToOcr.length }),
         })
       } else if (!modelLoaded && m.status) {
         // Before the first page's recognition, surface the model download so the
         // ~15 MB one-time fetch isn't a dead-looking bar.
         const label = /download|load|initializ|initialis/i.test(m.status)
-          ? 'Downloading OCR model (one-time)…'
-          : 'Preparing OCR engine…'
+          ? getT()('lib.ocr_downloading_model')
+          : getT()('lib.ocr_preparing')
         onProgress?.({ phase: 'load', fraction: LOAD_WEIGHT * (m.progress || 0), message: label })
       }
     },
@@ -286,7 +287,7 @@ export async function makeSearchablePdf(
         page: n + 1,
         totalPages: pagesToOcr.length,
         fraction: LOAD_WEIGHT + perPage * n,
-        message: `Reading page ${n + 1} of ${pagesToOcr.length}…`,
+        message: getT()('lib.ocr_reading_page', { page: n + 1, total: pagesToOcr.length }),
       })
 
       const { canvas, viewport } = await renderPage(pdfjsDoc, pageIndex)
@@ -309,7 +310,7 @@ export async function makeSearchablePdf(
         page: n + 1,
         totalPages: pagesToOcr.length,
         fraction: LOAD_WEIGHT + perPage * (n + 1),
-        message: `Reading page ${n + 1} of ${pagesToOcr.length}…`,
+        message: getT()('lib.ocr_reading_page', { page: n + 1, total: pagesToOcr.length }),
       })
     }
   } finally {
@@ -317,9 +318,9 @@ export async function makeSearchablePdf(
     pdfjsDoc.destroy()
   }
 
-  onProgress?.({ phase: 'build', fraction: 0.99, message: 'Saving searchable PDF…' })
+  onProgress?.({ phase: 'build', fraction: 0.99, message: getT()('lib.ocr_saving') })
   const bytes = await outDoc.save()
-  onProgress?.({ phase: 'build', fraction: 1, message: 'Done' })
+  onProgress?.({ phase: 'build', fraction: 1, message: getT()('lib.ocr_done') })
 
   return {
     bytes,

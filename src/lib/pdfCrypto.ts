@@ -31,6 +31,11 @@
 // removes them without knowing any password at all. Offering that next to a
 // real lock would put a checkbox that does nothing beside one that does
 // everything, and no user could tell which was which.
+//
+// The one exception is `../i18n/runtime.ts`, the node-safe lookup: plain data
+// and no React, so the test still loads it.
+import { getT } from '../i18n/runtime.ts'
+
 
 /** 32 bytes: an AES-256 key. */
 export type Key = Uint8Array
@@ -70,11 +75,11 @@ export function passwordBytes(password: string): Uint8Array {
  */
 export function passwordWarning(password: string): string | null {
   if (enc.encode(password).length > 127) {
-    return 'Only the first 127 bytes of a password count. Anything past that is ignored.'
+    return getT()('lib.lock_password_bytes')
   }
   for (const ch of password) {
     if (ch.codePointAt(0)! > 0xFF) {
-      return 'Accented or non-Latin characters can be typed differently by other PDF apps. A password of letters, digits and punctuation is safest.'
+      return getT()('lib.lock_password_nonlatin')
     }
   }
   return null
@@ -88,9 +93,7 @@ function subtle(): SubtleCrypto {
   // we say so.
   const s = globalThis.crypto?.subtle
   if (!s) {
-    throw new Error(
-      'This browser will not do encryption on an insecure connection. Open Universal PDF over https:// (or localhost) and try again.'
-    )
+    throw new Error(getT()('lib.crypto_insecure'))
   }
   return s
 }

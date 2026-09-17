@@ -8,6 +8,7 @@ import { FONT_DEFS } from '../../lib/fonts'
 import { useCoarsePointer } from '../../hooks/useCoarsePointer'
 import { useUndo } from '../../hooks/useUndo'
 import type { Annotation, Tool } from '../../types/annotations'
+import { useT, type MessageKey } from '../../i18n'
 
 // The always-visible core fonts; the rest (FONT_DEFS) are revealed by the "+"
 // more-fonts button in the text options.
@@ -72,25 +73,26 @@ function PictureFrameIcon({ active = false, className = 'w-6 h-6' }: { active?: 
   )
 }
 
-const COLORS = [
-  { hex: '#000000', name: 'Black' },
-  { hex: '#ffffff', name: 'White' },
-  { hex: '#dc2626', name: 'Red' },
-  { hex: '#2563eb', name: 'Blue' },
-  { hex: '#16a34a', name: 'Green' },
-  { hex: '#eab308', name: 'Yellow' },
-  { hex: '#9333ea', name: 'Purple' }
+// `name` is a translation key, read at render.
+const COLORS: { hex: string; name: MessageKey }[] = [
+  { hex: '#000000', name: 'viewer.toolbar.color_black' },
+  { hex: '#ffffff', name: 'viewer.toolbar.color_white' },
+  { hex: '#dc2626', name: 'viewer.toolbar.color_red' },
+  { hex: '#2563eb', name: 'viewer.toolbar.color_blue' },
+  { hex: '#16a34a', name: 'viewer.toolbar.color_green' },
+  { hex: '#eab308', name: 'viewer.toolbar.color_yellow' },
+  { hex: '#9333ea', name: 'viewer.toolbar.color_purple' }
 ]
 
 const HIGHLIGHT_YELLOW = '#eab308'
 const HIGHLIGHT_GREEN = '#16a34a'
 
-const DRAW_SHAPES: { id: Tool; icon: string; label: string }[] = [
-  { id: 'tick', icon: '✓', label: 'Tick' },
-  { id: 'cross', icon: '✗', label: 'Cross' },
-  { id: 'line', icon: '╱', label: 'Line' },
-  { id: 'rect', icon: '▭', label: 'Box' },
-  { id: 'ellipse', icon: '◯', label: 'Circle' }
+const DRAW_SHAPES: { id: Tool; icon: string; label: MessageKey }[] = [
+  { id: 'tick', icon: '✓', label: 'viewer.toolbar.shape_tick' },
+  { id: 'cross', icon: '✗', label: 'viewer.toolbar.shape_cross' },
+  { id: 'line', icon: '╱', label: 'viewer.toolbar.shape_line' },
+  { id: 'rect', icon: '▭', label: 'viewer.toolbar.shape_box' },
+  { id: 'ellipse', icon: '◯', label: 'viewer.toolbar.shape_circle' }
 ]
 
 type Panel = 'select' | 'text' | 'draw' | 'color' | null
@@ -219,25 +221,26 @@ function FloatingPanel({
 // box is started by pressing and holding first (see MARQUEE_HOLD_MS in
 // AnnotationLayer). A gesture nobody is told about is a gesture nobody finds,
 // and this list is the one place a reader looks at the tool before picking it.
+// The text fields are translation keys, read at render.
 const SELECT_OPTIONS: {
   id: Tool
   icon: string
-  label: string
-  help: string
-  touchHelp?: string
-  gesture?: string
+  label: MessageKey
+  help: MessageKey
+  touchHelp?: MessageKey
+  gesture?: MessageKey
 }[] = [
-  { id: 'select', icon: '↖', label: 'Select', help: 'Click to move, resize or edit. On desktop, drag empty space to select many' },
+  { id: 'select', icon: '↖', label: 'viewer.toolbar.tool_select', help: 'viewer.toolbar.tool_select_help' },
   {
     id: 'marquee',
     icon: '⛶',
-    label: 'Select area',
-    help: 'Drag a box to select many edits, then move/resize/rotate them together',
-    touchHelp: 'Press and hold, then drag a box to select many edits — a plain swipe still scrolls the document',
-    gesture: 'hold, then drag'
+    label: 'viewer.toolbar.tool_select_area',
+    help: 'viewer.toolbar.tool_select_area_help',
+    touchHelp: 'viewer.toolbar.tool_select_area_touch_help',
+    gesture: 'viewer.toolbar.tool_select_area_gesture'
   },
-  { id: 'selecttext', icon: '⌶', label: 'Select text', help: "Drag over the PDF's own text to select it, then copy (Ctrl/⌘C)" },
-  { id: 'hand', icon: '✋', label: 'Hand', help: 'Drag to pan around the PDF without selecting' }
+  { id: 'selecttext', icon: '⌶', label: 'viewer.toolbar.tool_select_text', help: 'viewer.toolbar.tool_select_text_help' },
+  { id: 'hand', icon: '✋', label: 'viewer.toolbar.tool_hand', help: 'viewer.toolbar.tool_hand_help' }
 ]
 
 // Icon shown on the main Select-group button for the currently-active tool.
@@ -358,6 +361,7 @@ const isDrawShape = (t: Tool) => t === 'tick' || t === 'cross' || t === 'line' |
 export function ToolbarDesktopTools() {
   // A tablet gets this toolbar at lg+ but drives it with a finger, so the
   // help text has to name the gesture the reader actually has.
+  const t = useT()
   const coarsePointer = useCoarsePointer()
   const tool = useAnnotationStore((s) => s.tool)
   const color = useAnnotationStore((s) => s.color)
@@ -430,7 +434,7 @@ export function ToolbarDesktopTools() {
     e.target.value = ''
   }
 
-  function PlusBox({ panel, label = 'options' }: { panel: Panel; label?: string }) {
+  function PlusBox({ panel, openLabel, closeLabel }: { panel: Panel; openLabel: string; closeLabel: string }) {
     return (
       <button
         onClick={() => togglePanel(panel)}
@@ -439,8 +443,8 @@ export function ToolbarDesktopTools() {
             ? 'bg-orange-700 border-orange-400 text-white'
             : 'bg-slate-600 border-slate-500 text-slate-300 hover:bg-slate-500 hover:text-white'
         }`}
-        title={`${openPanel === panel ? 'Close' : 'Open'} ${label}`}
-        aria-label={`${openPanel === panel ? 'Close' : 'Open'} ${label}`}
+        title={openPanel === panel ? closeLabel : openLabel}
+        aria-label={openPanel === panel ? closeLabel : openLabel}
         aria-expanded={openPanel === panel}
       >
         +
@@ -490,7 +494,7 @@ export function ToolbarDesktopTools() {
         onPointerUp={endLongPress}
         onPointerLeave={endLongPress}
         onPointerCancel={endLongPress}
-        title={panel ? `${label} — tap again or long-press for options` : label}
+        title={panel ? t('viewer.toolbar.tool_with_options', { tool: label }) : label}
         className={`w-9 h-9 rounded flex items-center justify-center text-lg font-semibold transition-colors ${
           tool === id ? 'bg-orange-700' : 'hover:bg-slate-700'
         }`}
@@ -500,8 +504,9 @@ export function ToolbarDesktopTools() {
     )
   }
 
-  function colorSwatch(hex: string, name: string, small = false, onActiveReclick?: () => void) {
+  function colorSwatch(hex: string, nameKey: MessageKey, small = false, onActiveReclick?: () => void) {
     const active = color === hex
+    const name = t(nameKey)
     return (
       <button
         key={hex}
@@ -509,7 +514,7 @@ export function ToolbarDesktopTools() {
           if (active && onActiveReclick) onActiveReclick()
           else setColor(hex)
         }}
-        title={onActiveReclick ? `${name} — click again for more colours` : name}
+        title={onActiveReclick ? t('viewer.toolbar.swatch_more_colours', { colour: name }) : name}
         className={`rounded-full border-2 transition-transform flex-shrink-0 ${
           small ? 'w-6 h-6' : 'w-7 h-7'
         } ${active ? 'border-white scale-110' : 'border-slate-600 hover:scale-105'}`}
@@ -522,7 +527,7 @@ export function ToolbarDesktopTools() {
     const isCustom = !COLORS.some((c) => c.hex === color)
     return (
       <label
-        title="Custom colour"
+        title={t('viewer.toolbar.custom_colour')}
         className={`w-7 h-7 rounded-full cursor-pointer border-2 flex-shrink-0 overflow-hidden transition-transform ${
           isCustom ? 'border-white scale-110' : 'border-slate-600 hover:scale-105'
         }`}
@@ -548,15 +553,15 @@ export function ToolbarDesktopTools() {
           selectGroupTool(tool),
           SELECT_GROUP_ICON[tool] ?? '↖',
           tool === 'hand'
-            ? 'Hand — drag to pan'
+            ? t('viewer.toolbar.select_group_hand')
             : tool === 'marquee'
-              ? 'Select area — drag a box'
+              ? t('viewer.toolbar.select_group_area')
               : tool === 'selecttext'
-                ? 'Select text — drag to copy the PDF text'
-                : 'Select / move',
+                ? t('viewer.toolbar.select_group_text')
+                : t('viewer.toolbar.select_group_select'),
           'select'
         )}
-        <PlusBox panel="select" label="select options" />
+        <PlusBox panel="select" openLabel={t('viewer.toolbar.open_select_options')} closeLabel={t('viewer.toolbar.close_select_options')} />
         {openPanel === 'select' && (
           <FloatingPanel anchorRef={selectGroupRef} panelRef={panelContentRef}>
           <div className="bg-slate-800 border border-slate-600 rounded-lg shadow-xl py-1 whitespace-nowrap min-w-56">
@@ -570,9 +575,9 @@ export function ToolbarDesktopTools() {
               >
                 <span className="text-lg leading-none w-5 text-center">{opt.icon}</span>
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium">{opt.label}</div>
+                  <div className="font-medium">{t(opt.label)}</div>
                   <div className="text-[11px] opacity-70">
-                    {(coarsePointer && opt.touchHelp) || opt.help}
+                    {t((coarsePointer && opt.touchHelp) || opt.help)}
                   </div>
                 </div>
               </button>
@@ -586,12 +591,12 @@ export function ToolbarDesktopTools() {
 
       {/* Text + font-size expander */}
       <div ref={textGroupRef} className="relative flex items-start">
-        {toolBtn('text', 'T', 'Add text', 'text')}
-        <PlusBox panel="text" label="text options" />
+        {toolBtn('text', 'T', t('viewer.toolbar.tool_add_text'), 'text')}
+        <PlusBox panel="text" openLabel={t('viewer.toolbar.open_text_options')} closeLabel={t('viewer.toolbar.close_text_options')} />
         {openPanel === 'text' && (
           <FloatingPanel anchorRef={textGroupRef} panelRef={panelContentRef}>
           <div className="bg-slate-800 border border-slate-600 rounded-lg shadow-xl px-3 py-2 flex items-center gap-3 gap-y-2 flex-wrap">
-            <span className="text-xs text-slate-400">Size</span>
+            <span className="text-xs text-slate-400">{t('viewer.toolbar.size')}</span>
             <input
               type="range"
               min={10}
@@ -603,7 +608,7 @@ export function ToolbarDesktopTools() {
             />
             <span className="text-xs text-slate-300 w-9 tabular-nums text-right">{fontSize}px</span>
             <div className="w-px h-6 bg-slate-600 mx-1" />
-            <span className="text-xs text-slate-400">Font</span>
+            <span className="text-xs text-slate-400">{t('viewer.toolbar.font')}</span>
             {(moreFonts ? FONT_DEFS : FONT_OPTIONS).map((f) => (
               <button
                 key={f.id}
@@ -619,8 +624,8 @@ export function ToolbarDesktopTools() {
             ))}
             <button
               onClick={() => setMoreFonts((v) => !v)}
-              title={moreFonts ? 'Fewer fonts' : 'More fonts'}
-              aria-label={moreFonts ? 'Show fewer fonts' : 'Show more fonts'}
+              title={moreFonts ? t('viewer.toolbar.fewer_fonts') : t('viewer.toolbar.more_fonts')}
+              aria-label={moreFonts ? t('viewer.toolbar.show_fewer_fonts') : t('viewer.toolbar.show_more_fonts')}
               aria-expanded={moreFonts}
               className={`w-8 h-8 rounded text-lg leading-none transition-colors ${
                 moreFonts ? 'bg-orange-700 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-100'
@@ -639,8 +644,8 @@ export function ToolbarDesktopTools() {
           + the two quick swatches (their "+" = the colour picker on its own). */}
       <div ref={drawGroupRef} className="relative flex items-start gap-1">
         <div ref={drawToolRef} className="flex items-start">
-          {toolBtn('draw', '✎', 'Free draw', 'draw', '#000000')}
-          <PlusBox panel="draw" label="drawing tools" />
+          {toolBtn('draw', '✎', t('viewer.toolbar.tool_free_draw'), 'draw', '#000000')}
+          <PlusBox panel="draw" openLabel={t('viewer.toolbar.open_drawing_tools')} closeLabel={t('viewer.toolbar.close_drawing_tools')} />
         </div>
         <button
           onClick={() => handleToolClick('highlight', 'draw', HIGHLIGHT_YELLOW)}
@@ -648,7 +653,7 @@ export function ToolbarDesktopTools() {
           onPointerUp={endLongPress}
           onPointerLeave={endLongPress}
           onPointerCancel={endLongPress}
-          title="Highlighter — tap again or long-press for options"
+          title={t('viewer.toolbar.tool_with_options', { tool: t('viewer.toolbar.tool_highlighter') })}
           className={`w-9 h-9 rounded flex items-center justify-center transition-colors ${
             tool === 'highlight' ? 'bg-orange-700' : 'hover:bg-slate-700'
           }`}
@@ -662,17 +667,17 @@ export function ToolbarDesktopTools() {
           <div className="flex h-full items-center gap-1">
           {tool === 'highlight' ? (
             <>
-              {colorSwatch(HIGHLIGHT_YELLOW, 'Yellow', true, () => setOpenPanel('color'))}
-              {colorSwatch(HIGHLIGHT_GREEN, 'Green', true, () => setOpenPanel('color'))}
+              {colorSwatch(HIGHLIGHT_YELLOW, 'viewer.toolbar.color_yellow', true, () => setOpenPanel('color'))}
+              {colorSwatch(HIGHLIGHT_GREEN, 'viewer.toolbar.color_green', true, () => setOpenPanel('color'))}
             </>
           ) : (
             <>
-              {colorSwatch('#000000', 'Black', true, () => setOpenPanel('color'))}
-              {colorSwatch('#ffffff', 'White', true, () => setOpenPanel('color'))}
+              {colorSwatch('#000000', 'viewer.toolbar.color_black', true, () => setOpenPanel('color'))}
+              {colorSwatch('#ffffff', 'viewer.toolbar.color_white', true, () => setOpenPanel('color'))}
             </>
           )}
           </div>
-          <PlusBox panel="color" label="colours" />
+          <PlusBox panel="color" openLabel={t('viewer.toolbar.open_colours')} closeLabel={t('viewer.toolbar.close_colours')} />
         </div>
         {openPanel === 'draw' && (
           <FloatingPanel anchorRef={drawToolRef} panelRef={panelContentRef}>
@@ -689,7 +694,7 @@ export function ToolbarDesktopTools() {
                 <button
                   key={s.id}
                   onClick={() => setTool(s.id)}
-                  title={s.label}
+                  title={t(s.label)}
                   className={`w-9 h-9 rounded flex items-center justify-center text-lg font-semibold text-white transition-colors ${
                     tool === s.id ? 'bg-orange-700' : 'hover:bg-slate-700'
                   }`}
@@ -698,7 +703,7 @@ export function ToolbarDesktopTools() {
                 </button>
               ))}
               <div className="w-px h-6 bg-slate-600 mx-1" />
-              <span className="text-xs text-slate-400">Stroke</span>
+              <span className="text-xs text-slate-400">{t('viewer.toolbar.stroke')}</span>
               <input
                 type="range"
                 min={1}
@@ -711,7 +716,7 @@ export function ToolbarDesktopTools() {
               <span className="text-xs text-slate-300 w-12 tabular-nums text-right">{strokeWidth.toFixed(1)}px</span>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-slate-400">Colour</span>
+              <span className="text-xs text-slate-400">{t('viewer.toolbar.colour')}</span>
               {COLORS.map((c) => colorSwatch(c.hex, c.name))}
               <ColorPickerTrigger />
             </div>
@@ -734,7 +739,7 @@ export function ToolbarDesktopTools() {
 
       {/* Image upload */}
       <label
-        title="Upload and place an image"
+        title={t('viewer.toolbar.upload_image')}
         className={`w-9 h-9 rounded flex items-center justify-center transition-colors cursor-pointer ${
           tool === 'image' ? 'bg-orange-700' : 'hover:bg-slate-700'
         }`}
@@ -753,7 +758,7 @@ export function ToolbarDesktopTools() {
           to the image button rather than in the tool groups. */}
       <button
         onClick={() => setQrOpen(true)}
-        title="Add a QR code"
+        title={t('viewer.toolbar.add_qr_code')}
         className="w-9 h-9 rounded flex items-center justify-center transition-colors hover:bg-slate-700"
       >
         <QrIcon className="w-5 h-5" />
@@ -778,6 +783,7 @@ export function ToolbarDesktopTools() {
 
 // --- DESKTOP ACTIONS (right, inline in header) ----------------------------
 export function ToolbarDesktopActions() {
+  const t = useT()
   const sourceBytes = usePdfStore((s) => s.sourceBytes)
   const [exportOpen, setExportOpen] = useState(false)
 
@@ -791,7 +797,7 @@ export function ToolbarDesktopActions() {
           disabled={!sourceBytes}
           className="px-4 h-9 rounded bg-orange-700 hover:bg-orange-800 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium"
         >
-          Export
+          {t('viewer.toolbar.export')}
         </button>
       </div>
       <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} />
@@ -804,6 +810,7 @@ export function ToolbarMobile() {
   // Only a touchscreen needs to be told about the press-and-hold; this toolbar
   // also shows on a narrow DESKTOP window, where a mouse drags the box on
   // contact as it always has.
+  const t = useT()
   const coarsePointer = useCoarsePointer()
   const tool = useAnnotationStore((s) => s.tool)
   const color = useAnnotationStore((s) => s.color)
@@ -913,7 +920,7 @@ export function ToolbarMobile() {
             >
               <span className="text-lg leading-none">{opt.icon}</span>
               <span className="flex flex-col items-start leading-tight">
-                <span>{opt.label}</span>
+                <span>{t(opt.label)}</span>
                 {/* The one tool whose gesture differs on glass says so here.
                     There is no room for the full help text in this row, and no
                     banner for it either (PlacementHint is for armed payloads,
@@ -921,7 +928,7 @@ export function ToolbarMobile() {
                     the whole budget, and it is enough. */}
                 {coarsePointer && opt.gesture && (
                   <span className={`text-[10px] font-normal ${tool === opt.id ? 'text-orange-100' : 'text-slate-500'}`}>
-                    {opt.gesture}
+                    {t(opt.gesture)}
                   </span>
                 )}
               </span>
@@ -933,7 +940,7 @@ export function ToolbarMobile() {
     if (openPanel === 'text') {
       return (
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 font-medium">Size</span>
+          <span className="text-xs text-slate-500 font-medium">{t('viewer.toolbar.size')}</span>
           <button
             onClick={() => setFontSize(Math.max(10, fontSize - 2))}
             className="w-8 h-8 rounded-full hover:bg-slate-100 text-lg font-semibold text-slate-700"
@@ -950,7 +957,7 @@ export function ToolbarMobile() {
             +
           </button>
           <div className="w-px h-7 bg-slate-200 mx-1" />
-          <span className="text-xs text-slate-500 font-medium">Font</span>
+          <span className="text-xs text-slate-500 font-medium">{t('viewer.toolbar.font')}</span>
           {(moreFonts ? FONT_DEFS : FONT_OPTIONS).map((f) => (
             <button
               key={f.id}
@@ -966,8 +973,8 @@ export function ToolbarMobile() {
           ))}
           <button
             onClick={() => setMoreFonts((v) => !v)}
-            title={moreFonts ? 'Fewer fonts' : 'More fonts'}
-            aria-label={moreFonts ? 'Show fewer fonts' : 'Show more fonts'}
+            title={moreFonts ? t('viewer.toolbar.fewer_fonts') : t('viewer.toolbar.more_fonts')}
+            aria-label={moreFonts ? t('viewer.toolbar.show_fewer_fonts') : t('viewer.toolbar.show_more_fonts')}
             aria-expanded={moreFonts}
             className={`w-9 h-9 rounded-lg text-lg leading-none transition-colors ${
               moreFonts ? 'bg-orange-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -989,7 +996,7 @@ export function ToolbarMobile() {
               }
               setTool('highlight')
             }}
-            title="Highlighter"
+            title={t('viewer.toolbar.tool_highlighter')}
             className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
               tool === 'highlight' ? 'bg-orange-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
@@ -1000,7 +1007,7 @@ export function ToolbarMobile() {
             <button
               key={s.id}
               onClick={() => setTool(s.id)}
-              title={s.label}
+              title={t(s.label)}
               className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl font-semibold transition-colors ${
                 tool === s.id ? 'bg-orange-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
@@ -1028,11 +1035,11 @@ export function ToolbarMobile() {
                 color === c.hex ? 'border-slate-900 scale-110' : 'border-slate-200 hover:scale-105'
               }`}
               style={{ backgroundColor: c.hex }}
-              title={c.name}
+              title={t(c.name)}
             />
           ))}
           <label
-            title="Custom colour"
+            title={t('viewer.toolbar.custom_colour')}
             className={`w-8 h-8 rounded-full cursor-pointer border-2 flex-shrink-0 overflow-hidden transition-transform ${
               !COLORS.some((c) => c.hex === color) ? 'border-slate-900 scale-110' : 'border-slate-200 hover:scale-105'
             }`}
@@ -1113,20 +1120,26 @@ export function ToolbarMobile() {
         {mobileBtnWithPlus(
           selectGroupTool(tool),
           SELECT_GROUP_ICON[tool] ?? '↖',
-          tool === 'hand' ? 'Hand' : tool === 'marquee' ? 'Area' : tool === 'selecttext' ? 'Text' : 'Select',
+          tool === 'hand'
+            ? t('viewer.toolbar.tool_hand')
+            : tool === 'marquee'
+              ? t('viewer.toolbar.mobile_select_area')
+              : tool === 'selecttext'
+                ? t('viewer.toolbar.mobile_select_text')
+                : t('viewer.toolbar.tool_select'),
           'select'
         )}
 
         {/* Draw with + (includes shapes/stroke/colour in panel) */}
-        {mobileBtnWithPlus('draw', '✎', 'Draw', 'draw', '#000000')}
+        {mobileBtnWithPlus('draw', '✎', t('viewer.toolbar.mobile_draw'), 'draw', '#000000')}
 
         {/* Text with + */}
-        {mobileBtnWithPlus('text', 'T', 'Text', 'text')}
+        {mobileBtnWithPlus('text', 'T', t('viewer.toolbar.mobile_text'), 'text')}
 
         {/* Image upload */}
         <label className={`flex flex-col items-center justify-center flex-1 h-full gap-0.5 cursor-pointer ${tool === 'image' ? 'text-orange-400' : 'text-slate-200'}`}>
           <PictureFrameIcon active={tool === 'image'} className="w-6 h-6" />
-          <span className="text-[10px] font-medium">Image</span>
+          <span className="text-[10px] font-medium">{t('viewer.toolbar.mobile_image')}</span>
           <input
             type="file"
             accept="image/png,image/jpeg,image/webp,image/gif"
@@ -1141,7 +1154,7 @@ export function ToolbarMobile() {
           className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 text-slate-200"
         >
           <QrIcon className="w-6 h-6" />
-          <span className="text-[10px] font-medium">QR</span>
+          <span className="text-[10px] font-medium">{t('viewer.toolbar.mobile_qr')}</span>
         </button>
 
         <div className="flex-1 h-full flex items-stretch">
@@ -1154,7 +1167,7 @@ export function ToolbarMobile() {
           className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 text-slate-200 disabled:opacity-40"
         >
           <span className="text-xl leading-none">↶</span>
-          <span className="text-[10px] font-medium">Undo</span>
+          <span className="text-[10px] font-medium">{t('viewer.toolbar.mobile_undo')}</span>
         </button>
 
         <button
@@ -1163,7 +1176,7 @@ export function ToolbarMobile() {
           className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 text-orange-400 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <span className="text-xl leading-none">⤓</span>
-          <span className="text-[10px] font-medium">Save</span>
+          <span className="text-[10px] font-medium">{t('viewer.toolbar.mobile_save')}</span>
         </button>
       </nav>
 

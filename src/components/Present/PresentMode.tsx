@@ -3,6 +3,7 @@ import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { buildAnnotatedPdfBytes } from '../../lib/export'
 import { pdfjsLib, type PDFDocumentProxy } from '../../lib/pdfjs'
+import { getT, useT } from '../../i18n'
 
 // 1:1 with the editor's PDF-point coordinate space — see ExportModal.tsx.
 const EXPORT_SCALE = 1.0
@@ -14,6 +15,7 @@ export default function PresentMode() {
   const open = usePdfStore((s) => s.presentOpen)
   const setOpen = usePdfStore((s) => s.setPresentOpen)
   const sourceBytes = usePdfStore((s) => s.sourceBytes)
+  const t = useT()
 
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null)
   const [building, setBuilding] = useState(false)
@@ -55,7 +57,7 @@ export default function PresentMode() {
       } catch (e) {
         if (myId !== buildIdRef.current) return
         console.error(e)
-        setError((e as Error).message || 'Could not start presentation')
+        setError((e as Error).message || getT()('tools.present.start_failed'))
       } finally {
         if (myId === buildIdRef.current) setBuilding(false)
       }
@@ -202,13 +204,13 @@ export default function PresentMode() {
         <button
           onClick={close}
           className="ml-auto px-3 h-9 rounded bg-white/15 hover:bg-white/25 text-sm font-medium backdrop-blur-sm"
-          aria-label="Exit presentation"
+          aria-label={t('tools.present.exit_label')}
         >
           {/* ⚠️ An SVG, not `✕` — U+2715 has no glyph in iOS's system font and
               WebKit does not fall back, so the one way out of presentation
               mode read "Exit ▯?▯" on the phone. See the suite landmines. */}
           <span className="inline-flex items-center gap-1.5">
-            Exit
+            {t('tools.present.exit')}
             <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true">
               <path d="m4 4 8 8M12 4l-8 8" />
             </svg>
@@ -222,9 +224,9 @@ export default function PresentMode() {
         className="flex-1 min-h-0 flex items-center justify-center overflow-hidden"
       >
         {error ? (
-          <div className="text-red-400 px-6 text-center">Presentation failed: {error}</div>
+          <div className="text-red-400 px-6 text-center">{t('tools.present.failed', { message: error })}</div>
         ) : !doc ? (
-          <div className="text-white/60">{building ? 'Preparing slides…' : 'Loading…'}</div>
+          <div className="text-white/60">{building ? t('tools.present.preparing') : t('tools.present.loading')}</div>
         ) : (
           <Slide doc={doc} pageIndex={pageIndex} />
         )}
@@ -234,7 +236,7 @@ export default function PresentMode() {
       <button
         onClick={(e) => { e.stopPropagation(); prev() }}
         disabled={pageIndex === 0}
-        aria-label="Previous page"
+        aria-label={t('tools.present.previous')}
         className={`absolute left-3 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white/10 hover:bg-white/25 text-white text-2xl flex items-center justify-center backdrop-blur-sm transition-opacity duration-300 disabled:opacity-0 disabled:pointer-events-none ${
           controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
@@ -244,7 +246,7 @@ export default function PresentMode() {
       <button
         onClick={(e) => { e.stopPropagation(); next() }}
         disabled={numPages > 0 && pageIndex >= numPages - 1}
-        aria-label="Next page"
+        aria-label={t('tools.present.next')}
         className={`absolute right-3 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white/10 hover:bg-white/25 text-white text-2xl flex items-center justify-center backdrop-blur-sm transition-opacity duration-300 disabled:opacity-0 disabled:pointer-events-none ${
           controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}

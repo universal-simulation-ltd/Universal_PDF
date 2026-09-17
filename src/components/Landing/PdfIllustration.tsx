@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { useIllustrationClock } from '@unisim/sdk'
+import { useT } from '../../i18n'
 
 /** One sweep of the loop, frame 0 → frame 10, in ms. It runs straight back down. */
 const SWEEP_MS = 4600
@@ -53,6 +54,7 @@ const SIGNATURE_D_LOCAL =
  * with the thing they came to click. It settles on frame 0 and stays there.
  */
 export default function PdfIllustration() {
+  const t = useT()
   const ref = useRef<HTMLDivElement>(null)
   useIllustrationClock(ref, { sweepMs: SWEEP_MS })
 
@@ -148,7 +150,7 @@ export default function PdfIllustration() {
 
           {/* Signature line */}
           <line x1="84" y1="514" x2="260" y2="514" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3 4" />
-          <text x="84" y="530" fontSize="9" fill="#94a3b8" fontFamily="ui-sans-serif, system-ui">Signature</text>
+          <text x="84" y="530" fontSize="9" fill="#94a3b8" fontFamily="ui-sans-serif, system-ui">{t('app.illustration_signature')}</text>
 
           {/* Animated signature stroke */}
           <path
@@ -219,7 +221,7 @@ export default function PdfIllustration() {
               fill="#059669"
               fontFamily="ui-sans-serif, system-ui"
             >
-              APPROVED
+              {t('app.illustration_approved')}
             </text>
           </g>
 

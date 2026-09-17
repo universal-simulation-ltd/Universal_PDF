@@ -5,6 +5,8 @@ import { downloadZip } from '../../lib/zip'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useExitGuard } from '../../stores/exitGuard'
 import { saveBlob } from '@unisim/media/save'
+import { useT } from '../../i18n'
+import { formatSize } from '../Export/formatSize'
 
 export type ConvertMode = 'pdf-to-images' | 'images-to-pdf'
 
@@ -14,12 +16,6 @@ interface Props {
   /** Seed the PDF→images side with this file (the currently-open document when
    *  launched from the viewer's Advanced menu). Omit to start empty. */
   initialPdf?: File | null
-}
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(2)} MB`
 }
 
 // Convert between PDFs and images, both directions, fully on-device: pdfjs
@@ -38,6 +34,7 @@ export default function ConvertDialog({ initialMode, onClose, initialPdf }: Prop
   const loadFile = usePdfStore((s) => s.loadFile)
   const snapshotDocument = usePdfStore((s) => s.snapshotDocument)
   const requestExit = useExitGuard((s) => s.requestExit)
+  const t = useT()
 
   function switchMode(next: ConvertMode) {
     if (busy) return
@@ -53,7 +50,7 @@ export default function ConvertDialog({ initialMode, onClose, initialPdf }: Prop
       const buf = await pdf.arrayBuffer()
       const entries = await pdfToImages(buf, pdf.name, {
         format,
-        onProgress: (done, total) => setProgress(`Rendering ${done}/${total}…`)
+        onProgress: (done, total) => setProgress(t('tools.convert.rendering', { done, total }))
       })
       if (entries.length === 1) {
         const mime = format === 'png' ? 'image/png' : 'image/jpeg'
@@ -66,7 +63,7 @@ export default function ConvertDialog({ initialMode, onClose, initialPdf }: Prop
       onClose()
     } catch (err) {
       console.error(err)
-      alert('Convert failed: ' + (err as Error).message)
+      alert(t('tools.convert.failed', { message: (err as Error).message }))
     } finally {
       setBusy(false)
       setProgress('')
@@ -96,7 +93,7 @@ export default function ConvertDialog({ initialMode, onClose, initialPdf }: Prop
       onClose()
     } catch (err) {
       console.error(err)
-      alert('Convert failed: ' + (err as Error).message)
+      alert(t('tools.convert.failed', { message: (err as Error).message }))
     } finally {
       setBusy(false)
     }
@@ -115,11 +112,11 @@ export default function ConvertDialog({ initialMode, onClose, initialPdf }: Prop
           still overrun the visible area once the browser chrome shows. */}
       <div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-lg flex max-h-[min(100%,100dvh)] flex-col">
         <div className="flex shrink-0 items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold text-slate-900">Convert</h2>
+          <h2 className="text-lg font-semibold text-slate-900">{t('tools.convert.title')}</h2>
           <button
             onClick={onClose}
             disabled={busy}
-            aria-label="Close"
+            aria-label={t('tools.common.close')}
             className="text-slate-400 hover:text-slate-700 text-2xl leading-none w-8 h-8 flex items-center justify-center disabled:opacity-50"
           >
             ×
@@ -130,8 +127,8 @@ export default function ConvertDialog({ initialMode, onClose, initialPdf }: Prop
         {/* Direction toggle */}
         <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-lg mb-4">
           {([
-            ['pdf-to-images', 'PDF → images'],
-            ['images-to-pdf', 'Images → PDF']
+            ['pdf-to-images', t('tools.convert.pdf_to_images')],
+            ['images-to-pdf', t('tools.convert.images_to_pdf')]
           ] as const).map(([value, label]) => (
             <button
               key={value}
@@ -161,10 +158,10 @@ export default function ConvertDialog({ initialMode, onClose, initialPdf }: Prop
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block font-medium text-slate-800 truncate">
-                  {pdf ? pdf.name : 'Choose a PDF…'}
+                  {pdf ? pdf.name : t('tools.convert.choose_pdf')}
                 </span>
                 <span className="block text-xs text-slate-500">
-                  {pdf ? formatSize(pdf.size) : 'One image per page'}
+                  {pdf ? formatSize(t, pdf.size) : t('tools.convert.one_image_per_page')}
                 </span>
               </span>
             </button>
@@ -181,12 +178,12 @@ export default function ConvertDialog({ initialMode, onClose, initialPdf }: Prop
 
             <div className="mt-4">
               <div className="text-xs uppercase tracking-wide text-slate-500 font-medium mb-1.5">
-                Image format
+                {t('tools.convert.image_format')}
               </div>
               <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-lg">
                 {([
-                  ['png', 'PNG · sharp'],
-                  ['jpeg', 'JPG · smaller']
+                  ['png', t('tools.convert.png_sharp')],
+                  ['jpeg', t('tools.convert.jpg_smaller')]
                 ] as const).map(([value, label]) => (
                   <button
                     key={value}
@@ -210,14 +207,14 @@ export default function ConvertDialog({ initialMode, onClose, initialPdf }: Prop
                 disabled={busy}
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700 disabled:opacity-50"
               >
-                Cancel
+                {t('tools.common.cancel')}
               </button>
               <button
                 onClick={runPdfToImages}
                 disabled={!pdf || busy}
                 className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {busy ? progress || 'Converting…' : '⬇ Convert & download'}
+                {busy ? progress || t('tools.convert.converting') : t('tools.convert.convert_download')}
               </button>
             </div>
           </>
@@ -234,10 +231,10 @@ export default function ConvertDialog({ initialMode, onClose, initialPdf }: Prop
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block font-medium text-slate-800 truncate">
-                  {images.length > 0 ? `${images.length} image${images.length > 1 ? 's' : ''} selected` : 'Choose images…'}
+                  {images.length > 0 ? t.plural('tools.convert.images_selected', images.length) : t('tools.convert.choose_images')}
                 </span>
                 <span className="block text-xs text-slate-500">
-                  PNG, JPG, WebP, HEIC — one page each, in the order picked
+                  {t('tools.convert.images_hint')}
                 </span>
               </span>
             </button>
@@ -263,7 +260,7 @@ export default function ConvertDialog({ initialMode, onClose, initialPdf }: Prop
                   <div key={i} className="flex items-center gap-2 px-3 py-1.5 text-sm">
                     <span className="w-5 text-right tabular-nums text-slate-400">{i + 1}</span>
                     <span className="truncate flex-1 text-slate-700" title={f.name}>{f.name}</span>
-                    <span className="text-xs text-slate-400 tabular-nums shrink-0">{formatSize(f.size)}</span>
+                    <span className="text-xs text-slate-400 tabular-nums shrink-0">{formatSize(t, f.size)}</span>
                   </div>
                 ))}
               </div>
@@ -275,21 +272,21 @@ export default function ConvertDialog({ initialMode, onClose, initialPdf }: Prop
                 disabled={busy}
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700 disabled:opacity-50"
               >
-                Cancel
+                {t('tools.common.cancel')}
               </button>
               <button
                 onClick={() => runImagesToPdf(true)}
                 disabled={images.length === 0 || busy}
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Convert &amp; open
+                {t('tools.convert.convert_open')}
               </button>
               <button
                 onClick={() => runImagesToPdf(false)}
                 disabled={images.length === 0 || busy}
                 className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {busy ? 'Converting…' : '⬇ Convert & download'}
+                {busy ? t('tools.convert.converting') : t('tools.convert.convert_download')}
               </button>
             </div>
           </>

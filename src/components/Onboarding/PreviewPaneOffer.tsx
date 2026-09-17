@@ -1,29 +1,36 @@
 import type { PreviewPaneOffer as Offer } from '../../hooks/usePreviewPane'
+import { useT, type Translator } from '../../i18n'
 
-function label(offer: Offer) {
-  if (offer.busy) return 'Waiting for Windows…'
-  if (offer.enabled) return 'Stop showing PDFs in the Explorer preview pane'
-  return 'Show PDFs in the Explorer preview pane — needs admin once'
+function label(t: Translator, offer: Offer) {
+  if (offer.busy) return t('app.preview_pane_waiting')
+  if (offer.enabled) return t('app.preview_pane_stop')
+  return t('app.preview_pane_show')
 }
 
 function OutcomeLine({ offer }: { offer: Offer }) {
+  const t = useT()
   if (!offer.outcome) return null
   if (offer.outcome.kind === 'enabled') {
     return (
       <p className="mt-1 px-1 text-[13px] text-emerald-700">
-        Done. Turn the pane on in Explorer with <kbd className="font-mono">Alt</kbd>+
-        <kbd className="font-mono">P</kbd> and select a PDF.
+        {t.rich('app.preview_pane_enabled', {
+          shortcut: (
+            <>
+              <kbd className="font-mono">Alt</kbd>+<kbd className="font-mono">P</kbd>
+            </>
+          )
+        })}
       </p>
     )
   }
   if (offer.outcome.kind === 'disabled') {
-    return <p className="mt-1 px-1 text-[13px] text-slate-600">Turned off.</p>
+    return <p className="mt-1 px-1 text-[13px] text-slate-600">{t('app.preview_pane_disabled')}</p>
   }
   if (offer.outcome.kind === 'declined') {
     // Not an error: someone was asked for administrator rights and said no.
     return (
       <p className="mt-1 px-1 text-[13px] text-slate-600">
-        Left as it was — the change needs the administrator prompt.
+        {t('app.preview_pane_declined')}
       </p>
     )
   }
@@ -39,16 +46,17 @@ function OutcomeLine({ offer }: { offer: Offer }) {
  * rather than interrupting to ask.
  */
 export function PreviewPanePill({ offer, className }: { offer: Offer; className: string }) {
+  const t = useT()
   if (!offer.available) return null
   return (
     <>
       <button type="button" onClick={() => void offer.toggle()} disabled={offer.busy} className={className}>
         <span aria-hidden="true">👁️</span>
-        {label(offer)}
+        {label(t, offer)}
       </button>
       {offer.incomplete && (
         <p className="mt-1 px-1 text-[13px] text-amber-700">
-          Half registered — reinstall Universal PDF to finish setting this up.
+          {t('app.preview_pane_incomplete')}
         </p>
       )}
       <OutcomeLine offer={offer} />
@@ -61,9 +69,9 @@ export function PreviewPanePill({ offer, className }: { offer: Offer; className:
           cost an afternoon to work out from the other side. */}
       {offer.enabled && (
         <p className="mt-1 px-1 text-[13px] text-slate-500">
-          A PDF saved from the internet shows a Windows safety message instead of
-          a preview — that is Windows, not this app. Right-click the file →
-          Properties → tick <strong className="font-medium">Unblock</strong>.
+          {t.rich('app.preview_pane_unblock', {
+            unblock: <strong className="font-medium">{t('app.preview_pane_unblock_label')}</strong>
+          })}
         </p>
       )}
     </>

@@ -16,6 +16,10 @@
 // wants the file will have it in under a second. We say so, in those words,
 // rather than colouring a bar amber and hoping.
 
+// ⚠️ `runtime.ts`, not `../i18n`: scripts/lockPassword.test.mjs imports this
+// file under plain node, which cannot load React or the SDK.
+import { getT } from '../i18n/runtime.ts'
+
 export type LockMode = 'password' | 'pin'
 
 /** The shortest we will accept. Four digits is a phone lock screen's worth. */
@@ -36,15 +40,16 @@ export const MIN_PASSWORD = 6
 const GUESSES_PER_SECOND = 200_000
 
 function describeDuration(seconds: number): string {
-  if (seconds < 1) return 'less than a second'
-  if (seconds < 60) return `about ${Math.round(seconds)} seconds`
-  if (seconds < 3600) return `about ${Math.round(seconds / 60)} minutes`
-  if (seconds < 86_400) return `about ${Math.round(seconds / 3600)} hours`
-  if (seconds < 2_592_000) return `about ${Math.round(seconds / 86_400)} days`
-  if (seconds < 31_536_000) return `about ${Math.round(seconds / 2_592_000)} months`
+  const t = getT()
+  if (seconds < 1) return t('lib.lock_duration_instant')
+  if (seconds < 60) return t.plural('lib.lock_duration_seconds', Math.round(seconds))
+  if (seconds < 3600) return t.plural('lib.lock_duration_minutes', Math.round(seconds / 60))
+  if (seconds < 86_400) return t.plural('lib.lock_duration_hours', Math.round(seconds / 3600))
+  if (seconds < 2_592_000) return t.plural('lib.lock_duration_days', Math.round(seconds / 86_400))
+  if (seconds < 31_536_000) return t.plural('lib.lock_duration_months', Math.round(seconds / 2_592_000))
   const years = seconds / 31_536_000
-  if (years < 1000) return `about ${Math.round(years)} years`
-  return 'longer than anyone will wait'
+  if (years < 1000) return t.plural('lib.lock_duration_years', Math.round(years))
+  return t('lib.lock_duration_forever')
 }
 
 /** The alphabet an attacker would have to search, given what was typed. */
@@ -100,24 +105,24 @@ function isObviousPin(value: string): boolean {
 export function strengthOf(mode: LockMode, value: string): Strength {
   if (!value) return { level: 'weak', label: '', note: '' }
 
+  const t = getT()
   if (mode === 'pin') {
     if (isObviousPin(value)) {
       return {
         level: 'weak',
-        label: 'Guessable',
-        note: 'This is one of the first PINs anyone tries. Pick digits that are not a run or a repeat.',
+        label: t('lib.lock_guessable'),
+        note: t('lib.lock_pin_obvious'),
       }
     }
     const seconds = Math.pow(10, value.length) / 2 / GUESSES_PER_SECOND
     const level: StrengthLevel = value.length >= 12 ? 'good' : value.length >= 8 ? 'fair' : 'weak'
     return {
       level,
-      label: level === 'weak' ? 'Weak' : level === 'fair' ? 'Fair' : 'Reasonable',
+      label: level === 'weak' ? t('lib.lock_weak') : level === 'fair' ? t('lib.lock_fair') : t('lib.lock_reasonable'),
       note:
-        `A ${value.length}-digit PIN falls to someone determined in ${describeDuration(seconds)}. ` +
-        (level === 'weak'
-          ? 'Fine for keeping a document out of the wrong hands by accident; not for anything valuable.'
-          : 'Use a password instead if the document would genuinely hurt to lose.'),
+        level === 'weak'
+          ? t('lib.lock_pin_note_weak', { digits: value.length, time: describeDuration(seconds) })
+          : t('lib.lock_pin_note', { digits: value.length, time: describeDuration(seconds) }),
     }
   }
 
@@ -125,15 +130,15 @@ export function strengthOf(mode: LockMode, value: string): Strength {
   if (COMMON.has(lower) || COMMON.has(lower.replace(/[0-9!.]+$/, ''))) {
     return {
       level: 'weak',
-      label: 'Guessable',
-      note: 'This is on every password-guessing list there is. Almost anything else is better.',
+      label: t('lib.lock_guessable'),
+      note: t('lib.lock_password_common'),
     }
   }
   if (value.length < 8) {
     return {
       level: 'weak',
-      label: 'Too short',
-      note: 'Short passwords are searched exhaustively. Aim for a phrase of three or four words.',
+      label: t('lib.lock_too_short'),
+      note: t('lib.lock_password_short'),
     }
   }
 
@@ -142,11 +147,11 @@ export function strengthOf(mode: LockMode, value: string): Strength {
   const level: StrengthLevel = years > 1000 ? 'strong' : years > 1 ? 'good' : 'fair'
   return {
     level,
-    label: level === 'strong' ? 'Strong' : level === 'good' ? 'Good' : 'Fair',
+    label: level === 'strong' ? t('lib.lock_strong') : level === 'good' ? t('lib.lock_good') : t('lib.lock_fair'),
     note:
       level === 'strong'
-        ? 'Nobody is brute-forcing this. Just make sure you can remember it — there is no way back in without it.'
-        : `Roughly ${describeDuration(seconds)} to guess by brute force — assuming it is not a phrase somebody would try first.`,
+        ? t('lib.lock_password_strong')
+        : t('lib.lock_password_note', { time: describeDuration(seconds) }),
   }
 }
 
@@ -163,15 +168,16 @@ export interface Validation {
  * only check standing between a user and that.
  */
 export function validateLock(mode: LockMode, value: string, confirm: string): Validation {
+  const t = getT()
   if (mode === 'pin') {
-    if (!/^\d*$/.test(value)) return { ok: false, error: 'A PIN is digits only.' }
-    if (value.length < MIN_PIN) return { ok: false, error: `A PIN needs at least ${MIN_PIN} digits.` }
+    if (!/^\d*$/.test(value)) return { ok: false, error: t('lib.lock_pin_digits_only') }
+    if (value.length < MIN_PIN) return { ok: false, error: t('lib.lock_pin_min', { min: MIN_PIN }) }
   } else if (value.length < MIN_PASSWORD) {
-    return { ok: false, error: `A password needs at least ${MIN_PASSWORD} characters.` }
+    return { ok: false, error: t('lib.lock_password_min', { min: MIN_PASSWORD }) }
   }
   if (!confirm) return { ok: false, error: null }
   if (value !== confirm) {
-    return { ok: false, error: mode === 'pin' ? 'The two PINs do not match.' : 'The two passwords do not match.' }
+    return { ok: false, error: mode === 'pin' ? t('lib.lock_pins_differ') : t('lib.lock_passwords_differ') }
   }
   return { ok: true, error: null }
 }

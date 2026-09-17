@@ -1,22 +1,24 @@
 import { usePdfStore } from '../../stores/pdfStore'
+import { useT, type Translator } from '../../i18n'
 
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+function formatSize(t: Translator, bytes: number): string {
+  if (bytes < 1024) return t('app.recent_size_b', { n: bytes })
+  if (bytes < 1024 * 1024) return t('app.recent_size_kb', { n: Math.round(bytes / 1024) })
+  return t('app.recent_size_mb', { n: (bytes / 1024 / 1024).toFixed(1) })
 }
 
-function formatRelative(ms: number): string {
+function formatRelative(t: Translator, ms: number): string {
   const diff = Date.now() - ms
-  if (diff < 60_000) return 'just now'
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`
-  return `${Math.floor(diff / 86_400_000)}d ago`
+  if (diff < 60_000) return t('app.recent_just_now')
+  if (diff < 3_600_000) return t('app.recent_minutes_ago', { n: Math.floor(diff / 60_000) })
+  if (diff < 86_400_000) return t('app.recent_hours_ago', { n: Math.floor(diff / 3_600_000) })
+  return t('app.recent_days_ago', { n: Math.floor(diff / 86_400_000) })
 }
 
 const RECENTS_LIMIT = 2
 
 export default function RecentFilesList({ className = 'mt-8 w-full max-w-md' }: { className?: string } = {}) {
+  const t = useT()
   const recents = usePdfStore((s) => s.recents)
   const openRecent = usePdfStore((s) => s.openRecent)
   const removeRecent = usePdfStore((s) => s.removeRecent)
@@ -29,10 +31,10 @@ export default function RecentFilesList({ className = 'mt-8 w-full max-w-md' }: 
   return (
     <div className={className}>
       <div className="text-xs uppercase text-slate-500 font-medium mb-2 px-1 tracking-wide">
-        Recent
+        {t('app.recent_heading')}
         {extra > 0 && (
           <span className="ml-2 normal-case text-slate-400 font-normal">
-            +{extra} more in File menu once you open one
+            {t('app.recent_more', { count: extra })}
           </span>
         )}
       </div>
@@ -50,15 +52,15 @@ export default function RecentFilesList({ className = 'mt-8 w-full max-w-md' }: 
               <div className="flex-1 min-w-0">
                 <div className="font-medium text-slate-900 truncate">{r.name}</div>
                 <div className="text-xs text-slate-500">
-                  {formatSize(r.size)} · {formatRelative(r.lastOpened)}
+                  {formatSize(t, r.size)} · {formatRelative(t, r.lastOpened)}
                 </div>
               </div>
             </button>
             <button
               onClick={() => removeRecent(r.id)}
               className="text-slate-300 hover:text-red-600 px-3 py-3"
-              title="Remove from recents"
-              aria-label={`Remove ${r.name} from recents`}
+              title={t('app.recent_remove')}
+              aria-label={t('app.recent_remove_aria', { name: r.name })}
             >
               {/* SVG, not `✕`: U+2715 is a hollow ▯?▯ box in iOS's system
                   font — see the suite landmines. */}

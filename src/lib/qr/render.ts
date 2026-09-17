@@ -7,6 +7,7 @@
 // a URL still resolving.
 
 import { renderQrCanvas, type QrDesign } from '@unisim/qr'
+import { getT } from '../../i18n'
 
 /** The size a QR is rendered at when it goes onto a page. Generous on purpose:
  *  placed at the default ~200pt it works out around 360 dpi, so the code still
@@ -50,7 +51,7 @@ export async function imageUrlToDataUrl(src: string, max = 512): Promise<string>
   canvas.width = Math.max(1, Math.round(w * scale))
   canvas.height = Math.max(1, Math.round(h * scale))
   const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('Canvas is not available in this browser.')
+  if (!ctx) throw new Error(getT()('lib.qr_no_canvas'))
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
   return canvas.toDataURL('image/png')
 }
@@ -70,7 +71,7 @@ export async function imageUrlToDataUrl(src: string, max = 512): Promise<string>
  * with, and the quiet zone is not decoration) — @unisim/qr does that scaling.
  */
 export async function renderQrPng(design: QrDesign, size = PLACEMENT_SIZE): Promise<string> {
-  if (!design.data.trim()) throw new Error('Enter a link or some text to encode.')
+  if (!design.data.trim()) throw new Error(getT()('lib.qr_no_data'))
   const canvas = await renderQrCanvas(design, size)
   return canvas.toDataURL('image/png')
 }

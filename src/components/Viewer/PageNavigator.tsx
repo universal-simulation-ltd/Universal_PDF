@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { usePdfStore } from '../../stores/pdfStore'
+import { useT } from '../../i18n'
 
 // ── Thumbnails are sized to the pixels they actually occupy ─────────────
 // The pane renders each page into an <img> capped at 180 CSS px wide (see
@@ -16,6 +17,7 @@ const THUMB_QUALITY = 0.85
 type DropPosition = 'before' | 'after'
 
 export default function PageNavigator() {
+  const t = useT()
   const doc = usePdfStore((s) => s.doc)
   const numPages = usePdfStore((s) => s.numPages)
   const open = usePdfStore((s) => s.pageNavOpen)
@@ -104,7 +106,7 @@ export default function PageNavigator() {
     // keep straight. The pane asks for the order to be settled first.
     if (busy || numPages <= 1 || pending) return
     const ok = window.confirm(
-      `Delete page ${i + 1}? Any annotations on this page will also be removed.`
+      t('viewer.nav.delete_confirm', { page: i + 1 })
     )
     if (!ok) return
     setBusy(true)
@@ -112,7 +114,7 @@ export default function PageNavigator() {
       await deletePage(i)
     } catch (err) {
       console.error(err)
-      alert('Failed to delete page')
+      alert(t('viewer.nav.delete_failed'))
     } finally {
       setBusy(false)
     }
@@ -140,7 +142,7 @@ export default function PageNavigator() {
       setOrder(null)
     } catch (err) {
       console.error(err)
-      alert('Failed to reorder pages')
+      alert(t('viewer.nav.reorder_failed'))
     } finally {
       setBusy(false)
     }
@@ -203,12 +205,12 @@ export default function PageNavigator() {
       >
         <div className="sticky top-0 bg-white border-b border-slate-100 px-3 py-2 flex items-center justify-between z-10">
           <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-            Pages
+            {t('viewer.bar.pages')}
           </div>
           <button
             onClick={() => setOpen(false)}
             className="md:hidden text-slate-400 hover:text-slate-700 w-7 h-7 flex items-center justify-center"
-            aria-label="Close pages"
+            aria-label={t('viewer.nav.close')}
           >
             {/* ⚠️ SVG, not `✕`: U+2715 has no glyph in iOS's system font, so
                 the only way to close the page list on a phone — where this
@@ -261,7 +263,7 @@ export default function PageNavigator() {
               type="button"
               onClick={() => setOrder(null)}
               disabled={busy}
-              title="Discard the new page order"
+              title={t('viewer.nav.discard_order')}
               className="w-8 h-8 shrink-0 rounded-md border border-slate-300 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               ↺
@@ -270,10 +272,10 @@ export default function PageNavigator() {
               type="button"
               onClick={applyOrder}
               disabled={busy}
-              title="Apply the new page order"
+              title={t('viewer.nav.apply_order_title')}
               className="flex-1 h-8 rounded-md bg-orange-700 hover:bg-orange-800 text-white text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-wait"
             >
-              {busy ? 'Applying…' : (<><span aria-hidden="true">✓</span> Apply new order</>)}
+              {busy ? t('viewer.nav.applying') : (<><span aria-hidden="true">✓</span> {t('viewer.nav.apply_order')}</>)}
             </button>
           </div>
         )}
@@ -318,6 +320,7 @@ function PageThumb({
   onDrop,
   onDragEnd
 }: ThumbProps) {
+  const t = useT()
   const canDelete = total > 1 && !busy && !pending
   const canMoveUp = index > 0 && !busy
   const canMoveDown = index < total - 1 && !busy
@@ -339,7 +342,7 @@ function PageThumb({
       onDrop={onDrop}
       onDragEnd={onDragEnd}
       style={{ cursor: busy ? 'wait' : 'grab' }}
-      title="Drag to reorder"
+      title={t('viewer.nav.drag_to_reorder')}
     >
       {dropIndicator === 'before' && (
         <div className="absolute left-1 right-1 -top-1 h-0.5 bg-orange-500 rounded pointer-events-none z-10" />
@@ -355,14 +358,14 @@ function PageThumb({
         {thumb ? (
           <img
             src={thumb}
-            alt={`Page ${index + 1}`}
+            alt={t('viewer.nav.page', { page: index + 1 })}
             className="block w-full max-w-[180px] shadow-sm border border-slate-200"
             draggable={false}
           />
         ) : (
           <div className="w-full max-w-[180px] aspect-[1/1.41] bg-slate-100 animate-pulse rounded" />
         )}
-        <span className="text-xs text-slate-500">Page {index + 1}</span>
+        <span className="text-xs text-slate-500">{t('viewer.nav.page', { page: index + 1 })}</span>
       </button>
 
       {/* Action overlay — always visible so the controls are discoverable. */}
@@ -371,8 +374,8 @@ function PageThumb({
           type="button"
           onClick={actionHandler(onDelete)}
           disabled={!canDelete}
-          title={pending ? 'Apply or discard the new page order first' : 'Delete page'}
-          aria-label={`Delete page ${index + 1}`}
+          title={pending ? t('viewer.nav.delete_blocked') : t('viewer.nav.delete_page_title')}
+          aria-label={t('viewer.nav.delete_page', { page: index + 1 })}
           className="w-6 h-6 rounded-full bg-white text-red-600 hover:bg-red-600 hover:text-white border border-slate-300 shadow text-xs leading-none flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {/* SVG, not `✕` — see the note on the Close pages button above. */}
@@ -386,8 +389,8 @@ function PageThumb({
           type="button"
           onClick={actionHandler(onMoveUp)}
           disabled={!canMoveUp}
-          title="Move page up"
-          aria-label={`Move page ${index + 1} up`}
+          title={t('viewer.nav.move_up_title')}
+          aria-label={t('viewer.nav.move_up', { page: index + 1 })}
           className="w-6 h-6 rounded-full bg-white text-slate-700 hover:bg-slate-700 hover:text-white border border-slate-300 shadow text-xs leading-none flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
         >
           ↑
@@ -396,8 +399,8 @@ function PageThumb({
           type="button"
           onClick={actionHandler(onMoveDown)}
           disabled={!canMoveDown}
-          title="Move page down"
-          aria-label={`Move page ${index + 1} down`}
+          title={t('viewer.nav.move_down_title')}
+          aria-label={t('viewer.nav.move_down', { page: index + 1 })}
           className="w-6 h-6 rounded-full bg-white text-slate-700 hover:bg-slate-700 hover:text-white border border-slate-300 shadow text-xs leading-none flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
         >
           ↓

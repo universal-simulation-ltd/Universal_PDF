@@ -9,6 +9,7 @@ import {
 } from '@unisim/sdk'
 import CompanyBadge from './CompanyBadge'
 import DeleteAccountDialog, { useCanDeleteAccount } from './DeleteAccountDialog'
+import { useT } from '../../i18n'
 
 // Same default the UniversalAppsNavBar uses for the profile "Sign in" item.
 const HUB_LOGIN_HREF = 'https://app.unisim.co.uk/login'
@@ -70,6 +71,7 @@ function initialsFor(displayName: string | null | undefined, email: string | nul
  * instead of an Actions button and an avatar sitting apart in the same bar.
  */
 export default function ToolbarUserProfile({ actions }: { actions?: ReactNode }) {
+  const t = useT()
   const { user, loading: userLoading } = useUser()
   const { profile, loading: profileLoading, refresh: refreshProfile } = useProfile()
   const { supabase, session } = useUniversal()
@@ -234,7 +236,7 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
                   className="flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-[13px] text-red-700 hover:bg-red-50"
                 >
                   <span aria-hidden="true" className="w-7 shrink-0 text-center">🗑</span>
-                  Delete my account…
+                  {t('menu.delete_account_row')}
                 </button>
               )}
             </>

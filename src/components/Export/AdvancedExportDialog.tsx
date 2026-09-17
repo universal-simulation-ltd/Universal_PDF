@@ -3,13 +3,15 @@ import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { downloadPdfBytes, type CompressQuality } from '../../lib/export'
 import { nextExportName, previewExportName } from '../../lib/exportName'
-import { countRedactions, isRedactConfirmed } from '../../lib/redactGate'
+import { countRedactions, isRedactConfirmed, REDACT_CONFIRM_WORD } from '../../lib/redactGate'
 import { encryptPdf } from '../../lib/pdfEncrypt'
 import { scrubPdfMetadata } from '../../lib/pdfMetadata'
 import LockFields, { EMPTY_LOCK, lockIncomplete, lockPasswordOf, type LockState } from '../Lock/LockFields'
 import { markSaved } from '../../lib/unsavedChanges'
 import { RedactIcon } from '../icons/RedactIcon'
 import { useExportBuild } from './useExportBuild'
+import { useT, type Translator } from '../../i18n'
+import { formatSize } from './formatSize'
 
 // Actions ▸ Advanced ▸ Advanced export — the things that change what the
 // exported file IS, rather than how big it is: flatten, strip metadata, lock.
@@ -45,19 +47,15 @@ import { useExportBuild } from './useExportBuild'
 // So the two questions are two controls: a FLATTEN checkbox, always available,
 // and — only once flattening is on — a strength choice between the two
 // rasterising levels. 'light' is no longer a button; it IS the unchecked box.
-const FLATTEN_OPTIONS: { value: CompressQuality; label: string; hint: string }[] = [
-  { value: 'balanced', label: 'Balanced', hint: 'Good quality · big saving on scans' },
-  { value: 'strong', label: 'Maximum', hint: 'Smallest · most visible loss' }
-]
+function flattenOptions(t: Translator): { value: CompressQuality; label: string; hint: string }[] {
+  return [
+    { value: 'balanced', label: t('tools.compress.balanced'), hint: t('tools.advanced.balanced_hint') },
+    { value: 'strong', label: t('tools.compress.maximum'), hint: t('tools.advanced.maximum_hint') }
+  ]
+}
 
 /** The quality used when the flatten box is ticked, before any strength is picked. */
 const DEFAULT_FLATTEN: CompressQuality = 'balanced'
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(2)} MB`
-}
 
 interface Props {
   open: boolean
@@ -68,6 +66,7 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
   const fileName = usePdfStore((s) => s.fileName)
   const isXfa = usePdfStore((s) => s.isXfa)
   const annotations = useAnnotationStore((s) => s.annotations)
+  const t = useT()
 
   // ⚠️ ONE boolean's worth of state, held as the quality itself. There is no
   // separate `flatten` flag to keep in step, and so no way for the checkbox and
@@ -150,6 +149,7 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
     const savedVs = against - estimated
     return savedVs >= against * RASTER_WORTH_IT && savedVs >= RASTER_MIN_BYTES
   }
+  const FLATTEN_OPTIONS = flattenOptions(t)
   const offeredQualities = FLATTEN_OPTIONS.filter((opt) => {
     if (opt.value === 'balanced') return true
     // Not measured yet (or the estimate failed): show it rather than hide a
@@ -200,7 +200,7 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
         // Bail rather than fall through, on the same grounds as the lock below:
         // handing over a file still carrying the author's name, to someone who
         // ticked a box saying it would not, is worse than an error.
-        setScrubError((e as Error).message || 'Could not strip the metadata.')
+        setScrubError((e as Error).message || t('tools.advanced.scrub_failed'))
         return
       }
     }
@@ -217,7 +217,7 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
       try {
         bytes = (await encryptPdf(bytes, password)).bytes
       } catch (e) {
-        setLockError((e as Error).message || 'Could not lock this PDF.')
+        setLockError((e as Error).message || t('tools.advanced.lock_failed'))
         return
       } finally {
         setLocking(false)
@@ -246,10 +246,10 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
           why `max-h-[min(100%,100dvh)]` rather than a `vh` cap. */}
       <div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-lg flex max-h-[min(100%,100dvh)] flex-col">
         <div className="flex shrink-0 items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold text-slate-900">Advanced export</h2>
+          <h2 className="text-lg font-semibold text-slate-900">{t('tools.advanced.title')}</h2>
           <button
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('tools.common.close')}
             className="text-slate-400 hover:text-slate-700 text-2xl leading-none w-8 h-8 flex items-center justify-center"
           >
             ×
@@ -258,16 +258,15 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
 
         <div className="-mx-5 min-h-0 flex-1 overflow-y-auto px-5">
         {error ? (
-          <div className="text-sm text-red-600">Export failed: {error}</div>
+          <div className="text-sm text-red-600">{t('tools.export.failed', { message: error })}</div>
         ) : isXfa ? (
           // Neither control can work on an XFA document: the rasteriser only
           // ever captures Adobe's placeholder page, and there is no reason to
           // send someone down that path to find out.
           <div className="rounded-lg border border-slate-200 p-4">
-            <div className="text-sm font-medium text-slate-900">Filled XFA form</div>
+            <div className="text-sm font-medium text-slate-900">{t('tools.export.xfa_title')}</div>
             <p className="mt-1 text-xs text-slate-500">
-              Flattening and locking aren't available for XFA documents. Use Export to
-              download the filled form.
+              {t('tools.advanced.xfa_body')}
             </p>
           </div>
         ) : (
@@ -290,16 +289,15 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
                 />
                 <span className="min-w-0">
                   <span className="block text-sm font-medium text-slate-900">
-                    Flatten pages to images
+                    {t('tools.advanced.flatten')}
                     {flattenSaving !== null && (
                       <span className="ml-1.5 text-xs font-medium tabular-nums text-emerald-700">
-                        ≈ {formatSize(flattenSaving)} smaller
+                        {t('tools.advanced.flatten_saving', { size: formatSize(t, flattenSaving) })}
                       </span>
                     )}
                   </span>
                   <span className="block text-xs text-slate-500 mt-0.5">
-                    Every page becomes a picture, so nobody can select, copy, search or edit
-                    the text — useful for a document you have signed.
+                    {t('tools.advanced.flatten_hint')}
                   </span>
                 </span>
               </label>
@@ -309,7 +307,7 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
               {showStrength && (
                 <div className="mt-2.5 pl-6.5">
                   <div className="text-xs uppercase tracking-wide text-slate-500 font-medium mb-1.5">
-                    Image quality
+                    {t('tools.advanced.image_quality')}
                   </div>
                   <div
                     className="grid gap-1 p-1 bg-slate-100 rounded-lg"
@@ -344,8 +342,7 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
 
               {flatten && (
                 <div className="mt-2 text-xs text-amber-700">
-                  Your open document keeps its text layer — only the downloaded copy is
-                  flattened. Export again from the toolbar if you need the text back.
+                  {t('tools.advanced.flatten_note')}
                 </div>
               )}
             </div>
@@ -372,11 +369,11 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
                   className="mt-0.5 h-4 w-4 shrink-0 accent-orange-700 disabled:cursor-wait"
                 />
                 <span className="min-w-0">
-                  <span className="block text-sm font-medium text-slate-900">Keep metadata</span>
+                  <span className="block text-sm font-medium text-slate-900">{t('tools.advanced.keep_metadata')}</span>
                   <span className="block text-xs text-slate-500 mt-0.5">
                     {keepMeta
-                      ? 'The author, title, dates and producing app travel with the downloaded copy.'
-                      : 'The author, title, dates and producing app are removed from the downloaded copy. Your open document keeps its own.'}
+                      ? t('tools.advanced.keep_metadata_on')
+                      : t('tools.advanced.keep_metadata_off')}
                   </span>
                   {/* Only when it is about to happen. Stripping the XMP packet
                       is what takes a PDF/A or PDF/UA document out of
@@ -384,8 +381,7 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
                       invisible unless someone says so. */}
                   {!keepMeta && (
                     <span className="block text-xs text-amber-700 mt-1">
-                      Tick this for an archival (PDF/A), accessible (PDF/UA) or licensed
-                      document — their conformance and licence live in the metadata.
+                      {t('tools.advanced.keep_metadata_warning')}
                     </span>
                   )}
                 </span>
@@ -407,7 +403,7 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
               {!ready ? (
                 <>
                   <div className="text-sm text-slate-500">
-                    {building ? 'Building export…' : 'Flattening pages…'}
+                    {building ? t('tools.export.building') : t('tools.advanced.flattening')}
                   </div>
                   {/* A rasterising pass over a long document is minutes of
                       work. Without a bar it reads as a hung dialog, which is
@@ -425,7 +421,7 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
                 <>
                   <div className="flex items-baseline gap-3 flex-wrap">
                     <div className="text-2xl font-semibold text-slate-900 tabular-nums">
-                      {formatSize(outSize)}
+                      {formatSize(t, outSize)}
                     </div>
                     {/* ⚠️ Three outcomes, not one. Flattening a text document
                         routinely produces a BIGGER file, and a single line
@@ -433,22 +429,22 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
                         saving of a negative number, which is not a sentence
                         anybody should have to parse. */}
                     {!flatten ? (
-                      <div className="text-xs text-slate-500">annotations baked in</div>
+                      <div className="text-xs text-slate-500">{t('tools.export.annotations_baked_in')}</div>
                     ) : delta > 0 ? (
                       <div className="text-xs font-medium text-emerald-700">
-                        {formatSize(delta)} smaller
+                        {t('tools.advanced.smaller', { size: formatSize(t, delta) })}
                       </div>
                     ) : delta < 0 ? (
                       <div className="text-xs font-medium text-amber-700">
-                        {formatSize(-delta)} bigger
+                        {t('tools.advanced.bigger', { size: formatSize(t, -delta) })}
                       </div>
                     ) : (
-                      <div className="text-xs font-medium text-slate-500">Same size</div>
+                      <div className="text-xs font-medium text-slate-500">{t('tools.advanced.same_size')}</div>
                     )}
                   </div>
                   <div className="text-[11px] text-slate-400 mt-0.5">
-                    {flatten ? 'pages rasterised to JPEG' : 'no changes to the pages'}
-                    {lock.enabled && ' · locked with AES-256'}
+                    {flatten ? t('tools.advanced.rasterised') : t('tools.advanced.no_page_changes')}
+                    {lock.enabled && ` · ${t('tools.advanced.locked_aes')}`}
                   </div>
                 </>
               )}
@@ -462,17 +458,16 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
                   </span>
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-red-900">
-                      Permanent redaction
+                      {t('tools.export.redact_title')}
                     </div>
                     <p className="mt-1 text-xs text-red-700">
-                      Exporting flattens {redactCount} redaction box{redactCount === 1 ? '' : 'es'} and
-                      removes the text underneath for good. This can't be undone.
+                      {t.plural('tools.export.redact_body', redactCount)}
                     </p>
                     <input
                       value={redactConfirm}
                       onChange={(e) => setRedactConfirm(e.target.value)}
-                      placeholder="Type REDACT to confirm"
-                      aria-label="Type REDACT to confirm"
+                      placeholder={t('tools.export.redact_confirm', { word: REDACT_CONFIRM_WORD })}
+                      aria-label={t('tools.export.redact_confirm', { word: REDACT_CONFIRM_WORD })}
                       autoCapitalize="characters"
                       spellCheck={false}
                       className="mt-2.5 w-full rounded-md border border-red-300 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 placeholder:text-red-300"
@@ -483,7 +478,9 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
             )}
 
             <p className="mt-4 text-xs text-slate-500">
-              Saves as <span className="font-medium text-slate-700">{previewName}</span>
+              {t.rich('tools.export.saves_as', {
+                name: <span className="font-medium text-slate-700">{previewName}</span>
+              })}
             </p>
 
             {/* A disabled button with no stated reason is the same as a broken
@@ -491,7 +488,7 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
                 can fix by typing, so it is the only one that says so. */}
             {lockIncomplete(lock) && !lockError && (
               <p className="mt-1 text-xs text-amber-700">
-                Finish the {lock.mode === 'pin' ? 'PIN' : 'password'} fields above to download.
+                {lock.mode === 'pin' ? t('tools.advanced.finish_pin') : t('tools.advanced.finish_password')}
               </p>
             )}
             {lockError && <p className="mt-1 text-xs text-red-600">{lockError}</p>}
@@ -504,14 +501,14 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
               >
                 <span aria-hidden="true">{lock.enabled ? '🔒' : '⬇'}</span>
                 {locking
-                  ? 'Locking…'
+                  ? t('tools.advanced.locking')
                   : flatten && lock.enabled
-                    ? 'Download flattened & locked'
+                    ? t('tools.advanced.download_flattened_locked')
                     : flatten
-                      ? 'Download flattened'
+                      ? t('tools.advanced.download_flattened')
                       : lock.enabled
-                        ? 'Download locked'
-                        : 'Download'}
+                        ? t('tools.advanced.download_locked')
+                        : t('tools.export.download')}
               </button>
             </div>
           </>
@@ -523,7 +520,7 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
             onClick={onClose}
             className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700"
           >
-            Cancel
+            {t('tools.common.cancel')}
           </button>
         </div>
       </div>

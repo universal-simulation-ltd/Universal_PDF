@@ -3,6 +3,7 @@ import { useAnnotationStore } from '../stores/annotationStore'
 import { useFormStore, type FormFieldValue } from '../stores/formStore'
 import type { Annotation } from '../types/annotations'
 import { saveBlob } from '@unisim/media/save'
+import { getT } from '../i18n'
 
 // "Save to desktop" backup for Universal PDF — the editable middle tier between
 // the free in-browser recents and the paid "Hosted by UNI·SIM" cloud. A backup
@@ -59,7 +60,7 @@ export function canBackup(): boolean {
 /** Serialise the open PDF + its edits to a JSON backup blob + filename. */
 export function buildBackup(): { blob: Blob; fileName: string } {
   const { sourceBytes, fileName } = usePdfStore.getState()
-  if (!sourceBytes) throw new Error('No PDF is open.')
+  if (!sourceBytes) throw new Error(getT()('lib.no_pdf_open'))
   const payload: BackupFile = {
     app: MAGIC,
     version: VERSION,
@@ -87,15 +88,15 @@ export async function importBackup(file: File): Promise<void> {
   try {
     json = JSON.parse(await file.text())
   } catch {
-    throw new Error("That file isn't a Universal PDF backup (it isn't valid JSON).")
+    throw new Error(getT()('lib.backup_not_json'))
   }
 
   const data = json as Partial<BackupFile>
   if (!data || data.app !== MAGIC || typeof data.pdf !== 'string') {
-    throw new Error("That file isn't a Universal PDF backup.")
+    throw new Error(getT()('lib.backup_invalid'))
   }
   if (typeof data.version === 'number' && data.version > VERSION) {
-    throw new Error('This backup was made by a newer version of Universal PDF — update the app to open it.')
+    throw new Error(getT()('lib.backup_too_new'))
   }
 
   const bytes = base64ToBytes(data.pdf)

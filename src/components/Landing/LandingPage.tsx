@@ -23,6 +23,7 @@ import { PreviewPanePill } from '../Onboarding/PreviewPaneOffer'
 import { usePreviewPane } from '../../hooks/usePreviewPane'
 import { CONTAINER } from '../../lib/layout'
 import DeleteAccountDialog, { useCanDeleteAccount } from '../Header/DeleteAccountDialog'
+import { useT, type MessageKey } from '../../i18n'
 
 // Balanced is the default when compressing — 'light' is lossless but usually
 // barely shrinks, so people expect the "Compress PDF(s)" default to actually
@@ -35,9 +36,9 @@ const DEFAULT_COMPRESS_QUALITY: CompressQuality = 'balanced'
 // wearing the tick its neighbours do. Lucide's `cloud-off` / `eye-off` /
 // `megaphone-off` outlines, drawn inline: a lone symbol CHARACTER falls back to
 // whatever font happens to carry it (see the chevron on the compress row).
-const PROMISES: { claim: string; paths: string[] }[] = [
+const PROMISES: { claim: MessageKey; paths: string[] }[] = [
   {
-    claim: 'No forced uploads',
+    claim: 'app.landing_no_uploads',
     paths: [
       'M5.78 5.78A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.3-.19',
       'M21.53 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7 7 0 0 0 10 5.07',
@@ -45,7 +46,7 @@ const PROMISES: { claim: string; paths: string[] }[] = [
     ]
   },
   {
-    claim: 'No data scraping',
+    claim: 'app.landing_no_scraping',
     paths: [
       'M9.88 9.88a3 3 0 1 0 4.24 4.24',
       'M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68',
@@ -54,7 +55,7 @@ const PROMISES: { claim: string; paths: string[] }[] = [
     ]
   },
   {
-    claim: 'No advertising',
+    claim: 'app.landing_no_ads',
     paths: [
       'M9.26 9.26 3 11v3l14.14 3.14',
       'M21 15.34V6l-7.31 2.03',
@@ -65,6 +66,7 @@ const PROMISES: { claim: string; paths: string[] }[] = [
 ]
 
 export default function LandingPage() {
+  const t = useT()
   // The default-app offer, now surfaced only as the "System options" pill —
   // the top-of-page bar it used to share this with is gone (2026-08-27).
   const defaultApp = useDefaultPdfApp()
@@ -131,7 +133,7 @@ export default function LandingPage() {
     multiple: true,
     pageWide: true,
     disabled: modalOpen,
-    label: 'Drop a PDF, Word or OpenDocument file here, or click to browse',
+    label: t('app.landing_drop_label'),
   })
   // ⚠️ `over`/`pageOver` go true for a page drag whether or not the zone is
   // disabled — the hook lights every page-wide zone and only checks `disabled`
@@ -147,7 +149,7 @@ export default function LandingPage() {
       (f) => f.type === 'application/pdf' || /\.pdf$/i.test(f.name)
     )
     if (files.length === 0) {
-      alert('Please choose one or more PDF files.')
+      alert(t('app.landing_choose_pdfs'))
       return
     }
     setCompressing(true)
@@ -163,7 +165,7 @@ export default function LandingPage() {
           buf.slice(0),
           files[0].name,
           DEFAULT_COMPRESS_QUALITY,
-          (f) => setCompressProgress(`Compressing… ${Math.round(f * 100)}%`)
+          (f) => setCompressProgress(t('app.landing_compressing_pct', { pct: Math.round(f * 100) }))
         )
         setCompressJob({ sourceBytes: buf, fileName: files[0].name, result })
         return
@@ -172,13 +174,13 @@ export default function LandingPage() {
       const sources: BatchSource[] = []
       const results: CompressResult[] = []
       for (let i = 0; i < files.length; i++) {
-        setCompressProgress(`Compressing ${i + 1}/${files.length}…`)
+        setCompressProgress(t('app.landing_compressing_batch', { n: i + 1, total: files.length }))
         const buf = await files[i].arrayBuffer()
         const result = await compressPdf(
           buf.slice(0),
           files[i].name,
           DEFAULT_COMPRESS_QUALITY,
-          (f) => setCompressProgress(`Compressing ${i + 1}/${files.length} — ${Math.round(f * 100)}%`)
+          (f) => setCompressProgress(t('app.landing_compressing_batch_pct', { n: i + 1, total: files.length, pct: Math.round(f * 100) }))
         )
         sources.push({ sourceBytes: buf, fileName: files[i].name })
         results.push(result)
@@ -186,7 +188,7 @@ export default function LandingPage() {
       setBatchJob({ files: sources, results })
     } catch (err) {
       console.error(err)
-      alert('Compression failed: ' + (err as Error).message)
+      alert(t('app.landing_compression_failed', { message: (err as Error).message }))
     } finally {
       setCompressing(false)
       setCompressProgress('')
@@ -243,7 +245,7 @@ export default function LandingPage() {
       await loadFile(file)
     } catch (err) {
       console.error(err)
-      alert('Failed to open example: ' + ((err as Error).message || err))
+      alert(t('app.landing_example_failed', { message: String((err as Error).message || err) }))
     } finally {
       setOpening(false)
     }
@@ -265,7 +267,7 @@ export default function LandingPage() {
     e.target.value = ''
     if (!file) return
     if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
-      alert('Please choose a PDF file.')
+      alert(t('app.landing_choose_pdf'))
       return
     }
     setOcrJob({ bytes: await file.arrayBuffer(), name: file.name })
@@ -288,7 +290,7 @@ export default function LandingPage() {
       className={`${PILL} ${PILL_IDLE} disabled:opacity-60 disabled:cursor-wait`}
     >
       <span aria-hidden="true">👁</span>
-      {opening ? 'Opening example…' : 'Try with example PDF'}
+      {opening ? t('app.landing_opening_example') : t('app.landing_try_example')}
     </button>
   )
 
@@ -326,10 +328,12 @@ export default function LandingPage() {
                 name is already in the navbar directly above it — so the word
                 was costing a whole line to repeat something on screen. */}
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-slate-900">
-              PDFs that <span className="text-orange-600">just work</span>.
+              {t.rich('app.landing_headline', {
+                em: <span className="text-orange-600">{t('app.landing_headline_em')}</span>
+              })}
             </h1>
             <p className="mt-3 text-slate-600 max-w-md">
-              View, annotate, sign and export.
+              {t('app.landing_lead')}
             </p>
 
             {/* One box, read top to bottom: upload → recent → compress →
@@ -378,13 +382,13 @@ export default function LandingPage() {
                       <path d="M9 17h4" />
                     </svg>
                     <span className="text-[15px] font-bold text-slate-900">
-                      {converting ? 'Converting…' : over ? 'Drop to open' : 'Drop a PDF here'}
+                      {converting ? t('app.landing_converting') : over ? t('app.drop_title') : t('app.landing_drop_here')}
                     </span>
                     {/* Word and OpenDocument files are converted here rather
                         than turned away, so the circle has to say so — nobody
                         drops a .docx on a thing labelled "PDF" to find out. */}
                     <span className="mt-1 text-[11px] text-slate-400">
-                      or click to browse — .pdf, .docx, .odt
+                      {t('app.landing_click_to_browse', { types: '.pdf, .docx, .odt' })}
                     </span>
                   </DropRing>
                 </div>
@@ -400,7 +404,7 @@ export default function LandingPage() {
                 <details className="group mt-5">
                   <summary className={`${PILL} ${PILL_IDLE} cursor-pointer select-none list-none`}>
                     <span aria-hidden="true">🕘</span>
-                    Recent files
+                    {t('app.recent_files')}
                     <span
                       className="text-base text-slate-400 transition-transform group-open:rotate-180"
                       aria-hidden="true"
@@ -419,7 +423,7 @@ export default function LandingPage() {
 
               <div className="mt-4 flex items-center gap-3 text-xs text-slate-500">
                 <span className="h-px flex-1 bg-slate-200" aria-hidden="true" />
-                <span>or</span>
+                <span>{t('app.landing_or')}</span>
                 <span className="h-px flex-1 bg-slate-200" aria-hidden="true" />
               </div>
 
@@ -477,10 +481,10 @@ export default function LandingPage() {
               >
                 <span aria-hidden="true">⬇</span>
                 {compressing
-                  ? compressProgress || 'Compressing…'
+                  ? compressProgress || t('app.landing_compressing')
                   : dragOverCompress
-                    ? 'Drop to compress'
-                    : 'Compress PDF(s)'}
+                    ? t('app.landing_drop_to_compress')
+                    : t('app.landing_compress')}
               </button>
 
               {/* The chevron IS the "Advanced options" label now: a square
@@ -497,8 +501,8 @@ export default function LandingPage() {
                 onClick={() => setAdvancedOpen(o => !o)}
                 aria-expanded={advancedOpen}
                 aria-controls="pdf-advanced-options"
-                aria-label={advancedOpen ? 'Hide advanced options' : 'Show advanced options'}
-                title="Advanced options — merge, convert, OCR, redact, Markdown"
+                aria-label={advancedOpen ? t('app.landing_hide_advanced') : t('app.landing_show_advanced')}
+                title={t('app.landing_advanced_title')}
                 className={`shrink-0 w-11 inline-flex items-center justify-center rounded-lg border transition-colors ${
                   advancedOpen
                     ? 'border-orange-400 bg-orange-50/60 text-orange-700'
@@ -545,7 +549,7 @@ export default function LandingPage() {
                   className={`${PILL} ${PILL_IDLE} mt-3`}
                 >
                   <span aria-hidden="true">⧉</span>
-                  Merge PDFs — combine several into one
+                  {t('app.landing_merge')}
                 </button>
 
                 <button
@@ -554,7 +558,7 @@ export default function LandingPage() {
                   className={`${PILL} ${PILL_IDLE} mt-3`}
                 >
                   <span aria-hidden="true">⇄</span>
-                  Convert — PDF ↔ images (PNG/JPG)
+                  {t('app.landing_convert')}
                 </button>
 
                 {/* Make searchable (OCR) — scanned/image-only PDF → text layer */}
@@ -564,7 +568,7 @@ export default function LandingPage() {
                   className={`${PILL} ${PILL_IDLE} mt-3`}
                 >
                   <span aria-hidden="true">🔎</span>
-                  Make searchable (OCR) — read a scan
+                  {t('app.landing_ocr')}
                 </button>
                 <input
                   ref={ocrInputRef}
@@ -584,7 +588,7 @@ export default function LandingPage() {
                   className={`${PILL} ${PILL_IDLE} mt-3`}
                 >
                   <RedactIcon size={16} className="shrink-0" />
-                  Redact text — make portions unreadable to humans and machines
+                  {t('app.landing_redact')}
                 </button>
                 <input
                   ref={redactInputRef}
@@ -600,7 +604,7 @@ export default function LandingPage() {
                   className={`${PILL} ${PILL_IDLE} mt-3`}
                 >
                   <span aria-hidden="true">✎</span>
-                  Transform text into a PDF — paste Markdown
+                  {t('app.landing_transform')}
                 </button>
               </div>
               )}
@@ -629,7 +633,7 @@ export default function LandingPage() {
                 return (
                 <details className="group mt-3">
                   <summary className="flex items-center gap-2 cursor-pointer select-none list-none px-1 py-1 text-xs uppercase tracking-wide font-medium text-slate-500 hover:text-slate-700 transition-colors">
-                    <span>{os ? `[${os}] ` : ''}System options</span>
+                    <span>{os ? t('app.landing_system_options_os', { os }) : t('app.landing_system_options')}</span>
                     <span
                       className="ml-auto text-base text-slate-400 transition-transform group-open:rotate-180"
                       aria-hidden="true"
@@ -673,17 +677,17 @@ export default function LandingPage() {
                   eighteen. Below that it falls back to two columns and plain
                   row-flow, where they all fit on one line each. */}
               <ul className="mt-5 grid grid-cols-2 sm:grid-cols-3 sm:grid-rows-3 sm:grid-flow-col gap-x-1 gap-y-2 text-xs text-slate-600">
-                {[
-                  'Sign PDF for free',
-                  'Convert PDF for free',
-                  'Redact PDF for free',
-                  'Compress PDF for free',
-                  'Add QR codes for free',
-                  'Export PDF for free'
-                ].map((claim) => (
+                {([
+                  'app.landing_free_sign',
+                  'app.landing_free_convert',
+                  'app.landing_free_redact',
+                  'app.landing_free_compress',
+                  'app.landing_free_qr',
+                  'app.landing_free_export'
+                ] as const).map((claim) => (
                   <li key={claim} className="flex items-center gap-2 pl-2 sm:pl-4">
                     <span className="text-orange-700" aria-hidden="true">✓</span>
-                    {claim}
+                    {t(claim)}
                   </li>
                 ))}
                 {PROMISES.map(({ claim, paths }) => (
@@ -700,7 +704,7 @@ export default function LandingPage() {
                     >
                       {paths.map((d) => <path key={d} d={d} />)}
                     </svg>
-                    {claim}
+                    {t(claim)}
                   </li>
                 ))}
               </ul>
@@ -725,15 +729,18 @@ export default function LandingPage() {
                 purpose: it matters only to the person looking for it. */}
             {canDeleteAccount && (
               <p className="mt-3 text-xs text-slate-500">
-                Signed in with a Universal ID.{' '}
+                {t.rich('app.landing_signed_in', {
+                  delete: (
                 <button
                   type="button"
                   data-testid="landing-delete-account"
                   onClick={() => setDeleteAccountOpen(true)}
                   className="underline underline-offset-2 hover:text-red-700"
                 >
-                  Delete my account
+                  {t('app.landing_delete_account')}
                 </button>
+                  )
+                })}
               </p>
             )}
           </div>
@@ -754,7 +761,7 @@ export default function LandingPage() {
           fileName={compressJob.fileName}
           initialResult={compressJob.result}
           onClose={() => setCompressJob(null)}
-          discardLabel="Discard"
+          discardLabel={t('app.discard')}
         />
       )}
 
@@ -783,7 +790,7 @@ export default function LandingPage() {
           onOpen={(file) => {
             loadFile(file).catch((err) => {
               console.error(err)
-              alert('Failed to load searchable PDF')
+              alert(t('app.failed_to_load_searchable'))
             })
           }}
         />
@@ -795,8 +802,8 @@ export default function LandingPage() {
           is, and this says why, in the margin where the pointer actually is. */}
       <DropAnywhere
         show={showDropHint}
-        title="Drop to open"
-        hint="PDF files only — anywhere on this page will do"
+        title={t('app.drop_title')}
+        hint={t('app.landing_drop_hint')}
         icon={<span aria-hidden="true">📄</span>}
       />
     </div>

@@ -2,6 +2,7 @@ import { useUserPrefs } from '@unisim/sdk'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { useSignatureStore } from '../../stores/signatureStore'
 import { useCoarsePointer } from '../../hooks/useCoarsePointer'
+import { useT, type MessageKey } from '../../i18n'
 
 // "Don't show again" is PERMANENT and stays that way, matching the ruling on
 // the mobile welcome coach-mark (James, 2026-09-01: a prompt that reappears
@@ -68,13 +69,23 @@ type Prompt = {
   cancel: () => void
 }
 
-const EXTRA_NOUN: Record<'name' | 'details' | 'date', string> = {
-  name: 'name',
-  details: 'details',
-  date: 'date',
+// Whole sentences per verb, not a noun spliced into one — word order and
+// agreement differ per language.
+const EXTRA_LABEL: Record<'tap' | 'click', Record<'name' | 'details' | 'date', MessageKey>> = {
+  tap: {
+    name: 'viewer.placement.tap_name',
+    details: 'viewer.placement.tap_details',
+    date: 'viewer.placement.tap_date',
+  },
+  click: {
+    name: 'viewer.placement.click_name',
+    details: 'viewer.placement.click_details',
+    date: 'viewer.placement.click_date',
+  },
 }
 
 export default function PlacementHint() {
+  const t = useT()
   // ⚠️ Not read once on mount any more. `useUserPrefs` answers from
   // localStorage synchronously (so there is no flash on a device that has
   // already dismissed it) and then merges the remote row when it arrives — so
@@ -93,7 +104,7 @@ export default function PlacementHint() {
   })
   // "Tap" on glass, "Click" with a mouse. The instruction is only useful if it
   // names the gesture the reader actually has.
-  const verb = useCoarsePointer() ? 'Tap' : 'Click'
+  const verb = useCoarsePointer() ? 'tap' : 'click'
 
   const prompt = ((): Prompt | null => {
     // Mid-sequence first: with extras queued the signature is already down and
@@ -102,8 +113,11 @@ export default function PlacementHint() {
       const next = pendingExtras[0]
       const more = pendingExtras.length - 1
       return {
-        label: `${verb} where the ${EXTRA_NOUN[next.kind]} should go`,
-        detail: more > 0 ? `“${next.text}” — ${more} more after this` : `“${next.text}”`,
+        label: t(EXTRA_LABEL[verb][next.kind]),
+        detail:
+          more > 0
+            ? t.plural('viewer.placement.extra_detail_more', more, { text: next.text })
+            : t('viewer.placement.extra_detail', { text: next.text }),
         cancel: () => {
           useSignatureStore.getState().setPendingExtras([])
           useAnnotationStore.getState().setTool('select')
@@ -120,14 +134,14 @@ export default function PlacementHint() {
       // card is the centre of the screen than it did as a top-edge pill.
       const isStamp = activeSignature.name.endsWith(' Stamp')
       return {
-        label: `${verb} the page to place your ${isStamp ? 'stamp' : 'signature'}`,
+        label: t(`viewer.placement.${verb}_${isStamp ? 'stamp' : 'signature'}`),
         preview: activeSignature.dataUrl,
         cancel: () => useAnnotationStore.getState().setTool('select'),
       }
     }
     if (tool === 'image' && uploadedImageSrc) {
       return {
-        label: `${verb} the page to place your ${uploadedImageQr ? 'QR code' : 'image'}`,
+        label: t(`viewer.placement.${verb}_${uploadedImageQr ? 'qr_code' : 'image'}`),
         preview: uploadedImageSrc,
         cancel: () => {
           useAnnotationStore.getState().setUploadedImageSrc(null)
@@ -219,7 +233,7 @@ export default function PlacementHint() {
             onClick={prompt.cancel}
             className="rounded-full bg-slate-100 px-4 py-1.5 text-[13px] font-semibold text-slate-700 shadow-sm hover:bg-slate-200"
           >
-            Cancel
+            {t('viewer.common.cancel')}
           </button>
           <button
             type="button"
@@ -228,7 +242,7 @@ export default function PlacementHint() {
             // preference, not a way out of the state. Cancel is the way out.
             className="rounded-full bg-white/80 px-3 py-1.5 text-[13px] font-medium text-slate-500 shadow-sm hover:bg-white hover:text-slate-700"
           >
-            Don't show again
+            {t('viewer.placement.dont_show_again')}
           </button>
         </span>
       </div>
