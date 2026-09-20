@@ -175,6 +175,17 @@ npm run cap:open:ios     # open in Xcode
 bakes in the `/pdf/` base path the hosted site uses, and every asset 404s inside
 the WebView.
 
+⚠️ **iOS uses the UIScene life cycle, written out by hand.** iOS terminates an
+app built against the current SDK that still uses the old app-delegate window
+life cycle, before any of our code runs — that is what App Review hit on 1.0.3.
+Capacitor adopted scenes in 8.5 and this app is on 7, so `SceneDelegate.swift`,
+`UIApplicationSceneManifest` in `Info.plist` and `configurationForConnecting`
+in `AppDelegate.swift` are ours to keep. All three, plus a usage string for
+every privacy-gated resource the web layer can reach, are checked by
+`npm run check:ios-launch` (part of `cap:sync`). **Do not add logic to
+`AppDelegate`'s `applicationDid…`/`applicationWill…` methods — under the scene
+life cycle they are never called.**
+
 **Versions.** `android/app/build.gradle` reads `package.json` directly, so
 Android needs nothing. Xcode cannot, so run `node scripts/sync-ios-version.mjs`
 after a version bump (`--check` fails instead of writing, for CI). Both derive

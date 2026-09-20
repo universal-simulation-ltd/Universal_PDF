@@ -33,10 +33,63 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- ⚠️ THE APP DOES NOT LAUNCH WITHOUT THIS. iOS terminates an app built
+	     against the current SDK that still uses the old app-delegate window
+	     life cycle, before any of our code runs — "UIScene life cycle is
+	     required for apps built with this SDK" in the device log and nothing
+	     on screen. That is the crash App Review hit on 1.0.3.
+
+	     The manifest is only half of it: the runtime also checks that the app
+	     delegate answers application(_:configurationForConnecting:options:).
+	     Both halves, plus SceneDelegate.swift itself, are checked by
+	     `npm run check:ios-launch`.
+
+	     Capacitor adopted scenes in 8.5 and this app is on 7, so the three
+	     pieces are written out by hand rather than coming from the template.
+	     UISceneStoryboardFile keeps Main.storyboard (a bare
+	     CAPBridgeViewController) as the scene's storyboard, exactly as
+	     UIMainStoryboardFile did before. -->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+					<key>UISceneStoryboardFile</key>
+					<string>Main</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
+	<!-- ⚠️ A MISSING USAGE STRING IS A CRASH, not a refusal: iOS terminates
+	     the process the moment a privacy-gated resource is reached without
+	     one (see Docs_UNI_SIM/landmines.md — it took Universal Family's iOS
+	     app down on the first tap of the microphone).
+
+	     Nothing here calls the camera directly. The web layer's image pickers
+	     do, by proxy: an <input type="file"> that accepts images makes the
+	     WebView offer "Take Photo" alongside the photo library, and tapping it
+	     opens the camera with our bundle's usage string. Add a picture to a
+	     page, import a signature, convert an image to PDF — all three reach
+	     it. `npm run check:ios-launch` fails if such an input exists in src/
+	     and this key does not.
+
+	     Video is deliberately NOT accepted anywhere, so there is no
+	     NSMicrophoneUsageDescription: iOS only offers "Take Video" (and only
+	     then asks for the microphone) when the input accepts a video type. -->
+	<key>NSCameraUsageDescription</key>
+	<string>Take a photo to add to your PDF — a picture, a signature or a page to convert. Photos stay on this device.</string>
 	<!-- Puts Universal PDF in the Files app's "Open With" menu and the share
 	     sheet for PDFs. iOS 26 DOES have a default app per file type — the Open
 	     With menu marks one "Default" — so registering here is what makes the
