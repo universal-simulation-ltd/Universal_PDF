@@ -33,6 +33,21 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- Export compliance, answered once here instead of per upload.
+	     `false` says the app uses no encryption that needs an export licence.
+
+	     ⚠️ It is an ATTESTATION, not a setting, and it is James's to change.
+	     It records the answer already given on every Universal PDF upload to
+	     App Store Connect to date; putting it in the bundle only stops ASC
+	     asking again. The one thing that could make it wrong is "Lock PDF"
+	     (`src/lib/pdfEncrypt.ts`), which is real AES done by us rather than
+	     HTTPS done by the OS — password-protecting a document is arguably
+	     data confidentiality rather than one of the exempt categories. If
+	     that reading is taken, the answer becomes `true` and Apple asks for
+	     the compliance paperwork. Delete this key to be asked per upload
+	     again. France is a separate question and is still answered "no". -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<!-- ⚠️ THE APP DOES NOT LAUNCH WITHOUT THIS. iOS terminates an app built
 	     against the current SDK that still uses the old app-delegate window
 	     life cycle, before any of our code runs — "UIScene life cycle is
