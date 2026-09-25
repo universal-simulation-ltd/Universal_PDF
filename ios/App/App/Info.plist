@@ -61,9 +61,11 @@
 
 	     Capacitor adopted scenes in 8.5 and this app is on 7, so the three
 	     pieces are written out by hand rather than coming from the template.
-	     UISceneStoryboardFile keeps Main.storyboard (a bare
-	     CAPBridgeViewController) as the scene's storyboard, exactly as
-	     UIMainStoryboardFile did before. -->
+	     There is deliberately NO UISceneStoryboardFile: SceneDelegate builds
+	     the window and its CAPBridgeViewController itself (it has to, to load
+	     the bridge before forwarding a launch document). Naming Main here as
+	     well would have UIKit build a second window and bridge from the
+	     storyboard. -->
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -77,8 +79,6 @@
 					<string>Default Configuration</string>
 					<key>UISceneDelegateClassName</key>
 					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
-					<key>UISceneStoryboardFile</key>
-					<string>Main</string>
 				</dict>
 			</array>
 		</dict>
