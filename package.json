@@ -1,6 +1,6 @@
 {
   "name": "universal-pdf",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "private": true,
   "type": "module",
   "license": "AGPL-3.0-or-later",
@@ -99,7 +99,7 @@
     "@unisim/doc": "^0.7.0",
     "@unisim/media": "^0.7.0",
     "@unisim/qr": "^0.1.0",
-    "@unisim/sdk": "^0.155.0",
+    "@unisim/sdk": "^0.156.0",
     "heic-to": "^1.5.2",
     "konva": "^9.3.20",
     "pdf-lib": "^1.17.1",

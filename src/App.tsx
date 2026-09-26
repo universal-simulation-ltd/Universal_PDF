@@ -473,11 +473,12 @@ export default function App() {
             productLogo={<ProductLogo />}
             suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
             contentClassName={CONTAINER}
-            // PDF draws its own "Delete my account" row (Universal_PDF@6b411b3,
-            // for the store launch). SDK 0.141.7 added one to the account
-            // panel, on by default in a native shell — so without this the
-            // phone apps showed the row twice.
-            showDeleteAccount={false}
+            // The SDK's "Delete my account" stays ON here (its default in a
+            // native shell): this is the menu a phone opens first. It was
+            // switched off to stop the row doubling — but the double was in
+            // the toolbar's menu, so this one had none, and App Review could
+            // not find it (5.1.1(v), 1.0.4, 2026-09-25). The toolbar's
+            // <UserProfile /> is the one that turns the SDK row off now.
           />
           {/* The SDK's <UpdateNotice /> ("new version — reload") used to sit
               here. Off for now with the other top banners (James,

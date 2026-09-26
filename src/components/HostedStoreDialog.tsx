@@ -58,7 +58,12 @@ export default function HostedStoreDialog() {
 
   const signedIn = !!session?.user && session.user.is_anonymous !== true
   const native = isNativeShell()
-  const tokens = credits ?? 0
+  // App Review 3.1.1 (1.0.4, 2026-09-25): the phone app may not use tokens
+  // bought on the web, because it sells none through In-App Purchase. So in a
+  // native shell only the free per-app token counts — the purchased balance is
+  // neither shown nor offered, and the button stays off once the free token is
+  // held (the server spends the free token first, so gating here is enough).
+  const tokens = native ? 0 : (credits ?? 0)
   const canStore = freeToken === 'available' || tokens > 0
 
   function close() {
@@ -234,7 +239,8 @@ export default function HostedStoreDialog() {
           <div className="rounded-xl border border-orange-200 bg-white p-4">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-slate-900">{t('sign.hosted_cloud')}</span>
-              <Chip size="sm">{t('sign.hosted_cloud_chip')}</Chip>
+              {/* "Universal subscription" names a paid plan: not in the phone app (3.1.1). */}
+              {!native && <Chip size="sm">{t('sign.hosted_cloud_chip')}</Chip>}
             </div>
             <p className="mt-1 text-xs text-slate-500">
               {t('sign.hosted_cloud_body')}
@@ -273,11 +279,15 @@ export default function HostedStoreDialog() {
               <div className="mt-3">
                 <div className="flex items-center justify-between rounded-lg bg-orange-50/60 px-3 py-2 text-sm">
                   <span className="text-slate-600">{user?.email}</span>
+                  {/* Native with the free token held: no count to show (see
+                      `tokens`) — the box below says why the button is gone. */}
+                  {!(native && freeToken !== 'available') && (
                   <span className="font-semibold text-orange-700">
                     {freeToken === 'available'
                       ? (tokens > 0 ? t('sign.hosted_free_plus_purchased', { count: tokens }) : t('sign.hosted_free_available'))
                       : t.plural('sign.hosted_tokens', tokens)}
                   </span>
+                  )}
                 </div>
 
                 {doc ? (

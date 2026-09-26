@@ -208,6 +208,10 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
           menuAlign="right"
           tier={subscription?.tier}
           actions={actions}
+          // This menu draws its own "Delete my account" row in `extras`
+          // (below), which is visible without opening the account panel; the
+          // SDK's copy in that panel would make two in a native shell.
+          showDeleteAccount={false}
           // No `showLanguageSelector`: the language lives in the SDK's App
           // preferences (this app's override) and Global preferences rows —
           // the Actions rows' own Language picker went in 2026-09-17. Both

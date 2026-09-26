@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useUniversal } from '@unisim/sdk'
 import { CONFIRM_PHRASE, deleteMyAccount, isConfirmed } from '../../lib/deleteAccount'
 import { useT } from '../../i18n'
+import { isNativeShell } from '../../lib/nativeOpen'
 
 // "Delete my account": the signed-in person deletes their Universal ID, and
 // with it their account in every UNI·SIM product.
@@ -126,7 +127,9 @@ export default function DeleteAccountDialog({ open, onClose }: { open: boolean; 
                 <li>{t('menu.delete_point_sole_org')}</li>
                 <li>{t('menu.delete_point_shared_org')}</li>
                 <li>{t('menu.delete_point_files')}</li>
-                <li>{t('menu.delete_point_subscription')}</li>
+                {/* Not in the phone app, which names no paid plan (App Review
+                    3.1.1); the SDK's own delete dialog does not mention one. */}
+                {!isNativeShell() && <li>{t('menu.delete_point_subscription')}</li>}
               </ul>
 
               <label className="mt-4 block text-xs font-medium text-slate-700" htmlFor="delete-account-confirm">

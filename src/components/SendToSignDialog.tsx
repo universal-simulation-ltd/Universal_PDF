@@ -120,7 +120,13 @@ export default function SendToSignDialog() {
 
   const signedIn = !!session?.user && session.user.is_anonymous !== true
   const emailVerified = !!session?.user?.email_confirmed_at
-  const tokens = credits ?? 0
+  // App Review 3.1.1 (1.0.4, 2026-09-25): the phone app may not use tokens
+  // bought on the web, because it sells none through In-App Purchase. So in a
+  // native shell only the free per-app token counts — the purchased balance is
+  // neither shown nor offered, and the button stays off once the free token is
+  // held (the server spends the free token first, so gating here is enough).
+  const native = isNativeShell()
+  const tokens = native ? 0 : (credits ?? 0)
   const canStore = freeToken === 'available' || tokens > 0
 
   function close() {
@@ -409,7 +415,7 @@ export default function SendToSignDialog() {
                   <span className="text-sm font-semibold text-slate-900">{t('sign.send_step1')}</span>
                   {freeToken === 'available'
                     ? <Chip size="sm">{t('sign.send_free_token')}</Chip>
-                    : <ValueChip size="sm" label={tokens}>{t.plural('sign.send_tokens_unit', tokens)}</ValueChip>}
+                    : !native && <ValueChip size="sm" label={tokens}>{t.plural('sign.send_tokens_unit', tokens)}</ValueChip>}
                 </div>
 
                 {!doc ? (

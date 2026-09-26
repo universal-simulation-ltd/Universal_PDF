@@ -66,8 +66,19 @@ const playwright = await loadPlaywright()
 const browser = await playwright.chromium.launch()
 const pdf = await testPdf()
 
-async function openPage({ signedIn, viewport = { width: 1400, height: 900 } }) {
+async function openPage({ signedIn, native = false, viewport = { width: 1400, height: 900 } }) {
   const context = await browser.newContext({ viewport })
+  // The phone app, as isNativeShell() sees it: `isNativePlatform()` and
+  // nothing else. ⚠️ A plain object is not enough — @capacitor/core adopts the
+  // existing global and writes its own (web, false) isNativePlatform onto it,
+  // so the stub pins that one property and lets core set everything else.
+  if (native) {
+    await context.addInitScript(() => {
+      window.Capacitor = new Proxy({ isNativePlatform: () => true }, {
+        set: (t, k, v) => { if (k !== 'isNativePlatform') t[k] = v; return true },
+      })
+    })
+  }
   if (signedIn) {
     await context.addInitScript(() => {
       window.localStorage.setItem('universal:mock_session', 'james')
@@ -183,6 +194,46 @@ console.log('\nat phone width the buttons stay on screen')
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
   check('no sideways scroll', !overflow)
   await page.screenshot({ path: 'e2e-delete-account-phone.png' })
+  await context.close()
+}
+
+// App Review rejected 1.0.4 under 5.1.1(v) (2026-09-25): the reviewer opened
+// the start screen's account menu and found no delete row, because the SDK's
+// was switched off there. And 3.1.1: the same menu named a plan.
+console.log('\nthe phone app: the start screen\'s account menu has the row, and names no plan')
+{
+  const { context, page } = await openPage({ signedIn: true, native: true, viewport: { width: 1400, height: 900 } })
+  await page.locator('header button[aria-label$="Profile"]').first().hover()
+  await page.waitForTimeout(600)
+  const header = page.locator('button[aria-haspopup="true"]', { hasText: '@' }).first()
+  check('the account header is in the menu', await header.isVisible())
+  await header.click()
+  await page.waitForTimeout(400)
+  const row = page.getByRole('menuitem', { name: /Delete my account/ })
+  check('Delete my account is in the account panel', await row.count() === 1, String(await row.count()))
+  const menuText = await page.locator('[role="menu"]').first().innerText()
+  check('no "Plan & limits", tier or balance', !/Plan|Free tier|Purchased/i.test(menuText), menuText.replace(/\n/g, ' | '))
+  await row.first().click()
+  await page.waitForTimeout(300)
+  check('it opens a delete dialog', await page.locator('[role="dialog"], [data-testid="unisim-delete-account-dialog"]').count() > 0)
+  await context.close()
+}
+
+console.log('\nthe phone app, a document open: ONE delete row, not two')
+{
+  const { context, page } = await openPage({ signedIn: true, native: true })
+  await page.setInputFiles('input[type=file][accept*="pdf"], input[type=file]', {
+    name: 'delete.pdf', mimeType: 'application/pdf', buffer: pdf,
+  })
+  await page.waitForSelector('[data-page-index="0"] canvas', { timeout: 30000 })
+  await page.waitForTimeout(500)
+  await page.locator('button:has-text("Actions")').first().hover()
+  await page.waitForTimeout(600)
+  check('the Delete row is in the open profile menu', await page.locator('[data-testid="profile-delete-account"]').isVisible())
+  await page.locator('button[aria-haspopup="true"]', { hasText: '@' }).first().click()
+  await page.waitForTimeout(400)
+  const n = await page.getByRole('button', { name: /Delete my account/ }).or(page.getByRole('menuitem', { name: /Delete my account/ })).count()
+  check('…and only once, with the account panel open too', n === 1, String(n))
   await context.close()
 }
 
