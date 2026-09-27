@@ -71,7 +71,9 @@ const browser = await playwright.chromium.launch()
 const pdf = await testPdf()
 // ONE context for the whole run: localStorage has to survive the reloads, which
 // is the entire thing under test.
-const context = await browser.newContext({ viewport: { width: 1400, height: 900 } })
+// hasTouch: the placement card is touch-only since 2026-09-27 (with a mouse
+// the cursor ghost is the feedback), and it is the card this test resets.
+const context = await browser.newContext({ viewport: { width: 1400, height: 900 }, hasTouch: true })
 await context.addInitScript(() => {
   window.localStorage.setItem('universal:mock_session', 'james')
 })
@@ -129,10 +131,11 @@ console.log('\nReset defaults brings it back')
 // trap the separate-placement suite records for the mobile toolbar's Save. So
 // the menu has to be OPENED, and every assertion below is on VISIBILITY, not on
 // count: a count assertion here would pass without the menu ever opening.
-// ⚠️ HOVER, not click. The Actions panel is the SDK's <UserProfile />, which
-// opens on pointer-enter — clicking the pill leaves aria-expanded at false and
-// nothing appears, which looks exactly like a broken menu.
-await page.locator('button:has-text("Actions")').first().hover()
+// ⚠️ CLICK here, not hover. The Actions panel is the SDK's <UserProfile />,
+// which opens on pointer-enter for a MOUSE — where clicking the pill leaves
+// aria-expanded at false. This context is a touch one (see newContext, for
+// the placement card), and there it opens on the click.
+await page.locator('button:has-text("Actions")').first().click()
 await page.waitForTimeout(600)
 const tune = page.locator('[role=menuitem]:has-text("Tune this app")').first()
 check('Tune this app is visible once Actions is open', await tune.isVisible())

@@ -27,6 +27,15 @@
 //   • "Don't show again" hides it for good (localStorage) and, unlike Cancel,
 //     leaves the placement ARMED — it is a display preference, not a way out.
 //
+// And since 2026-09-27 (James: "no need to show this tip for placing something
+// that already has a preview at the mouse … Only required on mobile without
+// mouse hover"):
+//
+//   • It is TOUCH ONLY. With a mouse every armed payload follows the cursor as
+//     a ghost, so the card never appears — pinned at the end with a second,
+//     mouse-only context. Everything above runs in a `hasTouch` context, which
+//     is what makes Chromium answer `(pointer: coarse)`.
+//
 // Negative control (2026-08-30, run): with `<PlacementHint />` taken back out of
 // App.tsx, the four QR checks go red and the run then ABORTS at Cancel — there
 // is no banner to click, so the locator times out rather than reporting the rest.
@@ -87,7 +96,7 @@ async function testPdf() {
 const playwright = await loadPlaywright()
 const browser = await playwright.chromium.launch()
 const pdf = await testPdf()
-const context = await browser.newContext({ viewport: { width: 1400, height: 900 } })
+const context = await browser.newContext({ viewport: { width: 1400, height: 900 }, hasTouch: true })
 const page = await context.newPage()
 page.on('pageerror', (e) => failures.push('page error: ' + e.message))
 
@@ -144,7 +153,7 @@ const pageBox = await pageCanvas.boundingBox()
 // nothing in the app broken. Reset to defaults (Tune this app) is the app's
 // own way back, and clearing localStorage would not do: the synced value would
 // simply come back down.
-await page.hover('button[aria-label$="Profile"]')
+await page.click('button[aria-label$="Profile"]')
 await page.waitForTimeout(400)
 await page.locator('[role=menuitem]:visible').filter({ hasText: 'Tune this app' }).first().click()
 await page.waitForTimeout(400)
@@ -330,6 +339,31 @@ check(
   'and it is still off after a reload',
   await dismissedInPrefs(),
 )
+
+// ── With a mouse there is no card at all ────────────────────────────────────
+// A fresh context (fresh prefs, so the dismissal above can't be what hides it)
+// with no touch: arming a QR code has to leave the cursor ghost as the only
+// feedback.
+console.log('\nwith a mouse the cursor ghost is the feedback, not a card')
+const mouseContext = await browser.newContext({ viewport: { width: 1400, height: 900 } })
+const mousePage = await mouseContext.newPage()
+mousePage.on('pageerror', (e) => failures.push('page error (mouse): ' + e.message))
+await mousePage.goto(BASE, { waitUntil: 'load' })
+await mousePage.setInputFiles('input[type=file]', { name: 'hint.pdf', mimeType: 'application/pdf', buffer: pdf })
+await mousePage.waitForSelector('[data-page-index="0"] canvas', { timeout: 30000 })
+await mousePage.waitForTimeout(500)
+check(
+  'the page reports a fine pointer',
+  await mousePage.evaluate(() => !matchMedia('(pointer: coarse)').matches),
+)
+await mousePage.click('button[title="Add a QR code"]')
+await mousePage.waitForSelector('h2:has-text("Add a QR code")', { timeout: 5000 })
+await mousePage.fill('input[placeholder="https://example.com"]', 'https://unisim.co.uk')
+await mousePage.waitForTimeout(900)
+await mousePage.click('button:has-text("Add to page")')
+await mousePage.waitForTimeout(1200)
+check('arming a QR code puts up no card', (await mousePage.locator('[data-placement-hint]').count()) === 0)
+await mouseContext.close()
 
 await browser.close()
 

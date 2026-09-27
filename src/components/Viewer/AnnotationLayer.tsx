@@ -924,6 +924,18 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // While dragging a multi-selection, the dragged node's last position so we
   // can apply the same delta to every other selected node each frame.
   const groupDragLast = useRef<{ x: number; y: number } | null>(null)
+  // ⚠️ Dragging a shape ONTO ANOTHER PAGE (James, 2026-09-27: "was unable to
+  // drag a signature placement from one page to another"). Every page is its
+  // own Konva stage, so a dragged node can't leave its canvas: it vanished at
+  // the page edge and, dropped on the next page, landed off the bottom of this
+  // one. The drag now tracks the pointer in screen space; once the shape
+  // crosses its page's edge a DOM copy of it floats over the document, and a
+  // drop over another page moves it there (see onShapeDragEnd).
+  const dragClient = useRef<{ x: number; y: number } | null>(null)
+  const dragGhostSrc = useRef<{ id: string; src: string } | null>(null)
+  const [dragGhost, setDragGhost] = useState<
+    { src: string; left: number; top: number; width: number; height: number } | null
+  >(null)
   // Pointer position used to render the ghost-signature preview that
   // follows the cursor while the signature tool is armed.
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null)
@@ -1022,6 +1034,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     clearMarqueeHold()
     setLineDrag(null)
     groupDragLast.current = null
+    clearDragGhost()
     // Tell the dragend handlers (Konva fires them from stopDrag, and line
     // anchors fire theirs whenever the finger finally lifts) to drop the move.
     gestureCancelled.current = true
@@ -1795,8 +1808,62 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     }
   }
 
+  // Screen position of a drag's pointer — a touch drag reports touches, a mouse
+  // or pen drag reports the point itself.
+  function clientPointOf(evt: unknown): { x: number; y: number } | null {
+    const ev = evt as Partial<PointerEvent> & Partial<TouchEvent>
+    const touch = ev.touches?.[0] ?? ev.changedTouches?.[0]
+    if (touch) return { x: touch.clientX, y: touch.clientY }
+    return typeof ev.clientX === 'number' ? { x: ev.clientX, y: ev.clientY ?? 0 } : null
+  }
+
+  // The OTHER page under a screen point, if any. A drop in the gap between two
+  // pages finds none and the shape stays on its own page, as it always did.
+  function otherPageAt(p: { x: number; y: number }): { index: number; rect: DOMRect } | null {
+    for (const el of document.querySelectorAll<HTMLElement>('[data-page-index]')) {
+      const index = Number(el.dataset.pageIndex)
+      if (index === pageIndex) continue
+      const rect = el.getBoundingClientRect()
+      if (p.x >= rect.left && p.x <= rect.right && p.y >= rect.top && p.y <= rect.bottom) {
+        return { index, rect }
+      }
+    }
+    return null
+  }
+
+  // Float the dragged shape over the document while any of it is outside its
+  // own page, where the page canvas can no longer draw it.
+  function syncDragGhost(a: Annotation, node: Konva.Node) {
+    const container = stageRef.current?.container()
+    if (!container) return
+    const page = container.getBoundingClientRect()
+    const r = node.getClientRect()
+    const inside = r.x >= 0 && r.y >= 0 && r.x + r.width <= page.width && r.y + r.height <= page.height
+    if (inside) {
+      if (dragGhost) setDragGhost(null)
+      return
+    }
+    if (dragGhostSrc.current?.id !== a.id) {
+      dragGhostSrc.current = { id: a.id, src: node.toDataURL({ pixelRatio: window.devicePixelRatio || 1 }) }
+    }
+    setDragGhost({
+      src: dragGhostSrc.current.src,
+      left: page.left + r.x,
+      top: page.top + r.y,
+      width: r.width,
+      height: r.height
+    })
+  }
+
+  function clearDragGhost() {
+    dragClient.current = null
+    dragGhostSrc.current = null
+    setDragGhost(null)
+  }
+
   function onShapeDragStart(a: Annotation) {
     gestureCancelled.current = false
+    clearDragGhost()
     setDraggingId(a.id)
     const ids = useAnnotationStore.getState().selectedIds
     if (ids.length > 1 && ids.includes(a.id)) {
@@ -1812,6 +1879,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   function onShapeDragMove(a: Annotation, e: Konva.KonvaEventObject<DragEvent>) {
     if (gestureCancelled.current) return
     if (a.type === 'redact') syncRedactHint(a.id, e.target)
+    dragClient.current = clientPointOf(e.evt) ?? dragClient.current
+    syncDragGhost(a, e.target)
     const last = groupDragLast.current
     if (!last) return
     const ids = useAnnotationStore.getState().selectedIds
@@ -1898,12 +1967,27 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
 
   function onShapeDragEnd(a: Annotation, e: Konva.KonvaEventObject<DragEvent>) {
     setDraggingId(null)
+    const dropAt = clientPointOf(e.evt) ?? dragClient.current
+    clearDragGhost()
     if (gestureCancelled.current) {
       // A pinch (or a browser pointercancel) took this gesture over.
       // cancelGesture already put the nodes back; commit nothing.
       gestureCancelled.current = false
       groupDragLast.current = null
       return
+    }
+    // Dropped over another page: carry the shape (and the rest of a group) there.
+    // Every page shares one zoom, so a point moves between the two pages'
+    // coordinates by the gap between their top-left corners, in page units.
+    const target = dropAt ? otherPageAt(dropAt) : null
+    const own = stageRef.current?.container().getBoundingClientRect()
+    const toPage = (node: Konva.Node): Partial<Annotation> => {
+      if (!target || !own) return {}
+      node.position({
+        x: node.x() + (own.left - target.rect.left) / scale,
+        y: node.y() + (own.top - target.rect.top) / scale
+      })
+      return { pageIndex: target.index }
     }
     const ids = useAnnotationStore.getState().selectedIds
     if (groupDragLast.current && ids.length > 1) {
@@ -1913,13 +1997,16 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         .map((id) => {
           const n = shapeRefs.current.get(id)
           const ann = annos.find((x) => x.id === id)
-          return n && ann ? { id, patch: nodeMovePatch(ann, n) } : null
+          if (!n || !ann) return null
+          const moved = toPage(n)
+          return { id, patch: { ...nodeMovePatch(ann, n), ...moved } }
         })
         .filter((p): p is { id: string; patch: Partial<Annotation> } => !!p)
       updateMany(patches)
       return
     }
-    update(a.id, nodeMovePatch(a, e.target))
+    const moved = toPage(e.target)
+    update(a.id, { ...nodeMovePatch(a, e.target), ...moved })
   }
 
   // Resize / rotate patch for one node, resetting Konva's transient scale so
@@ -2776,6 +2863,25 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           })()}
         </Layer>
       </Stage>
+      {/* The dragged shape, drawn over every page once it crosses its own
+          page's edge — see dragClient. Fixed to the viewport because that is
+          the space the pointer and the page rects are measured in. */}
+      {dragGhost &&
+        createPortal(
+          <img
+            src={dragGhost.src}
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none fixed z-40 opacity-80"
+            style={{
+              left: dragGhost.left,
+              top: dragGhost.top,
+              width: dragGhost.width,
+              height: dragGhost.height
+            }}
+          />,
+          document.body
+        )}
 
       {editingAnnotation && (
         <TextEditor

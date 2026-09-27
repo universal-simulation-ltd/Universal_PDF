@@ -83,7 +83,8 @@
     "test:reset-defaults": "node e2e/reset-defaults.e2e.mjs",
     "test:place-ghost": "node e2e/place-ghost.e2e.mjs",
     "test:scrub-export": "node e2e/scrub-export.e2e.mjs",
-    "test:merge-guard": "node e2e/merge-guard.e2e.mjs"
+    "test:merge-guard": "node e2e/merge-guard.e2e.mjs",
+    "test:cross-page-drag": "node e2e/cross-page-drag.e2e.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.6.8",

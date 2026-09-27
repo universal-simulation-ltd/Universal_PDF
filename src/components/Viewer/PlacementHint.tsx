@@ -162,7 +162,15 @@ export default function PlacementHint() {
     return null
   })()
 
-  if (!prompt || dismissed) return null
+  // ⚠️ TOUCH ONLY (James, 2026-09-27: "no need to show this tip for placing
+  // something that already has a preview at the mouse … just show the preview
+  // at the mouse. Only required on mobile without mouse hover"). With a mouse,
+  // every armed payload — signature, stamp, QR, picture and each queued
+  // name/details/date — already follows the cursor as a ghost in
+  // AnnotationLayer, which says "click to put this here" better than a card in
+  // the middle of the page covering what you're aiming at. A finger has no
+  // hover, so there the card is still the only feedback.
+  if (!prompt || dismissed || verb === 'click') return null
 
   return (
     // ⚠️ pointer-events-none on everything but the buttons. This floats over the

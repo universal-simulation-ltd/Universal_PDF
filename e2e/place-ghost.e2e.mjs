@@ -151,8 +151,7 @@ async function pixelRatio() {
 }
 
 // A point well inside the page, for the before-anything-is-armed check. The two
-// the preview is actually measured at are worked out below, once the hint card
-// exists and its position is known.
+// the preview is actually measured at are worked out below.
 const IDLE = { x: pageBox.x + pageBox.width * 0.32, y: pageBox.y + 200 }
 
 // ── Nothing armed, nothing drawn ────────────────────────────────────────────
@@ -170,29 +169,17 @@ await page.waitForTimeout(900)
 await page.click('button:has-text("Add to page")')
 await page.waitForTimeout(800)
 
-// ⚠️ HOVER CLEAR OF THE HINT CARD — do not dismiss it. The card floats over the
-// middle of the document, and its two buttons are the one part of it that DOES
-// take pointer events: a hover landing on one never reaches the Konva stage, so
-// the preview looks broken when it is only being covered.
-//
-// The obvious fix is to press "Don't show again", and it is WRONG. Since
-// 2026-09-08 that preference follows the user between devices, so pressing it
-// here turns the card off for the mock account for good — and
-// placement-hint.e2e.mjs, whose whole job is to check that the card appears,
-// then fails for a reason nothing in its own file explains. (Done once,
-// diagnosed, undone.) Hover in the band above the card instead.
-const card = await page.locator('[data-placement-hint]').first().boundingBox()
+// No hint card to hover clear of: with a mouse it no longer appears (touch
+// only since 2026-09-27), so the whole upper page is free to hover in.
 const bandTop = pageBox.y + 60
-const bandBottom = card.y - 20
-check(
-  'there is room above the hint card to hover in',
-  bandBottom - bandTop > 120,
-  `only ${Math.round(bandBottom - bandTop)}px between the page top and the card`,
-)
+const bandBottom = pageBox.y + 480
 const P1 = { x: pageBox.x + pageBox.width * 0.32, y: bandTop + (bandBottom - bandTop) * 0.3 }
 const P2 = { x: pageBox.x + pageBox.width * 0.62, y: bandTop + (bandBottom - bandTop) * 0.7 }
 
-await page.mouse.move(P1.x, P1.y)
+// In steps, like a real mouse: the first single-jump move after the QR dialog
+// closes never reaches the stage, and any later one does. It used to pass only
+// because the hint card's lookup happened to sit in between.
+await page.mouse.move(P1.x, P1.y, { steps: 4 })
 await page.waitForTimeout(300)
 const qrAt1 = await inkBox()
 check('moving over the page draws a preview', qrAt1 !== null, 'the annotation canvas is still empty')

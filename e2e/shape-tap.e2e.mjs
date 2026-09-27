@@ -472,12 +472,20 @@ await page.locator('button:has-text("Preset stamps")').first().click()
 await page.waitForTimeout(600)
 await page.locator('button:has-text("APPROVED")').first().click()
 await page.waitForTimeout(700)
+// ⚠️ Read off the CURSOR GHOST, not the placement card: since 2026-09-27 the
+// card is touch-only, and this context has a mouse. The ghost is the one Konva
+// Image without an id (placed annotations carry theirs).
+await page.mouse.move(pageBox.x + pageBox.width * 0.5, pageBox.y + 300)
+await page.waitForTimeout(500)
 const raster = await page.evaluate(() => {
-  const img = document.querySelector('[data-placement-hint] img')
-  if (!img) return null
-  return { w: img.naturalWidth, h: img.naturalHeight, chars: (img.getAttribute('src') || '').length }
+  for (const st of window.Konva?.stages ?? []) {
+    const ghost = st.find('Image').find((i) => !i.id())
+    const img = ghost?.image()
+    if (img) return { w: img.naturalWidth || img.width, h: img.naturalHeight || img.height }
+  }
+  return null
 })
-check('the armed stamp is on screen', !!raster, 'no preview in the placement card')
+check('the armed stamp is on screen', !!raster, 'no ghost following the cursor')
 check(
   'and its raster is a multiple of the 240x96 logical stamp, not 1:1',
   !!raster && raster.w >= 240 * 3 && raster.h === Math.round((raster.w * 96) / 240),
