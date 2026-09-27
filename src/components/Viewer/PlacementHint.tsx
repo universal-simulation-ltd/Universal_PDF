@@ -16,7 +16,7 @@ import { useT, type MessageKey } from '../../i18n'
 // behaves exactly as before — a local flag, no requests — which is most
 // visitors, since this app needs no account.
 //
-// ⚠️ And it now has a way BACK: Actions → Advanced → Reset defaults. That is
+// ⚠️ And it now has a way BACK: Tune this app → Reset to defaults. That is
 // what makes "permanent" defensible rather than a trap; without it an
 // accidental tap on the button set a preference the user could not see or
 // undo. The two changes belong together and should not be separated.

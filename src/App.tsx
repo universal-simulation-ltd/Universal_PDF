@@ -28,7 +28,8 @@ import QrDialog from './components/Qr/QrDialog'
 import MobileWelcomeToast from './components/Onboarding/MobileWelcomeToast'
 import UnsavedChangesDialog from './components/Exit/UnsavedChangesDialog'
 import LockedFilePrompt from './components/Lock/LockedFilePrompt'
-import { UniversalAppsNavBar, UniversalBar, ChangelogMenu, DropAnywhere, useFileDrop } from '@unisim/sdk'
+import { UniversalAppsNavBar, UniversalBar, ChangelogMenu, DropAnywhere, useFileDrop, useUserPrefs } from '@unisim/sdk'
+import { ABOUT_APP } from './lib/aboutApp'
 
 // What this copy of the app is, for the changelog panel's footer and the
 // landing footer. Support's first question is "which build are you on?", and
@@ -104,6 +105,9 @@ const DOC_RIGHT_STRIP = `max(0px, calc((100vw - var(--doc-scrollbar-width, 0px) 
 
 export default function App() {
   const t = useT()
+  // The landing navbar's "Reset to defaults" (foot of Tune this app) — the
+  // same reset the open-document bar's ToolbarUserProfile offers; see there.
+  const { reset: resetPrefs } = useUserPrefs()
   const loadFile = usePdfStore((s) => s.loadFile)
   const doc = usePdfStore((s) => s.doc)
   const loading = usePdfStore((s) => s.loading)
@@ -473,6 +477,10 @@ export default function App() {
             productLogo={<ProductLogo />}
             suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
             contentClassName={CONTAINER}
+            // About + Reset to defaults sit at the foot of Tune this app
+            // (SDK 0.161.0) — the same pair ToolbarUserProfile passes.
+            about={ABOUT_APP}
+            onResetDefaults={() => { void resetPrefs() }}
             // The SDK's "Delete my account" stays ON here (its default in a
             // native shell): this is the menu a phone opens first. It was
             // switched off to stop the row doubling — but the double was in

@@ -38,11 +38,6 @@ const menu: Messages['menu'] = {
   'advanced_export_info': 'Sayfaları resimlere dönüştürerek düzleştirin, parolayla kilitleyin, meta verileri koruyun veya kaldırın.',
   'metadata': 'Belge meta verileri',
   'metadata_info': 'Bu dosyada kimin ve neyin adı geçtiğini görün — sonra temizleyin.',
-  'about': 'Bu uygulama hakkında',
-  'about_info': 'Ne yaptığı, asla neyi göndermediği ve hangi sürümü kullandığınız.',
-  'reset_defaults': 'Varsayılanlara sıfırla',
-  'defaults_restored': 'Varsayılanlar geri yüklendi',
-  'reset_defaults_info': '“Bir daha gösterme” ile kapattığınız ipuçlarını geri getirir. Belgelerinize dokunulmaz.',
   // FileMenu — Redact
   'redact': 'Karart',
   'find_and_redact': 'Bul ve karart',
@@ -55,8 +50,6 @@ const menu: Messages['menu'] = {
   'undo_named': 'Geri al: {action}',
   'redo': 'Yinele',
   'clear_annotations': 'Tüm notları temizle',
-  // CompanyBadge
-  'company': 'Şirket',
   // FileNameEditor
   'rename_file': 'Dosyayı yeniden adlandır',
   'click_to_rename': 'Yeniden adlandırmak için tıklayın',

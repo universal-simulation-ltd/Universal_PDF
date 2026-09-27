@@ -38,11 +38,6 @@ const menu: Messages['menu'] = {
   'advanced_export_info': 'Seiten zu Bildern reduzieren, mit einem Passwort schützen, Metadaten behalten oder entfernen.',
   'metadata': 'Dokument-Metadaten',
   'metadata_info': 'Sieh nach, wen und was diese Datei nennt – und entferne es.',
-  'about': 'Über diese App',
-  'about_info': 'Was sie kann, was sie nie sendet und welche Version du verwendest.',
-  'reset_defaults': 'Standardwerte wiederherstellen',
-  'defaults_restored': 'Standardwerte wiederhergestellt',
-  'reset_defaults_info': 'Holt die Tipps zurück, die du mit „Nicht mehr anzeigen“ ausgeblendet hast. Deine Dokumente bleiben unverändert.',
   // FileMenu — Redact
   'redact': 'Schwärzen',
   'find_and_redact': 'Suchen und schwärzen',
@@ -55,8 +50,6 @@ const menu: Messages['menu'] = {
   'undo_named': 'Rückgängig: {action}',
   'redo': 'Wiederholen',
   'clear_annotations': 'Alle Kommentare entfernen',
-  // CompanyBadge
-  'company': 'Unternehmen',
   // FileNameEditor
   'rename_file': 'Datei umbenennen',
   'click_to_rename': 'Zum Umbenennen klicken',

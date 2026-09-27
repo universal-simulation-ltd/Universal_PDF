@@ -267,16 +267,14 @@ it, so a header is still its own toggle.
 "close the others" line that gets forgotten the day a seventh category is
 added. Pinned by `npm run test:actions`.
 
-### The company badge
+### The company badge — now the SDK's
 
-`CompanyBadge` renders the org's mark and name at the bottom of the profile
-dropdown, via the SDK's `extras` slot. Both reads are existing SDK org hooks
-(`useOrg` for the name, `useOrgBranding` for the images — the latter is
-literally `useOrg()` narrowed to the branding columns), so whatever an admin
-has already set under My Company → Branding is what shows. `icon_url` wins over
-`logo_url` because the square mark is the one meant for compact chrome; an
-initials tile in the org's brand colour is the last resort, and no org at all
-renders nothing.
+`CompanyBadge` used to draw the org's mark and name at the bottom of the
+profile dropdown, via the SDK's `extras` slot. It was deleted on 2026-09-27:
+since @unisim/sdk 0.161.0 the SDK's own plan & limits box shows the company's
+name and logo, and About + Reset to defaults moved from Actions ▸ Advanced to
+the foot of "Tune this app" (the navbars' `about` / `onResetDefaults`, config
+in `src/lib/aboutApp.ts`).
 
 ### ⚠️ `useProfile()` is per-call-site state, so the display name went stale
 

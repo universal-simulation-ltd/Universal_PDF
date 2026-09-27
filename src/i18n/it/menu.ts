@@ -38,11 +38,6 @@ const menu: Messages['menu'] = {
   'advanced_export_info': 'Appiattisci le pagine in immagini, proteggi con password, conserva o rimuovi i metadati.',
   'metadata': 'Metadati del documento',
   'metadata_info': 'Scopri chi e cosa nomina questo file, poi ripuliscilo.',
-  'about': 'Informazioni sull’app',
-  'about_info': 'Cosa fa, cosa non invia mai e quale versione stai usando.',
-  'reset_defaults': 'Ripristina predefiniti',
-  'defaults_restored': 'Predefiniti ripristinati',
-  'reset_defaults_info': 'Fai riapparire i suggerimenti chiusi con «Non mostrare più». I tuoi documenti non vengono toccati.',
   // FileMenu — Redact
   'redact': 'Oscura',
   'find_and_redact': 'Trova e oscura',
@@ -55,8 +50,6 @@ const menu: Messages['menu'] = {
   'undo_named': 'Annulla {action}',
   'redo': 'Ripeti',
   'clear_annotations': 'Cancella tutte le annotazioni',
-  // CompanyBadge
-  'company': 'Azienda',
   // FileNameEditor
   'rename_file': 'Rinomina file',
   'click_to_rename': 'Fai clic per rinominare',

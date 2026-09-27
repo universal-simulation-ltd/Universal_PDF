@@ -1,5 +1,6 @@
-// reset-defaults.e2e.mjs — "Don't show again" stays dismissed, and Reset
-// defaults brings it back. `npm run test:reset-defaults` (dev server up).
+// reset-defaults.e2e.mjs — "Don't show again" stays dismissed, and Reset to
+// defaults (the foot of "Tune this app" since SDK 0.161.0, 2026-09-27; Actions
+// ▸ Advanced before that) brings it back. `npm run test:reset-defaults` (dev server up).
 //
 // Owner ask, 2026-09-08: keep "Don't show again" permanent, add a Reset
 // defaults row under Advanced on the Actions tab, and make the dismissal follow
@@ -133,21 +134,24 @@ console.log('\nReset defaults brings it back')
 // nothing appears, which looks exactly like a broken menu.
 await page.locator('button:has-text("Actions")').first().hover()
 await page.waitForTimeout(600)
-const advanced = page.locator('button:has-text("Advanced")').first()
-check('the Advanced section is visible once Actions is open', await advanced.isVisible())
+const tune = page.locator('[role=menuitem]:has-text("Tune this app")').first()
+check('Tune this app is visible once Actions is open', await tune.isVisible())
 
-await advanced.click()
-await page.waitForTimeout(300)
-const resetRow = page.locator('button:has-text("Reset defaults")').first()
-check('Reset defaults is in it', await resetRow.isVisible())
+await tune.click()
+await page.waitForTimeout(400)
+const resetRow = page.locator('[data-testid="unisim-prefs-reset"] button:has-text("Reset to defaults")').first()
+check('Reset to defaults is at its foot', await resetRow.isVisible())
 if (await resetRow.isVisible()) {
   await page.screenshot({ path: 'e2e-reset-defaults-menu.png' })
 }
 
 await resetRow.click()
+await page.waitForTimeout(300)
+// The SDK asks first, in place, then says so.
+await page.locator('[data-testid="unisim-prefs-reset"] button', { hasText: /^Reset$/ }).first().click()
 await page.waitForTimeout(800)
-check('it confirms in place rather than closing the menu',
-      await page.locator('button:has-text("Defaults restored")').first().isVisible())
+check('it confirms in place rather than closing the dialog',
+      await page.locator('[data-testid="unisim-prefs-reset"]:has-text("Defaults restored")').first().isVisible())
 
 await openDoc()
 await armPlacement()

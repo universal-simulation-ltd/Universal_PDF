@@ -38,11 +38,6 @@ export default {
   'advanced_export_info': 'Flatten the pages into pictures, lock it with a password, keep or strip the metadata.',
   'metadata': 'Document metadata',
   'metadata_info': 'See who and what this file names — then scrub it.',
-  'about': 'About this app',
-  'about_info': 'What it does, what it never sends, and which build you are on.',
-  'reset_defaults': 'Reset defaults', // verb phrase: restore dismissed tips
-  'defaults_restored': 'Defaults restored', // replaces "Reset defaults" for 2.5s after it is tapped
-  'reset_defaults_info': 'Bring back the tips you dismissed with “Don’t show again”. Your documents are untouched.',
   // FileMenu — Redact
   'redact': 'Redact', // menu section header
   'find_and_redact': 'Find and redact',
@@ -55,8 +50,6 @@ export default {
   'undo_named': 'Undo {action}', // {action} is a whole-document step, e.g. "merge"
   'redo': 'Redo',
   'clear_annotations': 'Clear all annotations',
-  // CompanyBadge
-  'company': 'Company', // caption above the organisation's name
   // FileNameEditor
   'rename_file': 'Rename file',
   'click_to_rename': 'Click to rename',

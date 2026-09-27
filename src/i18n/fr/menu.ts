@@ -38,11 +38,6 @@ const menu: Messages['menu'] = {
   'advanced_export_info': 'Aplatissez les pages en images, verrouillez le fichier par mot de passe, conservez ou supprimez les métadonnées.',
   'metadata': 'Métadonnées du document',
   'metadata_info': 'Découvrez les personnes et les logiciels que ce fichier mentionne — puis effacez ces informations.',
-  'about': 'À propos de cette application',
-  'about_info': 'Ce qu’elle fait, ce qu’elle n’envoie jamais et la version que vous utilisez.',
-  'reset_defaults': 'Rétablir les valeurs par défaut',
-  'defaults_restored': 'Valeurs par défaut rétablies',
-  'reset_defaults_info': 'Réaffiche les conseils masqués avec « Ne plus afficher ». Vos documents ne sont pas modifiés.',
   // FileMenu — Redact
   'redact': 'Caviarder',
   'find_and_redact': 'Rechercher et caviarder',
@@ -55,8 +50,6 @@ const menu: Messages['menu'] = {
   'undo_named': 'Annuler {action}',
   'redo': 'Rétablir',
   'clear_annotations': 'Effacer toutes les annotations',
-  // CompanyBadge
-  'company': 'Entreprise',
   // FileNameEditor
   'rename_file': 'Renommer le fichier',
   'click_to_rename': 'Cliquez pour renommer',

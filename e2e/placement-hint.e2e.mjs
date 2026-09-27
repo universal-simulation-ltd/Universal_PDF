@@ -141,17 +141,16 @@ const pageBox = await pageCanvas.boundingBox()
 // preference is SYNCED to the account rather than kept in this browser. So a
 // run leaves the next one starting with the card already off, and "a card is up
 // again" fails — on a second run of a suite that passed the first time, with
-// nothing in the app broken. Reset defaults (Actions ▸ Advanced) is the app's
+// nothing in the app broken. Reset to defaults (Tune this app) is the app's
 // own way back, and clearing localStorage would not do: the synced value would
 // simply come back down.
 await page.hover('button[aria-label$="Profile"]')
 await page.waitForTimeout(400)
-const advanced = page.locator('button:visible').filter({ hasText: 'Advanced' }).first()
-if ((await advanced.getAttribute('aria-expanded')) !== 'true') {
-  await advanced.click()
-  await page.waitForTimeout(300)
-}
-await page.locator('button:visible').filter({ hasText: 'Reset defaults' }).first().click()
+await page.locator('[role=menuitem]:visible').filter({ hasText: 'Tune this app' }).first().click()
+await page.waitForTimeout(400)
+await page.locator('[data-testid="unisim-prefs-reset"] button').filter({ hasText: 'Reset to defaults' }).first().click()
+await page.waitForTimeout(300)
+await page.locator('[data-testid="unisim-prefs-reset"] button').filter({ hasText: /^Reset$/ }).first().click()
 await page.waitForTimeout(1200)
 await page.keyboard.press('Escape')
 await page.waitForTimeout(300)

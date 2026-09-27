@@ -1,4 +1,5 @@
-// "About this app" — browser checks for the Advanced category and the dialog
+// "About this app" — browser checks for the row at the foot of "Tune this app"
+// (SDK 0.161.0; it lived in Actions ▸ Advanced until 2026-09-27) and the dialog
 // it opens. Runs against ANY Universal app, not just this one, because the
 // component under test is the SDK's and every app in the suite now carries it:
 //
@@ -92,28 +93,21 @@ const pill = p.locator('button:has-text("Actions")').first()
 await pill.waitFor({ state: 'visible', timeout: 15000 })
 await pill.hover()
 await p.waitForTimeout(600)
-if (!(await p.locator('button[aria-haspopup="true"]', { hasText: /^\s*\S{0,3}\s*Advanced\s*$/ }).first().isVisible())) {
+const tune = p.locator('[role=menuitem]', { hasText: /Tune this app/ }).first()
+if (!(await tune.isVisible())) {
   await pill.click()
   await p.waitForTimeout(600)
 }
+check(await tune.isVisible(), 'the menu has Tune this app')
+await tune.click()
+await p.waitForTimeout(500)
 
-// ⚠️ aria-haspopup, not the label alone: Universal QR has an "Advanced" TAB
-// in its studio, and a bare text match found that instead of the menu's own
-// category — green on the first assertion, then stuck on the second.
-const advanced = p.locator('button[aria-haspopup="true"]', { hasText: /^\s*\S{0,3}\s*Advanced\s*$/ }).first()
-check(await advanced.isVisible(), 'the menu has an Advanced category')
-await advanced.click()
-await p.waitForTimeout(400)
-
-// Not [role=menuitem]: Universal PDF's own InfoRow is a plain <button>, and
-// this test has to accept the app's existing row markup rather than the
-// SDK's, since PDF keeps its own Advanced section.
-const row = p.locator('button', { hasText: /About this app/ }).first()
-check(await row.isVisible(), 'About this app is inside it')
+const row = p.locator('[data-testid="unisim-prefs-about"]').first()
+check(await row.isVisible(), 'About this app is at the foot of it')
 await row.click()
 await p.waitForTimeout(700)
 
-const dialog = p.locator('[role=dialog]').first()
+const dialog = p.locator('[role=dialog][aria-label^="About this app"]').first()
 check(await dialog.isVisible(), 'the row opens the dialog')
 const text = await dialog.innerText()
 check(/OPEN SOURCE/i.test(text), 'it states the licence and links the source')
@@ -127,7 +121,7 @@ if (SHOT) await dialog.screenshot({ path: SHOT })
 
 await p.keyboard.press('Escape')
 await p.waitForTimeout(400)
-check((await p.locator('[role=dialog]').count()) === 0, 'Escape closes it')
+check((await p.locator('[role=dialog][aria-label^="About this app"]').count()) === 0, 'Escape closes it')
 
 check(errors.length === 0, 'no page errors', errors.join(' | ').slice(0, 200))
 await b.close()

@@ -38,11 +38,6 @@ const menu: Messages['menu'] = {
   'advanced_export_info': 'Transforme as páginas em imagens, proteja com senha, mantenha ou remova os metadados.',
   'metadata': 'Metadados do documento',
   'metadata_info': 'Veja quem e o que este arquivo identifica — e depois apague.',
-  'about': 'Sobre este app',
-  'about_info': 'O que ele faz, o que nunca envia e qual versão você está usando.',
-  'reset_defaults': 'Restaurar padrões',
-  'defaults_restored': 'Padrões restaurados',
-  'reset_defaults_info': 'Traz de volta as dicas que você dispensou com “Não mostrar novamente”. Seus documentos não são alterados.',
   // FileMenu — Redact
   'redact': 'Tarjar',
   'find_and_redact': 'Localizar e tarjar',
@@ -55,8 +50,6 @@ const menu: Messages['menu'] = {
   'undo_named': 'Desfazer {action}',
   'redo': 'Refazer',
   'clear_annotations': 'Apagar todas as anotações',
-  // CompanyBadge
-  'company': 'Empresa',
   // FileNameEditor
   'rename_file': 'Renomear arquivo',
   'click_to_rename': 'Clique para renomear',

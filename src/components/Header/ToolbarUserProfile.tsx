@@ -6,8 +6,9 @@ import {
   useProfile,
   useUniversal,
   useSubscription,
+  useUserPrefs,
 } from '@unisim/sdk'
-import CompanyBadge from './CompanyBadge'
+import { ABOUT_APP } from '../../lib/aboutApp'
 
 // Same default the UniversalAppsNavBar uses for the profile "Sign in" item.
 const HUB_LOGIN_HREF = 'https://app.unisim.co.uk/login'
@@ -70,6 +71,14 @@ function initialsFor(displayName: string | null | undefined, email: string | nul
  */
 export default function ToolbarUserProfile({ actions }: { actions?: ReactNode }) {
   const { user, loading: userLoading } = useUser()
+  // Reset to defaults — the way back from "Don't show again" (James,
+  // 2026-09-08). `reset` clears the local copy AND, for a signed-in user, the
+  // synced row, so a hint dismissed on another device comes back too. Since
+  // 2026-09-27 the SDK draws the row at the foot of "Tune this app" (it asks
+  // in place first and says "Defaults restored"), rather than Actions ▸
+  // Advanced. ⚠️ Do not drop it without also making "Don't show again"
+  // non-permanent: this row is what makes a permanent dismissal defensible.
+  const { reset: resetPrefs } = useUserPrefs()
   const { profile, loading: profileLoading, refresh: refreshProfile } = useProfile()
   const { supabase, session } = useUniversal()
   const { subscription } = useSubscription()
@@ -212,16 +221,12 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
           // dialogs follow `theme` (light, the default), not `pillTheme`, so
           // they match the light panel.
 
-          // The org's mark and name, from whatever My Company → Branding
-          // already holds. `extras` sits with the account rows (profile, Global
-          // preferences) and above the sign-out divider, which is where
-          // "who am I signed in as" belongs — not up among the app's actions.
-          //
-          // ⚠️ Styled LIGHT deliberately. The SDK renders `extras` as-is and
-          // does not theme it, and `theme` is left at its default here (a dark
-          // pill over a light panel — see pillTheme below), so a dark treatment
-          // would be white text on white.
-          extras={<CompanyBadge />}
+          // About and Reset to defaults live at the foot of "Tune this app"
+          // (SDK 0.161.0), the same config the landing navbar gets. No
+          // `extras`: the company badge this menu drew until 2026-09-27 is
+          // now the SDK's, in the plan & limits box.
+          about={ABOUT_APP}
+          onResetDefaults={() => { void resetPrefs() }}
           // The bar this sits in is slate-900, so the pill takes the dark
           // treatment — otherwise it reads as a white chip punched into it.
           pillTheme="dark"

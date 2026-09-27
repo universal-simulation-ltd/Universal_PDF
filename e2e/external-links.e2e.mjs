@@ -134,20 +134,20 @@ async function run(native) {
   await page.waitForTimeout(500)
 
   // ⚠️ HOVER, not click — <UserProfile> opens the pill on hover, so a click
-  // opens it and then toggles it shut again. Same landmine as `about-app`, and
-  // `aria-haspopup` rather than the bare label for the same reason it gives.
+  // opens it and then toggles it shut again. Same landmine as `about-app`.
   const pill = page.locator('button:has-text("Actions")').first()
   await pill.waitFor({ state: 'visible', timeout: 15000 })
   await pill.hover()
   await page.waitForTimeout(600)
-  const advanced = page.locator('button[aria-haspopup="true"]', { hasText: /^\s*\S{0,3}\s*Advanced\s*$/ }).first()
-  if (!(await advanced.isVisible())) {
+  // About this app is at the foot of "Tune this app" since SDK 0.161.0.
+  const tune = page.locator('[role=menuitem]', { hasText: /Tune this app/ }).first()
+  if (!(await tune.isVisible())) {
     await pill.click()
     await page.waitForTimeout(600)
   }
-  await advanced.click()
+  await tune.click()
   await page.waitForTimeout(400)
-  await page.locator('button', { hasText: /About this app/ }).first().click()
+  await page.locator('[data-testid="unisim-prefs-about"]').first().click()
   await page.waitForTimeout(700)
 
   // ⚠️ Watch the click's own `defaultPrevented`, not whether a tab appeared.

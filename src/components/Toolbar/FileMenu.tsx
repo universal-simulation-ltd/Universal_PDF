@@ -5,18 +5,11 @@ import { usePdfStore } from '../../stores/pdfStore'
 import { useExitGuard } from '../../stores/exitGuard'
 import { useSearchStore } from '../../stores/searchStore'
 import { useUndo } from '../../hooks/useUndo'
-import { useUserPrefs } from '@unisim/sdk'
 import { useT } from '../../i18n'
 import { PDF_OR_OFFICE_ACCEPT } from '../../lib/officeToPdf'
 import { openFiles } from '../../stores/tabStore'
 import { RedactIcon } from '../icons/RedactIcon'
-import { AboutAppDialog, useCloseAppMenu } from '@unisim/sdk'
-// Generated — `node ../unisim-workspace/Universal_Apps/scripts/gen-credits.mjs .`
-// after any dependency change. Never edit it by hand: it is read off the
-// installed tree, so a hand-kept list drifts from the lockfile the first time
-// anyone upgrades anything, and a credits list naming a package we removed is
-// worse than no list at all.
-import credits from '../../generated/credits.json'
+import { useCloseAppMenu } from '@unisim/sdk'
 
 /**
  * The one category the dropdown has expanded, or `null` for all collapsed.
@@ -171,11 +164,6 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const isXfa = usePdfStore((s) => s.isXfa)
   const setSearchOpen = useSearchStore((s) => s.setOpen)
   const openForRedact = useSearchStore((s) => s.openForRedact)
-  // Reset defaults (Advanced). `reset` clears the local copy AND, for a
-  // signed-in user, the synced row — so a hint dismissed on another device
-  // comes back too, which is the whole point of it being synced.
-  const { reset: resetPrefs } = useUserPrefs()
-  const [resetDone, setResetDone] = useState(false)
 
   const canClear = annotations.length > 0
   const canRename = !!doc && !!fileName
@@ -208,7 +196,6 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   // App preferences (this app's override) and Global preferences (the suite's),
   // both rows of the profile menu this panel is merged into.
   const t = useT()
-  const [aboutOpen, setAboutOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -680,43 +667,6 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                     info={t('menu.metadata_info')}
                     onSelect={() => { setMetadataOpen(true); closeMenu() }}
                   />
-                  {/* ⚠️ This app keeps its OWN Advanced section, so it gets the
-                      SDK's <AboutAppDialog> without the SDK's <AdvancedMenu>
-                      around it. Two sections both labelled Advanced in one
-                      dropdown would be worse than either. */}
-                  <InfoRow
-                    icon="ℹ"
-                    label={t('menu.about')}
-                    info={t('menu.about_info')}
-                    onSelect={() => { setAboutOpen(true); closeMenu() }}
-                  />
-                  {/* Reset defaults — the way back from "Don't show again"
-                      (James, 2026-09-08).
-
-                      ⚠️ This row is what makes a PERMANENT dismissal defensible.
-                      Before it existed, tapping "Don't show again" set a
-                      preference the user could neither see nor undo, and the
-                      only cure was clearing site data. Do not remove it
-                      without also making that button non-permanent.
-
-                      It is deliberately NOT a confirm: it restores hints, it
-                      does not delete anything a user made, and a confirm on a
-                      harmless action teaches people to click through confirms
-                      on harmful ones. The label says what comes back. */}
-                  <InfoRow
-                    icon="↺"
-                    label={resetDone ? t('menu.defaults_restored') : t('menu.reset_defaults')}
-                    info={t('menu.reset_defaults_info')}
-                    onSelect={() => {
-                      void resetPrefs().then(() => {
-                        setResetDone(true)
-                        // Left open on purpose: the label changing to
-                        // "Defaults restored" IS the feedback, and closing the
-                        // menu would hide it.
-                        window.setTimeout(() => setResetDone(false), 2500)
-                      })
-                    }}
-                  />
                 </div>
               )}
             </>
@@ -825,24 +775,6 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
         </>
   )
 
-  // The About dialog is a portal, so it can be mounted from either variant and
-  // survives the dropdown closing behind it (`closeMenu()` runs on the same
-  // click). Its content — the product name, mark, tagline and the privacy note
-  // itself — comes from the SDK; only what is true of THIS app is passed.
-  const aboutDialog = (
-    <AboutAppDialog
-      open={aboutOpen}
-      onClose={() => setAboutOpen(false)}
-      repo="https://github.com/universal-simulation-ltd/Universal_PDF"
-      proof="https://github.com/universal-simulation-ltd/Universal_PDF/blob/main/PRIVACY.md"
-      subject="Your PDF"
-      except="backup and send-to-sign"
-      version={__APP_VERSION__}
-      credits={credits}
-      noticesHref="https://github.com/universal-simulation-ltd/Universal_PDF/blob/main/THIRD-PARTY-NOTICES.md"
-    />
-  )
-
   // Rows mode: the SDK's dropdown is the container, so there is no trigger, no
   // panel and no `open` state in play (the outside-click and positioning
   // effects above are both gated on `open`, which stays false here).
@@ -851,7 +783,6 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
       <>
         {fileInput}
         <div className={MENU_MIN_WIDTH_CLASS}>{body}</div>
-        {aboutDialog}
       </>
     )
   }
@@ -871,7 +802,6 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
       </button>
       {fileInput}
       {open && renderMenu(body)}
-      {aboutDialog}
     </div>
   )
 }
