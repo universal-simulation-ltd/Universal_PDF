@@ -1766,23 +1766,20 @@ its trigger carries `aria-expanded` **and** `aria-controls`; with no
 
 App Review 5.1.1(v): the suite's sign-in creates an account for any email it
 doesn't recognise, so an app that offers it must also let people delete the
-account from inside the app. `components/Header/DeleteAccountDialog.tsx` does
-that (2026-09-13). The dialog only asks; the platform's `delete-account` edge
-function does the work, and it deletes the Universal ID in **every** UNI·SIM
-product, which is why the dialog says "everywhere" and asks for `delete-all`
-(James's wording for the same screen in the Ergo Assess iPhone app).
+account from inside the app. Since 2026-09-27 this app draws nothing of its
+own for it: **Delete my account…** is the SDK's, at the foot of **Global
+Tuning** (or of "Tune this app" when that holds the global rows), from SDK
+0.159.0 — James: "Move the delete my account everywhere into the 'Global
+Tuning' menu (e.g. remove from pdf landing page)". It opens the SDK's
+`<DeleteAccountDialog />`, which says it is "everywhere" and will not act until
+`delete-all` is typed, then calls the platform's `delete-account` function and
+signs out locally. Its tests live in the SDK (`npm run test:delete-account`
+there).
 
-- **Two ways in, both only when a real account is signed in:** a row under the
-  company badge in the profile menu (a document open), and a small link under
-  the privacy note on the start screen (the landing navbar has no `extras`
-  slot, and a phone starts on that screen).
-- **It is a portal.** Both callers sit in a stacking context (the tools bar is
-  `relative z-[45]`, the landing navbar's wrapper `z-50`), so a `fixed` dialog
-  rendered in place would be capped at its parent's level.
-- **Success signs out locally only.** The account no longer exists, so a global
-  sign-out would call the server as nobody.
-- `npm run test:delete-account` intercepts the function. It proves the app's
-  half; the function's half was proved on prod from the Ergo app.
+Until then this repo had its own dialog (`components/Header/DeleteAccountDialog.tsx`,
+2026-09-13, the one the SDK's was lifted from), a row under the company badge
+and a link under the start screen's privacy note. All three went, with their
+strings in every language and both of their tests.
 
 **The iOS privacy manifest** is `ios/App/App/PrivacyInfo.xcprivacy`. It declares
 the sign-in email and id, a PDF the user stores or sends to sign, and the one

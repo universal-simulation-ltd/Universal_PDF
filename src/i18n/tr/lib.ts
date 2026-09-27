@@ -163,8 +163,6 @@ const lib: Messages['lib'] = {
   'image_empty': '“{name}” boş geldi — yeniden eklemeyi deneyin',
   'image_unreadable': '“{name}” bu cihazdan okunamadı — bulutta duruyorsa indirilmesi için önce fotoğraf uygulamanızda açın',
 
-  // deleteAccount
-  'delete_account_failed': 'Hesabınız silinemedi. Bağlantınızı kontrol edip yeniden deneyin veya inbox@unisim.co.uk adresine e-posta gönderin.',
 }
 
 export default lib

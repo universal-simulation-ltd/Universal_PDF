@@ -8,8 +8,6 @@ import {
   useSubscription,
 } from '@unisim/sdk'
 import CompanyBadge from './CompanyBadge'
-import DeleteAccountDialog, { useCanDeleteAccount } from './DeleteAccountDialog'
-import { useT } from '../../i18n'
 
 // Same default the UniversalAppsNavBar uses for the profile "Sign in" item.
 const HUB_LOGIN_HREF = 'https://app.unisim.co.uk/login'
@@ -71,14 +69,11 @@ function initialsFor(displayName: string | null | undefined, email: string | nul
  * instead of an Actions button and an avatar sitting apart in the same bar.
  */
 export default function ToolbarUserProfile({ actions }: { actions?: ReactNode }) {
-  const t = useT()
   const { user, loading: userLoading } = useUser()
   const { profile, loading: profileLoading, refresh: refreshProfile } = useProfile()
   const { supabase, session } = useUniversal()
   const { subscription } = useSubscription()
   const [signInOpen, setSignInOpen] = useState(false)
-  const [deleteOpen, setDeleteOpen] = useState(false)
-  const canDeleteAccount = useCanDeleteAccount()
 
   // ⚠️ WHY THE NAME WENT STALE, and why this is a refresh rather than a
   // subscription. `useProfile()` is a hook with its OWN `useState` per call
@@ -208,10 +203,9 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
           menuAlign="right"
           tier={subscription?.tier}
           actions={actions}
-          // This menu draws its own "Delete my account" row in `extras`
-          // (below), which is visible without opening the account panel; the
-          // SDK's copy in that panel would make two in a native shell.
-          showDeleteAccount={false}
+          // No `showDeleteAccount`: "Delete my account…" is the SDK's, at the
+          // foot of Global Tuning (SDK 0.159.0). This menu drew its own row
+          // in `extras` until 2026-09-27, when James moved it there suite-wide.
           // No `showLanguageSelector`: the language lives in the SDK's App
           // preferences (this app's override) and Global preferences rows —
           // the Actions rows' own Language picker went in 2026-09-17. Both
@@ -227,26 +221,7 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
           // does not theme it, and `theme` is left at its default here (a dark
           // pill over a light panel — see pillTheme below), so a dark treatment
           // would be white text on white.
-          //
-          // "Delete my account" sits here too, with the account rows it
-          // belongs to (App Review 5.1.1(v); see DeleteAccountDialog). Only
-          // for a real account: a guest or an anonymous trial has none.
-          extras={
-            <>
-              <CompanyBadge />
-              {canDeleteAccount && (
-                <button
-                  type="button"
-                  data-testid="profile-delete-account"
-                  onClick={() => setDeleteOpen(true)}
-                  className="flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-[13px] text-red-700 hover:bg-red-50"
-                >
-                  <span aria-hidden="true" className="w-7 shrink-0 text-center">🗑</span>
-                  {t('menu.delete_account_row')}
-                </button>
-              )}
-            </>
-          }
+          extras={<CompanyBadge />}
           // The bar this sits in is slate-900, so the pill takes the dark
           // treatment — otherwise it reads as a white chip punched into it.
           pillTheme="dark"
@@ -257,9 +232,6 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
         onClose={() => setSignInOpen(false)}
         hubLoginHref={HUB_LOGIN_HREF}
       />
-      {/* Rendered whether or not anyone is signed in: a successful deletion
-          signs out, and the dialog has to outlive that to say it worked. */}
-      <DeleteAccountDialog open={deleteOpen} onClose={() => setDeleteOpen(false)} />
     </>
   )
 }

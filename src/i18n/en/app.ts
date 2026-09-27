@@ -140,8 +140,6 @@ export default {
   'landing_free_compress': 'Compress PDF for free',
   'landing_free_qr': 'Add QR codes for free',
   'landing_free_export': 'Export PDF for free',
-  'landing_signed_in': 'Signed in with a Universal ID. {delete}', // {delete} is the "Delete my account" button
-  'landing_delete_account': 'Delete my account',
   'landing_drop_hint': 'PDF files only — anywhere on this page will do',
 
   // PdfIllustration

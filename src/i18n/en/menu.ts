@@ -57,24 +57,6 @@ export default {
   'clear_annotations': 'Clear all annotations',
   // CompanyBadge
   'company': 'Company', // caption above the organisation's name
-  // ToolbarUserProfile
-  'delete_account_row': 'Delete my account…',
-  // DeleteAccountDialog
-  'delete_done_title': 'Your account has been deleted',
-  'delete_done_body': 'You’re signed out everywhere. Universal PDF keeps working without an account, and the files on this device are just as you left them.',
-  'close': 'Close',
-  'delete_title': 'Delete your account everywhere?',
-  'delete_body_email': 'This deletes your Universal ID ({email}) in {every} UNI·SIM app and product you sign in to with it, not just in Universal PDF. It can’t be undone.',
-  'delete_body': 'This deletes your Universal ID in {every} UNI·SIM app and product you sign in to with it, not just in Universal PDF. It can’t be undone.',
-  'delete_every': 'every', // emphasised word filling {every} in the two sentences above
-  'delete_point_profile': 'Your sign-in, profile and settings are deleted.',
-  'delete_point_sole_org': 'Organisations where you are the only member are deleted, with everything stored in them.',
-  'delete_point_shared_org': 'In an organisation you share, you are removed and it carries on without you.',
-  'delete_point_files': 'PDFs on this device and your Recent files are not touched.',
-  'delete_point_subscription': 'A paid subscription is not cancelled automatically. Email inbox@unisim.co.uk and we will cancel it.',
-  'delete_confirm_label': 'Type {phrase} to confirm', // {phrase} is the literal "delete-all", never translated
-  'deleting': 'Deleting…',
-  'delete_button': 'Delete my account',
   // FileNameEditor
   'rename_file': 'Rename file',
   'click_to_rename': 'Click to rename',

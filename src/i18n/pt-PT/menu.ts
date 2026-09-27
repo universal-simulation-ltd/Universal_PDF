@@ -57,24 +57,6 @@ const menu: Messages['menu'] = {
   'clear_annotations': 'Limpar todas as anotações',
   // CompanyBadge
   'company': 'Empresa',
-  // ToolbarUserProfile
-  'delete_account_row': 'Eliminar a minha conta…',
-  // DeleteAccountDialog
-  'delete_done_title': 'A conta foi eliminada',
-  'delete_done_body': 'A sessão foi terminada em todo o lado. O Universal PDF continua a funcionar sem conta, e os ficheiros neste dispositivo ficam tal como estavam.',
-  'close': 'Fechar',
-  'delete_title': 'Eliminar a conta em todo o lado?',
-  'delete_body_email': 'Esta ação elimina o Universal ID ({email}) em {every} app ou produto UNI·SIM em que é usado para iniciar sessão, e não apenas no Universal PDF. Não é possível anular.',
-  'delete_body': 'Esta ação elimina o Universal ID em {every} app ou produto UNI·SIM em que é usado para iniciar sessão, e não apenas no Universal PDF. Não é possível anular.',
-  'delete_every': 'cada',
-  'delete_point_profile': 'O início de sessão, o perfil e as definições são eliminados.',
-  'delete_point_sole_org': 'As organizações em que é o único membro são eliminadas, com tudo o que nelas está guardado.',
-  'delete_point_shared_org': 'Numa organização partilhada, a conta é removida e a organização continua sem ela.',
-  'delete_point_files': 'Os PDF neste dispositivo e os ficheiros recentes não são alterados.',
-  'delete_point_subscription': 'Uma subscrição paga não é cancelada automaticamente. Envie um email para inbox@unisim.co.uk e nós cancelamo-la.',
-  'delete_confirm_label': 'Escreva {phrase} para confirmar',
-  'deleting': 'A eliminar…',
-  'delete_button': 'Eliminar a minha conta',
   // FileNameEditor
   'rename_file': 'Mudar o nome do ficheiro',
   'click_to_rename': 'Clique para mudar o nome',

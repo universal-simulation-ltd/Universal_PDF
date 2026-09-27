@@ -57,24 +57,6 @@ const menu: Messages['menu'] = {
   'clear_annotations': 'Alle Kommentare entfernen',
   // CompanyBadge
   'company': 'Unternehmen',
-  // ToolbarUserProfile
-  'delete_account_row': 'Mein Konto löschen…',
-  // DeleteAccountDialog
-  'delete_done_title': 'Dein Konto wurde gelöscht',
-  'delete_done_body': 'Du bist überall abgemeldet. Universal PDF funktioniert auch ohne Konto weiter, und die Dateien auf diesem Gerät sind genau so, wie du sie hinterlassen hast.',
-  'close': 'Schließen',
-  'delete_title': 'Dein Konto überall löschen?',
-  'delete_body_email': 'Damit wird deine Universal ID ({email}) in {every} UNI·SIM-App und jedem UNI·SIM-Produkt gelöscht, bei dem du dich damit anmeldest – nicht nur in Universal PDF. Das kann nicht rückgängig gemacht werden.',
-  'delete_body': 'Damit wird deine Universal ID in {every} UNI·SIM-App und jedem UNI·SIM-Produkt gelöscht, bei dem du dich damit anmeldest – nicht nur in Universal PDF. Das kann nicht rückgängig gemacht werden.',
-  'delete_every': 'jeder',
-  'delete_point_profile': 'Deine Anmeldung, dein Profil und deine Einstellungen werden gelöscht.',
-  'delete_point_sole_org': 'Organisationen, in denen du das einzige Mitglied bist, werden mit allem, was darin gespeichert ist, gelöscht.',
-  'delete_point_shared_org': 'Aus Organisationen, die du mit anderen teilst, wirst du entfernt; sie bestehen ohne dich weiter.',
-  'delete_point_files': 'PDFs auf diesem Gerät und deine zuletzt verwendeten Dateien bleiben unberührt.',
-  'delete_point_subscription': 'Ein kostenpflichtiges Abo wird nicht automatisch gekündigt. Schreib an inbox@unisim.co.uk, dann kündigen wir es.',
-  'delete_confirm_label': 'Gib {phrase} ein, um zu bestätigen',
-  'deleting': 'Wird gelöscht…',
-  'delete_button': 'Mein Konto löschen',
   // FileNameEditor
   'rename_file': 'Datei umbenennen',
   'click_to_rename': 'Zum Umbenennen klicken',

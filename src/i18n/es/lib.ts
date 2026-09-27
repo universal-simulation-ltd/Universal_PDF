@@ -163,8 +163,6 @@ const lib: Messages['lib'] = {
   'image_empty': '{name} ha llegado vacío; prueba a añadirlo de nuevo',
   'image_unreadable': 'No se ha podido leer {name} desde este dispositivo; si está en la nube, ábrelo primero en tu app de fotos para que se descargue',
 
-  // deleteAccount
-  'delete_account_failed': 'No se ha podido eliminar tu cuenta. Comprueba tu conexión y vuelve a intentarlo, o escribe a inbox@unisim.co.uk.',
 }
 
 export default lib

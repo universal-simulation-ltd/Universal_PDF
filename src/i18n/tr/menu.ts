@@ -57,24 +57,6 @@ const menu: Messages['menu'] = {
   'clear_annotations': 'Tüm notları temizle',
   // CompanyBadge
   'company': 'Şirket',
-  // ToolbarUserProfile
-  'delete_account_row': 'Hesabımı sil…',
-  // DeleteAccountDialog
-  'delete_done_title': 'Hesabınız silindi',
-  'delete_done_body': 'Her yerde oturumunuz kapatıldı. Universal PDF hesap olmadan da çalışmaya devam eder ve bu cihazdaki dosyalar bıraktığınız gibi durur.',
-  'close': 'Kapat',
-  'delete_title': 'Hesabınız her yerde silinsin mi?',
-  'delete_body_email': 'Bu işlem, Universal ID’nizi ({email}) yalnızca Universal PDF’te değil, onunla giriş yaptığınız {every} UNI·SIM uygulamasında ve ürününde siler. Geri alınamaz.',
-  'delete_body': 'Bu işlem, Universal ID’nizi yalnızca Universal PDF’te değil, onunla giriş yaptığınız {every} UNI·SIM uygulamasında ve ürününde siler. Geri alınamaz.',
-  'delete_every': 'her',
-  'delete_point_profile': 'Giriş bilgileriniz, profiliniz ve ayarlarınız silinir.',
-  'delete_point_sole_org': 'Tek üyesi olduğunuz kuruluşlar, içlerinde saklanan her şeyle birlikte silinir.',
-  'delete_point_shared_org': 'Paylaştığınız bir kuruluştan çıkarılırsınız; kuruluş sizsiz devam eder.',
-  'delete_point_files': 'Bu cihazdaki PDF’lere ve son dosyalarınıza dokunulmaz.',
-  'delete_point_subscription': 'Ücretli abonelik otomatik olarak iptal edilmez. inbox@unisim.co.uk adresine e-posta gönderin, aboneliği biz iptal edelim.',
-  'delete_confirm_label': 'Onaylamak için {phrase} yazın',
-  'deleting': 'Siliniyor…',
-  'delete_button': 'Hesabımı sil',
   // FileNameEditor
   'rename_file': 'Dosyayı yeniden adlandır',
   'click_to_rename': 'Yeniden adlandırmak için tıklayın',

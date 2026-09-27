@@ -22,7 +22,6 @@ import { useDefaultPdfApp } from '../../hooks/useDefaultPdfApp'
 import { PreviewPanePill } from '../Onboarding/PreviewPaneOffer'
 import { usePreviewPane } from '../../hooks/usePreviewPane'
 import { CONTAINER } from '../../lib/layout'
-import DeleteAccountDialog, { useCanDeleteAccount } from '../Header/DeleteAccountDialog'
 import { useT, type MessageKey } from '../../i18n'
 
 // Balanced is the default when compressing — 'light' is lossless but usually
@@ -100,8 +99,6 @@ export default function LandingPage() {
   const [mergeOpen, setMergeOpen] = useState(false)
   const [convertMode, setConvertMode] = useState<ConvertMode | null>(null)
   const [ocrJob, setOcrJob] = useState<{ bytes: ArrayBuffer; name: string } | null>(null)
-  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false)
-  const canDeleteAccount = useCanDeleteAccount()
 
   // The suite's shared drop mechanics — drag depth, the hidden input, click and
   // Enter and Space, resetting the value so the same file can be picked twice.
@@ -121,8 +118,7 @@ export default function LandingPage() {
   // its own, and swapping the document out from behind it would leave the dialog
   // describing something that is no longer there.
   const modalOpen =
-    !!compressJob || !!batchJob || transformOpen || mergeOpen || !!convertMode || !!ocrJob ||
-    deleteAccountOpen
+    !!compressJob || !!batchJob || transformOpen || mergeOpen || !!convertMode || !!ocrJob
   const drop = useFileDrop({
     // Wrapped rather than passed straight through: `openFiles` reports whether
     // the document actually opened (the redact entry point below only arms the
@@ -722,27 +718,6 @@ export default function LandingPage() {
               except="backup and send-to-sign"
             />
 
-            {/* The start screen's way to "Delete my account" (App Review
-                5.1.1(v)). The landing navbar's profile menu takes no `extras`,
-                and a phone starts here, so the only other way in (the profile
-                menu with a document open) would be one PDF away. Quiet on
-                purpose: it matters only to the person looking for it. */}
-            {canDeleteAccount && (
-              <p className="mt-3 text-xs text-slate-500">
-                {t.rich('app.landing_signed_in', {
-                  delete: (
-                <button
-                  type="button"
-                  data-testid="landing-delete-account"
-                  onClick={() => setDeleteAccountOpen(true)}
-                  className="underline underline-offset-2 hover:text-red-700"
-                >
-                  {t('app.landing_delete_account')}
-                </button>
-                  )
-                })}
-              </p>
-            )}
           </div>
 
         </div>
@@ -795,8 +770,6 @@ export default function LandingPage() {
           }}
         />
       )}
-
-      <DeleteAccountDialog open={deleteAccountOpen} onClose={() => setDeleteAccountOpen(false)} />
 
       {/* The other half of `pageWide` — the circle lights up wherever the drag
           is, and this says why, in the margin where the pointer actually is. */}

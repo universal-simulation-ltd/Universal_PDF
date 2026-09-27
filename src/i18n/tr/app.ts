@@ -140,8 +140,6 @@ const app: Messages['app'] = {
   'landing_free_compress': 'PDF’i ücretsiz sıkıştırın',
   'landing_free_qr': 'Ücretsiz QR kod ekleyin',
   'landing_free_export': 'PDF’i ücretsiz dışa aktarın',
-  'landing_signed_in': 'Universal ID ile giriş yapıldı. {delete}',
-  'landing_delete_account': 'Hesabımı sil',
   'landing_drop_hint': 'Yalnızca PDF dosyaları — bu sayfanın herhangi bir yerine bırakabilirsiniz',
 
   // PdfIllustration

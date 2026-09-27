@@ -162,7 +162,4 @@ export default {
   // heicSniff (adding a picture)
   'image_empty': '{name} came through empty — try adding it again',
   'image_unreadable': '{name} could not be read from this device — if it lives in the cloud, open it in your photos app first so it downloads',
-
-  // deleteAccount
-  'delete_account_failed': "Couldn't delete your account. Check your connection and try again, or email inbox@unisim.co.uk.",
 }

@@ -140,8 +140,6 @@ const app: Messages['app'] = {
   'landing_free_compress': 'PDF kostenlos komprimieren',
   'landing_free_qr': 'QR-Codes kostenlos hinzufügen',
   'landing_free_export': 'PDF kostenlos exportieren',
-  'landing_signed_in': 'Mit einer Universal ID angemeldet. {delete}',
-  'landing_delete_account': 'Mein Konto löschen',
   'landing_drop_hint': 'Nur PDF-Dateien – einfach irgendwo auf dieser Seite ablegen',
 
   // PdfIllustration
