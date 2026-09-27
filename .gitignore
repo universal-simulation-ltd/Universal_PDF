@@ -31,3 +31,6 @@ CLAUDE.md
 
 # Scratch: where the e2e docs say to stage a build under a /pdf/ base path.
 srv/
+
+# Screenshots the e2e runs drop in the repo root (delete-account writes three).
+e2e-*.png

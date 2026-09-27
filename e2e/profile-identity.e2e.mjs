@@ -92,6 +92,13 @@ const ORG_ID = '00000000-0000-4000-8000-0000000000aa'
 const LOGO_DATA_URL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
 
+// The SDK's own strings. The preferences row is asked for by KEY, never by its
+// English text: 0.148.0 renamed it "App preferences" → "Tune this app" and the
+// hard-coded literal here went on looking for a row that no longer says that,
+// so the case below failed for eight SDK releases while the row was fine.
+const sdk = await import(pathToFileURL(join(HERE, '../node_modules/@unisim/sdk/dist/i18n.js')).href)
+const APP_PREFS = sdk.t('en', 'prefs.app_preferences')
+
 const playwright = await loadPlaywright()
 const browser = await playwright.chromium.launch()
 const pdf = await testPdf()
@@ -266,8 +273,9 @@ check('the renamed org is shown', (await badge.first().innerText()).includes('Ac
 //     below jumped ~83px — including the language row, which moved out from
 //     under the cursor mid-press and could not be used at all. (That row was
 //     the SDK's <select> until 1.0.3, then the Actions menu's Language row; the
-//     language is in App preferences / Global preferences since 2026-09-17, so
-//     the row pinned below is App preferences — see e2e/language.e2e.mjs.)
+//     language is in the app / global preferences rows since 2026-09-17, so the
+//     row pinned below is the app one, `prefs.app_preferences` — see
+//     e2e/language.e2e.mjs, which asks for it the same way.)
 //
 // Both are pinned here rather than by the pill's appearance alone, because a
 // screenshot of the resting state looks identical either way.
@@ -305,23 +313,25 @@ check(
   JSON.stringify(pillStates),
 )
 
-console.log('\nthe App preferences row holds still while the pointer is on it')
+console.log(`\nthe "${APP_PREFS}" row holds still while the pointer is on it`)
 const panelShape = () =>
-  page.evaluate(() => {
+  page.evaluate((label) => {
     const el = [...document.querySelectorAll('[role="menu"] [role="menuitem"][aria-haspopup="dialog"]')]
-      .find((b) => b.textContent.includes('App preferences'))
+      .find((b) => b.textContent.includes(label))
     if (!el) return null
     return {
       top: Math.round(el.getBoundingClientRect().top),
       rows: document.querySelectorAll('[role="menu"] > *').length,
     }
-  })
+  }, APP_PREFS)
 await openMenu()
 const atRest = await panelShape()
-const selBox = await page
-  .locator('[role="menu"] [role="menuitem"][aria-haspopup="dialog"]:has-text("App preferences")')
-  .boundingBox()
-check('the App preferences row is in the open panel', !!atRest && !!selBox)
+// Not `.boundingBox()` straight off: it waits 30 s and THROWS when the row is
+// absent, which takes the run down instead of turning this one check red.
+const selLocator = page
+  .locator(`[role="menu"] [role="menuitem"][aria-haspopup="dialog"]:has-text("${APP_PREFS}")`)
+const selBox = (await selLocator.count()) > 0 ? await selLocator.boundingBox() : null
+check(`the "${APP_PREFS}" row is in the open panel`, !!atRest && !!selBox)
 if (atRest && selBox) {
   await page.mouse.move(selBox.x + selBox.width / 2, selBox.y + selBox.height / 2)
   await page.mouse.down()

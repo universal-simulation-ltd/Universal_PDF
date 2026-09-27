@@ -98,6 +98,14 @@ const pdf = await testPdf()
 const context = await browser.newContext({ viewport: { width: 1400, height: 900 }, locale: 'fr-FR' })
 await context.addInitScript(() => {
   window.localStorage.setItem('universal:mock_session', 'james')
+  // ⚠️ SPLIT MODE, and everything below depends on it. Since 2026-09-17 the SDK
+  // shows ONE combined row to someone who has only ever opened one app: there
+  // is no Global preferences row then, and the language picker writes the suite
+  // key instead of this app's override (`splitPreferences` in the SDK's
+  // provider — it flips once `universal:apps-seen` holds two). A fresh context
+  // has seen only 'pdf', so without this seed the combined row is correct
+  // behaviour and four checks below are simply asking the wrong question.
+  window.localStorage.setItem('universal:apps-seen', JSON.stringify(['pdf', 'images']))
 })
 const page = await context.newPage()
 page.on('pageerror', (e) => failures.push('page error: ' + e.message))
