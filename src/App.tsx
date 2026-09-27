@@ -71,6 +71,7 @@ import DocumentTabs from './components/Tabs/DocumentTabs'
 import { isNativeShell, setStatusBarOverDarkChrome, subscribeNativeOpenPdf } from './lib/nativeOpen'
 import { installExternalLinkHandler } from './lib/externalLinks'
 import { getT, useT } from './i18n'
+import { KNOWLEDGE_BASE } from './knowledge'
 
 const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_PDF'
 
@@ -480,6 +481,9 @@ export default function App() {
             // About + Reset to defaults sit at the foot of Tune this app
             // (SDK 0.161.0) — the same pair ToolbarUserProfile passes.
             about={ABOUT_APP}
+            // Actions ▸ Advanced ▸ Knowledge base (SDK 0.163.0): this app's own
+            // articles, bundled from ./knowledge so they read offline.
+            knowledgeBase={KNOWLEDGE_BASE}
             onResetDefaults={() => { void resetPrefs() }}
             // The SDK's "Delete my account" stays ON here (its default in a
             // native shell): this is the menu a phone opens first. It was

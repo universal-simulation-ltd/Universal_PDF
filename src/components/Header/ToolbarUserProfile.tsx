@@ -9,6 +9,7 @@ import {
   useUserPrefs,
 } from '@unisim/sdk'
 import { ABOUT_APP } from '../../lib/aboutApp'
+import { KNOWLEDGE_BASE } from '../../knowledge'
 
 // Same default the UniversalAppsNavBar uses for the profile "Sign in" item.
 const HUB_LOGIN_HREF = 'https://app.unisim.co.uk/login'
@@ -226,6 +227,9 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
           // `extras`: the company badge this menu drew until 2026-09-27 is
           // now the SDK's, in the plan & limits box.
           about={ABOUT_APP}
+          // Actions ▸ Advanced ▸ Knowledge base (SDK 0.163.0): this app's own
+          // articles, bundled from ./knowledge so they read offline.
+          knowledgeBase={KNOWLEDGE_BASE}
           onResetDefaults={() => { void resetPrefs() }}
           // The bar this sits in is slate-900, so the pill takes the dark
           // treatment — otherwise it reads as a white chip punched into it.
