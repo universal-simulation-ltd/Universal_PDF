@@ -23,7 +23,7 @@ with your own version, and use the result with this app.** Concretely:
 * LGPL-3.0 incorporates the GNU GPL v3 by reference, so that licence is
   reproduced in full at the end of this file.
 
-## @capacitor/android 7.6.8
+## @capacitor/android 8.5.2
 
 Ionic Team et al.
 <https://github.com/ionic-team/capacitor>
@@ -53,7 +53,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## @capacitor/app 7.1.2
+## @capacitor/app 8.1.1
 
 Ionic et al.
 <https://github.com/ionic-team/capacitor-plugins>
@@ -85,7 +85,39 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-## @capacitor/core 7.6.8
+## @capacitor/browser 8.0.4
+
+Ionic et al.
+<https://github.com/ionic-team/capacitor-plugins>
+Licence: MIT
+
+```
+Copyright 2020-present Ionic
+https://ionic.io
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
+
+## @capacitor/core 8.5.2
 
 Ionic Team et al.
 <https://github.com/ionic-team/capacitor>
@@ -115,7 +147,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## @capacitor/filesystem 7.1.8
+## @capacitor/filesystem 8.1.3
 
 Outsystems et al.
 <https://github.com/ionic-team/capacitor-filesystem>
@@ -145,7 +177,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## @capacitor/ios 7.6.8
+## @capacitor/ios 8.5.2
 
 Ionic Team et al.
 <https://github.com/ionic-team/capacitor>
@@ -175,39 +207,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## @capacitor/share 7.0.4
-
-Ionic et al.
-<https://github.com/ionic-team/capacitor-plugins>
-Licence: MIT
-
-```
-Copyright 2020-present Ionic
-https://ionic.io
-
-MIT License
-
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
-
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-```
-
-## @capacitor/status-bar 7.0.6
+## @capacitor/share 8.0.2
 
 Ionic et al.
 <https://github.com/ionic-team/capacitor-plugins>
@@ -367,7 +367,7 @@ Licence: MIT
 
 _Licence text not found in the published package._
 
-## @unisim/media 0.5.0
+## @unisim/media 0.7.0
 
 Universal Simulation Ltd et al.
 <https://github.com/universal-simulation-ltd/universal-platform>
@@ -383,7 +383,7 @@ Licence: MIT
 
 _Licence text not found in the published package._
 
-## @unisim/sdk 0.127.0
+## @unisim/sdk 0.164.0
 
 Universal Simulation Ltd et al.
 <https://github.com/universal-simulation-ltd/universal-platform>
