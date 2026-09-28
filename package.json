@@ -60,6 +60,7 @@
     "test:names": "node --experimental-strip-types scripts/exportName.test.mjs",
     "test:hosted-paths": "node --experimental-strip-types scripts/hostedPath.test.mjs",
     "test:heic-sniff": "node --experimental-strip-types scripts/heicSniff.test.mjs",
+    "test:status-bar": "node --experimental-strip-types scripts/statusBarGlyphs.test.mjs",
     "test:external-links": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/externalLinks.test.mjs",
     "test:build-env": "node --experimental-strip-types scripts/buildEnv.test.mjs",
     "test:render-queue": "node --experimental-strip-types scripts/renderQueue.test.mjs",

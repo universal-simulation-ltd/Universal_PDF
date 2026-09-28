@@ -14,6 +14,8 @@
 // the web bundle, which has its own path (the File Handling API) and would
 // otherwise pay for code that can only no-op in a browser.
 
+import { statusBarStyleFor } from './statusBarGlyphs'
+
 // `Uint8Array<ArrayBuffer>` rather than a bare `Uint8Array`: a File part may
 // not be backed by a SharedArrayBuffer, and the default is the looser
 // `ArrayBufferLike`.
@@ -198,14 +200,22 @@ export async function subscribeNativeOpenPdf(
  * the other plugin would be silently reverted to SystemBars' launch style the
  * first time the phone turned.
  *
+ * ⚠️ ONLY WHERE THE PAGE IS UNDER THE BAR. On Android with a WebView older than
+ * Chromium 140, SystemBars pads the web view natively instead: the notch spacer
+ * collapses to nothing and the glyphs sit over the window background that
+ * values/styles.xml pins WHITE on every screen. Light glyphs there would be the
+ * white-on-white clock all over again, so that case always keeps dark glyphs.
+ * The decision lives in `statusBarGlyphs.ts`, where it is unit-tested.
+ *
  * No-ops off a native shell, and swallows its own failure — a status bar that
  * cannot be styled is a cosmetic loss, never a reason to break a render.
  */
 export async function setStatusBarOverDarkChrome(dark: boolean): Promise<void> {
   if (!isNativeShell()) return
   try {
-    const { SystemBars, SystemBarsStyle } = await import('@capacitor/core')
-    await SystemBars.setStyle({ style: dark ? SystemBarsStyle.Dark : SystemBarsStyle.Light })
+    const { Capacitor, SystemBars, SystemBarsStyle } = await import('@capacitor/core')
+    const style = statusBarStyleFor(dark, Capacitor.getPlatform(), navigator.userAgent)
+    await SystemBars.setStyle({ style: style === 'DARK' ? SystemBarsStyle.Dark : SystemBarsStyle.Light })
   } catch {
     /* The plugin is absent (web/desktop) or the platform refused. Cosmetic. */
   }
