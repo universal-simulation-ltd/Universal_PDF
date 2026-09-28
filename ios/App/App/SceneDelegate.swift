@@ -1,31 +1,22 @@
 import UIKit
 import Capacitor
 
-/// The window's owner under the **UIScene life cycle**, which iOS now requires.
+/// The window's owner under the **UIScene life cycle**, which iOS requires of
+/// an app built against the iOS 27 SDK: without it the process is killed at
+/// launch ("UIScene life cycle is required for apps built with this SDK"),
+/// before any of our code or the web view runs.
 ///
-/// ⚠️ WHY THIS FILE EXISTS. An app built against the current iOS SDK that still
-/// uses the old `UIApplicationDelegate` window life cycle — a `window` property
-/// on the app delegate and no scene manifest — is **killed the moment it
-/// launches**, with `UIScene life cycle is required for apps built with this
-/// SDK` in the device log. There is no in-app symptom to debug: the process is
-/// gone before any of our code, or the web view, runs. That is what App Review
-/// reported on 1.0.3 ("the app crashed after the initial launch"), and it is
-/// why the crash never showed up here — a build made against an older SDK, or
-/// run on an older OS, launches perfectly well.
+/// This is Capacitor 8.5's own `SceneDelegate` template — the window and
+/// `CAPBridgeViewController` built in code, and every callback handed to
+/// Capacitor's `SceneDelegateProxy`, which posts what `@capacitor/app`'s
+/// `appUrlOpen` and `getLaunchUrl()` read, and holds a cold-start URL back
+/// until the bridge's plugins are listening. It differs from the template in
+/// ONE way, below: a document opened in place is copied in first.
 ///
-/// Capacitor adopted scenes in 8.5; this app is on Capacitor 7, so the adoption
-/// is written out by hand here. It mirrors Capacitor's own `SceneDelegate`
-/// template, with the one difference that Capacitor 8's `SceneDelegateProxy`
-/// does not exist in 7 — the launch payload is forwarded to
-/// `ApplicationDelegateProxy` instead, which is what `@capacitor/app`'s
-/// `getLaunchUrl()` and `appUrlOpen` read on this version.
-///
-/// ⚠️ Under the scene life cycle iOS stops calling `AppDelegate`'s
-/// `application(_:open:options:)`, `application(_:continue:…)` and the four
-/// `applicationDid…`/`applicationWill…` activity methods. The first two are
-/// what hand this app a PDF, so they are re-implemented below; the activity
-/// methods were empty and nothing was lost. **Do not put new logic in those
-/// AppDelegate methods — it will never run.**
+/// ⚠️ Under the scene life cycle iOS never calls `AppDelegate`'s
+/// `application(_:open:options:)`, `application(_:continue:…)` or the
+/// `applicationDid…`/`applicationWill…` activity methods. Anything that has
+/// to happen on a URL, a Universal Link or a foreground change belongs here.
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
 
@@ -36,57 +27,105 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     ) {
         guard let windowScene = scene as? UIWindowScene else { return }
 
-        let root = CAPBridgeViewController()
         window = UIWindow(windowScene: windowScene)
-        window?.rootViewController = root
+        window?.rootViewController = CAPBridgeViewController()
         window?.makeKeyAndVisible()
 
-        // ⚠️ Load-bearing, and the reason this is not just the template.
-        //
-        // A cold start that was STARTED BY a document (Files → Open With, the
-        // share sheet) delivers it in `connectionOptions`, not through
-        // `scene(_:openURLContexts:)`. Forwarding it before the bridge exists
-        // would drop it on the floor: the notifications the Capacitor plugins
-        // listen for are posted to nobody until `CapacitorBridge` has
-        // registered them, which happens inside the view controller's
-        // `loadView()`. `loadViewIfNeeded()` makes that ordering explicit
-        // rather than a side effect of `makeKeyAndVisible()`.
-        //
-        // Once registered, `@capacitor/app` retains `appUrlOpen` until the web
-        // layer subscribes (`retainUntilConsumed`), so the web view still
-        // booting is not a problem — see `src/lib/nativeOpen.ts`.
-        root.loadViewIfNeeded()
-
-        if !connectionOptions.urlContexts.isEmpty {
-            self.scene(scene, openURLContexts: connectionOptions.urlContexts)
+        guard connectionOptions.urlContexts.contains(where: Self.isInPlaceDocument) else {
+            SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)
+            return
         }
-        for userActivity in connectionOptions.userActivities {
-            self.scene(scene, continue: userActivity)
+
+        // ⚠️ A cold start BY an in-place document can't go through the proxy:
+        // it would forward the raw security-scoped URL, which the web layer
+        // cannot read, and neither the proxy nor `ConnectionOptions` can be
+        // subclassed or rebuilt to swap the copy in. So this does what
+        // `SceneDelegateProxy.scene(_:willConnectTo:options:)` does — post the
+        // connect notification, then wait for the bridge's first
+        // `viewDidAppear` (its plugins are registered by then; before it, the
+        // notifications reach nobody) — and delivers through the method below,
+        // which does the copy.
+        NotificationCenter.default.post(name: .capacitorSceneWillConnect, object: scene)
+        var token: NSObjectProtocol?
+        token = NotificationCenter.default.addObserver(
+            forName: .capacitorViewDidAppear, object: nil, queue: .main
+        ) { [weak self] _ in
+            if let token { NotificationCenter.default.removeObserver(token) }
+            self?.scene(scene, openURLContexts: connectionOptions.urlContexts)
+            for userActivity in connectionOptions.userActivities {
+                self?.scene(scene, continue: userActivity)
+            }
         }
     }
 
-    /// A document or a `unisim-pdf://` link handed over while the app is
-    /// already running.
+    /// A document or a link handed over while the app is running (and, via the
+    /// branch above, a cold start by an in-place document).
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
-        for context in URLContexts {
-            AppDelegate.forwardOpenedURL(context.url, options: Self.openURLOptions(from: context.options))
+        let inPlace = URLContexts.filter(Self.isInPlaceDocument)
+        let rest = URLContexts.subtracting(inPlace)
+        if !rest.isEmpty {
+            SceneDelegateProxy.shared.scene(scene, openURLContexts: rest)
+        }
+
+        // What the proxy would post for these, with the copy's URL in place of
+        // the security-scoped one. `ApplicationDelegateProxy` posts
+        // `.capacitorOpenURL` (what `@capacitor/app` listens to) and sets the
+        // `lastURL` that `getLaunchUrl()` returns.
+        for context in inPlace {
+            let options = Self.openURLOptions(from: context.options)
+            let url = Self.localCopyOfInPlaceDocument(context.url) ?? context.url
+            _ = ApplicationDelegateProxy.shared.application(UIApplication.shared, open: url, options: options)
+            NotificationCenter.default.post(name: .capacitorSceneOpenURL, object: scene, userInfo: [
+                "url": url,
+                "options": options
+            ])
         }
     }
 
     /// A Universal Link.
     func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
-        _ = ApplicationDelegateProxy.shared.application(
-            UIApplication.shared,
-            continue: userActivity,
-            restorationHandler: { _ in }
-        )
+        SceneDelegateProxy.shared.scene(scene, continue: userActivity)
     }
 
-    /// `UIScene.OpenURLOptions` and `UIApplication.OpenURLOptionsKey` carry the
-    /// same three values under different types. Capacitor 7 only speaks the
-    /// application form, and `openInPlace` in particular is the flag
-    /// `AppDelegate.localCopyOfInPlaceDocument` keys off, so it has to survive
-    /// the translation.
+    // MARK: - Documents opened in place
+
+    /// A document opened IN PLACE (Files → Open With) arrives as a
+    /// security-scoped URL outside our container. Handed straight to the web
+    /// layer, Capacitor's Filesystem plugin cannot read it: nothing on that
+    /// side holds the scope. A document iOS already copied into our Inbox is an
+    /// ordinary file URL with `openInPlace` false, and goes through the proxy.
+    private static func isInPlaceDocument(_ context: UIOpenURLContext) -> Bool {
+        context.url.isFileURL && context.options.openInPlace
+    }
+
+    /// Copies the document into our own container and returns the copy, or nil
+    /// if it could not be copied (the original is then forwarded unchanged).
+    ///
+    /// ⚠️ The access has to be released on every path, including the throwing
+    /// one; `startAccessingSecurityScopedResource` takes a real lock and
+    /// leaking it eventually stops further documents opening at all.
+    private static func localCopyOfInPlaceDocument(_ url: URL) -> URL? {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+
+        // A fresh subdirectory per open: two documents of the same name opened
+        // in one session must not collide, and copyItem refuses to overwrite.
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("opened-in-place/\(UUID().uuidString)", isDirectory: true)
+        let dest = dir.appendingPathComponent(url.lastPathComponent)
+        do {
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            try FileManager.default.copyItem(at: url, to: dest)
+            return dest
+        } catch {
+            NSLog("Universal PDF: could not copy an in-place document: \(error)")
+            return nil
+        }
+    }
+
+    /// `UIScene.OpenURLOptions` in the application-level form the
+    /// `.capacitorOpenURL` payload carries — as `SceneDelegateProxy` builds it
+    /// (its own helper is private).
     private static func openURLOptions(
         from sceneOptions: UIScene.OpenURLOptions
     ) -> [UIApplication.OpenURLOptionsKey: Any] {

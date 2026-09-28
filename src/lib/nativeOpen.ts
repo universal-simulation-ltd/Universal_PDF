@@ -192,14 +192,20 @@ export async function subscribeNativeOpenPdf(
  * means "styled FOR a dark background", i.e. LIGHT glyphs. Passing the mood you
  * want rather than the background you have is the obvious mistake.
  *
+ * ⚠️ Through Capacitor 8's core `SystemBars`, not `@capacitor/status-bar`.
+ * SystemBars remembers its own style and puts it back on every Android
+ * configuration change (a rotation, a density change), so a style set through
+ * the other plugin would be silently reverted to SystemBars' launch style the
+ * first time the phone turned.
+ *
  * No-ops off a native shell, and swallows its own failure — a status bar that
  * cannot be styled is a cosmetic loss, never a reason to break a render.
  */
 export async function setStatusBarOverDarkChrome(dark: boolean): Promise<void> {
   if (!isNativeShell()) return
   try {
-    const { StatusBar, Style } = await import('@capacitor/status-bar')
-    await StatusBar.setStyle({ style: dark ? Style.Dark : Style.Light })
+    const { SystemBars, SystemBarsStyle } = await import('@capacitor/core')
+    await SystemBars.setStyle({ style: dark ? SystemBarsStyle.Dark : SystemBarsStyle.Light })
   } catch {
     /* The plugin is absent (web/desktop) or the platform refused. Cosmetic. */
   }

@@ -18,8 +18,8 @@ def (vMajor, vMinor, vPatch) = appVersionName.tokenize('.').collect { it.toInteg
 def appVersionCode = vMajor * 10000 + vMinor * 100 + vPatch
 
 android {
-    namespace "uk.co.unisim.pdf"
-    compileSdk rootProject.ext.compileSdkVersion
+    namespace = "uk.co.unisim.pdf"
+    compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
         applicationId "uk.co.unisim.pdf"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -30,7 +30,7 @@ android {
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
-            ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
     // Release signing is driven entirely by environment variables so the

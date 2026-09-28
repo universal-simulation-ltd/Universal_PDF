@@ -15,9 +15,15 @@
 //    pieces are needed and a missing one is silent — the Info.plist manifest,
 //    a scene delegate class, and `configurationForConnecting` on the app
 //    delegate, because the runtime checks the delegate answers it rather than
-//    trusting the plist. Capacitor adopted scenes in 8.5; this app is on 7 and
-//    writes them out by hand, so nothing upstream will notice if one is lost
-//    to a merge or a `cap sync`.
+//    trusting the plist. Capacitor 8.5 ships the pattern (its template
+//    `SceneDelegate` and `SceneDelegateProxy`), but the three pieces live in
+//    THIS repo's ios/ folder, which `cap sync` never regenerates — so nothing
+//    upstream will notice if one is lost to a merge. A fourth check since the
+//    move to Capacitor 8.5 (2026-09-28): the scene delegate must hand URLs and
+//    Universal Links to `SceneDelegateProxy`, because under the scene life
+//    cycle nothing else ever reaches Capacitor — `AppDelegate`'s open-URL
+//    methods are never called — and a document opened from Files would just
+//    show the landing page, with no error anywhere.
 //
 // 2. **Usage strings for what the WEB layer reaches.** A missing
 //    `NS…UsageDescription` is a TCC violation, and iOS kills the process on
@@ -164,12 +170,40 @@ if (delegateName) {
   }
 }
 
+// Capacitor 8.5's `SceneDelegateProxy` is what posts the notifications
+// `@capacitor/app` turns into `appUrlOpen` / `getLaunchUrl()`. A scene delegate
+// that does not call it for all three callbacks drops documents and links on
+// the floor. Comments stripped, so a mention in a note does not count.
+const stripComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '')
+if (delegateName && existsSync(join(IOS, `${delegateName}.swift`))) {
+  const sceneSource = stripComments(readFileSync(join(IOS, `${delegateName}.swift`), 'utf8'))
+  const forwards = [
+    ['willConnectTo', /SceneDelegateProxy\.shared\.scene\([^)]*willConnectTo:/],
+    ['openURLContexts', /SceneDelegateProxy\.shared\.scene\([^)]*openURLContexts:/],
+    ['continue', /SceneDelegateProxy\.shared\.scene\([^)]*continue:/],
+  ]
+  for (const [callback, pattern] of forwards) {
+    if (!pattern.test(sceneSource)) {
+      fail(
+        `${delegateName}.swift never hands scene(_:${callback}:…) to SceneDelegateProxy`,
+        'Under the scene life cycle that is the only road a URL or Universal Link has into Capacitor.'
+      )
+    }
+  }
+  const capIos = JSON.parse(readFileSync(join(ROOT, 'node_modules/@capacitor/ios/package.json'), 'utf8')).version
+  const [major, minor] = capIos.split('.').map(Number)
+  if (major < 8 || (major === 8 && minor < 5)) {
+    fail(
+      `@capacitor/ios is ${capIos}; SceneDelegateProxy needs 8.5 or later`,
+      'Capacitor adopted UIScene in 8.5.0. Run npm install.'
+    )
+  }
+}
+
 // Comments stripped first, and the whole signature matched rather than the
 // selector name: the method commented out, or mentioned only in a note like
 // this one, must not read as implemented.
-const appDelegate = readFileSync(join(IOS, 'AppDelegate.swift'), 'utf8')
-  .replace(/\/\*[\s\S]*?\*\//g, '')
-  .replace(/^[ \t]*\/\/.*$/gm, '')
+const appDelegate = stripComments(readFileSync(join(IOS, 'AppDelegate.swift'), 'utf8'))
 const connects = /func\s+application\s*\([^)]*\bconfigurationForConnecting\b[^)]*\)\s*->\s*UISceneConfiguration/
 if (!connects.test(appDelegate)) {
   fail(
@@ -239,7 +273,7 @@ if (cameraReaches.length > 0 && !info.NSCameraUsageDescription) {
 
 // ── Report ─────────────────────────────────────────────────────────────────
 if (problems.length > 0) {
-  console.error('\niOS: this build would be killed by the OS, not caught by the app.\n')
+  console.error('\niOS: this build would be killed by the OS, or lose what it is handed — nothing the app can catch.\n')
   for (const problem of problems) console.error(`  · ${problem}\n`)
   process.exit(1)
 }

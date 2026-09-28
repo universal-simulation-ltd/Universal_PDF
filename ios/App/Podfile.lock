@@ -1,20 +1,18 @@
 PODS:
-  - Capacitor (7.6.8):
+  - Capacitor (8.5.2):
     - CapacitorCordova
-  - CapacitorApp (7.1.2):
+  - CapacitorApp (8.1.1):
     - Capacitor
-  - CapacitorBrowser (7.0.5):
+  - CapacitorBrowser (8.0.4):
     - Capacitor
-  - CapacitorCordova (7.6.8)
-  - CapacitorFilesystem (7.1.8):
+  - CapacitorCordova (8.5.2)
+  - CapacitorFilesystem (8.1.3):
     - Capacitor
     - IONFilesystemLib (~> 1.1.1)
-  - CapacitorShare (7.0.4):
-    - Capacitor
-  - CapacitorStatusBar (7.0.6):
+  - CapacitorShare (8.0.2):
     - Capacitor
   - IONFilesystemLib (1.1.2)
-  - UnisimSdk (0.156.1):
+  - UnisimSdk (0.163.0):
     - Capacitor
 
 DEPENDENCIES:
@@ -24,7 +22,6 @@ DEPENDENCIES:
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorFilesystem (from `../../node_modules/@capacitor/filesystem`)"
   - "CapacitorShare (from `../../node_modules/@capacitor/share`)"
-  - "CapacitorStatusBar (from `../../node_modules/@capacitor/status-bar`)"
   - "UnisimSdk (from `../../node_modules/@unisim/sdk`)"
 
 SPEC REPOS:
@@ -44,22 +41,19 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/filesystem"
   CapacitorShare:
     :path: "../../node_modules/@capacitor/share"
-  CapacitorStatusBar:
-    :path: "../../node_modules/@capacitor/status-bar"
   UnisimSdk:
     :path: "../../node_modules/@unisim/sdk"
 
 SPEC CHECKSUMS:
-  Capacitor: ff6bf01336ac353098378828aff465095a89e459
-  CapacitorApp: f01a913211780e0718dae9750442c3e23f96e106
-  CapacitorBrowser: 6d09f59655e89aede71654ef08b98de55cf032b6
-  CapacitorCordova: e61ee8c40101b8cd011d0224261606a290c082cf
-  CapacitorFilesystem: c63fc54df41e5a6761785a7f3c49dc696c22e296
-  CapacitorShare: 25f7fc5dd0e4edbde5d6801c6de5d14a8b450a41
-  CapacitorStatusBar: 416e9e53fd6397e668d4a181cd2131617d949bd6
+  Capacitor: 89067779e14fb7ea56af07b4817f45d1f0c2a269
+  CapacitorApp: 305bd13c44f6f9d164e2ee66a4faa956ed8c0e06
+  CapacitorBrowser: 752e0208aa07c7aa63d1f7cde895a3e9519b2656
+  CapacitorCordova: 5bec5648cbd09a176ce34ce5e7b6cdabb2c8a327
+  CapacitorFilesystem: b2bbd84bb91c177906c9dbc252864cb71ab9957b
+  CapacitorShare: 2fde721d06a6f83ff5c7578e6a91b190d341ac6a
   IONFilesystemLib: 21a63377696b2d8fab5632ecfb7d2ac67bddb68a
-  UnisimSdk: 2d55d976e0613d3c455119cc5cfe8399a2ebd500
+  UnisimSdk: 674a6950776b97a6cd6bc3b5b30c92f457b21f49
 
-PODFILE CHECKSUM: 4ef677621b5bb864978fd682898b88f1255e04a5
+PODFILE CHECKSUM: 6e7113c4ff4797dfc0431341029e482755fbbb45
 
 COCOAPODS: 1.16.2
