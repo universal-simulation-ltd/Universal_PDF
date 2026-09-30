@@ -291,6 +291,7 @@ const sign: Messages['sign'] = {
   'hosted_back_up_online': 'Fai il backup online di questo PDF',
   'hosted_token_held': 'Hai usato tutto lo spazio online gratuito per i PDF. Elimina qui sotto un PDF archiviato per fare spazio, oppure ottienine altro.',
   'hosted_token_held_native': 'Hai usato tutto lo spazio online gratuito per i PDF. Elimina qui sotto un PDF archiviato per fare spazio.',
+  'free_storage_near_limit': 'Hai usato {used} MB dei tuoi {limit} MB di spazio online gratuito. Lo spazio è condiviso da Universal PDF, Images, Exports e Recorder.',
   'hosted_open_to_backup': 'Apri un PDF per farne il backup.',
   'hosted_your_backups': 'I tuoi backup',
   'hosted_open': 'Apri',

@@ -29,6 +29,7 @@ import {
   signRequestMailto,
 } from '../lib/signRequestClient'
 import { useT, intlLocale, type MessageKey } from '../i18n'
+import { useFreeAllowance, nearFreeLimit } from '../lib/useFreeAllowance'
 
 // Human labels for a request's signing state (either-order two-party flow).
 // A toned state is a Value chip (the tone fills its key); the neutral one is
@@ -82,6 +83,8 @@ export default function SendToSignDialog() {
   const { credits, refresh: refreshCredits } = useCredits()
   const { status: freeToken, refresh: refreshFreeToken } = useAppFreeToken('pdf')
   const { requests, loading: listLoading, refresh: refreshList } = useSignRequests()
+  // The shared free "files" pool's numbers — only for the near-the-limit line.
+  const { status: allowance, refresh: refreshAllowance } = useFreeAllowance('pdf', open)
 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -128,6 +131,10 @@ export default function SendToSignDialog() {
   const native = isNativeShell()
   const tokens = native ? 0 : (credits ?? 0)
   const canStore = freeToken === 'available' || tokens > 0
+  // Talk about the limit only once it is close: 80%+ used and still room. At
+  // the limit the existing at-limit message takes over instead.
+  const near = signedIn && freeToken !== 'held' ? nearFreeLimit(allowance) : null
+  const fmt = new Intl.NumberFormat(intlLocale(t.lang))
 
   function close() {
     setOpen(false)
@@ -239,6 +246,7 @@ export default function SendToSignDialog() {
       })
       refreshCredits()
       refreshFreeToken()
+      refreshAllowance()
       refreshList()
     } finally {
       setBusy(false)
@@ -325,6 +333,7 @@ export default function SendToSignDialog() {
       if (!res.ok) setError(res.error ?? t('sign.send_could_not_revoke'))
       else {
         if (minted?.id === req.id) setMinted(null)
+        refreshAllowance()
         refreshList()
       }
     } finally {
@@ -600,6 +609,11 @@ export default function SendToSignDialog() {
                   >
                     {busy ? t('sign.send_storing') : t('sign.send_store_create')}
                   </button>
+                  {near && (
+                    <p className="mt-2 text-xs text-slate-500" data-testid="free-storage-near-limit">
+                      {t('sign.free_storage_near_limit', { used: fmt.format(near.usedMb), limit: fmt.format(near.limitMb) })}
+                    </p>
+                  )}
                   </>
                 ) : freeToken === null ? null : (
                   <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">

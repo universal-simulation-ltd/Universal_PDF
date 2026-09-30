@@ -291,6 +291,7 @@ const sign: Messages['sign'] = {
   'hosted_back_up_online': 'Bu PDF’i çevrimiçi yedekle',
   'hosted_token_held': 'PDF’ler için ücretsiz çevrimiçi depolama alanınızı kullandınız. Yer açmak için aşağıdan depolanan bir PDF’i silin veya daha fazlasını alın.',
   'hosted_token_held_native': 'PDF’ler için ücretsiz çevrimiçi depolama alanınızı kullandınız. Yer açmak için aşağıdan depolanan bir PDF’i silin.',
+  'free_storage_near_limit': 'Ücretsiz çevrimiçi depolama alanınızın {limit} MB’ının {used} MB’ını kullandınız. Bu alan Universal PDF, Images, Exports ve Recorder arasında paylaşılır.',
   'hosted_open_to_backup': 'Yedeklemek için bir PDF açın.',
   'hosted_your_backups': 'Yedekleriniz',
   'hosted_open': 'Aç',

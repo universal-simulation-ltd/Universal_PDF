@@ -291,6 +291,7 @@ export default {
   'hosted_back_up_online': 'Back up this PDF online',
   'hosted_token_held': "You've used your free online storage for PDFs. Delete a stored PDF below to make room, or get more.",
   'hosted_token_held_native': "You've used your free online storage for PDFs. Delete a stored PDF below to make room.",
+  'free_storage_near_limit': "You've used {used} MB of your {limit} MB of free online storage. It's shared by Universal PDF, Images, Exports and Recorder.", // used/limit = whole megabytes
   'hosted_open_to_backup': 'Open a PDF to back it up.',
   'hosted_your_backups': 'Your backups',
   'hosted_open': 'Open',

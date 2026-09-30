@@ -8,6 +8,7 @@ import { isNativeShell } from '../lib/nativeOpen'
 import { storeCurrentPdf, deleteHostedPdf, openHostedPdf, HostedObjectMissingError } from '../lib/hostedStore'
 import { downloadBackup, importBackup } from '../lib/pdfBackup'
 import { useT, intlLocale } from '../i18n'
+import { useFreeAllowance, nearFreeLimit } from '../lib/useFreeAllowance'
 
 // ⚠️ The HREF ONLY — never a plain navigation. In a Capacitor shell an
 // <a> to another origin is handed to the system browser, so the tap left the
@@ -40,6 +41,8 @@ export default function HostedStoreDialog() {
   // spends it before the purchased wallet, so the button gates on either.
   const { status: freeToken, refresh: refreshFreeToken } = useAppFreeToken('pdf')
   const { uploads, loading: listLoading, refresh: refreshList } = useHostedUploads('pdf')
+  // The shared free "files" pool's numbers — only for the near-the-limit line.
+  const { status: allowance, refresh: refreshAllowance } = useFreeAllowance('pdf', open)
 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -65,6 +68,10 @@ export default function HostedStoreDialog() {
   // held (the server spends the free token first, so gating here is enough).
   const tokens = native ? 0 : (credits ?? 0)
   const canStore = freeToken === 'available' || tokens > 0
+  // Talk about the limit only once it is close: 80%+ used and still room. At
+  // the limit the existing at-limit message takes over instead.
+  const near = signedIn && freeToken !== 'held' ? nearFreeLimit(allowance) : null
+  const fmt = new Intl.NumberFormat(intlLocale(t.lang))
 
   function close() {
     setOpen(false)
@@ -111,6 +118,7 @@ export default function HostedStoreDialog() {
         setJustStored(true)
         refreshCredits()
         refreshFreeToken()
+        refreshAllowance()
         refreshList()
         window.setTimeout(() => setJustStored(false), 2200)
       }
@@ -151,6 +159,7 @@ export default function HostedStoreDialog() {
         setMissingId((id) => (id === upload.id ? null : id))
         refreshCredits()
         refreshFreeToken()
+        refreshAllowance()
         refreshList()
       }
     } finally {
@@ -314,6 +323,12 @@ export default function HostedStoreDialog() {
                   )
                 ) : (
                   <p className="mt-3 text-xs text-slate-500">{t('sign.hosted_open_to_backup')}</p>
+                )}
+
+                {near && (
+                  <p className="mt-2 text-xs text-slate-500" data-testid="free-storage-near-limit">
+                    {t('sign.free_storage_near_limit', { used: fmt.format(near.usedMb), limit: fmt.format(near.limitMb) })}
+                  </p>
                 )}
 
                 {error && <p className="mt-2 text-sm text-rose-600">{error}</p>}

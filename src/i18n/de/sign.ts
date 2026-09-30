@@ -291,6 +291,7 @@ const sign: Messages['sign'] = {
   'hosted_back_up_online': 'Dieses PDF online sichern',
   'hosted_token_held': 'Du hast deinen kostenlosen Online-Speicher für PDFs aufgebraucht. Lösche unten ein gespeichertes PDF, um Platz zu schaffen, oder hol dir mehr.',
   'hosted_token_held_native': 'Du hast deinen kostenlosen Online-Speicher für PDFs aufgebraucht. Lösche unten ein gespeichertes PDF, um Platz zu schaffen.',
+  'free_storage_near_limit': 'Du hast {used} MB von {limit} MB deines kostenlosen Online-Speichers belegt. Universal PDF, Images, Exports und Recorder teilen sich diesen Speicher.',
   'hosted_open_to_backup': 'Öffne ein PDF, um es zu sichern.',
   'hosted_your_backups': 'Deine Sicherungen',
   'hosted_open': 'Öffnen',
