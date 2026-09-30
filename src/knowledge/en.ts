@@ -119,7 +119,7 @@ The **Back up** option offers three levels:
 
 1. **Save to browser.** Automatic, and only on this device.
 2. **Save to desktop.** Downloads one backup file containing the original PDF and your edits, still editable. Import it later, on any device, to carry on where you left off. The file is not encrypted, so look after it as you would the PDF itself.
-3. **Hosted by UNI·SIM.** Stores the finished PDF online against your Universal ID, so you can open it on another device. It is free with a Universal ID; free accounts have a generous limit — if you ever reach it, delete something you no longer need or get more.
+3. **Hosted by UNI·SIM.** Stores the finished PDF online against your Universal ID, so you can open it on another device. It is free with a Universal ID; free accounts have a generous limit — if you ever reach it, delete something you no longer need to make room.
 
 ## Signing on your phone
 
@@ -166,7 +166,7 @@ This is not legal advice. Whether an electronic signature is acceptable depends 
 ## The steps
 
 1. **Mark where to sign.** Add at least one "sign here" box to the document, so the other person knows where their signature goes.
-2. **Store it online.** The finished PDF, with anything you have added merged in, is stored online against your Universal ID. It is free with a Universal ID; free accounts have a generous limit — if you ever reach it, delete something you no longer need or get more.
+2. **Store it online.** The finished PDF, with anything you have added merged in, is stored online against your Universal ID. It is free with a Universal ID; free accounts have a generous limit — if you ever reach it, delete something you no longer need to make room.
 3. **Choose who can open it.** Either anyone with the link, or only the person you address it to. See "How secure is Send to sign?" for what that choice changes.
 4. **Send it.** Copy the link and send it yourself, or enter their email address and the app emails it for you. On an open link the email includes the PDF as an attachment. On a protected link it does not, because the attachment would bypass the protection.
 

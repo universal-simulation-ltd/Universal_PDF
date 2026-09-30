@@ -119,7 +119,7 @@ A opção **Fazer backup** oferece três níveis:
 
 1. **Salvar no navegador.** Automático, e só neste aparelho.
 2. **Salvar no computador.** Baixa um único arquivo de backup com o PDF original e suas edições, ainda editáveis. Importe esse arquivo depois, em qualquer aparelho, para continuar de onde parou. O arquivo não é criptografado, então cuide dele como cuidaria do próprio PDF.
-3. **Hospedado pela UNI·SIM.** Guarda o PDF finalizado on-line, vinculado ao seu Universal ID, para que você possa abri-lo em outro aparelho. É gratuito com um Universal ID; contas gratuitas têm um limite generoso — se você chegar a ele, exclua algo de que não precisa mais ou obtenha mais.
+3. **Hospedado pela UNI·SIM.** Guarda o PDF finalizado on-line, vinculado ao seu Universal ID, para que você possa abri-lo em outro aparelho. É gratuito com um Universal ID; contas gratuitas têm um limite generoso — se você chegar a ele, exclua algo de que não precisa mais para liberar espaço.
 
 ## Assinar pelo celular
 
@@ -166,7 +166,7 @@ Isto não é aconselhamento jurídico. Se uma assinatura eletrônica é aceitáv
 ## Os passos
 
 1. **Marque onde assinar.** Adicione pelo menos uma caixa "Assine aqui" ao documento, para que a outra pessoa saiba onde vai a assinatura dela.
-2. **Guarde on-line.** O PDF finalizado, com tudo o que você adicionou já incorporado, é guardado on-line, vinculado ao seu Universal ID. É gratuito com um Universal ID; contas gratuitas têm um limite generoso — se você chegar a ele, exclua algo de que não precisa mais ou obtenha mais.
+2. **Guarde on-line.** O PDF finalizado, com tudo o que você adicionou já incorporado, é guardado on-line, vinculado ao seu Universal ID. É gratuito com um Universal ID; contas gratuitas têm um limite generoso — se você chegar a ele, exclua algo de que não precisa mais para liberar espaço.
 3. **Escolha quem pode abrir.** Ou qualquer pessoa com o link, ou só a pessoa a quem você endereçar. Veja "Quão seguro é o Enviar para assinatura?" para saber o que essa escolha muda.
 4. **Envie.** Copie o link e envie você mesmo, ou digite o e-mail da pessoa e o aplicativo envia por você. Em um link aberto, o e-mail inclui o PDF como anexo. Em um link protegido, não inclui, porque o anexo driblaria a proteção.
 

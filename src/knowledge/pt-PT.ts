@@ -119,7 +119,7 @@ A opção **Fazer uma cópia de segurança** oferece três níveis:
 
 1. **Guardar no navegador.** Automático e apenas neste dispositivo.
 2. **Guardar no computador.** Transfere um ficheiro de cópia de segurança com o PDF original e as suas edições, que continuam editáveis. Importe-o mais tarde, em qualquer dispositivo, para continuar onde parou. O ficheiro não é encriptado, por isso trate-o com o mesmo cuidado que o próprio PDF.
-3. **Alojado pela UNI·SIM.** Guarda o PDF final online, associado ao seu Universal ID, para o poder abrir noutro dispositivo. É gratuito com um Universal ID; as contas gratuitas têm um limite generoso — se algum dia o atingir, elimine algo de que já não precise ou obtenha mais.
+3. **Alojado pela UNI·SIM.** Guarda o PDF final online, associado ao seu Universal ID, para o poder abrir noutro dispositivo. É gratuito com um Universal ID; as contas gratuitas têm um limite generoso — se algum dia o atingir, elimine algo de que já não precise para libertar espaço.
 
 ## Assinar no telemóvel
 
@@ -166,7 +166,7 @@ Isto não é aconselhamento jurídico. A aceitação de uma assinatura eletróni
 ## Os passos
 
 1. **Marcar onde assinar.** Acrescente pelo menos uma caixa «Assinar aqui» ao documento, para que a outra pessoa saiba onde colocar a assinatura.
-2. **Guardar online.** O PDF final, com tudo o que acrescentou integrado, é guardado online, associado ao seu Universal ID. É gratuito com um Universal ID; as contas gratuitas têm um limite generoso — se algum dia o atingir, elimine algo de que já não precise ou obtenha mais.
+2. **Guardar online.** O PDF final, com tudo o que acrescentou integrado, é guardado online, associado ao seu Universal ID. É gratuito com um Universal ID; as contas gratuitas têm um limite generoso — se algum dia o atingir, elimine algo de que já não precise para libertar espaço.
 3. **Escolher quem o pode abrir.** Qualquer pessoa com a ligação, ou só a pessoa a quem é endereçado. Consulte «Qual é a segurança do Enviar para assinatura?» para saber o que essa escolha altera.
 4. **Enviar.** Copie a ligação e envie-a pessoalmente, ou introduza o endereço de email do destinatário e a app envia-a por si. Numa ligação aberta, o email inclui o PDF como anexo. Numa ligação protegida, não inclui, porque o anexo contornaria a proteção.
 
