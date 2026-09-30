@@ -10,6 +10,7 @@ import {
 } from '@unisim/sdk'
 import { ABOUT_APP } from '../../lib/aboutApp'
 import { KNOWLEDGE_BASE } from '../../knowledge'
+import SignatureDefaultViewRows from '../Signature/SignatureDefaultViewRows'
 
 // Same default the UniversalAppsNavBar uses for the profile "Sign in" item.
 const HUB_LOGIN_HREF = 'https://app.unisim.co.uk/login'
@@ -231,6 +232,9 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
           // articles, bundled from ./knowledge so they read offline.
           knowledgeBase={KNOWLEDGE_BASE}
           onResetDefaults={() => { void resetPrefs() }}
+          // The double-tap defaults' Tune this app rows (SDK 0.170.0) — the same
+          // rows in both menus. Reset to defaults clears them via the SDK.
+          appPreferences={<SignatureDefaultViewRows />}
           // The bar this sits in is slate-900, so the pill takes the dark
           // treatment — otherwise it reads as a white chip punched into it.
           pillTheme="dark"

@@ -47,6 +47,8 @@ const sign: Messages['sign'] = {
   'menu_tab_signatures': 'Firmas',
   'menu_tab_stamps': 'Sellos',
   'menu_tab_request': 'Solicitar',
+  'default_menu_tab': 'El menú Firmar se abre en',
+  'default_pad_mode': 'La nueva firma se abre en',
   'menu_request_intro': 'Coloca un recuadro «Firma aquí» en la página. Cualquiera que abra este PDF en Universal PDF puede hacer clic en el recuadro para firmarlo.',
   'menu_ask_name': 'Pedir nombre',
   'menu_ask_date': 'Pedir fecha',

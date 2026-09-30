@@ -47,6 +47,8 @@ const sign: Messages['sign'] = {
   'menu_tab_signatures': 'Unterschriften',
   'menu_tab_stamps': 'Stempel',
   'menu_tab_request': 'Anfrage',
+  'default_menu_tab': 'Menü „Unterschreiben“ zeigt zuerst',
+  'default_pad_mode': 'Neue Unterschrift zeigt zuerst',
   'menu_request_intro': 'Setze ein „Hier unterschreiben“-Feld auf die Seite. Wer dieses PDF in Universal PDF öffnet, kann auf das Feld klicken, um zu unterschreiben.',
   'menu_ask_name': 'Name anfordern',
   'menu_ask_date': 'Datum anfordern',

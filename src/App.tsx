@@ -22,6 +22,7 @@ import SendToSignDialog from './components/SendToSignDialog'
 import OcrModal from './components/Ocr/OcrModal'
 import MergeDialog from './components/Convert/MergeDialog'
 import ConvertDialog from './components/Convert/ConvertDialog'
+import SignatureDefaultViewRows from './components/Signature/SignatureDefaultViewRows'
 import AdvancedExportDialog from './components/Export/AdvancedExportDialog'
 import MetadataDialog from './components/Metadata/MetadataDialog'
 import QrDialog from './components/Qr/QrDialog'
@@ -485,6 +486,9 @@ export default function App() {
             // articles, bundled from ./knowledge so they read offline.
             knowledgeBase={KNOWLEDGE_BASE}
             onResetDefaults={() => { void resetPrefs() }}
+            // The double-tap defaults' Tune this app rows (SDK 0.170.0) — the same
+            // rows in both menus. Reset to defaults clears them via the SDK.
+            appPreferences={<SignatureDefaultViewRows />}
             // The SDK's "Delete my account" stays ON here (its default in a
             // native shell): this is the menu a phone opens first. It was
             // switched off to stop the row doubling — but the double was in
