@@ -413,9 +413,9 @@ export default function SendToSignDialog() {
               <div className="rounded-xl border border-orange-200 bg-white p-4">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-semibold text-slate-900">{t('sign.send_step1')}</span>
-                  {freeToken === 'available'
-                    ? <Chip size="sm">{t('sign.send_free_token')}</Chip>
-                    : !native && <ValueChip size="sm" label={tokens}>{t.plural('sign.send_tokens_unit', tokens)}</ValueChip>}
+                  {/* No allowance talk while the free allowance covers it — only a
+                      neutral count of purchased tokens, when there are any. */}
+                  {!native && tokens > 0 && <ValueChip size="sm" label={tokens}>{t.plural('sign.send_tokens_unit', tokens)}</ValueChip>}
                 </div>
 
                 {!doc ? (
@@ -598,7 +598,7 @@ export default function SendToSignDialog() {
                     disabled={busy || !redactConfirmed}
                     className="mt-3 w-full rounded-lg bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {busy ? t('sign.send_storing') : freeToken === 'available' ? t('sign.send_store_create') : t('sign.send_store_create_token')}
+                    {busy ? t('sign.send_storing') : t('sign.send_store_create')}
                   </button>
                   </>
                 ) : freeToken === null ? null : (

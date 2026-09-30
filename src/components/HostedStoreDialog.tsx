@@ -279,13 +279,12 @@ export default function HostedStoreDialog() {
               <div className="mt-3">
                 <div className="flex items-center justify-between rounded-lg bg-orange-50/60 px-3 py-2 text-sm">
                   <span className="text-slate-600">{user?.email}</span>
-                  {/* Native with the free token held: no count to show (see
-                      `tokens`) — the box below says why the button is gone. */}
-                  {!(native && freeToken !== 'available') && (
+                  {/* No allowance talk while the free allowance covers it — only a
+                      neutral count of purchased tokens, when there are any
+                      (always 0 in a native shell, see `tokens`). */}
+                  {tokens > 0 && (
                   <span className="font-semibold text-orange-700">
-                    {freeToken === 'available'
-                      ? (tokens > 0 ? t('sign.hosted_free_plus_purchased', { count: tokens }) : t('sign.hosted_free_available'))
-                      : t.plural('sign.hosted_tokens', tokens)}
+                    {t.plural('sign.hosted_tokens', tokens)}
                   </span>
                   )}
                 </div>
@@ -297,7 +296,7 @@ export default function HostedStoreDialog() {
                       disabled={busy}
                       className="mt-3 w-full rounded-lg bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-50"
                     >
-                      {busy ? t('sign.hosted_backing_up') : justStored ? t('sign.hosted_backed_up') : freeToken === 'available' ? t('sign.hosted_back_up_online') : t('sign.hosted_back_up_online_token')}
+                      {busy ? t('sign.hosted_backing_up') : justStored ? t('sign.hosted_backed_up') : t('sign.hosted_back_up_online')}
                     </button>
                   ) : freeToken === null ? null : (
                     <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
@@ -341,8 +340,8 @@ export default function HostedStoreDialog() {
 
                           {/* A backup with nothing behind it. Say which file,
                               say plainly that the upload never finished, and
-                              make clearing it up one click — the token comes
-                              back with it, so there is nothing to lose by
+                              make clearing it up one click — removing it frees
+                              the space it holds, so there is nothing to lose by
                               tidying. This replaces storage's bare "Object not
                               found", which read like the app had mislaid the
                               user's document. */}

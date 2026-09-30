@@ -100,8 +100,8 @@ const lib: Messages['lib'] = {
   'image_decode_failed_why': 'Impossible de décoder {name} — {reason}',
 
   // hostedStore
-  'hosted_reserve_failed': 'Impossible de réserver un jeton.',
-  'hosted_refund_failed': 'Impossible de rendre le jeton.',
+  'hosted_reserve_failed': 'Impossible de réserver le stockage en ligne pour ce PDF.',
+  'hosted_refund_failed': 'Impossible de libérer le stockage en ligne de ce PDF.',
   'hosted_signed_download_failed': 'Impossible de télécharger le PDF signé.',
 
   // signRequestClient

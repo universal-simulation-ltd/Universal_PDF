@@ -119,7 +119,7 @@ L’opzione **Fai il backup** offre tre livelli:
 
 1. **Salva nel browser.** Automatico, e solo su questo dispositivo.
 2. **Salva sul computer.** Scarica un unico file di backup che contiene il PDF originale e le tue modifiche, ancora modificabili. Importalo in seguito, su qualsiasi dispositivo, per riprendere da dove avevi lasciato. Il file non è crittografato, quindi custodiscilo come faresti con il PDF stesso.
-3. **Ospitato da UNI·SIM.** Conserva il PDF finito online collegato al tuo Universal ID, così puoi aprirlo su un altro dispositivo. Usa un token, che ti viene restituito quando elimini la copia conservata.
+3. **Ospitato da UNI·SIM.** Conserva il PDF finito online collegato al tuo Universal ID, così puoi aprirlo su un altro dispositivo. È gratuito con un Universal ID; gli account gratuiti hanno un limite generoso: se mai lo raggiungi, elimina qualcosa che non ti serve più oppure ottienine di più.
 
 ## Firmare sul telefono
 
@@ -166,7 +166,7 @@ Questa non è una consulenza legale. Se una firma elettronica sia accettabile di
 ## I passaggi
 
 1. **Indica dove firmare.** Aggiungi al documento almeno un riquadro «Firma qui», così l’altra persona sa dove va la sua firma.
-2. **Conservalo online.** Il PDF finito, con tutto ciò che hai aggiunto già unito, viene conservato online collegato al tuo Universal ID. Questo usa un token, come quando fai il backup online di un PDF.
+2. **Conservalo online.** Il PDF finito, con tutto ciò che hai aggiunto già unito, viene conservato online collegato al tuo Universal ID. È gratuito con un Universal ID; gli account gratuiti hanno un limite generoso: se mai lo raggiungi, elimina qualcosa che non ti serve più oppure ottienine di più.
 3. **Scegli chi può aprirlo.** «Chiunque abbia il link» oppure «Solo la persona a cui lo invii». Leggi «Quanto è sicuro Invia per la firma?» per sapere che cosa cambia con questa scelta.
 4. **Invialo.** Copia il link e invialo tu, oppure inserisci l’indirizzo email del destinatario e l’app lo invia per te. Con un link aperto l’email include il PDF come allegato. Con un link protetto no, perché l’allegato aggirerebbe la protezione.
 

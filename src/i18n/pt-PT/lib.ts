@@ -100,8 +100,8 @@ const lib: Messages['lib'] = {
   'image_decode_failed_why': 'Não foi possível descodificar {name} — {reason}',
 
   // hostedStore
-  'hosted_reserve_failed': 'Não foi possível reservar um token.',
-  'hosted_refund_failed': 'Não foi possível devolver o token.',
+  'hosted_reserve_failed': 'Não foi possível reservar armazenamento online para este PDF.',
+  'hosted_refund_failed': 'Não foi possível libertar o armazenamento online deste PDF.',
   'hosted_signed_download_failed': 'Não foi possível transferir o PDF assinado.',
 
   // signRequestClient

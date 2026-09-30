@@ -100,8 +100,8 @@ const lib: Messages['lib'] = {
   'image_decode_failed_why': '“{name}” çözümlenemedi — {reason}',
 
   // hostedStore
-  'hosted_reserve_failed': 'Jeton ayrılamadı.',
-  'hosted_refund_failed': 'Jeton iade edilemedi.',
+  'hosted_reserve_failed': 'Bu PDF için çevrimiçi depolama alanı ayrılamadı.',
+  'hosted_refund_failed': 'Bu PDF’in çevrimiçi depolama alanı boşaltılamadı.',
   'hosted_signed_download_failed': 'İmzalı PDF indirilemedi.',
 
   // signRequestClient

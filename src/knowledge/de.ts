@@ -119,7 +119,7 @@ Die Option **Sichern** bietet drei Stufen:
 
 1. **Im Browser speichern.** Automatisch und nur auf diesem Gerät.
 2. **Auf dem Computer speichern.** Lädt eine Sicherungsdatei herunter, die das Original-PDF und Ihre Änderungen enthält, weiterhin bearbeitbar. Importieren Sie sie später auf einem beliebigen Gerät, um dort weiterzumachen, wo Sie aufgehört haben. Die Datei ist nicht verschlüsselt, gehen Sie also so sorgsam mit ihr um wie mit dem PDF selbst.
-3. **Gehostet von UNI·SIM.** Speichert das fertige PDF online unter Ihrer Universal ID, sodass Sie es auf einem anderen Gerät öffnen können. Das kostet ein Token, das Sie zurückbekommen, wenn Sie die gespeicherte Kopie löschen.
+3. **Gehostet von UNI·SIM.** Speichert das fertige PDF online unter Ihrer Universal ID, sodass Sie es auf einem anderen Gerät öffnen können. Das ist mit einer Universal ID kostenlos; kostenlose Konten haben ein großzügiges Limit – falls Sie es je erreichen, löschen Sie etwas, das Sie nicht mehr brauchen, oder holen Sie sich mehr.
 
 ## Unterschreiben auf dem Handy
 
@@ -166,7 +166,7 @@ Dies ist keine Rechtsberatung. Ob eine elektronische Unterschrift ausreicht, hä
 ## Die Schritte
 
 1. **Markieren, wo unterschrieben wird.** Fügen Sie dem Dokument mindestens ein Feld „Hier unterschreiben“ hinzu, damit die andere Person weiß, wohin ihre Unterschrift gehört.
-2. **Online speichern.** Das fertige PDF, in das alle Ihre Ergänzungen übernommen wurden, wird online unter Ihrer Universal ID gespeichert. Das kostet ein Token, genauso wie das Online-Sichern eines PDFs.
+2. **Online speichern.** Das fertige PDF, in das alle Ihre Ergänzungen übernommen wurden, wird online unter Ihrer Universal ID gespeichert. Das ist mit einer Universal ID kostenlos; kostenlose Konten haben ein großzügiges Limit – falls Sie es je erreichen, löschen Sie etwas, das Sie nicht mehr brauchen, oder holen Sie sich mehr.
 3. **Festlegen, wer es öffnen darf.** Entweder „Jede Person mit dem Link“ oder „Nur die Person, an die du es adressierst“. Was diese Wahl ändert, lesen Sie unter „Wie sicher ist Zum Unterschreiben senden?“.
 4. **Absenden.** Kopieren Sie den Link und schicken Sie ihn selbst, oder geben Sie die E-Mail-Adresse der Person ein, und die App verschickt ihn für Sie. Bei einem offenen Link enthält die E-Mail das PDF als Anhang. Bei einem geschützten Link nicht, weil der Anhang den Schutz umgehen würde.
 
