@@ -154,7 +154,6 @@ export default {
   'download_ios_hint': 'Not on the App Store yet. In Safari, tap {share} → {add} — it installs and runs offline.',
   'download_ios_share': 'Share', // Safari's Share button, use the name iOS shows in this language
   'download_ios_add_to_home': 'Add to Home Screen', // iOS share-sheet item, use the name iOS shows in this language
-  'download_footnote': 'Free and open source, like the web version. Desktop builds are unsigned.',
 
   // LivePreview
   'preview_failed': 'Preview failed',

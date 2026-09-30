@@ -5,7 +5,7 @@ const RELEASES = 'https://github.com/universal-simulation-ltd/Universal_PDF/rele
 
 // The same marks the download page on the marketing site uses, so the two read
 // as one product rather than two takes on the same four platforms.
-const ICON = 'h-[18px] w-[18px] shrink-0'
+const ICON = 'h-5 w-5 shrink-0'
 
 function WindowsIcon() {
   return (
@@ -43,8 +43,11 @@ function IPhoneIcon() {
   )
 }
 
+// Icon-only (James, 2026-09-30): the marks are recognisable on their own, and
+// four words on a phone wrapped the row onto two lines. Each keeps its name as
+// an aria-label + tooltip, so screen readers and hover still say "macOS".
 const ITEM =
-  'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors'
+  'inline-flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors'
 
 /**
  * Where to get the app for each platform, kept quiet on purpose.
@@ -76,35 +79,33 @@ export default function DownloadRow() {
         {t('app.download_heading')}
       </h2>
 
-      <ul className="mt-1 flex flex-wrap items-center justify-center gap-x-1 gap-y-1">
+      <ul className="mt-1 flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
         <li>
-          <a className={ITEM} href={RELEASES} rel="noopener" title={t('app.download_windows_title')}>
+          <a className={ITEM} href={RELEASES} rel="noopener" title={t('app.download_windows_title')} aria-label="Windows">
             <WindowsIcon />
-            Windows
           </a>
         </li>
         <li>
-          <a className={ITEM} href={RELEASES} rel="noopener" title={t('app.download_macos_title')}>
+          <a className={ITEM} href={RELEASES} rel="noopener" title={t('app.download_macos_title')} aria-label="macOS">
             <AppleIcon />
-            macOS
           </a>
         </li>
         <li>
-          <a className={ITEM} href={RELEASES} rel="noopener" title={t('app.download_android_title')}>
+          <a className={ITEM} href={RELEASES} rel="noopener" title={t('app.download_android_title')} aria-label="Android">
             <AndroidIcon />
-            Android
           </a>
         </li>
         <li>
           <button
             type="button"
             className={ITEM}
+            aria-label="iPhone"
+            title="iPhone"
             aria-expanded={showIosHint}
             aria-controls={iosHintId}
             onClick={() => setShowIosHint((open) => !open)}
           >
             <IPhoneIcon />
-            iPhone
           </button>
         </li>
       </ul>
@@ -117,10 +118,6 @@ export default function DownloadRow() {
           })}
         </p>
       )}
-
-      <p className="mt-1 text-[12px] text-slate-400">
-        {t('app.download_footnote')}
-      </p>
     </section>
   )
 }

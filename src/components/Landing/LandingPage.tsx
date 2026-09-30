@@ -671,7 +671,11 @@ export default function LandingPage() {
                   Three columns only from `sm`. Measured on a 390px phone: every
                   one of the nine wrapped onto a second line, which is a block of
                   eighteen. Below that it falls back to two columns and plain
-                  row-flow, where they all fit on one line each. */}
+                  row-flow, where they all fit on one line each.
+
+                  Phones (below `sm`) show only the first two of each — Sign +
+                  Convert, then No forced uploads + No data scraping — as two
+                  tidy rows (James, 2026-09-30); the rest are `hidden sm:flex`. */}
               <ul className="mt-5 grid grid-cols-2 sm:grid-cols-3 sm:grid-rows-3 sm:grid-flow-col gap-x-1 gap-y-2 text-xs text-slate-600">
                 {([
                   'app.landing_free_sign',
@@ -680,14 +684,14 @@ export default function LandingPage() {
                   'app.landing_free_compress',
                   'app.landing_free_qr',
                   'app.landing_free_export'
-                ] as const).map((claim) => (
-                  <li key={claim} className="flex items-center gap-2 pl-2 sm:pl-4">
+                ] as const).map((claim, i) => (
+                  <li key={claim} className={`${i < 2 ? 'flex' : 'hidden sm:flex'} items-center gap-2 pl-2 sm:pl-4`}>
                     <span className="text-orange-700" aria-hidden="true">✓</span>
                     {t(claim)}
                   </li>
                 ))}
-                {PROMISES.map(({ claim, paths }) => (
-                  <li key={claim} className="flex items-center gap-2 pl-2 sm:pl-4">
+                {PROMISES.map(({ claim, paths }, i) => (
+                  <li key={claim} className={`${i < 2 ? 'flex' : 'hidden sm:flex'} items-center gap-2 pl-2 sm:pl-4`}>
                     <svg
                       viewBox="0 0 24 24"
                       className="w-3.5 h-3.5 shrink-0 text-orange-700"

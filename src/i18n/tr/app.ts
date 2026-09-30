@@ -154,7 +154,6 @@ const app: Messages['app'] = {
   'download_ios_hint': 'Henüz App Store’da değil. Safari’de {share} → {add} öğesine dokunun — yüklenir ve çevrimdışı çalışır.',
   'download_ios_share': 'Paylaş',
   'download_ios_add_to_home': 'Ana Ekrana Ekle',
-  'download_footnote': 'Web sürümü gibi ücretsiz ve açık kaynak. Masaüstü sürümleri imzasızdır.',
 
   // LivePreview
   'preview_failed': 'Önizleme başarısız oldu',

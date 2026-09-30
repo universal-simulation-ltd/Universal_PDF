@@ -154,7 +154,6 @@ const app: Messages['app'] = {
   'download_ios_hint': 'Ainda não está na App Store. No Safari, toque em {share} → {add} — fica instalado e funciona offline.',
   'download_ios_share': 'Partilhar',
   'download_ios_add_to_home': 'Adicionar ao ecrã principal',
-  'download_footnote': 'Gratuito e de código aberto, tal como a versão web. As versões para computador não estão assinadas.',
 
   // LivePreview
   'preview_failed': 'Falha na pré-visualização',
