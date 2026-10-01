@@ -38,6 +38,7 @@ const menu: Messages['menu'] = {
   'advanced_export_info': 'Seiten zu Bildern reduzieren, mit einem Passwort schützen, Metadaten behalten oder entfernen.',
   'metadata': 'Dokument-Metadaten',
   'metadata_info': 'Sieh nach, wen und was diese Datei nennt – und entferne es.',
+  'knowledge_base_info': 'Wie jedes Werkzeug funktioniert, mit Anleitungen zum Herunterladen.', // under the SDK's own "Knowledge base" label
   // FileMenu — Redact
   'redact': 'Schwärzen',
   'find_and_redact': 'Suchen und schwärzen',

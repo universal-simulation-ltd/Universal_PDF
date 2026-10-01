@@ -115,6 +115,10 @@ interface PdfState {
   metadataOpen: boolean
   // The "Add QR code" generator (toolbar, next to the image button).
   qrOpen: boolean
+  // Actions ▸ Advanced ▸ Knowledge base, with a document open. Here and not
+  // in the menu, because the menu unmounts as it closes. See ToolbarUserProfile.
+  knowledgeBaseOpen: boolean
+  setKnowledgeBaseOpen: (open: boolean) => void
   // Set when the generator was opened by the ✏️ on a code already on the page
   // rather than by the toolbar: the annotation to write back to, and the editor
   // state it was placed with. Null for a fresh code.
@@ -290,6 +294,8 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   metadataOpen: false,
   qrOpen: false,
   qrEdit: null,
+  knowledgeBaseOpen: false,
+  setKnowledgeBaseOpen: (knowledgeBaseOpen) => set({ knowledgeBaseOpen }),
   recents: [],
   docUndo: [],
   importNotice: null,

@@ -405,12 +405,15 @@ const beforeColor = ((await shapes()).shapes ?? []).find((n) => n.cls === 'Line'
 check('a line landed', !!beforeColor)
 check('and it starts in the toolbar colour', beforeColor?.stroke === '#000000', beforeColor?.stroke)
 // The pill floats under the line. Both pills use the same cluster, so the
-// aria-labels are the addressable part.
-await page.locator('button[aria-label="White"]:visible').first().click()
+// aria-labels are the addressable part — scoped by `data-pill-swatch`, because
+// the toolbar's own swatches have carried the same names since 2026-10-01, and
+// an unscoped `.first()` clicked the TOOLBAR's White: that blurs the text
+// editor, which is what failed "the editor keeps focus" (the pill's doesn't).
+await page.locator('button[data-pill-swatch][aria-label="White"]:visible').first().click()
 await page.waitForTimeout(400)
 const whiteLine = ((await shapes()).shapes ?? []).find((n) => n.cls === 'Line' && n.points === 4)
 check('clicking White repaints THIS line', whiteLine?.stroke === '#ffffff', whiteLine?.stroke)
-await page.locator('button[aria-label="Black"]:visible').first().click()
+await page.locator('button[data-pill-swatch][aria-label="Black"]:visible').first().click()
 await page.waitForTimeout(400)
 const blackLine = ((await shapes()).shapes ?? []).find((n) => n.cls === 'Line' && n.points === 4)
 check('and Black puts it back', blackLine?.stroke === '#000000', blackLine?.stroke)
@@ -431,7 +434,7 @@ await page.waitForTimeout(350)
 // ⚠️ Clicking the pill mid-edit must not blur the editor — that is what the
 // preventDefault on the pill's mousedown is for, and losing focus here would
 // commit the text half-typed.
-await page.locator('button[aria-label="White"]:visible').first().click()
+await page.locator('button[data-pill-swatch][aria-label="White"]:visible').first().click()
 await page.waitForTimeout(400)
 check(
   'the editor keeps focus when the pill is clicked mid-edit',
@@ -453,7 +456,7 @@ check(
 // The commoner path: a text box that is merely SELECTED, not being edited.
 await page.mouse.click(pageBox.x + 150, pageBox.y + 700)
 await page.waitForTimeout(400)
-await page.locator('button[aria-label="Black"]:visible').first().click()
+await page.locator('button[data-pill-swatch][aria-label="Black"]:visible').first().click()
 await page.waitForTimeout(400)
 const backToBlack = ((await shapes()).shapes ?? []).filter((n) => n.cls === 'Text')
 check(

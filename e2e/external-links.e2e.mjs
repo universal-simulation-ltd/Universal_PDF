@@ -177,16 +177,21 @@ async function run(native) {
     prevented: await page.evaluate(() => window.__prevented),
     newTabs: context.pages().length - openedBefore,
     routed: await page.evaluate(() => window.__opened ?? []),
-    dialogStillOpen: (await page.locator('[role="dialog"]').count()) > 0,
+    dialogStillOpen: (await page.locator('[role="dialog"][aria-label^="About this app"]').count()) > 0,
     // The user-facing outcome: the dialog must still be closable afterwards.
     closable: null,
   }
 
   for (const p of context.pages()) if (p !== page) await p.close()
   await page.bringToFront()
-  await page.locator('[role="dialog"] button[aria-label]').first().click().catch(() => {})
+  // ⚠️ About opens ON TOP of "Tune this app" (its home since SDK 0.161.0), so
+  // two dialogs are up. Closing "the first dialog" clicked Tune's Close, which
+  // About covers, so nothing closed and this read as "About can't be closed".
+  // Close About by its own button, and ask whether About went.
+  const about = page.locator('[role="dialog"][aria-label^="About this app"]')
+  await about.locator('button[aria-label]').first().click().catch(() => {})
   await page.waitForTimeout(500)
-  result.closable = (await page.locator('[role="dialog"]').count()) === 0
+  result.closable = (await about.count()) === 0
 
   await context.close()
   return result

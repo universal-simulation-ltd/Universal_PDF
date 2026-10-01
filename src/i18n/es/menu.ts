@@ -38,6 +38,7 @@ const menu: Messages['menu'] = {
   'advanced_export_info': 'Convierte las páginas en imágenes, bloquéalo con contraseña y conserva o elimina los metadatos.',
   'metadata': 'Metadatos del documento',
   'metadata_info': 'Mira a quién y qué menciona este archivo y luego límpialo.',
+  'knowledge_base_info': 'Cómo funciona cada herramienta, con guías para descargar.', // under the SDK's own "Knowledge base" label
   // FileMenu — Redact
   'redact': 'Censurar',
   'find_and_redact': 'Buscar y censurar',

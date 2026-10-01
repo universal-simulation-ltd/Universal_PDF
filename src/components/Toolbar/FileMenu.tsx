@@ -9,7 +9,7 @@ import { useT } from '../../i18n'
 import { PDF_OR_OFFICE_ACCEPT } from '../../lib/officeToPdf'
 import { openFiles } from '../../stores/tabStore'
 import { RedactIcon } from '../icons/RedactIcon'
-import { useCloseAppMenu } from '@unisim/sdk'
+import { translateNav, useCloseAppMenu, useLanguage } from '@unisim/sdk'
 
 /**
  * The one category the dropdown has expanded, or `null` for all collapsed.
@@ -160,6 +160,8 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const setMergeOpen = usePdfStore((s) => s.setMergeOpen)
   const setConvertOpen = usePdfStore((s) => s.setConvertOpen)
   const setMetadataOpen = usePdfStore((s) => s.setMetadataOpen)
+  const setKnowledgeBaseOpen = usePdfStore((s) => s.setKnowledgeBaseOpen)
+  const { language } = useLanguage()
   const setAdvancedExportOpen = usePdfStore((s) => s.setAdvancedExportOpen)
   const isXfa = usePdfStore((s) => s.isXfa)
   const setSearchOpen = useSearchStore((s) => s.setOpen)
@@ -669,6 +671,17 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                     label={t('menu.metadata')}
                     info={t('menu.metadata_info')}
                     onSelect={() => { setMetadataOpen(true); closeMenu() }}
+                  />
+                  {/* ⚠️ Here, not in the SDK's own "Advanced" section. With a
+                      document open the SDK's section held only this one row,
+                      under a second "Advanced" heading two rows below this one
+                      — two identical headings in one menu. The label is the
+                      SDK's own string, so it reads the same as in every app. */}
+                  <InfoRow
+                    icon="📖"
+                    label={translateNav(language, 'menu.knowledge_base')}
+                    info={t('menu.knowledge_base_info')}
+                    onSelect={() => { setKnowledgeBaseOpen(true); closeMenu() }}
                   />
                 </div>
               )}

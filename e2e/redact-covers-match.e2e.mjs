@@ -179,10 +179,12 @@ await page.waitForTimeout(900)
 await page.locator('input[placeholder*="Find" i], input[aria-label*="Find" i]').first().fill(WORD)
 await page.waitForTimeout(1200)
 
-// Arm, then confirm — "Redact all" asks before it commits.
+// Arm, then confirm — "Redact all" asks before it commits. ⚠️ With a single
+// match the bar offers "Redact this 1 match" instead (find.redact_one), which
+// is what this one-word page shows; matching only "Redact all" clicked nothing.
 for (let i = 0; i < 2; i++) {
   await page.evaluate(() => {
-    const all = [...document.querySelectorAll('button')].filter((b) => /Redact all/i.test(b.textContent || ''))
+    const all = [...document.querySelectorAll('button')].filter((b) => /Redact (all|this)/i.test(b.textContent || ''))
     const el = all[all.length - 1]
     if (el) el.click()
   })

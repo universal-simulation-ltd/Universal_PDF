@@ -7,9 +7,11 @@ import {
   useUniversal,
   useSubscription,
   useUserPrefs,
+  KnowledgeBaseDialog,
 } from '@unisim/sdk'
 import { ABOUT_APP } from '../../lib/aboutApp'
 import { KNOWLEDGE_BASE } from '../../knowledge'
+import { usePdfStore } from '../../stores/pdfStore'
 import { clearDismissedPrompts } from '../../lib/resetDefaults'
 
 // Same default the UniversalAppsNavBar uses for the profile "Sign in" item.
@@ -73,6 +75,9 @@ function initialsFor(displayName: string | null | undefined, email: string | nul
  */
 export default function ToolbarUserProfile({ actions }: { actions?: ReactNode }) {
   const { user, loading: userLoading } = useUser()
+  const hasDoc = usePdfStore((s) => !!s.doc)
+  const knowledgeBaseOpen = usePdfStore((s) => s.knowledgeBaseOpen)
+  const setKnowledgeBaseOpen = usePdfStore((s) => s.setKnowledgeBaseOpen)
   // Reset to defaults — the way back from "Don't show again" (James,
   // 2026-09-08). `reset` clears the local copy AND, for a signed-in user, the
   // synced row, so a hint dismissed on another device comes back too. Since
@@ -233,13 +238,21 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
           about={ABOUT_APP}
           // Actions ▸ Advanced ▸ Knowledge base (SDK 0.163.0): this app's own
           // articles, bundled from ./knowledge so they read offline.
-          knowledgeBase={KNOWLEDGE_BASE}
+          // ⚠️ Only with NO document open. With one, the app's own ⚙️ Advanced
+          // section is in this menu too and carries the row (FileMenu), and the
+          // SDK's would be a second "Advanced" heading holding just that row.
+          knowledgeBase={hasDoc ? undefined : KNOWLEDGE_BASE}
           onResetDefaults={() => { clearDismissedPrompts(); void resetPrefs() }}
           // The bar this sits in is slate-900, so the pill takes the dark
           // treatment — otherwise it reads as a white chip punched into it.
           pillTheme="dark"
         />
       </span>
+      <KnowledgeBaseDialog
+        {...KNOWLEDGE_BASE}
+        open={knowledgeBaseOpen}
+        onClose={() => setKnowledgeBaseOpen(false)}
+      />
       <SignInDialog
         open={signInOpen}
         onClose={() => setSignInOpen(false)}

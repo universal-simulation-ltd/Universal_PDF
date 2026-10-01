@@ -38,6 +38,7 @@ const menu: Messages['menu'] = {
   'advanced_export_info': 'Transforme as páginas em imagens, proteja com senha, mantenha ou remova os metadados.',
   'metadata': 'Metadados do documento',
   'metadata_info': 'Veja quem e o que este arquivo identifica — e depois apague.',
+  'knowledge_base_info': 'Como cada ferramenta funciona, com guias para baixar.', // under the SDK's own "Knowledge base" label
   // FileMenu — Redact
   'redact': 'Tarjar',
   'find_and_redact': 'Localizar e tarjar',

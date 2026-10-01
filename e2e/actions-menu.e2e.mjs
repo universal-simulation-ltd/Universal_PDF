@@ -1,5 +1,4 @@
-// The Actions dropdown — browser-level checks for the accordion and the
-// company badge.
+// The Actions dropdown — browser-level checks for the accordion.
 //
 //   ./scripts/preview.ps1     # or preview.sh — Universal PDF is :5174
 //   npm run test:actions      # in another terminal
@@ -17,8 +16,6 @@
 //     had ever opened expanded, and the panel grew into a scroll.
 //   • Clicking the open category still collapses it — an accordion, not a
 //     radio group you can never get back out of.
-//   • The company's name appears in the profile popup, sourced from the org
-//     branding the SDK already exposes (`useOrg` / `useOrgBranding`).
 //
 // Negative control (2026-08-27, run): `git stash`-ing FileMenu.tsx back to the
 // six-boolean version turns 5 of these red — every "the other one closed"
@@ -186,14 +183,11 @@ await page.waitForTimeout(150)
 check('File closed again', !(await expanded('File')))
 check('and nothing else opened', !(await expanded('View')) && !(await expanded('Advanced')))
 
-console.log("\nthe profile popup names the signed-in user's company")
-const badge = page.locator('[data-testid="profile-company"]')
-check('the company row is in the dropdown', (await badge.count()) === 1)
-check(
-  'it shows the org name from branding',
-  (await badge.first().innerText()).includes('UNI·SIM Demo'),
-  await badge.first().innerText().catch(() => '(not found)'),
-)
+// ⚠️ No company-badge checks any more. The badge (`profile-company`) was this
+// app's own `extras` row until 2026-09-27, when James moved it into the SDK's
+// "Plan & limits" box (AccountLimits `CompanyRow`), shown in every app; it is
+// the SDK's to test. These checks looked for a row the app no longer draws and
+// had failed ever since.
 
 await browser.close()
 

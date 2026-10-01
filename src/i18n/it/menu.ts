@@ -38,6 +38,7 @@ const menu: Messages['menu'] = {
   'advanced_export_info': 'Appiattisci le pagine in immagini, proteggi con password, conserva o rimuovi i metadati.',
   'metadata': 'Metadati del documento',
   'metadata_info': 'Scopri chi e cosa nomina questo file, poi ripuliscilo.',
+  'knowledge_base_info': 'Come funziona ogni strumento, con guide da scaricare.', // under the SDK's own "Knowledge base" label
   // FileMenu — Redact
   'redact': 'Oscura',
   'find_and_redact': 'Trova e oscura',

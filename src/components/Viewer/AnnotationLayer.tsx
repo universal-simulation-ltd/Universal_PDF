@@ -325,6 +325,8 @@ function ColorCluster({
           type="button"
           title={t(c.name)}
           aria-label={t(c.name)}
+          // For tests: the toolbar's swatches carry the same names.
+          data-pill-swatch=""
           // The text pill is rendered while a text box may be being edited, so
           // the same "don't blur the editor" guard the style buttons use.
           onMouseDown={(e) => { e.stopPropagation(); e.preventDefault() }}

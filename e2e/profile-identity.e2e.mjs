@@ -1,5 +1,4 @@
-// The profile popup's identity — the display name that went stale, and the
-// company badge.
+// The profile popup's identity — the display name that went stale.
 //
 //   ./scripts/preview.ps1        # or preview.sh — Universal PDF is :5174
 //   npm run test:profile         # in another terminal
@@ -26,7 +25,7 @@
 //
 // Negative control (2026-08-27, run): dropping the pointer handlers from
 // `ToolbarUserProfile` turns 3 checks red — every assertion about a name
-// changing — and leaves the company-badge ones green.
+// changing.
 
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -219,18 +218,6 @@ console.log('\nthe dropdown shows the name the profile row holds')
 await openMenu()
 check('the current display name is on screen', (await menuText()).includes('Jim Original'))
 
-console.log('\nthe company badge names the org, from the branding the SDK already exposes')
-const badge = page.locator('[data-testid="profile-company"]')
-check('the company row is present', (await badge.count()) === 1)
-const badgeText = await badge.first().innerText()
-check('it shows the org name', badgeText.includes('Acme Ltd'), badgeText)
-check(
-  'with an initials tile while no mark is set',
-  badgeText.includes('AC'),
-  badgeText,
-)
-check('and no <img> until there is one', (await badge.locator('img').count()) === 0)
-
 console.log('\nsaving a new display name updates the dropdown — no reload (the reported bug)')
 world.displayName = 'Jim Renamed'
 await openMenu()
@@ -243,23 +230,12 @@ world.displayName = 'Jim Renamed Again'
 await openMenu()
 check('the newest name is shown', (await menuText()).includes('Jim Renamed Again'))
 
-console.log('\nuploading a company mark in branding puts it in the popup')
-world.iconUrl = LOGO_DATA_URL
-world.orgName = 'Acme Holdings'
-// The org row is read by useOrg, which re-reads on the same pointer refresh
-// path only for the profile — reload so the org query re-runs, which is what a
-// branding change does for a user in practice anyway.
-await page.reload({ waitUntil: 'load' })
-await page.setInputFiles('input[type=file]', {
-  name: 'identity.pdf',
-  mimeType: 'application/pdf',
-  buffer: pdf,
-})
-await page.waitForSelector('[data-page-index="0"] canvas', { timeout: 30000 })
-await page.waitForTimeout(600)
-await openMenu()
-check('the mark is rendered as an image', (await badge.locator('img').count()) === 1, )
-check('the renamed org is shown', (await badge.first().innerText()).includes('Acme Holdings'))
+// ⚠️ The company-badge checks that stood here (the org name, its initials
+// tile, the uploaded mark) went on 2026-10-02: the badge left this app's
+// `extras` for the SDK's "Plan & limits" box on 2026-09-27 (AccountLimits
+// `CompanyRow`), so they looked for a row the app no longer draws. The SDK
+// owns it now. What is left here is the display name, which is still the
+// app's wiring.
 
 // ── The other half of the same wire ─────────────────────────────────────────
 //
