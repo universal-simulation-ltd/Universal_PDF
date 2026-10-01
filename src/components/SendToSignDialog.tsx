@@ -15,6 +15,7 @@ import {
   type SignRequest,
 } from '@unisim/sdk'
 import { usePdfStore } from '../stores/pdfStore'
+import LockedOriginNote from './Lock/LockedOriginNote'
 // App Review 3.1.1: the phone app must not point people to buying tokens on
 // the web. The web and desktop builds keep the link and the wording.
 import { isNativeShell } from '../lib/nativeOpen'
@@ -368,6 +369,7 @@ export default function SendToSignDialog() {
           <p className="text-[11px] text-slate-400">
             {t('sign.send_legal')}
           </p>
+          <LockedOriginNote kind="send" />
 
           {!signedIn ? (
             /* ── Step 0: create / sign in with a Universal ID ── */

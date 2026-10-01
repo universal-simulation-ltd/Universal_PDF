@@ -30,6 +30,7 @@ import UnsavedChangesDialog from './components/Exit/UnsavedChangesDialog'
 import LockedFilePrompt from './components/Lock/LockedFilePrompt'
 import { UniversalAppsNavBar, UniversalBar, ChangelogMenu, DropAnywhere, useFileDrop, useUserPrefs } from '@unisim/sdk'
 import { ABOUT_APP } from './lib/aboutApp'
+import { clearDismissedPrompts } from './lib/resetDefaults'
 
 // What this copy of the app is, for the changelog panel's footer and the
 // landing footer. Support's first question is "which build are you on?", and
@@ -484,7 +485,7 @@ export default function App() {
             // Actions ▸ Advanced ▸ Knowledge base (SDK 0.163.0): this app's own
             // articles, bundled from ./knowledge so they read offline.
             knowledgeBase={KNOWLEDGE_BASE}
-            onResetDefaults={() => { void resetPrefs() }}
+            onResetDefaults={() => { clearDismissedPrompts(); void resetPrefs() }}
             // The SDK's "Delete my account" stays ON here (its default in a
             // native shell): this is the menu a phone opens first. It was
             // switched off to stop the row doubling — but the double was in

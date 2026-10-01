@@ -15,7 +15,11 @@ export default function SignatureImport() {
   const [name, setName] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<ImportedSignature | null>(null)
-  const [removeBg, setRemoveBg] = useState(true)
+  // ⚠️ Bound INVERTED, not defaulted on. Suite rule: every tick box starts
+  // unticked (James, 2026-09-16). Removing the white behind a photographed
+  // signature is still what happens by default — the box was reworded to the
+  // exception ("Keep the white background") rather than the behaviour changed.
+  const [keepBg, setKeepBg] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -25,7 +29,7 @@ export default function SignatureImport() {
       setName('')
       setFile(null)
       setPreview(null)
-      setRemoveBg(true)
+      setKeepBg(false)
       setBusy(false)
       setError(null)
     }
@@ -36,7 +40,7 @@ export default function SignatureImport() {
     let cancelled = false
     setBusy(true)
     setError(null)
-    importImageAsSignature(file, { removeBg })
+    importImageAsSignature(file, { removeBg: !keepBg })
       .then((res) => {
         if (cancelled) return
         setPreview(res)
@@ -63,7 +67,7 @@ export default function SignatureImport() {
     return () => {
       cancelled = true
     }
-  }, [file, removeBg, isStamp])
+  }, [file, keepBg, isStamp])
 
   if (!open) return null
 
@@ -138,7 +142,7 @@ export default function SignatureImport() {
             onClick={() => inputRef.current?.click()}
             className="w-full p-8 border-2 border-dashed border-slate-300 hover:border-orange-500 rounded-lg text-slate-500 hover:text-orange-700 transition-colors flex flex-col items-center gap-2"
           >
-            <div className="text-3xl">🖼️</div>
+            <div className="text-3xl" aria-hidden="true">🖼️</div>
             <div className="font-medium">{t('sign.import_choose')}</div>
             <div className="text-xs opacity-70">PNG, JPG, JPEG, GIF, WEBP</div>
           </button>
@@ -164,10 +168,10 @@ export default function SignatureImport() {
               <label className="flex items-center gap-2 text-slate-700 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={removeBg}
-                  onChange={(e) => setRemoveBg(e.target.checked)}
+                  checked={keepBg}
+                  onChange={(e) => setKeepBg(e.target.checked)}
                 />
-                {t('sign.import_remove_bg')}
+                {t('sign.import_keep_bg')}
               </label>
               <button
                 type="button"
@@ -196,6 +200,7 @@ export default function SignatureImport() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t('sign.import_name_placeholder')}
+            aria-label={t('sign.import_name_placeholder')}
             className="flex-1 min-w-40 px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
           <button

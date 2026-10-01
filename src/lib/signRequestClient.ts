@@ -1,6 +1,7 @@
 import { useUniversal } from '@unisim/sdk'
 import { hashSecret, randomHex, generateAccessPin } from './signAccessSecret'
 import { getT } from '../i18n'
+import { publicAppBase } from './appUrl'
 
 // Client wrappers for the "Send to sign" Edge Functions.
 //
@@ -21,15 +22,15 @@ import { getT } from '../i18n'
 
 type Supabase = ReturnType<typeof useUniversal>['supabase']
 
-/** Build a party's signing link for a sign-request party token. BASE_URL keeps
- *  it correct under the /pdf/ portal prefix and in local dev alike. */
+/** Build a party's signing link for a sign-request party token. It is emailed
+ *  to somebody else, so it must be an address THEY can open — see appUrl.ts. */
 export function signRequestLink(token: string): string {
-  return `${window.location.origin}${import.meta.env.BASE_URL}?signdoc=${token}`
+  return `${publicAppBase()}?signdoc=${token}`
 }
 
 /** Public certificate-page link for a request's cert_id. */
 export function certLink(certId: string): string {
-  return `${window.location.origin}${import.meta.env.BASE_URL}?cert=${certId}`
+  return `${publicAppBase()}?cert=${certId}`
 }
 
 function base64FromBytes(bytes: Uint8Array): string {

@@ -531,6 +531,7 @@ export default function SignaturePad() {
               <button
                 type="button"
                 onClick={() => setMode('draw')}
+                aria-pressed={mode === 'draw'}
                 className={`rounded-md px-2.5 py-1 transition ${mode === 'draw' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 {t('sign.pad_mode_draw')}
@@ -540,9 +541,10 @@ export default function SignaturePad() {
               <button
                 type="button"
                 onClick={() => setMode('phone')}
+                aria-pressed={mode === 'phone'}
                 className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition ${mode === 'phone' ? 'bg-orange-700 text-white' : 'text-orange-700 hover:bg-orange-700/10 hover:text-orange-800'}`}
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <rect x="7" y="2" width="10" height="20" rx="2.5" /><line x1="11" y1="18" x2="13" y2="18" />
                 </svg>
                 {t('sign.send_to_sign')}
@@ -551,6 +553,7 @@ export default function SignaturePad() {
             <button
               onClick={cancel}
               className="text-slate-400 hover:text-slate-700 text-2xl leading-none w-8 h-8 flex items-center justify-center"
+              aria-label={t('sign.close')}
             >
               ×
             </button>
@@ -686,6 +689,7 @@ export default function SignaturePad() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t('sign.pad_name_placeholder')}
+              aria-label={t('sign.pad_name_placeholder')}
               className="flex-1 min-w-40 px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
             <button
@@ -718,7 +722,7 @@ export default function SignaturePad() {
               aria-expanded={advancedOpen}
               aria-controls={advancedId}
             >
-              <span className={`transition-transform ${advancedOpen ? 'rotate-90' : ''}`}>▸</span>
+              <span className={`transition-transform ${advancedOpen ? 'rotate-90' : ''}`} aria-hidden="true">▸</span>
               {t('sign.pad_advanced')}
             </button>
 
@@ -759,6 +763,7 @@ export default function SignaturePad() {
                     <button
                       type="button"
                       onClick={() => setSeparatePlacement(false)}
+                      aria-pressed={!separatePlacement}
                       className={`px-3 py-1.5 ${!separatePlacement ? 'bg-orange-700 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
                     >
                       {t('sign.pad_with_signature')}
@@ -766,6 +771,7 @@ export default function SignaturePad() {
                     <button
                       type="button"
                       onClick={() => setSeparatePlacement(true)}
+                      aria-pressed={separatePlacement}
                       className={`px-3 py-1.5 border-l border-slate-300 ${separatePlacement ? 'bg-orange-700 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
                     >
                       {t('sign.pad_separate_click')}

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Chip, SignInDialog, useUniversal, useUser, useCredits, useHostedUploads, useAppFreeToken, type HostedUpload } from '@unisim/sdk'
 import { usePdfStore } from '../stores/pdfStore'
+import LockedOriginNote from './Lock/LockedOriginNote'
 // App Review 3.1.1: the phone app must not point people to buying tokens on
 // the web. The web and desktop builds keep the link and the wording.
 import { isNativeShell } from '../lib/nativeOpen'
@@ -33,6 +34,9 @@ export default function HostedStoreDialog() {
   const open = usePdfStore((s) => s.hostedStoreOpen)
   const setOpen = usePdfStore((s) => s.setHostedStoreOpen)
   const doc = usePdfStore((s) => s.doc)
+  // A locked document is never put in recents, so "already kept on this
+  // device" would be untrue — and believed.
+  const openedLocked = usePdfStore((s) => s.openedLocked)
 
   const { supabase, session, activeOrgId } = useUniversal()
   const { user } = useUser()
@@ -188,6 +192,7 @@ export default function HostedStoreDialog() {
         </div>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
+          <LockedOriginNote kind="save" />
           {/* Tier 1 — Save to browser (local, temporary): automatic recents. */}
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex items-center gap-2">
@@ -195,7 +200,7 @@ export default function HostedStoreDialog() {
               <Chip size="sm">{t('sign.hosted_browser_chip')}</Chip>
             </div>
             <p className="mt-1 text-xs text-slate-500">
-              {t('sign.hosted_browser_body')}
+              {openedLocked ? t('sign.hosted_browser_body_locked') : t('sign.hosted_browser_body')}
             </p>
           </div>
 

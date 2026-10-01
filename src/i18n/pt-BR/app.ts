@@ -46,6 +46,7 @@ const app: Messages['app'] = {
   'unsaved_body': '{name} tem alterações que ainda não estão em um arquivo salvo. {consequence}',
   'unsaved_this_pdf': 'Este PDF',
   'unsaved_marks_stay': 'De qualquer forma, suas marcações ficam em {recent} neste aparelho — salvar grava tudo em um PDF que você pode enviar, guardar ou imprimir.',
+  'unsaved_locked_not_kept': 'Este PDF estava protegido quando você o abriu, então nada fica guardado neste aparelho. Se sair sem salvar, suas alterações serão perdidas.',
   'recent_files': 'Arquivos recentes',
   'unsaved_redact_title': 'Tarja permanente',
   'unsaved_redact_body_one': 'Salvar aplica {count} caixa de tarja e remove de vez o texto embaixo dela. Não é possível desfazer.',

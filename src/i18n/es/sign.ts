@@ -106,7 +106,7 @@ const sign: Messages['sign'] = {
   'import_processing': 'Procesando…',
   'import_preview_alt': 'Vista previa de la firma',
   'import_no_preview': 'Sin vista previa',
-  'import_remove_bg': 'Quitar fondo blanco',
+  'import_keep_bg': 'Conservar el fondo blanco',
   'import_choose_different': 'Elegir otro archivo',
   'import_name_placeholder': 'Nombre (opcional)',
 
@@ -272,6 +272,7 @@ const sign: Messages['sign'] = {
   'hosted_browser': 'Guardar en el navegador',
   'hosted_browser_chip': 'Local · temporal',
   'hosted_browser_body': 'Este PDF ya se conserva automáticamente en este dispositivo, así que al recargar se vuelve a abrir. Se queda en este navegador y nunca sale de él.',
+  'hosted_browser_body_locked': 'Este PDF no. Estaba bloqueado cuando lo abriste, así que no se conserva ninguna copia en este dispositivo.',
   'hosted_desktop': 'Guardar en el ordenador',
   'hosted_desktop_chip': 'Reimportar después',
   'hosted_desktop_body': 'Descarga este PDF y tus anotaciones en un único archivo de copia de seguridad. Impórtalo cuando quieras, en cualquier dispositivo, para seguir editando justo donde lo dejaste.',

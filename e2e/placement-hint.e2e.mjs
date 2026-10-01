@@ -215,7 +215,7 @@ await anyBanner.click()
 await page.waitForTimeout(400)
 check('the banner goes', (await anyBanner.count()) === 0)
 const armedAfterCancel = await page.evaluate(() => {
-  const img = document.querySelector('label[title="Upload and place an image"]')
+  const img = document.querySelector('button[title="Upload and place an image"]')
   return img ? (img.className || '').includes('bg-orange-700') : null
 })
 check('the picture tool is no longer lit', armedAfterCancel === false, `class check gave ${armedAfterCancel}`)

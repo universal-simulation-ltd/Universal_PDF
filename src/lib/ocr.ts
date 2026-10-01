@@ -7,10 +7,11 @@ import { getT } from '../i18n'
  * documents **entirely client-side**. Nothing is uploaded.
  *
  * The recognition runs on-device via Tesseract.js (a WebAssembly port of the
- * Tesseract engine). The only thing that leaves the browser is a one-time
- * download of the WASM core + the English language model (~15 MB), fetched from
- * Tesseract's official CDN on first use and then cached by the browser (and by
- * the PWA service worker — see the runtime-caching rule in vite.config.ts). This
+ * Tesseract engine). Its worker script and WASM core ship WITH the app (see
+ * `ocrRuntime()` in vite.config.ts); the one thing fetched from elsewhere is
+ * the English language model (~3 MB), from Tesseract's CDN on first use and
+ * then cached by tesseract (IndexedDB) and by the PWA service worker. Nothing
+ * of the user's goes anywhere. This
  * keeps the feature on-brand with the rest of the suite: local-first, no server
  * round-trip, no account — the same pattern the Images app uses for its
  * on-device background removal.
@@ -36,6 +37,23 @@ const RENDER_SCALE = 2
 /** A page already carrying at least this many non-space characters is treated
  *  as already-textual and skipped in `auto` mode (its real text is preserved). */
 const TEXTUAL_PAGE_MIN_CHARS = 16
+
+// The worker script + WASM cores, copied into the build by `ocrRuntime()` in
+// vite.config.ts. Relative to BASE_URL, so it lands under `/pdf/` on the web
+// and beside index.html in the desktop, phone and extension builds (`./`) —
+// tesseract turns it into an absolute URL against the page before the worker
+// sees it.
+//
+// ⚠️ `corePath` is the FOLDER, not a file, on purpose: given a folder,
+// tesseract chooses the SIMD or the plain core for the engine it is running
+// on. Naming one file here would hand the SIMD build to a browser that cannot
+// run it, or the slow build to every one that can.
+//
+// ⚠️ The language model is NOT self-hosted. `langPath` is left unset, so it
+// comes from tesseract's own CDN (cdn.jsdelivr.net/npm/@tesseract.js-data) —
+// ~3 MB of data rather than code, fetched once and cached, and shipping it
+// would add that to every install for a tool most people never open.
+const OCR_RUNTIME_URL = `${import.meta.env.BASE_URL}${import.meta.env.VITE_OCR_RUNTIME_DIR}`
 
 export interface OcrProgress {
   phase: 'load' | 'recognize' | 'build'
@@ -241,9 +259,10 @@ export async function makeSearchablePdf(
   const LOAD_WEIGHT = 0.15
   const perPage = (1 - LOAD_WEIGHT) / pagesToOcr.length
 
-  // Lazy import: Tesseract.js (+ its worker/WASM glue, fetched from CDN on first
-  // use) is only pulled in when the user actually runs OCR, keeping the initial
-  // app bundle lean for everyone who never touches this feature.
+  // Lazy import: Tesseract.js (+ its worker/WASM core, fetched from the app's
+  // own `ocr/` folder on first use) is only pulled in when the user actually
+  // runs OCR, keeping the initial app bundle lean for everyone who never
+  // touches this feature.
   const { createWorker } = await import('tesseract.js')
 
   // Shared with the loop below so the logger can interpolate the live page's
@@ -251,6 +270,13 @@ export async function makeSearchablePdf(
   let modelLoaded = false
   let currentSlot = 0
   const worker = await createWorker(lang, 1, {
+    workerPath: `${OCR_RUNTIME_URL}worker.min.js`,
+    corePath: OCR_RUNTIME_URL,
+    // ⚠️ Off because the worker is now same-origin. The blob: wrapper exists to
+    // load a CROSS-origin worker script, and a blob: worker is exactly what the
+    // extension's CSP (`script-src 'self'`) refuses — the same way pdf.js's
+    // worker is a real file here and not a blob.
+    workerBlobURL: false,
     logger: (m: { status: string; progress: number }) => {
       if (m.status === 'recognizing text') {
         // Smoothly fill the current page's slice as Tesseract works through it.
@@ -263,7 +289,7 @@ export async function makeSearchablePdf(
         })
       } else if (!modelLoaded && m.status) {
         // Before the first page's recognition, surface the model download so the
-        // ~15 MB one-time fetch isn't a dead-looking bar.
+        // one-time fetch (core + model, ~7 MB) isn't a dead-looking bar.
         const label = /download|load|initializ|initialis/i.test(m.status)
           ? getT()('lib.ocr_downloading_model')
           : getT()('lib.ocr_preparing')

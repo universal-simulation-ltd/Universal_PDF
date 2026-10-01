@@ -114,8 +114,25 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
         ref.current?.contains(target) || panelRef.current?.contains(target)
       if (!inside) setOpen(false)
     }
+    // Escape closes the menu — only while it's open, so Escape still reaches
+    // the page (deselect) otherwise; consumed while it is, so one press closes
+    // the menu without also dropping the selection. Focus goes back to the
+    // Sign button when it was inside the panel, rather than onto <body>.
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      e.stopPropagation()
+      if (panelRef.current?.contains(document.activeElement)) {
+        ref.current?.querySelector<HTMLButtonElement>('button')?.focus()
+      }
+      setOpen(false)
+    }
     document.addEventListener('mousedown', onDoc)
-    return () => document.removeEventListener('mousedown', onDoc)
+    document.addEventListener('keydown', onKey, true)
+    return () => {
+      document.removeEventListener('mousedown', onDoc)
+      document.removeEventListener('keydown', onKey, true)
+    }
   }, [open])
 
   // Pin the portaled desktop panel under its trigger, keeping it aligned to the
@@ -170,6 +187,7 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
       <div className="flex border-b border-slate-100">
         <button
           onClick={() => setTab('signatures')}
+          aria-pressed={tab === 'signatures'}
           className={`flex-1 px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
             tab === 'signatures'
               ? 'text-orange-700 border-b-2 border-orange-500 -mb-px'
@@ -180,6 +198,7 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
         </button>
         <button
           onClick={() => setTab('stamps')}
+          aria-pressed={tab === 'stamps'}
           className={`flex-1 px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
             tab === 'stamps'
               ? 'text-orange-700 border-b-2 border-orange-500 -mb-px'
@@ -190,6 +209,7 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
         </button>
         <button
           onClick={() => setTab('request')}
+          aria-pressed={tab === 'request'}
           className={`flex-1 px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
             tab === 'request'
               ? 'text-orange-700 border-b-2 border-orange-500 -mb-px'
@@ -338,11 +358,13 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
       {compact ? (
         <button
           onClick={() => setOpen((o) => !o)}
+          aria-haspopup="true"
+          aria-expanded={open}
           className={`flex flex-col items-center justify-center w-full h-full gap-0.5 rounded transition-colors ${
             armed ? 'text-orange-400' : 'text-slate-200'
           }`}
         >
-          <span className="text-xl leading-none">✍</span>
+          <span className="text-xl leading-none" aria-hidden="true">✍</span>
           <span className="text-[10px] font-medium leading-tight tracking-tight max-w-full truncate px-0.5">{t('sign.menu_sign_short')}</span>
         </button>
       ) : (

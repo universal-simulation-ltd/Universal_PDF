@@ -106,7 +106,7 @@ export default {
   'import_processing': 'Processing…',
   'import_preview_alt': 'Signature preview',
   'import_no_preview': 'No preview',
-  'import_remove_bg': 'Remove white background',
+  'import_keep_bg': 'Keep the white background', // tick box, unticked by default: the white behind an imported signature is removed unless this is ticked
   'import_choose_different': 'Choose different file',
   'import_name_placeholder': 'Name (optional)',
 
@@ -272,6 +272,7 @@ export default {
   'hosted_browser': 'Save to browser',
   'hosted_browser_chip': 'Local · temporary',
   'hosted_browser_body': 'This PDF is already kept on this device automatically, so a refresh reopens it. It stays in this browser and never leaves it.',
+  'hosted_browser_body_locked': 'Not for this PDF. It was locked when you opened it, so no copy is kept on this device.',
   'hosted_desktop': 'Save to desktop',
   'hosted_desktop_chip': 'Re-import later',
   'hosted_desktop_body': 'Download this PDF and your annotations as one backup file. Import it any time — on any device — to carry on editing exactly where you left off.',

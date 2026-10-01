@@ -158,6 +158,11 @@ const tools: Messages['tools'] = {
   'locked.no_recovery': 'O Universal PDF não consegue recuperar nem repor esta palavra-passe. Sem ela, o documento não pode ser aberto por nenhuma app.',
   'locked.unlocking': 'A desbloquear…',
   'locked.unlock': 'Desbloquear',
+  // LockedOriginNote — a document opened from a locked file, about to leave unlocked
+  'locked.origin_save': 'Este PDF estava protegido quando o abriu. As cópias que guardar ou arquivar a partir daqui abrem sem palavra-passe.',
+  'locked.origin_send': 'Este PDF estava protegido quando o abriu. A cópia enviada a partir daqui abre sem palavra-passe.',
+  'locked.origin_advanced': 'Este PDF estava protegido quando o abriu. Assinale «Proteger com palavra-passe» abaixo para proteger também a sua cópia.',
+  'locked.relock': 'Proteger novamente',
 
   // MetadataDialog
   'metadata.read_failed': 'Não foi possível ler os metadados deste PDF',

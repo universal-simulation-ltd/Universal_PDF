@@ -158,6 +158,11 @@ const tools: Messages['tools'] = {
   'locked.no_recovery': 'Universal PDF bu parolayı kurtaramaz veya sıfırlayamaz. Parola olmadan belge hiçbir uygulamada açılamaz.',
   'locked.unlocking': 'Kilit açılıyor…',
   'locked.unlock': 'Kilidi aç',
+  // LockedOriginNote — a document opened from a locked file, about to leave unlocked
+  'locked.origin_save': 'Bu PDF açtığınızda kilitliydi. Buradan kaydettiğiniz veya sakladığınız kopyalar parola olmadan açılır.',
+  'locked.origin_send': 'Bu PDF açtığınızda kilitliydi. Buradan gönderilen kopya parola olmadan açılır.',
+  'locked.origin_advanced': 'Bu PDF açtığınızda kilitliydi. Kopyanızı da kilitlemek için aşağıdaki “Parolayla kilitle” kutusunu işaretleyin.',
+  'locked.relock': 'Yeniden kilitle',
 
   // MetadataDialog
   'metadata.read_failed': 'Bu PDF’in meta verileri okunamadı',

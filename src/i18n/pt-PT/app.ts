@@ -46,6 +46,7 @@ const app: Messages['app'] = {
   'unsaved_body': '{name} tem alterações que ainda não estão num ficheiro guardado. {consequence}',
   'unsaved_this_pdf': 'Este PDF',
   'unsaved_marks_stay': 'As marcações ficam sempre em {recent} neste dispositivo — guardar escreve-as num PDF que pode enviar, manter ou imprimir.',
+  'unsaved_locked_not_kept': 'Este PDF estava protegido quando o abriu, por isso nada fica guardado neste dispositivo. Se sair sem guardar, as alterações perdem-se.',
   'recent_files': 'Ficheiros recentes',
   'unsaved_redact_title': 'Rasura permanente',
   'unsaved_redact_body_one': 'Guardar aplica {count} caixa de rasura e remove definitivamente o texto por baixo. Não é possível anular.',

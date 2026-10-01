@@ -158,6 +158,11 @@ const tools: Messages['tools'] = {
   'locked.no_recovery': 'Universal PDF kann dieses Passwort weder wiederherstellen noch zurücksetzen. Ohne das Passwort kann keine App das Dokument öffnen.',
   'locked.unlocking': 'Wird entsperrt…',
   'locked.unlock': 'Entsperren',
+  // LockedOriginNote — a document opened from a locked file, about to leave unlocked
+  'locked.origin_save': 'Dieses PDF war beim Öffnen passwortgeschützt. Kopien, die du von hier aus speicherst oder ablegst, lassen sich ohne Passwort öffnen.',
+  'locked.origin_send': 'Dieses PDF war beim Öffnen passwortgeschützt. Die Kopie, die von hier gesendet wird, lässt sich ohne Passwort öffnen.',
+  'locked.origin_advanced': 'Dieses PDF war beim Öffnen passwortgeschützt. Setze unten das Häkchen bei „Mit Passwort schützen“, damit auch deine Kopie geschützt ist.',
+  'locked.relock': 'Wieder schützen',
 
   // MetadataDialog
   'metadata.read_failed': 'Die Metadaten dieses PDFs konnten nicht gelesen werden',

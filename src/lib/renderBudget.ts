@@ -61,9 +61,9 @@ const DESKTOP_BUDGET_PIXELS = 160_000_000
 // zoom, so a very long document keeps 100% however far over budget it is. Such
 // a document is already over budget the moment it opens — the fix for that is
 // to stop rasterizing pages that are nowhere near the viewport, not to take
-// zooming away. (Half done: the interactive layers are now windowed, the PDF
-// bitmaps are not — they are merely rendered in a sensible order. See
-// `renderQueue`.)
+// zooming away. (Done since 2026-09-01: the bitmaps and the interactive layers
+// are both windowed to the band — see `MAX_RETAINED_PAGES` — and a page leaving
+// the band also frees pdf.js's parsed copy of it, see `Viewer/pageRetention`.)
 const MIN_MAX_ZOOM = 1
 
 // How many pages may hold canvases at once — the band `PdfViewer` keeps around

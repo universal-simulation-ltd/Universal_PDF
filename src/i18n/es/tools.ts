@@ -158,6 +158,11 @@ const tools: Messages['tools'] = {
   'locked.no_recovery': 'Universal PDF no puede recuperar ni restablecer esta contraseña. Sin ella, ninguna app puede abrir el documento.',
   'locked.unlocking': 'Desbloqueando…',
   'locked.unlock': 'Desbloquear',
+  // LockedOriginNote — a document opened from a locked file, about to leave unlocked
+  'locked.origin_save': 'Este PDF estaba bloqueado cuando lo abriste. Las copias que guardes o almacenes desde aquí se abrirán sin contraseña.',
+  'locked.origin_send': 'Este PDF estaba bloqueado cuando lo abriste. La copia que se envíe desde aquí se abrirá sin contraseña.',
+  'locked.origin_advanced': 'Este PDF estaba bloqueado cuando lo abriste. Marca «Bloquear con contraseña» abajo para que tu copia también quede bloqueada.',
+  'locked.relock': 'Volver a bloquear',
 
   // MetadataDialog
   'metadata.read_failed': 'No se han podido leer los metadatos de este PDF',

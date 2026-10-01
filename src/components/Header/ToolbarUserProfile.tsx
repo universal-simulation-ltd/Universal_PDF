@@ -10,6 +10,7 @@ import {
 } from '@unisim/sdk'
 import { ABOUT_APP } from '../../lib/aboutApp'
 import { KNOWLEDGE_BASE } from '../../knowledge'
+import { clearDismissedPrompts } from '../../lib/resetDefaults'
 
 // Same default the UniversalAppsNavBar uses for the profile "Sign in" item.
 const HUB_LOGIN_HREF = 'https://app.unisim.co.uk/login'
@@ -79,6 +80,9 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
   // in place first and says "Defaults restored"), rather than Actions ▸
   // Advanced. ⚠️ Do not drop it without also making "Don't show again"
   // non-permanent: this row is what makes a permanent dismissal defensible.
+  // ⚠️ `reset` only clears the SDK's own bag, so the app's localStorage
+  // dismissals (the fill-isn't-redaction warning among them) are cleared
+  // beside it — see lib/resetDefaults.
   const { reset: resetPrefs } = useUserPrefs()
   const { profile, loading: profileLoading, refresh: refreshProfile } = useProfile()
   const { supabase, session } = useUniversal()
@@ -230,7 +234,7 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
           // Actions ▸ Advanced ▸ Knowledge base (SDK 0.163.0): this app's own
           // articles, bundled from ./knowledge so they read offline.
           knowledgeBase={KNOWLEDGE_BASE}
-          onResetDefaults={() => { void resetPrefs() }}
+          onResetDefaults={() => { clearDismissedPrompts(); void resetPrefs() }}
           // The bar this sits in is slate-900, so the pill takes the dark
           // treatment — otherwise it reads as a white chip punched into it.
           pillTheme="dark"

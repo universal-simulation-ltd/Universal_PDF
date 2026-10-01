@@ -158,6 +158,11 @@ const tools: Messages['tools'] = {
   'locked.no_recovery': 'Universal PDF ne peut ni récupérer ni réinitialiser ce mot de passe. Sans lui, aucune application ne peut ouvrir le document.',
   'locked.unlocking': 'Déverrouillage…',
   'locked.unlock': 'Déverrouiller',
+  // LockedOriginNote — a document opened from a locked file, about to leave unlocked
+  'locked.origin_save': 'Ce PDF était verrouillé à l’ouverture. Les copies que vous enregistrez ou stockez d’ici s’ouvriront sans mot de passe.',
+  'locked.origin_send': 'Ce PDF était verrouillé à l’ouverture. La copie envoyée d’ici s’ouvrira sans mot de passe.',
+  'locked.origin_advanced': 'Ce PDF était verrouillé à l’ouverture. Cochez « Verrouiller par mot de passe » ci-dessous pour verrouiller aussi votre copie.',
+  'locked.relock': 'Le verrouiller à nouveau',
 
   // MetadataDialog
   'metadata.read_failed': 'Impossible de lire les métadonnées de ce PDF',

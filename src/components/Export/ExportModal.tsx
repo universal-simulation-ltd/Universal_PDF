@@ -9,6 +9,7 @@ import { RedactIcon } from '../icons/RedactIcon'
 import { useExportBuild } from './useExportBuild'
 import { useT } from '../../i18n'
 import { formatNumber, formatSize } from './formatSize'
+import LockedOriginNote from '../Lock/LockedOriginNote'
 
 // The plain export: here is your document, here is what it weighs, take it.
 //
@@ -183,6 +184,9 @@ export default function ExportModal({ open, onClose }: Props) {
         </div>
 
         <div className="-mx-5 min-h-0 flex-1 overflow-y-auto px-5">
+        {/* Locking lives in Advanced, so that is where "Lock it again" goes.
+            XFA documents cannot be locked here at all — see xfa_body. */}
+        <LockedOriginNote kind="save" onRelock={isXfa ? undefined : openAdvanced} className="mb-3" />
         {error ? (
           <div className="text-sm text-red-600">{t('tools.export.failed', { message: error })}</div>
         ) : isXfa ? (

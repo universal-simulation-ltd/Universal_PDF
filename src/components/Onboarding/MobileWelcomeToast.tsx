@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useT } from '../../i18n'
 
-const STORAGE_KEY = 'universal-pdf-mobile-welcome-dismissed'
+import { MOBILE_WELCOME_KEY as STORAGE_KEY } from '../../lib/resetDefaults'
 const MOBILE_QUERY = '(max-width: 767px)'
 
 function isDismissed(): boolean {

@@ -46,6 +46,7 @@ const app: Messages['app'] = {
   'unsaved_body': '{name} contiene modifiche non ancora salvate in un file. {consequence}',
   'unsaved_this_pdf': 'Questo PDF',
   'unsaved_marks_stay': 'Le tue annotazioni restano comunque in {recent} su questo dispositivo: salvando le scrivi in un PDF che puoi inviare, conservare o stampare.',
+  'unsaved_locked_not_kept': 'Questo PDF era protetto quando l’hai aperto, quindi su questo dispositivo non viene conservato nulla. Se esci senza salvare, le modifiche andranno perse.',
   'recent_files': 'File recenti',
   'unsaved_redact_title': 'Oscuramento permanente',
   'unsaved_redact_body_one': 'Il salvataggio appiattisce {count} riquadro di oscuramento ed elimina definitivamente il testo sottostante. L’operazione non può essere annullata.',

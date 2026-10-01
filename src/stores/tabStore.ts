@@ -52,6 +52,7 @@ interface TabSnapshot {
   isXfa: boolean
   importNotice: string | null
   lockedFile: PdfLive['lockedFile']
+  openedLocked: boolean
   docUndo: PdfLive['docUndo']
   annotations: Annotation[]
   past: Annotation[][]
@@ -118,6 +119,7 @@ function captureLive(): TabSnapshot {
     isXfa: pdf.isXfa,
     importNotice: pdf.importNotice,
     lockedFile: pdf.lockedFile,
+    openedLocked: pdf.openedLocked,
     docUndo: pdf.docUndo,
     annotations: ann.annotations,
     past: ann.past,
@@ -143,6 +145,7 @@ function applyLive(snap: TabSnapshot) {
     isXfa: snap.isXfa,
     importNotice: snap.importNotice,
     lockedFile: snap.lockedFile,
+    openedLocked: snap.openedLocked,
     docUndo: snap.docUndo,
     loading: false,
     // Already drawn once; there is no first paint to hold the placeholder for.
@@ -176,6 +179,7 @@ function blankLiveForLoading() {
     isXfa: false,
     importNotice: null,
     lockedFile: null,
+    openedLocked: false,
     docUndo: [],
     loading: true,
     firstPaint: true,
@@ -262,6 +266,9 @@ async function openInBackgroundTab(file: File, notice?: string) {
     isXfa: opened.isXfa,
     importNotice: opened.importNotice,
     lockedFile: opened.lockedFile,
+    // A locked file opened in the background has no document yet; it becomes
+    // one through `loadFile` with a password, which sets this itself.
+    openedLocked: false,
     docUndo: [],
     annotations: opened.annotations,
     past: [],

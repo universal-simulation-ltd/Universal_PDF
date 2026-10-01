@@ -6,6 +6,7 @@ import { nextExportName, previewExportName } from '../../lib/exportName'
 import { countRedactions, isRedactConfirmed, REDACT_CONFIRM_WORD } from '../../lib/redactGate'
 import { encryptPdf } from '../../lib/pdfEncrypt'
 import { scrubPdfMetadata } from '../../lib/pdfMetadata'
+import LockedOriginNote from '../Lock/LockedOriginNote'
 import LockFields, { EMPTY_LOCK, lockIncomplete, lockPasswordOf, type LockState } from '../Lock/LockFields'
 import { markSaved } from '../../lib/unsavedChanges'
 import { RedactIcon } from '../icons/RedactIcon'
@@ -397,6 +398,7 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
                 checkbox is what most PDF apps do, and it is why users believe
                 those flags protect anything. There is no such checkbox here on
                 purpose — see the note at the top of lib/pdfCrypto.ts. */}
+            <LockedOriginNote kind="advanced" className="mb-2" />
             <LockFields value={lock} onChange={setLock} disabled={building || compressing || locking} />
 
             <div className="rounded-lg border border-slate-200 p-4">

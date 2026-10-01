@@ -77,9 +77,10 @@ export default function PdfViewer() {
   zoomRef.current = zoom
 
   // How far this document can be zoomed on this device before the pages stop
-  // fitting in memory. Pages are all rasterized at once, so it falls as the
-  // document gets longer; it is measured off page 1 and re-measured whenever
-  // pages are added or removed.
+  // fitting in memory. Only the band around the reader holds pixels, so it
+  // falls as the document gets longer only up to `MAX_RETAINED_PAGES` pages;
+  // it is measured off page 1 and re-measured whenever pages are added or
+  // removed.
   const [maxZoom, setMaxZoom] = useState(MAX_ZOOM)
   const maxZoomRef = useRef(maxZoom)
   maxZoomRef.current = maxZoom
@@ -432,6 +433,82 @@ export default function PdfViewer() {
     timer = setTimeout(finish, LAYOUT_SETTLE_MS)
     pendingZoom.current = { finish, cancel: teardown }
   }
+
+  // Drop whatever transform a gesture (or a settling zoom's compensation) left on
+  // the content. Shared by the buttons and the keyboard, which own no transform
+  // of their own but still have to clear `commitZoom`'s.
+  function clearContentTransform() {
+    const content = contentRef.current
+    if (!content) return
+    content.style.transform = ''
+    content.style.transformOrigin = ''
+    content.style.willChange = ''
+  }
+
+  // A zoom from the − / + / % buttons, the presets and the keyboard, anchored
+  // on the middle of the viewport so the reader stays where they were.
+  //
+  // ⚠️ These used to call `setZoom` directly, which re-lays-out every page
+  // about the document's TOP-LEFT: the scroll position stays put in pixels
+  // while everything above it grows or shrinks, so deep in a long document a
+  // single click of + or − moved the reader pages away. The pinch and
+  // ctrl+wheel never did that because they go through `commitZoom` with an
+  // anchor; now everything does.
+  //
+  // Reads refs, not state, so rapid clicks and held-down keys compound from
+  // the zoom already committed rather than each re-reading a stale render's.
+  function zoomAboutCentre(target: number) {
+    const el = scrollRef.current
+    const next = Math.max(MIN_ZOOM, Math.min(maxZoomRef.current, target))
+    // Land a zoom still waiting on layout first, so this one measures itself
+    // against the document as it really sits — same as the gestures do.
+    pendingZoom.current?.finish()
+    if (Math.abs(next - zoomRef.current) < 0.0005) return
+    const anchor = el ? captureAnchor(el, el.clientWidth / 2, el.clientHeight / 2) : null
+    commitZoom(next, anchor, clearContentTransform)
+  }
+  const zoomStepIn = () => zoomAboutCentre(+(zoomRef.current + ZOOM_STEP).toFixed(2))
+  const zoomStepOut = () => zoomAboutCentre(+(zoomRef.current - ZOOM_STEP).toFixed(2))
+  // What the % button does when it isn't opening the presets: back to 100%.
+  const zoomReset = () => zoomAboutCentre(1)
+
+  // Ctrl/Cmd + and − step the zoom, Ctrl/Cmd 0 puts it back to 100% — the
+  // keys every browser and PDF reader uses, so they have to zoom the DOCUMENT
+  // rather than the browser's page (which would scale the toolbars with it).
+  //
+  // ⚠️ NOT gated on the drawing tools the way the buttons are. The pinch and
+  // ctrl+wheel both zoom mid-drawing, and the keyboard is the same intent.
+  // It IS gated on typing — Ctrl+0 / Ctrl+− in a text box are the user's —
+  // using the same test as the toolbar's shortcuts, and stands down while
+  // Present or the export preview covers the viewer.
+  //
+  // Through refs and the anchored path above, so the handler is bound once.
+  useEffect(() => {
+    function isEditable(t: EventTarget | null): boolean {
+      const el = t as HTMLElement | null
+      if (!el || !el.tagName) return false
+      const tag = el.tagName
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable
+    }
+    function onKey(e: KeyboardEvent) {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return
+      // `=` is + without Shift on most layouts; the numpad sends `+`/`-` too.
+      const action =
+        e.key === '+' || e.key === '=' ? zoomStepIn :
+        e.key === '-' || e.key === '_' ? zoomStepOut :
+        e.key === '0' ? zoomReset :
+        null
+      if (!action) return
+      const pdf = usePdfStore.getState()
+      if (!pdf.doc || pdf.presentOpen || pdf.previewOpen) return
+      if (isEditable(document.activeElement)) return
+      e.preventDefault()
+      action()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Pinch-to-zoom. While the fingers are down the pages are not re-rendered and
   // the document is not scrolled — it is only transformed — so the zoom tracks
@@ -973,7 +1050,7 @@ export default function PdfViewer() {
             </button>
             <span className="w-px h-5 bg-slate-200" aria-hidden="true" />
             <button
-              onClick={() => setZoom((z) => Math.max(MIN_ZOOM, +(z - ZOOM_STEP).toFixed(2)))}
+              onClick={zoomStepOut}
               disabled={zoomDisabled}
               className={`w-7 h-7 rounded border ${zoomDisabled ? 'border-slate-200 text-slate-300 cursor-not-allowed bg-white' : 'bg-white border-slate-300 hover:bg-slate-50'}`}
               aria-label={t('viewer.bar.zoom_out')}
@@ -982,7 +1059,7 @@ export default function PdfViewer() {
             </button>
             <div className="relative" ref={zoomMenuRef}>
               <button
-                onClick={() => { if (atHundred) setZoomMenuOpen((o) => !o); else setZoom(1) }}
+                onClick={() => { if (atHundred) setZoomMenuOpen((o) => !o); else zoomReset() }}
                 disabled={zoomDisabled}
                 title={atHundred ? t('viewer.bar.zoom_presets') : t('viewer.bar.zoom_reset')}
                 aria-haspopup={atHundred ? 'menu' : undefined}
@@ -997,7 +1074,7 @@ export default function PdfViewer() {
                     <button
                       key={p}
                       role="menuitem"
-                      onClick={() => { setZoom(Math.max(MIN_ZOOM, Math.min(maxZoom, p / 100))); setZoomMenuOpen(false) }}
+                      onClick={() => { zoomAboutCentre(p / 100); setZoomMenuOpen(false) }}
                       className="w-full text-center tabular-nums px-3 py-1.5 text-sm text-slate-700 hover:bg-orange-50 hover:text-orange-700"
                     >
                       {p}%
@@ -1007,7 +1084,7 @@ export default function PdfViewer() {
               )}
             </div>
             <button
-              onClick={() => setZoom((z) => Math.min(maxZoom, +(z + ZOOM_STEP).toFixed(2)))}
+              onClick={zoomStepIn}
               disabled={zoomInDisabled}
               title={atMaxZoom ? t('viewer.bar.zoom_max', { percent: Math.round(maxZoom * 100) }) : t('viewer.bar.zoom_in')}
               className={`w-7 h-7 rounded border ${zoomInDisabled ? 'border-slate-200 text-slate-300 cursor-not-allowed bg-white' : 'bg-white border-slate-300 hover:bg-slate-50'}`}

@@ -106,7 +106,7 @@ const sign: Messages['sign'] = {
   'import_processing': 'İşleniyor…',
   'import_preview_alt': 'İmza önizlemesi',
   'import_no_preview': 'Önizleme yok',
-  'import_remove_bg': 'Beyaz arka planı kaldır',
+  'import_keep_bg': 'Beyaz arka planı koru',
   'import_choose_different': 'Farklı dosya seç',
   'import_name_placeholder': 'Ad (isteğe bağlı)',
 
@@ -272,6 +272,7 @@ const sign: Messages['sign'] = {
   'hosted_browser': 'Tarayıcıya kaydet',
   'hosted_browser_chip': 'Yerel · geçici',
   'hosted_browser_body': 'Bu PDF zaten bu cihazda otomatik olarak saklanıyor; sayfayı yenilediğinizde yeniden açılır. Bu tarayıcıda kalır ve asla dışarı çıkmaz.',
+  'hosted_browser_body_locked': 'Bu PDF için geçerli değil. Açtığınızda kilitli olduğu için bu cihazda kopyası saklanmaz.',
   'hosted_desktop': 'Masaüstüne kaydet',
   'hosted_desktop_chip': 'Sonra yeniden içe aktarın',
   'hosted_desktop_body': 'Bu PDF’i ve notlarınızı tek bir yedek dosyası olarak indirin. Kaldığınız yerden düzenlemeye devam etmek için istediğiniz zaman — herhangi bir cihazda — içe aktarın.',

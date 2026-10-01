@@ -269,7 +269,13 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
         .map((a) => ({ ...a, pageIndex: indexMap.get(a.pageIndex)! } as Annotation)),
       selectedId: null,
       selectedIds: [],
-      past: pushPast(s.past, s.annotations),
+      // ⚠️ CLEARED, not pushed. A page change is undone by the document undo
+      // (pdfStore.snapshotDocument), which brings back the bytes AND the marks
+      // together. Pushing the pre-remap marks here put a step in FRONT of it —
+      // `useUndo` drains this history first — so Ctrl+Z after deleting page 1
+      // restored page 1's marks onto what was now page 2, and left the page
+      // itself deleted. Older steps go too: they index the old page order.
+      past: [],
       future: []
     })),
   undo: () =>

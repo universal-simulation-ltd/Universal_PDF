@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { FILL_WARNING_KEY } from '../../lib/resetDefaults'
 import { createPortal } from 'react-dom'
 import {
   Stage,
@@ -17,7 +18,7 @@ import { usePdfStore } from '../../stores/pdfStore'
 import { useSignatureStore, type PendingExtra } from '../../stores/signatureStore'
 import { useCoarsePointer } from '../../hooks/useCoarsePointer'
 import { useImage } from '../../lib/useImage'
-import { layerPixelRatio, pagePixelBudget } from '../../lib/renderBudget'
+import { budgetedPageCount, layerPixelRatio, pagePixelBudget } from '../../lib/renderBudget'
 import { RedactIcon } from '../icons/RedactIcon'
 import { SIGNATURE_INK, formatSigningDate } from '../../lib/signature'
 import {
@@ -54,7 +55,6 @@ const HIGHLIGHT_OPACITY = 0.4
 // Remembers the user's "don't show again" choice for the fill-vs-redact
 // warning. A filled box/circle only paints over content — the text beneath
 // stays selectable/extractable — so we nudge the user toward redaction once.
-const FILL_WARNING_KEY = 'updf:fillWarningDismissed'
 function fillWarningDismissed(): boolean {
   try {
     return localStorage.getItem(FILL_WARNING_KEY) === '1'
@@ -826,7 +826,12 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // counted in the budget as such.)
   const stageRef = useRef<Konva.Stage>(null)
   const numPages = usePdfStore((s) => s.numPages)
-  const pixelRatio = layerPixelRatio(width, height, pagePixelBudget(numPages))
+  // ⚠️ `budgetedPageCount`, NOT `numPages` — the same divisor `PdfPage` uses
+  // for the bitmap underneath. This stage only exists for the band of pages
+  // around the reader, so sharing the allowance with the whole document drew
+  // every annotation on a long PDF at 1× over a 2× page: crisp text, blurry
+  // ink on top of it. See `renderBudget`.
+  const pixelRatio = layerPixelRatio(width, height, pagePixelBudget(budgetedPageCount(numPages)))
   useEffect(() => {
     const stage = stageRef.current
     if (!stage) return
@@ -867,6 +872,38 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     { x: number; y: number; clientX: number; clientY: number } | null
   >(null)
   const [currentLine, setCurrentLine] = useState<number[] | null>(null)
+  // ⚠️ A FREEHAND STROKE (draw / highlight) DOES NOT GO THROUGH THAT STATE
+  // POINT BY POINT. It used to: every pointermove did
+  // `setCurrentLine([...prev, x, y])`, copying the whole stroke and
+  // re-rendering this entire component — every annotation on the page — once
+  // per event. An Apple Pencil sends 120–240 of those a second, so a long
+  // stroke cost O(n²) copies and fell visibly behind the nib.
+  //
+  // Now the points accumulate in this ref, the live <Line> node is handed them
+  // directly at most once per animation frame (`strokeFrame`), and React hears
+  // about the stroke twice: once to mount the live line on pointerdown, once to
+  // remove it on pointerup, when the ref's points are committed. The stored
+  // annotation is exactly what it was — the same raw points; the smoothing is
+  // the line's `tension`, applied at draw time, as before.
+  //
+  // For the two-point tools (line/rect/ellipse/redact/sigfield) the ref simply
+  // mirrors the state, so pointerup reads one place whatever the tool.
+  const currentLineRef = useRef<number[] | null>(null)
+  const liveStrokeRef = useRef<Konva.Line>(null)
+  const strokeFrame = useRef(0)
+  function setLine(points: number[] | null) {
+    currentLineRef.current = points
+    if (strokeFrame.current) {
+      cancelAnimationFrame(strokeFrame.current)
+      strokeFrame.current = 0
+    }
+    // A copy for the state, so onPointerMove's in-place appends never mutate what
+    // React (and the live line's original `points` prop) is holding.
+    setCurrentLine(points && points.slice())
+  }
+  // An unmount mid-stroke (the page scrolling out of the band) must not leave
+  // a frame queued against a node that no longer exists.
+  useEffect(() => () => cancelAnimationFrame(strokeFrame.current), [])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   // A signature-request box that's been selected (first click) and is now
@@ -976,6 +1013,37 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const selectedOnPage = annotations.filter((a) => selectedIds.includes(a.id))
   const isMulti = selectedOnPage.length > 1
 
+  // Escape lets go of the selection — one item or a whole group.
+  //
+  // Listened for only by a page that HOLDS part of the selection, so the
+  // twenty-odd stages in the band aren't all answering every keypress. And not
+  // while a text box on this page is being edited: there Escape belongs to the
+  // editor, which discards the edit (see the rich-text editor's onKeyDown).
+  //
+  // ⚠️ `defaultPrevented` and the target check are both needed. The editor's
+  // own Escape unmounts it, so by the time this window listener runs the focus
+  // has already left it and `activeElement` alone would let the same keypress
+  // end the edit AND drop the selection. Anything else that has already
+  // claimed Escape (a dialog closing, a field reverting its draft) calls
+  // preventDefault too, and one press should not do two things.
+  const hasSelectionHere = selectedOnPage.length > 0
+  useEffect(() => {
+    if (!hasSelectionHere || editingId) return
+    function isEditable(t: EventTarget | null): boolean {
+      const el = t as HTMLElement | null
+      if (!el || !el.tagName) return false
+      const tag = el.tagName
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      if (isEditable(e.target) || isEditable(document.activeElement)) return
+      setSelected(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [hasSelectionHere, editingId, setSelected])
+
   useEffect(() => {
     const tr = trRef.current
     if (!tr) return
@@ -1028,7 +1096,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   function cancelGesture() {
     drawingRef.current = false
     pendingTapRef.current = null
-    setCurrentLine(null)
+    setLine(null)
     marqueeRef.current = null
     setMarquee(null)
     clearMarqueeHold()
@@ -1222,10 +1290,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     const pos = getPos(e)
     if (tool === 'draw' || tool === 'highlight') {
       drawingRef.current = true
-      setCurrentLine([pos.x, pos.y])
+      setLine([pos.x, pos.y])
     } else if (tool === 'rect' || tool === 'ellipse' || tool === 'redact' || tool === 'line' || tool === 'sigfield') {
       drawingRef.current = true
-      setCurrentLine([pos.x, pos.y, pos.x, pos.y])
+      setLine([pos.x, pos.y, pos.x, pos.y])
     } else {
       // Everything else is a one-shot placement. Arm it; onPointerUp decides.
       pendingTapRef.current = { x: pos.x, y: pos.y, clientX: e.evt.clientX, clientY: e.evt.clientY }
@@ -1423,20 +1491,40 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       setHoverPos(null)
     }
     if (!drawingRef.current) return
-    setCurrentLine((prev) => {
-      if (!prev) return null
-      if (tool === 'line') {
-        // Snap to horizontal / vertical / diagonal when rigid mode is on, or
-        // while Shift is held as a one-off constraint.
-        if (lineSnap || e.evt.shiftKey) {
-          const { x, y } = snapLineEnd(prev[0], prev[1], pos.x, pos.y)
-          return [prev[0], prev[1], x, y]
-        }
-        return [prev[0], prev[1], pos.x, pos.y]
+    const prev = currentLineRef.current
+    if (!prev) return
+    if (tool === 'draw' || tool === 'highlight') {
+      // Freehand: append in place and repaint the live line once a frame —
+      // see `currentLineRef` for why this never touches React state.
+      prev.push(pos.x, pos.y)
+      if (!strokeFrame.current) {
+        strokeFrame.current = requestAnimationFrame(() => {
+          strokeFrame.current = 0
+          const node = liveStrokeRef.current
+          const pts = currentLineRef.current
+          if (!node || !pts) return
+          // A copy, not the ref's own array: Konva skips a setter handed the
+          // array it already holds, so the line would never redraw.
+          node.points(pts.slice())
+          node.getLayer()?.batchDraw()
+        })
       }
-      if (tool === 'rect' || tool === 'ellipse' || tool === 'redact' || tool === 'sigfield') return [prev[0], prev[1], pos.x, pos.y]
-      return [...prev, pos.x, pos.y]
-    })
+      return
+    }
+    if (tool === 'line') {
+      // Snap to horizontal / vertical / diagonal when rigid mode is on, or
+      // while Shift is held as a one-off constraint.
+      if (lineSnap || e.evt.shiftKey) {
+        const { x, y } = snapLineEnd(prev[0], prev[1], pos.x, pos.y)
+        setLine([prev[0], prev[1], x, y])
+        return
+      }
+      setLine([prev[0], prev[1], pos.x, pos.y])
+      return
+    }
+    if (tool === 'rect' || tool === 'ellipse' || tool === 'redact' || tool === 'sigfield') {
+      setLine([prev[0], prev[1], pos.x, pos.y])
+    }
   }
 
   function onPointerLeaveStage() {
@@ -1501,6 +1589,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       if (tool === 'marquee' && hits.length > 0) setTool('select')
       return
     }
+    // The ref, not the state: a freehand stroke's points are only in the ref.
+    const currentLine = currentLineRef.current
     if (drawingRef.current && currentLine) {
       if (tool === 'draw' && currentLine.length >= 4) {
         add({
@@ -1631,7 +1721,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       }
     }
     drawingRef.current = false
-    setCurrentLine(null)
+    setLine(null)
   }
 
   function shapeRefSetter(id: string) {
@@ -2255,7 +2345,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     'crosshair'
   // The marquee tool reserves drags for the selection box, so the page must
   // not scroll under the gesture (touchAction: none). Select/hand/form and the
-  // passive selecttext tool keep vertical panning + pinch-zoom available.
+  // passive selecttext tool keep panning (both axes) + pinch-zoom available.
   //
   // ⚠️ The one-shot placement tools (text/tick/cross/signature/image) belong on
   // the panning side too. They need a TAP, not a drag, so reserving the gesture
@@ -2268,14 +2358,22 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // through a drag — but unlike the drawing tools, a reader reaches for it in
   // the middle of a document they still need to move around, and reserving the
   // gesture left them unable to move it at all (see MARQUEE_HOLD_MS). So on a
-  // finger it keeps `pan-y pinch-zoom` and wins the gesture back per-gesture,
+  // finger it keeps `pan-x pan-y pinch-zoom` and wins the gesture back per-gesture,
   // with a press-and-hold, instead of taking it for the whole tool. A mouse or
   // a pen has no such conflict, so on a fine pointer it stays reserved.
   const dragDrawTool =
     tool === 'draw' || tool === 'highlight' || tool === 'rect' || tool === 'ellipse' ||
     tool === 'redact' || tool === 'line' || tool === 'sigfield' ||
     (tool === 'marquee' && !coarsePointer)
-  const touchAction = dragDrawTool ? 'none' : 'pan-y pinch-zoom'
+  // ⚠️ `pan-x` as well as `pan-y`. With only `pan-y`, Chrome on Android
+  // refuses to scroll sideways from a swipe that STARTS on the page — so a
+  // document zoomed wider than the screen could only be moved left and right
+  // by landing the finger in the grey margin, which at any real zoom there is
+  // none of. Nothing on the panning side needs a horizontal drag for itself:
+  // Select-area wins its gesture back per-gesture with a hold (see the
+  // touchmove listener), not through this property, and a drag on an
+  // annotation is claimed by Konva cancelling the touchmove, on either axis.
+  const touchAction = dragDrawTool ? 'none' : 'pan-x pan-y pinch-zoom'
 
   // Mirrors the drop sizing above (cap included) so the ghost under the cursor
   // is exactly what gets placed.
@@ -2570,6 +2668,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
 
           {currentLine && tool === 'draw' && (
             <Line
+              ref={liveStrokeRef}
               listening={false}
               points={currentLine}
               stroke={color}
@@ -2581,6 +2680,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           )}
           {currentLine && tool === 'highlight' && (
             <Line
+              ref={liveStrokeRef}
               listening={false}
               points={currentLine}
               stroke={color}

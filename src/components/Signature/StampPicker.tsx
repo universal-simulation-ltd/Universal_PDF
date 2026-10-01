@@ -209,6 +209,7 @@ export default function StampPicker() {
                     key={sh}
                     type="button"
                     onClick={() => setNewShape(sh)}
+                    aria-pressed={newShape === sh}
                     className={`flex-1 border-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                       newShape === sh
                         ? 'border-orange-500 bg-orange-50 text-orange-700'
@@ -234,6 +235,7 @@ export default function StampPicker() {
                     }`}
                     style={{ backgroundColor: c, borderColor: c }}
                     aria-label={t('sign.stamp_colour_named', { color: c })}
+                    aria-pressed={newColor === c}
                   />
                 ))}
               </div>
@@ -284,7 +286,7 @@ export default function StampPicker() {
                 onClick={() => setCreating(true)}
                 className="border-2 border-dashed border-slate-300 rounded-lg p-3 hover:bg-slate-50 hover:border-orange-400 transition-colors flex flex-col items-center justify-center gap-1 text-slate-500 min-h-[72px]"
               >
-                <span className="text-2xl leading-none">＋</span>
+                <span className="text-2xl leading-none" aria-hidden="true">＋</span>
                 <span className="text-xs font-medium">{t('sign.stamp_new')}</span>
               </button>
             </div>

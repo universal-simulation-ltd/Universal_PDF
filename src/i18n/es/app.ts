@@ -46,6 +46,7 @@ const app: Messages['app'] = {
   'unsaved_body': '{name} tiene cambios que aún no están en un archivo guardado. {consequence}',
   'unsaved_this_pdf': 'Este PDF',
   'unsaved_marks_stay': 'Tus marcas se conservan en {recent} en este dispositivo en cualquier caso; al guardar, se escriben en un PDF que puedes enviar, conservar o imprimir.',
+  'unsaved_locked_not_kept': 'Este PDF estaba bloqueado cuando lo abriste, así que no se conserva nada en este dispositivo. Si sales sin guardar, perderás tus cambios.',
   'recent_files': 'Archivos recientes',
   'unsaved_redact_title': 'Censura permanente',
   'unsaved_redact_body_one': 'Al guardar, se acopla {count} cuadro de censura y se elimina definitivamente el texto que hay debajo. No se puede deshacer.',

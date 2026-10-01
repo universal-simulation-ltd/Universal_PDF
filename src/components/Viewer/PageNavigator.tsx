@@ -1,18 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useT } from '../../i18n'
+import { usePageThumbnails } from '../../hooks/usePageThumbnails'
 
-// ── Thumbnails are sized to the pixels they actually occupy ─────────────
-// The pane renders each page into an <img> capped at 180 CSS px wide (see
-// PageThumb). A fixed pdf.js scale can't know that: 0.22 gave A4 ~131px, so
-// the browser stretched it to 180 and the device stretched THAT again on a
-// HiDPI screen — a ~2.7x upscale of a JPEG already at quality 0.6. Render at
-// the CSS width times the device pixel ratio instead, and the image is 1:1
-// with the physical pixels. Capped at 2x: beyond that the file grows faster
-// than anyone can see, and a long document holds one data URL per page.
-const THUMB_CSS_WIDTH = 180
-const THUMB_MAX_DPR = 2
-const THUMB_QUALITY = 0.85
+// Thumbnails — when they are drawn, how big, and how many are kept — live in
+// `usePageThumbnails`. ⚠️ This component is ALWAYS mounted (App.tsx), so
+// nothing here may do per-page work while the pane is closed.
 
 type DropPosition = 'before' | 'after'
 
@@ -25,7 +18,8 @@ export default function PageNavigator() {
   const deletePage = usePdfStore((s) => s.deletePage)
   const applyPageOrder = usePdfStore((s) => s.applyPageOrder)
 
-  const [thumbs, setThumbs] = useState<string[]>([])
+  const paneRef = useRef<HTMLElement>(null)
+  const thumbFor = usePageThumbnails(doc, numPages, open, paneRef)
   const [busy, setBusy] = useState(false)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [dropTarget, setDropTarget] = useState<{ index: number; pos: DropPosition } | null>(null)
@@ -34,8 +28,8 @@ export default function PageNavigator() {
   // Every reorder rewrites the whole PDF and reloads it through pdf.js — a
   // second or more on a big file, which is a long time to wait for the first
   // of five drags. Dragging now only shuffles this array (thumbnails are
-  // already rendered, so it is instant), and the tick at the bottom of the
-  // pane commits the lot in ONE rewrite.
+  // keyed by page, so nothing redraws and it is instant), and the tick at the
+  // bottom of the pane commits the lot in ONE rewrite.
   //
   // `null` means "no changes staged". The entries are indices into the
   // document as it stands, which is exactly what applyPageOrder takes.
@@ -43,52 +37,10 @@ export default function PageNavigator() {
   const slots = order ?? Array.from({ length: numPages }, (_, i) => i)
   const pending = order !== null
 
-  // Rebuild thumbnails whenever the doc identity or page count changes (a
-  // delete/reorder swaps the underlying PDFDocumentProxy).
+  // Staged moves belong to the document they were staged against — a delete
+  // or reorder swaps the underlying PDFDocumentProxy.
   useEffect(() => {
-    if (!doc) {
-      setThumbs([])
-      return
-    }
-    // Drop stale thumbs so a delete/reorder doesn't briefly render old
-    // images in their previous slots before the new doc finishes rendering.
-    setThumbs([])
-    // Staged moves belong to the document they were staged against.
     setOrder(null)
-    let cancelled = false
-    const acc: string[] = []
-    async function go() {
-      for (let i = 1; i <= numPages; i++) {
-        if (cancelled || !doc) return
-        try {
-          const page = await doc.getPage(i)
-          const dpr = Math.min(window.devicePixelRatio || 1, THUMB_MAX_DPR)
-          const unscaled = page.getViewport({ scale: 1 })
-          const viewport = page.getViewport({
-            scale: (THUMB_CSS_WIDTH * dpr) / unscaled.width
-          })
-          const canvas = document.createElement('canvas')
-          canvas.width = Math.round(viewport.width)
-          canvas.height = Math.round(viewport.height)
-          const ctx = canvas.getContext('2d')
-          if (!ctx) continue
-          // JPEG has no alpha, and an untouched canvas is transparent — a PDF
-          // that draws no background of its own would come out black.
-          ctx.fillStyle = '#ffffff'
-          ctx.fillRect(0, 0, canvas.width, canvas.height)
-          await page.render({ canvasContext: ctx, viewport }).promise
-          if (cancelled) return
-          acc.push(canvas.toDataURL('image/jpeg', THUMB_QUALITY))
-          setThumbs([...acc])
-        } catch {
-          // ignore individual page failures
-        }
-      }
-    }
-    go()
-    return () => {
-      cancelled = true
-    }
   }, [doc, numPages])
 
   if (!doc || !open) return null
@@ -136,7 +88,7 @@ export default function PageNavigator() {
     setBusy(true)
     try {
       await applyPageOrder(order)
-      // applyPageOrder swaps the document, and the thumbnail effect clears the
+      // applyPageOrder swaps the document, and the effect above clears the
       // staging with it — but it returns early for a no-op order, so clear it
       // here too rather than leaving a confirm bar over nothing to confirm.
       setOrder(null)
@@ -198,6 +150,7 @@ export default function PageNavigator() {
         onClick={() => setOpen(false)}
       />
       <aside
+        ref={paneRef}
         className="fixed z-40 bg-white shadow-2xl overflow-y-auto
           left-0 right-0 bottom-16 max-h-[55vh] rounded-t-2xl border-t border-slate-200
           md:right-auto md:left-0 md:top-[104px] md:bottom-0 md:w-56 md:max-h-none
@@ -234,7 +187,8 @@ export default function PageNavigator() {
               key={pageIndex}
               index={i}
               total={numPages}
-              thumb={thumbs[pageIndex]}
+              pageIndex={pageIndex}
+              thumb={thumbFor(pageIndex)}
               busy={busy}
               pending={pending}
               dragging={dragIndex === i}
@@ -286,6 +240,10 @@ export default function PageNavigator() {
 
 interface ThumbProps {
   index: number
+  /** The page's index in the document as it stands — what the thumbnail is of,
+   *  and what `usePageThumbnails` watches it by. Differs from `index` while a
+   *  reorder is staged. */
+  pageIndex: number
   total: number
   thumb?: string
   busy: boolean
@@ -305,6 +263,7 @@ interface ThumbProps {
 
 function PageThumb({
   index,
+  pageIndex,
   total,
   thumb,
   busy,
@@ -335,6 +294,7 @@ function PageThumb({
 
   return (
     <div
+      data-thumb-page={pageIndex}
       className={`relative group ${dragging ? 'opacity-40' : ''}`}
       draggable={!busy}
       onDragStart={onDragStart}

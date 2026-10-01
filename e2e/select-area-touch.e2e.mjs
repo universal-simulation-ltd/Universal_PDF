@@ -202,8 +202,10 @@ console.log('\nSelect area active, plain swipe up')
 await pickSelectTool('Select area')
 check('the tool is armed', (await barTool()) === 'Area', await barTool())
 check(
-  'the Stage leaves vertical panning to the document',
-  (await stageTouchAction()) === 'pan-y pinch-zoom',
+  'the Stage leaves panning to the document',
+  // pan-x as well since 2026-10-01: without it Chrome on Android would not
+  // pan a zoomed page sideways from a swipe that starts on the page.
+  (await stageTouchAction()) === 'pan-x pan-y pinch-zoom',
   await stageTouchAction()
 )
 await setScrollTop(400)

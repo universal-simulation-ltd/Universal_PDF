@@ -1,5 +1,6 @@
-const { app, BrowserWindow, dialog, ipcMain, screen, session, shell } = require('electron')
+const { app, BrowserWindow, dialog, ipcMain, Menu, screen, session, shell } = require('electron')
 const path = require('node:path')
+const { pathToFileURL } = require('node:url')
 const fs = require('node:fs')
 const defaultApp = require('./defaultApp.cjs')
 const previewPane = require('./previewPane.cjs')
@@ -327,6 +328,13 @@ function createWindow({ launching = false } = {}) {
   // bridge buffers it if React hasn't subscribed yet.
   win.webContents.on('did-finish-load', () => {
     state.loaded = true
+    // The PAGE zooms the document (⌘/Ctrl +, −, 0 and pinch, anchored on the
+    // pointer); the window itself stays at 100%. Reset here as well as kept
+    // off the menu (see `installAppMenu`) because Chromium remembers a zoom
+    // level per origin, and every window of this app shares the one origin —
+    // a window scaled once would hand its scale to the next one built.
+    win.webContents.setZoomFactor(1)
+    win.webContents.setVisualZoomLevelLimits(1, 1).catch(() => {})
     reveal()
     if (state.pending.length > 0) {
       for (const filePath of state.pending.splice(0)) sendPdf(win, filePath)
@@ -354,35 +362,105 @@ function createWindow({ launching = false } = {}) {
   // External links (e.g. the UNI SIM navbar) open in the system browser rather
   // than inside the app window.
   // mailto:/tel: are here because a PDF's own link annotations can carry them
-  // (see LinkLayer) and they arrive through this handler as target=_blank. Left
-  // to 'allow' they would open an empty BrowserWindow on a scheme Chromium
-  // can't render; handed to the OS they open the mail/phone app, which is what
-  // the same link does in a browser.
+  // (see LinkLayer) and they arrive through this handler as target=_blank.
+  // Handed to the OS they open the mail/phone app, which is what the same link
+  // does in a browser.
+  //
+  // ⚠️ DENY is the answer for everything, including the schemes handed to the
+  // OS. This used to fall back to 'allow', and a window Electron opens on the
+  // page's behalf inherits the opener's webPreferences — the PRELOAD included —
+  // so any URL a PDF's link annotation could name (a `javascript:`, a `data:`
+  // page, a `file://` path) got a window carrying the whole `window.desktop`
+  // bridge: save-anywhere, LibreOffice, the registry. Nothing in the app needs
+  // a second window from `window.open`: hub pages open through the SDK's own
+  // IPC (installHubHandoff, which builds its window WITHOUT a preload), and the
+  // print fallback's blob: window had nothing to show it with anyway (no PDF
+  // plugin in a BrowserWindow).
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (
-      url.startsWith('http://') || url.startsWith('https://') ||
-      url.startsWith('mailto:') || url.startsWith('tel:')
-    ) {
-      shell.openExternal(url)
-      return { action: 'deny' }
-    }
-    return { action: 'allow' }
+    if (isExternalScheme(url)) shell.openExternal(url)
+    return { action: 'deny' }
   })
 
   // setWindowOpenHandler only covers window.open/target=_blank. Plain <a href>
   // clicks (e.g. the suite-switcher rows) navigate the window itself, which
   // would replace the app with the remote site — send those to the system
-  // browser too. The packaged app is a local file:// bundle, so any http(s)
-  // navigation is external — except the dev server's own origin in dev mode.
+  // browser too.
+  //
+  // ⚠️ Allow-list, not block-list: the ONLY navigation this window may make is
+  // to the app's own bundle (`isAppUrl`). It used to block http(s) alone, which
+  // left every other scheme free to replace the app with a page that still had
+  // the preload — and the commonest of those is not even an attack: a file
+  // dropped somewhere the page does not catch the drop, which Chromium answers
+  // by navigating the window to `file:///…/that.pdf`, app gone.
+  //
+  // Reloads (⌘R) and in-page moves (hash, pushState) do not come through here,
+  // so this stops none of the app's own flows. A provider sign-in that tries to
+  // redirect the window is http(s) and goes to the browser, as it always has.
   win.webContents.on('will-navigate', (event, url) => {
-    if (DEV_SERVER_URL && url.startsWith(DEV_SERVER_URL)) return
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      event.preventDefault()
-      shell.openExternal(url)
-    }
+    if (isAppUrl(url)) return
+    event.preventDefault()
+    if (isExternalScheme(url)) shell.openExternal(url)
   })
 
   return win
+}
+
+// The schemes the OS is asked to open on the page's behalf. Anything else a
+// page asks for (`file:`, `javascript:`, `data:`, `blob:`, a custom app
+// protocol) is refused outright — `openExternal` on an arbitrary scheme hands
+// the OS whatever a PDF's link annotation said, which can launch apps.
+function isExternalScheme(url) {
+  return /^(https?:|mailto:|tel:)/i.test(String(url))
+}
+
+// The page this window was built to show, and nothing else: the dev server's
+// origin under `ELECTRON_START_URL`, otherwise `dist/index.html` itself — any
+// query (`?launching=1`) or hash, but not another file beside it.
+const APP_INDEX_URL = pathToFileURL(path.join(__dirname, '..', 'dist', 'index.html')).href
+
+function isAppUrl(url) {
+  let parsed
+  try {
+    parsed = new URL(url)
+  } catch {
+    return false
+  }
+  if (DEV_SERVER_URL) return parsed.origin === new URL(DEV_SERVER_URL).origin
+  parsed.search = ''
+  parsed.hash = ''
+  return parsed.href === APP_INDEX_URL
+}
+
+// The application menu — Electron's default, minus its three zoom items.
+//
+// ⚠️ The default menu's View → Zoom In / Zoom Out / Actual Size are bound to
+// ⌘/Ctrl +, − and 0: exactly the keys the page uses to zoom the DOCUMENT. Left
+// in, one keypress zooms the PDF and the whole window with it — toolbar, text
+// and all. So the menu is rebuilt from roles without them. The Edit menu has
+// to stay: on macOS copy, paste and select-all reach a text field only through
+// its roles, and the app menu is where ⌘Q and ⌘H live. Present on Windows and
+// Linux too, where the bar is hidden (`autoHideMenuBar`) but its accelerators
+// still fire.
+function installAppMenu() {
+  const isMac = process.platform === 'darwin'
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate([
+      ...(isMac ? [{ role: 'appMenu' }] : []),
+      { role: 'fileMenu' },
+      { role: 'editMenu' },
+      {
+        label: 'View',
+        submenu: [
+          { role: 'reload' },
+          { role: 'forceReload' },
+          { role: 'toggleDevTools' },
+          { type: 'separator' },
+          { role: 'togglefullscreen' },
+        ],
+      },
+      { role: 'windowMenu' },
+    ])
+  )
 }
 
 // The window an IPC message came from, or null if it is not one of ours.
@@ -492,6 +570,7 @@ if (!gotLock) {
   ipcMain.handle('preview-pane:set', (_event, enable) => previewPane.setEnabled(!!enable))
 
   app.whenReady().then(() => {
+    installAppMenu()
     // Hub pages (profile, account settings) open in a window this app owns,
     // signed in as the current user. Without it every hub link lands in the
     // system browser as a stranger — the desktop app's session lives here and

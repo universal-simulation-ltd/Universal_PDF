@@ -255,6 +255,9 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') {
+        // Consumed while the menu is open, so one press closes the menu
+        // without also reaching the page's own Escape (deselect).
+        e.stopPropagation()
         if (renameOpen) {
           setRenameOpen(false)
         } else {

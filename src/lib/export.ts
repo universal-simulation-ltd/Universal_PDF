@@ -1,4 +1,9 @@
-import { PDFDocument, StandardFonts, LineCapStyle, degrees, PDFName, PDFHexString, PDFString, PDFArray, PDFDict, PDFStream, type PDFFont } from 'pdf-lib'
+import {
+  PDFDocument, StandardFonts, LineCapStyle, degrees, PDFName, PDFHexString, PDFString, PDFArray, PDFDict, PDFStream,
+  PDFTextField, PDFCheckBox, PDFRadioGroup, PDFDropdown, PDFOptionList,
+  pushGraphicsState, popGraphicsState, concatTransformationMatrix,
+  type PDFFont, type PDFImage, type PDFPage
+} from 'pdf-lib'
 import type { Annotation, RedactAnnotation, SignatureFieldAnnotation } from '../types/annotations'
 import type { FormFieldValue } from '../stores/formStore'
 import { hexToPdfRgb } from './colors'
@@ -9,6 +14,7 @@ import { pdfjsLib, type PDFDocumentProxy } from './pdfjs'
 import { redactFillHex } from './redactGate'
 import { saveBlob } from '@unisim/media/save'
 import { getT } from '../i18n'
+import { loadFallbackFont } from './fallbackFont'
 
 // Custom PDF catalog key carrying the unsigned signature-request boxes, so a
 // reopened or shared file's boxes stay interactive (movable / click-to-sign) in
@@ -114,42 +120,645 @@ function smoothPolyline(points: number[], tension = 0.4, samplesPerSeg = 12) {
   return out.flat()
 }
 
-// Render one source page through pdfjs at high DPI, paint each redact rect
-// black on the resulting canvas, then return the JPEG bytes. The redact
-// coordinates come from the editor's canvas space (at `annotationScale`)
-// and are mapped to the render canvas via the ratio.
-async function rasterizePageWithRedacts(
-  pdfjsDoc: PDFDocumentProxy,
-  pageIndex: number,
-  redacts: RedactAnnotation[],
-  annotationScale: number
-): Promise<Uint8Array> {
-  const page = await pdfjsDoc.getPage(pageIndex + 1)
-  const renderScale = 2
-  const viewport = page.getViewport({ scale: renderScale })
-  const canvas = document.createElement('canvas')
-  canvas.width = viewport.width
-  canvas.height = viewport.height
-  const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('Canvas 2D context unavailable')
-  await page.render({ canvasContext: ctx, viewport }).promise
+// ── Page geometry ──────────────────────────────────────────────────────────
+// Every annotation is stored in the space the reader SAW: pdf.js's viewport at
+// scale 1, which is the page's CropBox, turned by its /Rotate, with y running
+// down from the top-left of what was on screen. pdf-lib draws in the page's
+// own user space, which is none of those things on a rotated or cropped page.
+//
+// ⚠️ This used to be bridged with an origin offset alone, which is right only
+// for an unrotated page. On a `/Rotate 90` page — phone scans, landscape
+// exports — a signature placed at the top-left came out at the top-right edge,
+// turned on its side, and anything placed beyond the page's unrotated width
+// fell off the page. So instead each page gets ONE matrix from "view space"
+// (the reader's view, y up, origin at its bottom-left, in points) to user
+// space, applied with `cm` around everything drawn on it. The drawing code
+// below then only ever thinks in the reader's view, rotation or not.
+type Matrix = [number, number, number, number, number, number]
 
-  const k = renderScale / annotationScale
-  for (const r of redacts) {
-    // The block only — never the editor's "This will be redacted on export"
-    // hint, which is drawn by the annotation layer and has no counterpart here.
-    ctx.fillStyle = redactFillHex(r.fill)
-    ctx.fillRect(r.x * k, r.y * k, r.width * k, r.height * k)
+interface PageFrame {
+  /** The reader's view of the page, in points. */
+  width: number
+  height: number
+  /** View space → the page's user space. */
+  m: Matrix
+}
+
+function pageFrame(page: PDFPage): PageFrame {
+  const { x, y, width: w, height: h } = page.getCropBox()
+  // pdf.js accepts only multiples of 90 and treats anything else as 0.
+  const angle = page.getRotation().angle
+  const r = angle % 90 === 0 ? ((angle % 360) + 360) % 360 : 0
+  switch (r) {
+    case 90:
+      return { width: h, height: w, m: [0, 1, -1, 0, x + w, y] }
+    case 180:
+      return { width: w, height: h, m: [-1, 0, 0, -1, x + w, y + h] }
+    case 270:
+      return { width: h, height: w, m: [0, -1, 1, 0, x, y + h] }
+    default:
+      return { width: w, height: h, m: [1, 0, 0, 1, x, y] }
+  }
+}
+
+function applyMatrix(m: Matrix, vx: number, vy: number): [number, number] {
+  return [m[0] * vx + m[2] * vy + m[4], m[1] * vx + m[3] * vy + m[5]]
+}
+
+// ── Fonts ──────────────────────────────────────────────────────────────────
+const isWinAnsi = (cp: number) =>
+  (cp >= 0x20 && cp <= 0x7E) || (cp >= 0xA0 && cp <= 0xFF) || WIN_ANSI_EXTRAS.has(cp)
+
+function fitsWinAnsi(text: string): boolean {
+  for (const ch of text) if (!isWinAnsi(ch.codePointAt(0)!)) return false
+  return true
+}
+
+// Standard-14 variants for each base family, indexed [normal, bold, italic,
+// boldItalic]. Text annotations map to their nearest base (see fonts.ts) and
+// then to the bold/italic variant for the on-screen toggles.
+const STD_VARIANTS: Record<PdfBaseFont, [StandardFonts, StandardFonts, StandardFonts, StandardFonts]> = {
+  helvetica: [StandardFonts.Helvetica, StandardFonts.HelveticaBold, StandardFonts.HelveticaOblique, StandardFonts.HelveticaBoldOblique],
+  times: [StandardFonts.TimesRoman, StandardFonts.TimesRomanBold, StandardFonts.TimesRomanItalic, StandardFonts.TimesRomanBoldItalic],
+  courier: [StandardFonts.Courier, StandardFonts.CourierBold, StandardFonts.CourierOblique, StandardFonts.CourierBoldOblique]
+}
+
+/**
+ * The fonts one output document draws text in.
+ *
+ * Text the standard fonts can spell (WinAnsi — Western European) uses them, as
+ * it always has: they cost nothing, because they carry no glyph data. Anything
+ * else is drawn in Liberation Sans, embedded as a subset — the face the Word
+ * import already falls back to (lib/fallbackFont.ts), which covers Turkish,
+ * Polish and the rest of Latin Extended, Greek and Cyrillic.
+ *
+ * ⚠️ WHY: the app ships in Turkish, and the standard fonts cannot write ş, ğ or
+ * ı. Typed into a FORM FIELD they made every export fail — pdf-lib throws while
+ * building the field's appearance, and the value is auto-saved, so it failed
+ * again on every retry. In a text box they were quietly folded (ı → i, ş → s),
+ * which in Turkish can change what a word means.
+ *
+ * The fallback has one weight and no italic, and it is a sans: a Times or bold
+ * run that needs it comes out as regular sans. That is the trade for not
+ * shipping a family of faces; the letters are right, which is the point. If the
+ * font cannot be had (offline on first use) the old folding is the answer, never
+ * a failed export.
+ */
+class ExportFonts {
+  private std = new Map<StandardFonts, PDFFont>()
+  private fallback: Promise<{ font: PDFFont; chars: Set<number> } | null> | null = null
+
+  constructor(private pdf: PDFDocument) {}
+
+  async standard(base: PdfBaseFont, bold?: boolean, italic?: boolean): Promise<PDFFont> {
+    const std = STD_VARIANTS[base][bold && italic ? 3 : bold ? 1 : italic ? 2 : 0]
+    let f = this.std.get(std)
+    if (!f) {
+      f = await this.pdf.embedFont(std)
+      this.std.set(std, f)
+    }
+    return f
   }
 
-  const blob: Blob = await new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (b) => (b ? resolve(b) : reject(new Error('toBlob failed'))),
-      'image/jpeg',
-      0.92
+  private loadFallback() {
+    this.fallback ??= (async () => {
+      const bytes = await loadFallbackFont()
+      if (!bytes) return null
+      // Loaded on demand: fontkit is a few hundred KB that an all-Latin export
+      // never needs.
+      const { default: fontkit } = await import('@pdf-lib/fontkit')
+      this.pdf.registerFontkit(fontkit)
+      const font = await this.pdf.embedFont(bytes, { subset: true })
+      return { font, chars: new Set(font.getCharacterSet()) }
+    })().catch(() => null)
+    return this.fallback
+  }
+
+  /** The font to draw `text` in, and `text` as that font can spell it. */
+  async forText(text: string, base: PdfBaseFont, bold?: boolean, italic?: boolean): Promise<{ font: PDFFont; text: string }> {
+    if (fitsWinAnsi(text)) return { font: await this.standard(base, bold, italic), text }
+    const fb = await this.loadFallback()
+    if (!fb) return { font: await this.standard(base, bold, italic), text: sanitizeForWinAnsi(text) }
+    let out = ''
+    for (const ch of text) out += fb.chars.has(ch.codePointAt(0)!) ? ch : foldToLatin1(ch)
+    return { font: fb.font, text: out }
+  }
+
+  /** For a form field: null means "the field's own font will do". */
+  async forField(text: string): Promise<{ font: PDFFont | null; text: string }> {
+    if (fitsWinAnsi(text.replace(/[\r\n]/g, ''))) return { font: null, text }
+    const fb = await this.loadFallback()
+    if (!fb) return { font: null, text: text.split(/(\r?\n)/).map((s) => (/\r?\n/.test(s) ? s : sanitizeForWinAnsi(s))).join('') }
+    let out = ''
+    for (const ch of text) out += ch === '\n' || ch === '\r' || fb.chars.has(ch.codePointAt(0)!) ? ch : foldToLatin1(ch)
+    return { font: fb.font, text: out }
+  }
+}
+
+// ── Pictures ───────────────────────────────────────────────────────────────
+/**
+ * Embed a placed picture or signature, whatever format it arrived in.
+ *
+ * ⚠️ pdf-lib takes PNG and JPEG only, and the picture button accepts WebP and
+ * GIF too — which used to go to `embedJpg` and fail the whole export with "SOI
+ * not found". Anything that is not PNG or JPEG BY ITS BYTES (a data URL's label
+ * is not trusted) is redrawn to PNG through a canvas first; a GIF keeps its
+ * first frame, as it would printed.
+ */
+class ExportImages {
+  private cache = new Map<string, Promise<PDFImage>>()
+  constructor(private pdf: PDFDocument) {}
+
+  embed(src: string): Promise<PDFImage> {
+    let hit = this.cache.get(src)
+    if (!hit) {
+      hit = this.load(src)
+      this.cache.set(src, hit)
+    }
+    return hit
+  }
+
+  private async load(src: string): Promise<PDFImage> {
+    const bytes = await imageBytes(src)
+    if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return this.pdf.embedPng(bytes)
+    if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return this.pdf.embedJpg(bytes)
+    return this.pdf.embedPng(await redrawAsPng(bytes))
+  }
+}
+
+async function imageBytes(src: string): Promise<Uint8Array> {
+  const m = /^data:[^,]*?(;base64)?,(.*)$/s.exec(src)
+  if (!m) return new Uint8Array(await (await fetch(src)).arrayBuffer())
+  if (!m[1]) return new TextEncoder().encode(decodeURIComponent(m[2]))
+  const bin = atob(m[2])
+  const out = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i)
+  return out
+}
+
+async function redrawAsPng(bytes: Uint8Array): Promise<Uint8Array> {
+  const url = URL.createObjectURL(new Blob([bytes as BlobPart]))
+  try {
+    const img = new Image()
+    img.src = url
+    await img.decode()
+    const canvas = document.createElement('canvas')
+    canvas.width = img.naturalWidth
+    canvas.height = img.naturalHeight
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('Canvas 2D context unavailable')
+    ctx.drawImage(img, 0, 0)
+    const blob: Blob = await new Promise((resolve, reject) =>
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/png')
     )
-  })
-  return new Uint8Array(await blob.arrayBuffer())
+    return new Uint8Array(await blob.arrayBuffer())
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
+// ── Forms ──────────────────────────────────────────────────────────────────
+/**
+ * Write the reader's form entries into the document's fields, then flatten so
+ * they are baked into the page content — which is what lets a redacted page
+ * rasterise with them in, and copyPages carry them on every other page.
+ *
+ * Every entry that EXISTS is applied, including an empty one: the store only
+ * holds fields the reader actually touched, so an empty value is somebody
+ * clearing a field the PDF arrived with filled in, and skipping it (as this
+ * once did) silently put the old value back.
+ */
+async function fillForm(pdf: PDFDocument, formValues: FormFieldValue[], fonts: ExportFonts) {
+  let form
+  try {
+    form = pdf.getForm()
+  } catch {
+    return // no AcroForm worth the name
+  }
+  for (const fv of formValues) {
+    let field
+    try {
+      field = form.getField(fv.fieldName)
+    } catch {
+      continue // not in this document's form (renamed, or a stale entry)
+    }
+    const value = fv.value
+    const off = !value || value === 'Off'
+    try {
+      if (field instanceof PDFTextField) {
+        const { font, text } = await fonts.forField(value)
+        field.setText(text || undefined)
+        // The field's own (standard) font cannot spell this — and pdf-lib would
+        // throw building its appearance at flatten time, failing the export.
+        if (font) field.updateAppearances(font)
+      } else if (field instanceof PDFCheckBox) {
+        if (off) field.uncheck()
+        else field.check()
+      } else if (field instanceof PDFRadioGroup) {
+        if (off) field.clear()
+        else selectRadio(field, value)
+      } else if (field instanceof PDFDropdown || field instanceof PDFOptionList) {
+        if (!value) field.clear()
+        else field.select(choiceDisplay(field, value))
+      }
+    } catch {
+      // A value this field will not take (an option that no longer exists, a
+      // read-only field) leaves the field as the PDF had it.
+    }
+  }
+  try { form.flatten() } catch { /* ignore if form can't be flattened */ }
+}
+
+// The viewer stores what pdf.js reports for a radio widget: its "on" state
+// name. pdf-lib's `select` checks against the field's /Opt export values when
+// there are any, which differ from those names in some forms — so fall back
+// to setting the state name directly.
+function selectRadio(field: PDFRadioGroup, value: string) {
+  try {
+    field.select(value)
+  } catch {
+    field.acroField.setValue(PDFName.of(value))
+  }
+}
+
+// The viewer stores a choice's EXPORT value; pdf-lib selects by what the option
+// displays. Map one to the other where the PDF gives both.
+function choiceDisplay(field: PDFDropdown | PDFOptionList, exportValue: string): string {
+  for (const { value, display } of field.acroField.getOptions()) {
+    if (value.decodeText() === exportValue) return (display ?? value).decodeText()
+  }
+  return exportValue
+}
+
+// ── Drawing ────────────────────────────────────────────────────────────────
+/** A clickable link, in canvas space, added once the pages are final. */
+interface PendingLink {
+  pageIndex: number
+  x1: number
+  y1: number
+  x2: number
+  y2: number
+  uri: string
+}
+
+/**
+ * Draw annotations onto `pdf`'s pages, each in its page's view space (see
+ * PageFrame). Links are not added here but collected in `links`: a page drawn
+ * on now may yet be rasterised for redaction, which would drop them.
+ */
+async function drawAnnotations(
+  pdf: PDFDocument,
+  annotations: Annotation[],
+  scale: number,
+  links: PendingLink[]
+) {
+  const fonts = new ExportFonts(pdf)
+  const images = new ExportImages(pdf)
+  const pages = pdf.getPages()
+
+  const byPage = new Map<number, Annotation[]>()
+  for (const a of annotations) {
+    if (a.type === 'redact') continue
+    if (!byPage.has(a.pageIndex)) byPage.set(a.pageIndex, [])
+    byPage.get(a.pageIndex)!.push(a)
+  }
+
+  for (const [pageIndex, items] of byPage) {
+    const page = pages[pageIndex]
+    if (!page) continue
+    const frame = pageFrame(page)
+    // sx/toY map a canvas-space position to view space; sw maps a canvas-space
+    // size — width, height, font size — to points.
+    const sx = (n: number) => n / scale
+    const toY = (canvasY: number) => frame.height - canvasY / scale
+    const sw = (n: number) => n / scale
+
+    page.pushOperators(pushGraphicsState(), concatTransformationMatrix(...frame.m))
+    try {
+      for (const a of items) {
+        switch (a.type) {
+          case 'text': {
+            const rot = a.rotation ?? 0
+            const rad = (rot * Math.PI) / 180
+            // Draw each styled run in sequence, advancing x by the run's own
+            // (variant-specific) width so mixed bold/italic/underline/link within
+            // one text box bake correctly.
+            //
+            // ⚠️ WHERE the lines break is decided by the shared canvas layout, not
+            // re-derived here from pdf-lib's metrics: the two measure slightly
+            // differently, and a file whose words wrapped somewhere other than
+            // the editor showed them would be the bug. Only the advance WITHIN a
+            // line uses the embedded font's own widths, as it always has.
+            for (const [li, line] of layoutText(a).entries()) {
+              const lineY = a.y + li * a.fontSize * LINE_HEIGHT
+              let offset = 0 // canvas-space advance from a.x
+              for (const run of line.runs) {
+                const { font, text: body } = await fonts.forText(run.text, fontBase(a.fontFamily), run.bold, run.italic)
+                const runW = body ? font.widthOfTextAtSize(body, a.fontSize) : 0
+                if (body) {
+                  const rx = a.x + offset
+                  const blKy = lineY + a.fontSize * 0.8
+                  const [bx, by] = rotatePoint(rx, blKy, a.x, a.y, rad)
+                  page.drawText(body, {
+                    x: sx(bx),
+                    y: toY(by),
+                    size: sw(a.fontSize),
+                    font,
+                    color: hexToPdfRgb(a.color),
+                    rotate: rot ? degrees(-rot) : undefined
+                  })
+                  // pdf-lib has no underline; a link also shows as an underline (its
+                  // colour is deliberately left as the text colour). Draw the rule
+                  // just below the baseline, rotated with the text. The canvas and
+                  // the editor draw a link the same way — see runUnderlined.
+                  if (runUnderlined(run)) {
+                    const uy = lineY + a.fontSize * 0.98
+                    const [ux1, uy1] = rotatePoint(rx, uy, a.x, a.y, rad)
+                    const [ux2, uy2] = rotatePoint(rx + runW, uy, a.x, a.y, rad)
+                    page.drawLine({
+                      start: { x: sx(ux1), y: toY(uy1) },
+                      end: { x: sx(ux2), y: toY(uy2) },
+                      thickness: sw(Math.max(0.75, a.fontSize * 0.06)),
+                      color: hexToPdfRgb(a.color)
+                    })
+                  }
+                  // A clickable URI link over just this run's box. The rect is
+                  // axis-aligned (run rotation of the hit area is dropped —
+                  // acceptable for a link target).
+                  if (run.link) {
+                    links.push({ pageIndex, x1: rx, y1: lineY, x2: rx + runW, y2: lineY + a.fontSize * 1.2, uri: run.link })
+                  }
+                }
+                offset += runW
+              }
+            }
+            break
+          }
+          case 'rect': {
+            const rot = a.rotation ?? 0
+            const rad = (rot * Math.PI) / 180
+            // Konva top-left is (a.x, a.y); pdf-lib wants the bottom-left of
+            // the un-rotated rectangle in its own coordinate system.
+            const [bx, by] = rotatePoint(a.x, a.y + a.height, a.x, a.y, rad)
+            if (a.filled) {
+              page.drawRectangle({
+                x: sx(bx),
+                y: toY(by),
+                width: sw(a.width),
+                height: sw(a.height),
+                color: hexToPdfRgb(a.color),
+                rotate: rot ? degrees(-rot) : undefined
+              })
+            } else {
+              page.drawRectangle({
+                x: sx(bx),
+                y: toY(by),
+                width: sw(a.width),
+                height: sw(a.height),
+                borderColor: hexToPdfRgb(a.color),
+                borderWidth: sw(2),
+                opacity: 0,
+                rotate: rot ? degrees(-rot) : undefined
+              })
+            }
+            break
+          }
+          case 'ellipse': {
+            const rot = a.rotation ?? 0
+            // pdf-lib drawEllipse is centre-anchored. Konva stores a top-left
+            // bbox; the centre in Konva space is (x + w/2, y + h/2). Rotation in
+            // the app pivots around the bbox top-left, so rotate that centre
+            // about the top-left to get the centre in the rotated frame.
+            const rad = (rot * Math.PI) / 180
+            const [cxr, cyr] = rotatePoint(a.x + a.width / 2, a.y + a.height / 2, a.x, a.y, rad)
+            const common = {
+              x: sx(cxr),
+              y: toY(cyr),
+              xScale: sw(a.width / 2),
+              yScale: sw(a.height / 2),
+              rotate: rot ? degrees(-rot) : undefined
+            }
+            if (a.filled) {
+              page.drawEllipse({ ...common, color: hexToPdfRgb(a.color) })
+            } else {
+              page.drawEllipse({
+                ...common,
+                borderColor: hexToPdfRgb(a.color),
+                borderWidth: sw(2),
+                opacity: 0
+              })
+            }
+            break
+          }
+          case 'draw': {
+            const pts = smoothPolyline(a.points, 0.4, 12)
+            for (let i = 0; i < pts.length - 2; i += 2) {
+              page.drawLine({
+                start: { x: sx(pts[i]), y: toY(pts[i + 1]) },
+                end: { x: sx(pts[i + 2]), y: toY(pts[i + 3]) },
+                thickness: sw(a.strokeWidth),
+                color: hexToPdfRgb(a.color),
+                opacity: a.opacity,
+                lineCap: LineCapStyle.Round
+              })
+            }
+            break
+          }
+          case 'tick': {
+            const s = a.size
+            const rad = ((a.rotation ?? 0) * Math.PI) / 180
+            const segs: Array<[number, number, number, number]> = [
+              [a.x, a.y + s * 0.55, a.x + s * 0.35, a.y + s * 0.9],
+              [a.x + s * 0.35, a.y + s * 0.9, a.x + s, a.y + s * 0.1]
+            ]
+            for (const [x1, y1, x2, y2] of segs) {
+              const [rx1, ry1] = rotatePoint(x1, y1, a.x, a.y, rad)
+              const [rx2, ry2] = rotatePoint(x2, y2, a.x, a.y, rad)
+              page.drawLine({
+                start: { x: sx(rx1), y: toY(ry1) },
+                end: { x: sx(rx2), y: toY(ry2) },
+                thickness: sw(3.5),
+                color: hexToPdfRgb(a.color),
+                lineCap: LineCapStyle.Round
+              })
+            }
+            break
+          }
+          case 'cross': {
+            const s = a.size
+            const rad = ((a.rotation ?? 0) * Math.PI) / 180
+            const segs: Array<[number, number, number, number]> = [
+              [a.x, a.y, a.x + s, a.y + s],
+              [a.x + s, a.y, a.x, a.y + s]
+            ]
+            for (const [x1, y1, x2, y2] of segs) {
+              const [rx1, ry1] = rotatePoint(x1, y1, a.x, a.y, rad)
+              const [rx2, ry2] = rotatePoint(x2, y2, a.x, a.y, rad)
+              page.drawLine({
+                start: { x: sx(rx1), y: toY(ry1) },
+                end: { x: sx(rx2), y: toY(ry2) },
+                thickness: sw(3.5),
+                color: hexToPdfRgb(a.color),
+                lineCap: LineCapStyle.Round
+              })
+            }
+            break
+          }
+          case 'image': {
+            const rot = a.rotation ?? 0
+            const rad = (rot * Math.PI) / 180
+            const img = await images.embed(a.src)
+            const [bx, by] = rotatePoint(a.x, a.y + a.height, a.x, a.y, rad)
+            page.drawImage(img, {
+              x: sx(bx),
+              y: toY(by),
+              width: sw(a.width),
+              height: sw(a.height),
+              rotate: rot ? degrees(-rot) : undefined
+            })
+            // Optional border (owner ask, 2026-09-04). Baked here as well as drawn
+            // in the viewer, or a bordered picture exports naked — which is the
+            // failure mode that matters, because the export is what gets sent.
+            //
+            // Drawn AFTER the image so the stroke sits on top of the picture edge
+            // rather than being half-covered by it, and `opacity: 0` keeps the
+            // rectangle's FILL invisible while the border still paints (the same
+            // trick the outline-only rect case above uses).
+            if (a.border && a.border.width > 0) {
+              page.drawRectangle({
+                x: sx(bx),
+                y: toY(by),
+                width: sw(a.width),
+                height: sw(a.height),
+                borderColor: hexToPdfRgb(a.border.color),
+                borderWidth: sw(a.border.width),
+                // ⚠️ pdf-lib takes the dash pattern in POINTS, already scaled —
+                // passing raw annotation units would give a dash that looks right
+                // on screen and wrong in the file at any zoom but 100%.
+                borderDashArray: a.border.style === 'dashed'
+                  ? [sw(a.border.width * 3), sw(a.border.width * 2)]
+                  : undefined,
+                opacity: 0,
+                rotate: rot ? degrees(-rot) : undefined
+              })
+            }
+            break
+          }
+          case 'sigfield': {
+            if (a.signed) {
+              // A signed box that came from a flattened/exported PDF (locked) has
+              // the "Sign here • Name • Date" caption already baked into the page —
+              // paint the box white first so the signature replaces it, not sits
+              // on top of it.
+              if (a.locked) {
+                page.drawRectangle({
+                  x: sx(a.x),
+                  y: toY(a.y + a.height),
+                  width: sw(a.width),
+                  height: sw(a.height),
+                  color: hexToPdfRgb('#ffffff')
+                })
+              }
+              // Bake the signature image, contained inside the box (matches the
+              // on-screen fit). Baseline of the box's bottom edge is a.y + height.
+              const img = await images.embed(a.signed.src)
+              const margin = 0.08
+              const availW = a.width * (1 - margin * 2)
+              const availH = a.height * (1 - margin * 2)
+              const ratio = a.signed.width > 0 && a.signed.height > 0
+                ? a.signed.width / a.signed.height
+                : 1
+              let fw = availW
+              let fh = fw / ratio
+              if (fh > availH) {
+                fh = availH
+                fw = fh * ratio
+              }
+              const fx = a.x + (a.width - fw) / 2
+              const fy = a.y + (a.height - fh) / 2
+              page.drawImage(img, {
+                x: sx(fx),
+                y: toY(fy + fh),
+                width: sw(fw),
+                height: sw(fh)
+              })
+            } else {
+              // Unsigned request box: bake a visible outline + caption so it's
+              // shown in any viewer (Acrobat, browsers, print). It's ALSO embedded
+              // in the catalog below, so Universal PDF re-detects it as a
+              // click-to-sign box — locked in place (non-movable) so it can't drift
+              // off the baked outline.
+              const orange = hexToPdfRgb('#ea580c')
+              page.drawRectangle({
+                x: sx(a.x),
+                y: toY(a.y + a.height),
+                width: sw(a.width),
+                height: sw(a.height),
+                borderColor: orange,
+                borderWidth: sw(1.5),
+                opacity: 0
+              })
+              const t = getT()
+              const parts: string[] = []
+              if (a.requireName) parts.push(t('lib.sign_here_name'))
+              if (a.requireDate) parts.push(t('lib.sign_here_date'))
+              if (a.requireLive) parts.push(t('lib.sign_here_live'))
+              const { font, text: label } = await fonts.forText([t('lib.sign_here'), ...parts].join(' • '), 'helvetica')
+              const size = sw(Math.min(a.height * 0.28, 18))
+              // Inset from the box's top-left corner. The box is in canvas units
+              // (canvas = pdf * scale); `size` is PDF units, so scale it back up to
+              // canvas space when positioning the baseline.
+              const padCanvas = Math.min(8, a.height * 0.12, a.width * 0.06)
+              const baselineCanvasY = a.y + padCanvas + size * scale * 0.85
+              page.drawText(label, {
+                x: sx(a.x + padCanvas),
+                y: toY(baselineCanvasY),
+                size,
+                font,
+                color: hexToPdfRgb('#c2410c')
+              })
+            }
+            break
+          }
+        }
+      }
+    } finally {
+      page.pushOperators(popGraphicsState())
+    }
+  }
+}
+
+/** Add the collected links to the finished pages — except any a redaction covers. */
+function addLinks(pdf: PDFDocument, links: PendingLink[], redactsByPage: Map<number, RedactAnnotation[]>, scale: number) {
+  const pages = pdf.getPages()
+  for (const l of links) {
+    const page = pages[l.pageIndex]
+    if (!page) continue
+    // A link under a redaction box would leave its address in the file and a
+    // live hot spot over the black — both things the box is there to remove.
+    const covered = (redactsByPage.get(l.pageIndex) ?? []).some(
+      (r) => l.x1 < r.x + r.width && l.x2 > r.x && l.y1 < r.y + r.height && l.y2 > r.y
+    )
+    if (covered) continue
+    const frame = pageFrame(page)
+    const [ax, ay] = applyMatrix(frame.m, l.x1 / scale, frame.height - l.y1 / scale)
+    const [bx, by] = applyMatrix(frame.m, l.x2 / scale, frame.height - l.y2 / scale)
+    const linkAnnot = pdf.context.obj({
+      Type: 'Annot',
+      Subtype: 'Link',
+      Rect: [Math.min(ax, bx), Math.min(ay, by), Math.max(ax, bx), Math.max(ay, by)],
+      Border: [0, 0, 0],
+      A: pdf.context.obj({
+        Type: 'Action',
+        S: 'URI',
+        URI: PDFString.of(l.uri)
+      })
+    })
+    const ref = pdf.context.register(linkAnnot)
+    const existing = page.node.lookup(PDFName.of('Annots'), PDFArray)
+    if (existing) existing.push(ref)
+    else page.node.set(PDFName.of('Annots'), pdf.context.obj([ref]))
+  }
 }
 
 export async function buildAnnotatedPdfBytes(
@@ -163,36 +772,44 @@ export async function buildAnnotatedPdfBytes(
   // document the user had just scrubbed (see lib/pdfMetadata.ts).
   const sourcePdf = await PDFDocument.load(sourceBytes, { updateMetadata: false })
 
-  // Fill PDF form fields if any. Flatten so values bake into the page
-  // content streams — that way any redacted page rasterizes with the user's
-  // typed values baked in, and copyPages preserves them on other pages too.
   if (formValues && formValues.length > 0) {
-    try {
-      const form = sourcePdf.getForm()
-      for (const fv of formValues) {
-        if (!fv.value) continue
-        try {
-          const field = form.getTextField(fv.fieldName)
-          field.setText(fv.value)
-        } catch {
-          // Field not found or not a text field — skip silently
-        }
-      }
-      try { form.flatten() } catch { /* ignore if form can't be flattened */ }
-    } catch {
-      // No form fields or form not supported
-    }
+    await fillForm(sourcePdf, formValues, new ExportFonts(sourcePdf))
   }
 
   // Group redact annotations by page — these drive the rasterize-and-rebuild
-  // pass below.
+  // pass below — and note where the LAST box on each page sits in the stack.
   const redactsByPage = new Map<number, RedactAnnotation[]>()
-  for (const a of annotations) {
-    if (a.type === 'redact') {
-      if (!redactsByPage.has(a.pageIndex)) redactsByPage.set(a.pageIndex, [])
-      redactsByPage.get(a.pageIndex)!.push(a)
-    }
-  }
+  const lastRedactAt = new Map<number, number>()
+  annotations.forEach((a, i) => {
+    if (a.type !== 'redact') return
+    if (!redactsByPage.has(a.pageIndex)) redactsByPage.set(a.pageIndex, [])
+    redactsByPage.get(a.pageIndex)!.push(a)
+    lastRedactAt.set(a.pageIndex, i)
+  })
+
+  // ⚠️ THE USER'S OWN MARKS GO UNDER THE REDACTION, not over it. On screen the
+  // annotations stack in array order, so a box drawn after a text box or a
+  // pasted picture hides it. The export used to rasterise the page with the
+  // boxes and THEN draw every annotation on top — so somebody who typed an ID
+  // number and redacted over it saw a black box, and sent a file with the
+  // number printed on top of the black.
+  //
+  // So everything beneath the topmost box on its page is drawn FIRST, into the
+  // source, and goes through the rasteriser with the page: under a box it is
+  // burnt out along with the text. Only what was placed after every box on
+  // its page — a signature added once the redacting was done — is drawn on top
+  // afterwards, as it was on screen.
+  const under: Annotation[] = []
+  const over: Annotation[] = []
+  annotations.forEach((a, i) => {
+    if (a.type === 'redact') return
+    const last = lastRedactAt.get(a.pageIndex)
+    if (last !== undefined && i > last) over.push(a)
+    else under.push(a)
+  })
+
+  const links: PendingLink[] = []
+  await drawAnnotations(sourcePdf, under, scale, links)
 
   // If any page needs redaction, rebuild the document so redacted pages
   // become flat raster images (no original text/forms survive in the
@@ -200,20 +817,29 @@ export async function buildAnnotatedPdfBytes(
   let pdf: PDFDocument
   if (redactsByPage.size > 0) {
     const flatBytes = await sourcePdf.save()
+    // ⚠️ Not destroyed afterwards. Every pdf.js document shares the one worker
+    // port (lib/pdfjs.ts), and a destroy that is still in flight fails any
+    // document that starts loading meanwhile — which the export dialog does,
+    // building and estimating side by side.
     const pdfjsDoc = await pdfjsLib.getDocument({ data: flatBytes.slice() }).promise
-
     const out = await PDFDocument.create()
     for (let i = 0; i < sourcePdf.getPageCount(); i++) {
-      const srcPage = sourcePdf.getPage(i)
-      const { width, height } = srcPage.getSize()
-      if (redactsByPage.has(i)) {
-        const imgBytes = await rasterizePageWithRedacts(
-          pdfjsDoc,
-          i,
-          redactsByPage.get(i)!,
-          scale
-        )
-        const img = await out.embedJpg(imgBytes)
+      const redacts = redactsByPage.get(i)
+      if (redacts) {
+        const { jpeg, width, height } = await rasterizePage(pdfjsDoc, i, 2, 0.92, (ctx, k) => {
+          // The block only — never the editor's "This will be redacted on
+          // export" hint, which is drawn by the annotation layer and has no
+          // counterpart here.
+          for (const r of redacts) {
+            ctx.fillStyle = redactFillHex(r.fill)
+            ctx.fillRect((r.x / scale) * k, (r.y / scale) * k, (r.width / scale) * k, (r.height / scale) * k)
+          }
+        })
+        // ⚠️ Sized to the page AS SEEN — rotation and crop already applied
+        // by the render — and given no /Rotate of its own. Sizing it from
+        // the MediaBox (as this did) squashed a rotated page's picture into
+        // portrait and stretched a cropped one over the uncropped area.
+        const img = await out.embedJpg(jpeg)
         const newPage = out.addPage([width, height])
         newPage.drawImage(img, { x: 0, y: 0, width, height })
       } else {
@@ -222,371 +848,11 @@ export async function buildAnnotatedPdfBytes(
       }
     }
     pdf = out
+    await drawAnnotations(pdf, over, scale, links)
   } else {
     pdf = sourcePdf
   }
-
-  // Standard-14 variants for each base family, indexed [normal, bold, italic,
-  // boldItalic]. Text annotations map to their nearest base (see fonts.ts) and
-  // then to the bold/italic variant for the on-screen toggles. Embedded lazily
-  // and cached — the standard fonts carry no glyph data so this is cheap.
-  const STD_VARIANTS: Record<PdfBaseFont, [StandardFonts, StandardFonts, StandardFonts, StandardFonts]> = {
-    helvetica: [StandardFonts.Helvetica, StandardFonts.HelveticaBold, StandardFonts.HelveticaOblique, StandardFonts.HelveticaBoldOblique],
-    times: [StandardFonts.TimesRoman, StandardFonts.TimesRomanBold, StandardFonts.TimesRomanItalic, StandardFonts.TimesRomanBoldItalic],
-    courier: [StandardFonts.Courier, StandardFonts.CourierBold, StandardFonts.CourierOblique, StandardFonts.CourierBoldOblique]
-  }
-  const fontCache = new Map<StandardFonts, PDFFont>()
-  const pickFont = async (base: PdfBaseFont, bold?: boolean, italic?: boolean): Promise<PDFFont> => {
-    const idx = bold && italic ? 3 : bold ? 1 : italic ? 2 : 0
-    const std = STD_VARIANTS[base][idx]
-    let f = fontCache.get(std)
-    if (!f) {
-      f = await pdf.embedFont(std)
-      fontCache.set(std, f)
-    }
-    return f
-  }
-  const pages = pdf.getPages()
-
-  const byPage = new Map<number, Annotation[]>()
-  for (const a of annotations) {
-    if (a.type === 'redact') continue
-    if (!byPage.has(a.pageIndex)) byPage.set(a.pageIndex, [])
-    byPage.get(a.pageIndex)!.push(a)
-  }
-
-  for (const [pageIndex, items] of byPage) {
-    const page = pages[pageIndex]
-    if (!page) continue
-    // PDF.js's viewport (used for the on-screen canvas) is anchored at the
-    // page's CropBox origin, not at user-space (0, 0). When a PDF declares
-    // a non-zero CropBox/MediaBox origin, every annotation we draw with
-    // pdf-lib would otherwise be shifted by that offset against the
-    // rasterized page — the form fields stay put because pdf-lib's
-    // flatten() works in user-space already.
-    const box = page.getCropBox()
-    const ph = box.height
-    const ox = box.x
-    const oy = box.y
-    // sx/toY map a canvas-space position to PDF user-space (offset included).
-    // sw maps a canvas-space size — width, height, font size — to PDF
-    // user-space (scale only, no offset).
-    const sx = (n: number) => ox + n / scale
-    const toY = (canvasY: number) => oy + ph - canvasY / scale
-    const sw = (n: number) => n / scale
-
-    for (const a of items) {
-      switch (a.type) {
-        case 'text': {
-          const rot = a.rotation ?? 0
-          const rad = (rot * Math.PI) / 180
-          // Draw each styled run in sequence, advancing x by the run's own
-          // (variant-specific) width so mixed bold/italic/underline/link within
-          // one text box bake correctly.
-          //
-          // ⚠️ WHERE the lines break is decided by the shared canvas layout, not
-          // re-derived here from pdf-lib's metrics: the two measure slightly
-          // differently, and a file whose words wrapped somewhere other than
-          // the editor showed them would be the bug. Only the advance WITHIN a
-          // line uses the embedded font's own widths, as it always has.
-          for (const [li, line] of layoutText(a).entries()) {
-            const lineY = a.y + li * a.fontSize * LINE_HEIGHT
-            let offset = 0 // canvas-space advance from a.x
-            for (const run of line.runs) {
-              const body = sanitizeForWinAnsi(run.text)
-              const font = await pickFont(fontBase(a.fontFamily), run.bold, run.italic)
-              const runW = body ? font.widthOfTextAtSize(body, a.fontSize) : 0
-              if (body) {
-                const rx = a.x + offset
-                const blKy = lineY + a.fontSize * 0.8
-                const [bx, by] = rotatePoint(rx, blKy, a.x, a.y, rad)
-                page.drawText(body, {
-                  x: sx(bx),
-                  y: toY(by),
-                  size: sw(a.fontSize),
-                  font,
-                  color: hexToPdfRgb(a.color),
-                  rotate: rot ? degrees(-rot) : undefined
-                })
-                // pdf-lib has no underline; a link also shows as an underline (its
-                // colour is deliberately left as the text colour). Draw the rule
-                // just below the baseline, rotated with the text. The canvas and
-                // the editor draw a link the same way — see runUnderlined.
-                if (runUnderlined(run)) {
-                  const uy = lineY + a.fontSize * 0.98
-                  const [ux1, uy1] = rotatePoint(rx, uy, a.x, a.y, rad)
-                  const [ux2, uy2] = rotatePoint(rx + runW, uy, a.x, a.y, rad)
-                  page.drawLine({
-                    start: { x: sx(ux1), y: toY(uy1) },
-                    end: { x: sx(ux2), y: toY(uy2) },
-                    thickness: sw(Math.max(0.75, a.fontSize * 0.06)),
-                    color: hexToPdfRgb(a.color)
-                  })
-                }
-                // Bake a clickable URI link annotation over just this run's box.
-                // The rect is axis-aligned (run rotation of the hit area is
-                // dropped — acceptable for a link target).
-                if (run.link) {
-                  const lx1 = sx(rx)
-                  const lx2 = sx(rx + runW)
-                  const ly1 = toY(lineY + a.fontSize * 1.2)
-                  const ly2 = toY(lineY)
-                  const linkAnnot = pdf.context.obj({
-                    Type: 'Annot',
-                    Subtype: 'Link',
-                    Rect: [lx1, ly1, lx2, ly2],
-                    Border: [0, 0, 0],
-                    A: pdf.context.obj({
-                      Type: 'Action',
-                      S: 'URI',
-                      URI: PDFString.of(run.link)
-                    })
-                  })
-                  const ref = pdf.context.register(linkAnnot)
-                  const existing = page.node.lookup(PDFName.of('Annots'), PDFArray)
-                  if (existing) existing.push(ref)
-                  else page.node.set(PDFName.of('Annots'), pdf.context.obj([ref]))
-                }
-              }
-              offset += runW
-            }
-          }
-          break
-        }
-        case 'rect': {
-          const rot = a.rotation ?? 0
-          const rad = (rot * Math.PI) / 180
-          // Konva top-left is (a.x, a.y); pdf-lib wants the bottom-left of
-          // the un-rotated rectangle in its own coordinate system.
-          const [bx, by] = rotatePoint(a.x, a.y + a.height, a.x, a.y, rad)
-          if (a.filled) {
-            page.drawRectangle({
-              x: sx(bx),
-              y: toY(by),
-              width: sw(a.width),
-              height: sw(a.height),
-              color: hexToPdfRgb(a.color),
-              rotate: rot ? degrees(-rot) : undefined
-            })
-          } else {
-            page.drawRectangle({
-              x: sx(bx),
-              y: toY(by),
-              width: sw(a.width),
-              height: sw(a.height),
-              borderColor: hexToPdfRgb(a.color),
-              borderWidth: sw(2),
-              opacity: 0,
-              rotate: rot ? degrees(-rot) : undefined
-            })
-          }
-          break
-        }
-        case 'ellipse': {
-          const rot = a.rotation ?? 0
-          // pdf-lib drawEllipse is centre-anchored. Konva stores a top-left
-          // bbox; the centre in Konva space is (x + w/2, y + h/2). Rotation in
-          // the app pivots around the bbox top-left, so rotate that centre
-          // about the top-left to get the centre in the rotated frame.
-          const rad = (rot * Math.PI) / 180
-          const [cxr, cyr] = rotatePoint(a.x + a.width / 2, a.y + a.height / 2, a.x, a.y, rad)
-          const common = {
-            x: sx(cxr),
-            y: toY(cyr),
-            xScale: sw(a.width / 2),
-            yScale: sw(a.height / 2),
-            rotate: rot ? degrees(-rot) : undefined
-          }
-          if (a.filled) {
-            page.drawEllipse({ ...common, color: hexToPdfRgb(a.color) })
-          } else {
-            page.drawEllipse({
-              ...common,
-              borderColor: hexToPdfRgb(a.color),
-              borderWidth: sw(2),
-              opacity: 0
-            })
-          }
-          break
-        }
-        case 'draw': {
-          const pts = smoothPolyline(a.points, 0.4, 12)
-          for (let i = 0; i < pts.length - 2; i += 2) {
-            page.drawLine({
-              start: { x: sx(pts[i]), y: toY(pts[i + 1]) },
-              end: { x: sx(pts[i + 2]), y: toY(pts[i + 3]) },
-              thickness: sw(a.strokeWidth),
-              color: hexToPdfRgb(a.color),
-              opacity: a.opacity,
-              lineCap: LineCapStyle.Round
-            })
-          }
-          break
-        }
-        case 'tick': {
-          const s = a.size
-          const rad = ((a.rotation ?? 0) * Math.PI) / 180
-          const segs: Array<[number, number, number, number]> = [
-            [a.x, a.y + s * 0.55, a.x + s * 0.35, a.y + s * 0.9],
-            [a.x + s * 0.35, a.y + s * 0.9, a.x + s, a.y + s * 0.1]
-          ]
-          for (const [x1, y1, x2, y2] of segs) {
-            const [rx1, ry1] = rotatePoint(x1, y1, a.x, a.y, rad)
-            const [rx2, ry2] = rotatePoint(x2, y2, a.x, a.y, rad)
-            page.drawLine({
-              start: { x: sx(rx1), y: toY(ry1) },
-              end: { x: sx(rx2), y: toY(ry2) },
-              thickness: sw(3.5),
-              color: hexToPdfRgb(a.color),
-              lineCap: LineCapStyle.Round
-            })
-          }
-          break
-        }
-        case 'cross': {
-          const s = a.size
-          const rad = ((a.rotation ?? 0) * Math.PI) / 180
-          const segs: Array<[number, number, number, number]> = [
-            [a.x, a.y, a.x + s, a.y + s],
-            [a.x + s, a.y, a.x, a.y + s]
-          ]
-          for (const [x1, y1, x2, y2] of segs) {
-            const [rx1, ry1] = rotatePoint(x1, y1, a.x, a.y, rad)
-            const [rx2, ry2] = rotatePoint(x2, y2, a.x, a.y, rad)
-            page.drawLine({
-              start: { x: sx(rx1), y: toY(ry1) },
-              end: { x: sx(rx2), y: toY(ry2) },
-              thickness: sw(3.5),
-              color: hexToPdfRgb(a.color),
-              lineCap: LineCapStyle.Round
-            })
-          }
-          break
-        }
-        case 'image': {
-          const rot = a.rotation ?? 0
-          const rad = (rot * Math.PI) / 180
-          const isPng = a.src.startsWith('data:image/png')
-          const img = isPng
-            ? await pdf.embedPng(a.src)
-            : await pdf.embedJpg(a.src)
-          const [bx, by] = rotatePoint(a.x, a.y + a.height, a.x, a.y, rad)
-          page.drawImage(img, {
-            x: sx(bx),
-            y: toY(by),
-            width: sw(a.width),
-            height: sw(a.height),
-            rotate: rot ? degrees(-rot) : undefined
-          })
-          // Optional border (owner ask, 2026-09-04). Baked here as well as drawn
-          // in the viewer, or a bordered picture exports naked — which is the
-          // failure mode that matters, because the export is what gets sent.
-          //
-          // Drawn AFTER the image so the stroke sits on top of the picture edge
-          // rather than being half-covered by it, and `opacity: 0` keeps the
-          // rectangle's FILL invisible while the border still paints (the same
-          // trick the outline-only rect case above uses).
-          if (a.border && a.border.width > 0) {
-            page.drawRectangle({
-              x: sx(bx),
-              y: toY(by),
-              width: sw(a.width),
-              height: sw(a.height),
-              borderColor: hexToPdfRgb(a.border.color),
-              borderWidth: sw(a.border.width),
-              // ⚠️ pdf-lib takes the dash pattern in POINTS, already scaled —
-              // passing raw annotation units would give a dash that looks right
-              // on screen and wrong in the file at any zoom but 100%.
-              borderDashArray: a.border.style === 'dashed'
-                ? [sw(a.border.width * 3), sw(a.border.width * 2)]
-                : undefined,
-              opacity: 0,
-              rotate: rot ? degrees(-rot) : undefined
-            })
-          }
-          break
-        }
-        case 'sigfield': {
-          if (a.signed) {
-            // A signed box that came from a flattened/exported PDF (locked) has
-            // the "Sign here • Name • Date" caption already baked into the page —
-            // paint the box white first so the signature replaces it, not sits
-            // on top of it.
-            if (a.locked) {
-              page.drawRectangle({
-                x: sx(a.x),
-                y: toY(a.y + a.height),
-                width: sw(a.width),
-                height: sw(a.height),
-                color: hexToPdfRgb('#ffffff')
-              })
-            }
-            // Bake the signature image, contained inside the box (matches the
-            // on-screen fit). Baseline of the box's bottom edge is a.y + height.
-            const img = a.signed.src.startsWith('data:image/png')
-              ? await pdf.embedPng(a.signed.src)
-              : await pdf.embedJpg(a.signed.src)
-            const margin = 0.08
-            const availW = a.width * (1 - margin * 2)
-            const availH = a.height * (1 - margin * 2)
-            const ratio = a.signed.width > 0 && a.signed.height > 0
-              ? a.signed.width / a.signed.height
-              : 1
-            let fw = availW
-            let fh = fw / ratio
-            if (fh > availH) {
-              fh = availH
-              fw = fh * ratio
-            }
-            const fx = a.x + (a.width - fw) / 2
-            const fy = a.y + (a.height - fh) / 2
-            page.drawImage(img, {
-              x: sx(fx),
-              y: toY(fy + fh),
-              width: sw(fw),
-              height: sw(fh)
-            })
-          } else {
-            // Unsigned request box: bake a visible outline + caption so it's
-            // shown in any viewer (Acrobat, browsers, print). It's ALSO embedded
-            // in the catalog below, so Universal PDF re-detects it as a
-            // click-to-sign box — locked in place (non-movable) so it can't drift
-            // off the baked outline.
-            const orange = hexToPdfRgb('#ea580c')
-            page.drawRectangle({
-              x: sx(a.x),
-              y: toY(a.y + a.height),
-              width: sw(a.width),
-              height: sw(a.height),
-              borderColor: orange,
-              borderWidth: sw(1.5),
-              opacity: 0
-            })
-            const t = getT()
-            const parts: string[] = []
-            if (a.requireName) parts.push(t('lib.sign_here_name'))
-            if (a.requireDate) parts.push(t('lib.sign_here_date'))
-            if (a.requireLive) parts.push(t('lib.sign_here_live'))
-            const label = sanitizeForWinAnsi([t('lib.sign_here'), ...parts].join(' • '))
-            const size = sw(Math.min(a.height * 0.28, 18))
-            // Inset from the box's top-left corner. The box is in canvas units
-            // (canvas = pdf * scale); `size` is PDF units, so scale it back up to
-            // canvas space when positioning the baseline.
-            const padCanvas = Math.min(8, a.height * 0.12, a.width * 0.06)
-            const baselineCanvasY = a.y + padCanvas + size * scale * 0.85
-            page.drawText(label, {
-              x: sx(a.x + padCanvas),
-              y: toY(baselineCanvasY),
-              size,
-              font: await pickFont('helvetica'),
-              color: hexToPdfRgb('#c2410c')
-            })
-          }
-          break
-        }
-      }
-    }
-  }
+  addLinks(pdf, links, redactsByPage, scale)
 
   // Embed unsigned signature-request boxes into the document catalog so they
   // round-trip as interactive fields when the file is reopened / shared. Signed
@@ -769,13 +1035,17 @@ export interface CompressResult {
 // slightly softer render instead of a blank one.
 const MAX_RASTER_PIXELS = 8_000_000
 
-// Render one source page through pdfjs at the given DPI and return JPEG bytes.
-async function rasterizePageToJpeg(
+// Render one source page through pdfjs at the given DPI and return JPEG bytes,
+// with the page's size AS SEEN (its CropBox, turned by its /Rotate) in points —
+// which is the size the picture must be placed at. `paint` draws over the
+// render first; `k` is canvas pixels per point.
+async function rasterizePage(
   pdfjsDoc: PDFDocumentProxy,
   pageIndex: number,
   renderScale: number,
-  jpegQuality: number
-): Promise<Uint8Array> {
+  jpegQuality: number,
+  paint?: (ctx: CanvasRenderingContext2D, k: number) => void
+): Promise<{ jpeg: Uint8Array; width: number; height: number }> {
   const page = await pdfjsDoc.getPage(pageIndex + 1)
   const unscaled = page.getViewport({ scale: 1 })
   const pixelsAtScale = unscaled.width * unscaled.height * renderScale * renderScale
@@ -793,6 +1063,7 @@ async function rasterizePageToJpeg(
   ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, canvas.width, canvas.height)
   await page.render({ canvasContext: ctx, viewport }).promise
+  paint?.(ctx, scale)
   const blob: Blob = await new Promise((resolve, reject) => {
     canvas.toBlob(
       (b) => (b ? resolve(b) : reject(new Error('toBlob failed'))),
@@ -800,7 +1071,11 @@ async function rasterizePageToJpeg(
       jpegQuality
     )
   })
-  return new Uint8Array(await blob.arrayBuffer())
+  // Hand the pixels back now rather than whenever the collector gets to them:
+  // a long document makes one of these per page.
+  canvas.width = 0
+  canvas.height = 0
+  return { jpeg: new Uint8Array(await blob.arrayBuffer()), width: unscaled.width, height: unscaled.height }
 }
 
 // A rasterised result this much smaller than the input is a landslide the
@@ -845,7 +1120,7 @@ export async function estimateRasterSizes(sourceBytes: ArrayBuffer): Promise<Ras
   const sampleIndex = Math.floor(pageCount / 2)
   const measure = async (q: 'balanced' | 'strong') => {
     const { renderScale, jpegQuality } = RASTER_SETTINGS[q]
-    const jpeg = await rasterizePageToJpeg(pdfjsDoc, sampleIndex, renderScale, jpegQuality)
+    const { jpeg } = await rasterizePage(pdfjsDoc, sampleIndex, renderScale, jpegQuality)
     // + a little per page for the PDF object overhead wrapping each image.
     return (jpeg.byteLength + 512) * pageCount
   }
@@ -892,9 +1167,10 @@ export async function compressPdf(
   const out = await PDFDocument.create()
   const pageCount = srcPdf.getPageCount()
   for (let i = 0; i < pageCount; i++) {
-    const { width, height } = srcPdf.getPage(i).getSize()
-    const imgBytes = await rasterizePageToJpeg(pdfjsDoc, i, renderScale, jpegQuality)
-    const img = await out.embedJpg(imgBytes)
+    // ⚠️ The size comes from the render, not `getSize()` (the MediaBox): on a
+    // rotated or cropped page those differ, and the picture was squashed to fit.
+    const { jpeg, width, height } = await rasterizePage(pdfjsDoc, i, renderScale, jpegQuality)
+    const img = await out.embedJpg(jpeg)
     const page = out.addPage([width, height])
     page.drawImage(img, { x: 0, y: 0, width, height })
     // Rendering is nearly all the wall-clock, so the bar is the page counter.

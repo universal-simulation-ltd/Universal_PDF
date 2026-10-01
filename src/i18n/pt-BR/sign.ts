@@ -106,7 +106,7 @@ const sign: Messages['sign'] = {
   'import_processing': 'Processando…',
   'import_preview_alt': 'Visualização da assinatura',
   'import_no_preview': 'Sem visualização',
-  'import_remove_bg': 'Remover fundo branco',
+  'import_keep_bg': 'Manter o fundo branco',
   'import_choose_different': 'Escolher outro arquivo',
   'import_name_placeholder': 'Nome (opcional)',
 
@@ -272,6 +272,7 @@ const sign: Messages['sign'] = {
   'hosted_browser': 'Salvar no navegador',
   'hosted_browser_chip': 'Local · temporário',
   'hosted_browser_body': 'Este PDF já é guardado automaticamente neste aparelho, então ele reabre ao atualizar a página. Ele fica neste navegador e nunca sai dele.',
+  'hosted_browser_body_locked': 'Não para este PDF. Ele estava protegido quando você o abriu, então nenhuma cópia é guardada neste aparelho.',
   'hosted_desktop': 'Salvar no computador',
   'hosted_desktop_chip': 'Importar depois',
   'hosted_desktop_body': 'Baixe este PDF e suas anotações em um único arquivo de backup. Importe quando quiser — em qualquer aparelho — para continuar editando exatamente de onde parou.',

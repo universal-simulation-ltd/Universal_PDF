@@ -135,6 +135,15 @@ interface PdfState {
   // long as somebody is hunting for their password.
   lockedFile: { file: File; notice?: string; error: string | null } | null
   cancelLockedFile: () => void
+  // True while the open document came from a password-locked file — or was
+  // made from one (a merge or convert of it). Its bytes are plaintext by then,
+  // so every path that would write them, or edits keyed to them, into recents
+  // checks this first. See `saveToRecents`.
+  //
+  // ⚠️ It has to outlive `loadFile`. Opening a locked file was always kept out
+  // of recents, but deleting a page, stripping metadata or undoing then saved
+  // the unlocked bytes anyway, because nothing remembered the lock by then.
+  openedLocked: boolean
   loadFile: (
     file: File,
     options?: {
@@ -238,6 +247,24 @@ function trimDocUndo(stack: DocSnapshot[]): DocSnapshot[] {
 // exactly as they did before. Overshooting it costs nothing worse than the
 // empty page frames this hold exists to hide.
 const FIRST_PAINT_GRACE_MS = 1200
+
+/**
+ * Record the open document's current bytes in recents, and point the URL at
+ * it. The one door every document rewrite goes through, so the lock check
+ * below cannot be forgotten by the next one added.
+ *
+ * ⚠️ A document opened from a locked file is NEVER written — see the note in
+ * `loadFile` for why, and `openedLocked` for how that used to leak.
+ */
+function saveToRecents(fileName: string, bytes: ArrayBuffer) {
+  if (usePdfStore.getState().openedLocked) return
+  saveRecent(fileName, bytes)
+    .then((slug) => {
+      if (slug) setHashSlug(slug)
+      return usePdfStore.getState().refreshRecents()
+    })
+    .catch(() => {})
+}
 let firstPaintDeadline: ReturnType<typeof setTimeout> | null = null
 
 export const usePdfStore = create<PdfState>((set, get) => ({
@@ -268,6 +295,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   importNotice: null,
   dismissImportNotice: () => set({ importNotice: null }),
   lockedFile: null,
+  openedLocked: false,
   cancelLockedFile: () => set({ lockedFile: null }),
   togglePageNav: () => set((s) => ({ pageNavOpen: !s.pageNavOpen })),
   setPageNavOpen: (pageNavOpen) => set({ pageNavOpen }),
@@ -339,12 +367,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     useSearchStore.getState().reset()
     noteStructuralEdit()
 
-    saveRecent(snap.fileName, snap.bytes)
-      .then((slug) => {
-        if (slug) setHashSlug(slug)
-        return get().refreshRecents()
-      })
-      .catch(() => {})
+    saveToRecents(snap.fileName, snap.bytes)
   },
 
   scrubMetadata: async () => {
@@ -365,12 +388,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     // would never see it. Same for the page operations below.
     noteStructuralEdit()
 
-    saveRecent(fileName, newBytes)
-      .then((slug) => {
-        if (slug) setHashSlug(slug)
-        return get().refreshRecents()
-      })
-      .catch(() => {})
+    saveToRecents(fileName, newBytes)
   },
   loadFile: async (file, options) => {
     set({ loading: true })
@@ -436,6 +454,10 @@ export const usePdfStore = create<PdfState>((set, get) => ({
         // notice left over from the converted document before it.
         importNotice: options?.notice ?? null,
         lockedFile: null,
+        // A merge or convert of a locked document carries its contents, so it
+        // inherits the lock's "keep out of recents" — those are the only loads
+        // that pass `keepDocUndo`.
+        openedLocked: encrypted || (!!options?.keepDocUndo && get().openedLocked),
         ...(options?.keepDocUndo ? {} : { docUndo: [] })
       })
       // Desktop only: the folder this document came off the disk from, which is
@@ -470,18 +492,13 @@ export const usePdfStore = create<PdfState>((set, get) => ({
       // The cost is that a locked document does not survive a refresh and has
       // no shareable slug. That is the right trade, and it is why the hash is
       // cleared rather than left pointing at the previous document.
-      if (encrypted) {
+      if (get().openedLocked) {
         setHashSlug(null)
       } else {
         // Persist to recents in the background — never blocks loading.
         // The returned slug becomes the URL hash so a refresh reloads the
         // same PDF straight from IndexedDB.
-        saveRecent(file.name, buf)
-          .then((slug) => {
-            if (slug) setHashSlug(slug)
-            return get().refreshRecents()
-          })
-          .catch(() => {})
+        saveToRecents(file.name, buf)
       }
     } catch (e) {
       set({ loading: false })
@@ -528,7 +545,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     // ⚠️ `docUndo` goes with it. Undoing a merge back onto a document that is
     // no longer open would be the same bug the annotation history avoids by
     // clearing on load.
-    set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, firstPaint: true, previewOpen: false, presentOpen: false, ocrOpen: false, mergeOpen: false, convertOpen: false, advancedExportOpen: false, metadataOpen: false, qrOpen: false, qrEdit: null, importNotice: null, lockedFile: null, docUndo: [] })
+    set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, firstPaint: true, previewOpen: false, presentOpen: false, ocrOpen: false, mergeOpen: false, convertOpen: false, advancedExportOpen: false, metadataOpen: false, qrOpen: false, qrEdit: null, importNotice: null, lockedFile: null, openedLocked: false, docUndo: [] })
     setHashSlug(null)
   },
   refreshRecents: async () => {
@@ -558,6 +575,9 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     const current = get().fileName
     if (!current || current === cleaned) return
     set({ fileName: cleaned })
+    // Recents are matched by name, so renaming a locked document's entry would
+    // rename some OTHER recent that happens to share its name.
+    if (get().openedLocked) return
     await renameRecent(current, cleaned)
     await get().refreshRecents()
   },
@@ -605,12 +625,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     get().doc?.destroy()
     set({ doc, numPages: doc.numPages, sourceBytes: newBytes, isXfa: doc.isPureXfa })
 
-    saveRecent(fileName, newBytes)
-      .then((slug) => {
-        if (slug) setHashSlug(slug)
-        return get().refreshRecents()
-      })
-      .catch(() => {})
+    saveToRecents(fileName, newBytes)
   },
   deletePage: async (pageIndex) => {
     const total = get().numPages
@@ -736,8 +751,12 @@ if (typeof window !== 'undefined') {
     if (anns === lastAnns && forms === lastForms) return
     lastAnns = anns
     lastForms = forms
-    const { doc, fileName } = usePdfStore.getState()
+    const { doc, fileName, openedLocked } = usePdfStore.getState()
     if (!doc || !fileName) return
+    // No recent exists for a locked document, and `updateRecentEdits` matches by
+    // name — so writing here would file its edits under an unrelated recent
+    // that shares the name.
+    if (openedLocked) return
     if (pending && pending.name !== fileName) flush()
     pending = { name: fileName, edits: { annotations: anns, formValues: forms } }
     if (timer !== null) clearTimeout(timer)

@@ -5,6 +5,7 @@ import { usePdfStore } from '../../stores/pdfStore'
 import { previewExportName } from '../../lib/exportName'
 import { countRedactions, isRedactConfirmed } from '../../lib/redactGate'
 import { RedactIcon } from '../icons/RedactIcon'
+import LockedOriginNote from '../Lock/LockedOriginNote'
 import { useT, type MessageKey } from '../../i18n'
 
 // The one popup that stands between an amended document and every way out of
@@ -41,6 +42,7 @@ export default function UnsavedChangesDialog() {
   const saveAndExit = useExitGuard((s) => s.saveAndExit)
 
   const fileName = usePdfStore((s) => s.fileName)
+  const openedLocked = usePdfStore((s) => s.openedLocked)
   const annotations = useAnnotationStore((s) => s.annotations)
 
   const [redactConfirm, setRedactConfirm] = useState('')
@@ -121,12 +123,23 @@ export default function UnsavedChangesDialog() {
         {/* Said plainly rather than left as a threat. The annotation layer is
             written to this device's recent files as you work, so "exit without
             saving" costs the FILE, not the work — and a popup that implies
-            otherwise trains people to save copies they don't need. */}
-        <p className="mt-2 text-xs text-slate-500 leading-relaxed bg-slate-50 rounded-lg px-3 py-2.5">
-          {t.rich('app.unsaved_marks_stay', {
-            recent: <span className="font-medium">{t('app.recent_files')}</span>
-          })}
-        </p>
+            otherwise trains people to save copies they don't need.
+            ⚠️ EXCEPT for a document opened from a locked file: nothing of it
+            is ever written to this device (see `openedLocked`), so for that one
+            the reassurance would be false, and "exit without saving" really
+            does cost the work. Said in amber, not grey, for that reason. */}
+        {openedLocked ? (
+          <p className="mt-2 text-xs text-amber-900 leading-relaxed bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+            {t('app.unsaved_locked_not_kept')}
+          </p>
+        ) : (
+          <p className="mt-2 text-xs text-slate-500 leading-relaxed bg-slate-50 rounded-lg px-3 py-2.5">
+            {t.rich('app.unsaved_marks_stay', {
+              recent: <span className="font-medium">{t('app.recent_files')}</span>
+            })}
+          </p>
+        )}
+        <LockedOriginNote kind="save" className="mt-2" />
 
         {needsRedactConfirm && (
           <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3.5">

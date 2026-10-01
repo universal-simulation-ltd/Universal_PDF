@@ -46,6 +46,7 @@ const app: Messages['app'] = {
   'unsaved_body': '{name} contient des modifications qui ne sont pas encore dans un fichier enregistré. {consequence}',
   'unsaved_this_pdf': 'Ce PDF',
   'unsaved_marks_stay': 'Dans tous les cas, vos annotations restent dans {recent} sur cet appareil — l’enregistrement les écrit dans un PDF que vous pouvez envoyer, conserver ou imprimer.',
+  'unsaved_locked_not_kept': 'Ce PDF était verrouillé à l’ouverture, donc rien n’est conservé sur cet appareil. Si vous quittez sans enregistrer, vos modifications seront perdues.',
   'recent_files': 'Fichiers récents',
   'unsaved_redact_title': 'Caviardage définitif',
   'unsaved_redact_body_one': 'L’enregistrement aplatit {count} zone de caviardage et supprime définitivement le texte en dessous. Cette action est irréversible.',

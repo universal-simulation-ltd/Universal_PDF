@@ -46,6 +46,7 @@ export default {
   'unsaved_body': '{name} has amendments that aren’t in a saved file yet. {consequence}', // {name} is the file name; {consequence} is one of the unsaved_close… sentences
   'unsaved_this_pdf': 'This PDF', // stands in for the file name when there is none
   'unsaved_marks_stay': 'Your marks stay in {recent} on this device either way — saving writes them into a PDF you can send, keep or print.',
+  'unsaved_locked_not_kept': 'This PDF was locked when you opened it, so nothing is kept on this device. Exit without saving and your changes are gone.',
   'recent_files': 'Recent files', // name of the recently opened files list
   'unsaved_redact_title': 'Permanent redaction',
   'unsaved_redact_body_one': 'Saving flattens {count} redaction box and removes the text underneath for good. This can’t be undone.',

@@ -158,6 +158,11 @@ export default {
   'locked.no_recovery': 'Universal PDF cannot recover or reset this password. Without it the document cannot be opened by any app.',
   'locked.unlocking': 'Unlocking…',
   'locked.unlock': 'Unlock',
+  // LockedOriginNote — a document opened from a locked file, about to leave unlocked
+  'locked.origin_save': 'This PDF was locked when you opened it. Copies you save or store from here will open without a password.',
+  'locked.origin_send': 'This PDF was locked when you opened it. The copy sent from here will open without a password.',
+  'locked.origin_advanced': 'This PDF was locked when you opened it. Tick “Lock with a password” below to lock the copy you save too.',
+  'locked.relock': 'Lock it again',
 
   // MetadataDialog
   'metadata.read_failed': 'Could not read this PDF’s metadata',

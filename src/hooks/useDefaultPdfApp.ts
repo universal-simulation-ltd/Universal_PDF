@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getT } from '../i18n'
+import { DEFAULT_APP_ASKED_KEY } from '../lib/resetDefaults'
 
 type DesktopApi = NonNullable<Window['desktop']>
 type DefaultAppStatus = Awaited<ReturnType<DesktopApi['defaultApp']['status']>>
@@ -12,7 +13,8 @@ export type DefaultAppOutcome =
 // Whether the proactive offer has been put to this person already. One ask,
 // then never again — the app is useful whether or not it owns the file type,
 // and a prompt that returns every launch is the reason people distrust them.
-const ASKED_KEY = 'unipdf:default-app-asked'
+// Cleared by "Reset to defaults" — see lib/resetDefaults.ts.
+const ASKED_KEY = DEFAULT_APP_ASKED_KEY
 
 function readAsked(): boolean {
   try {

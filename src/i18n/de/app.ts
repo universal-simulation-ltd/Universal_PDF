@@ -46,6 +46,7 @@ const app: Messages['app'] = {
   'unsaved_body': '{name} enthält Änderungen, die noch nicht in einer gespeicherten Datei sind. {consequence}',
   'unsaved_this_pdf': 'Dieses PDF',
   'unsaved_marks_stay': 'Deine Markierungen bleiben so oder so unter {recent} auf diesem Gerät erhalten – beim Speichern werden sie in ein PDF geschrieben, das du versenden, aufbewahren oder drucken kannst.',
+  'unsaved_locked_not_kept': 'Dieses PDF war beim Öffnen passwortgeschützt, deshalb wird auf diesem Gerät nichts aufbewahrt. Beendest du ohne Speichern, sind deine Änderungen weg.',
   'recent_files': 'Zuletzt verwendete Dateien',
   'unsaved_redact_title': 'Endgültige Schwärzung',
   'unsaved_redact_body_one': 'Beim Speichern wird {count} Schwärzungsrahmen eingebrannt und der Text darunter endgültig entfernt. Das kann nicht rückgängig gemacht werden.',

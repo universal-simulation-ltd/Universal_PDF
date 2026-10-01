@@ -6,6 +6,7 @@ import LinkLayer from './LinkLayer'
 import SearchHighlightLayer from './SearchHighlightLayer'
 import TextSelectLayer from './TextSelectLayer'
 import XfaPage from './XfaPage'
+import { holdPage } from './pageRetention'
 import { budgetedPageCount, layerPixelRatio, pagePixelBudget } from '../../lib/renderBudget'
 import { requestRenderSlot, type RenderSlot } from '../../lib/renderQueue'
 import { usePdfStore } from '../../stores/pdfStore'
@@ -167,10 +168,21 @@ function PdfPage({ doc, pageIndex, scale, isXfa, active, onSized }: Props) {
       const offCtx = off.getContext('2d')
       if (!offCtx) return
 
+      // ⚠️ The offscreen canvas is a full-size bitmap of its own, and once it
+      // has been copied (or the render has failed) nothing needs it — but a
+      // detached canvas keeps its backing store until the garbage collector
+      // gets round to it, which on a burst of zoom commits is several
+      // page-sized allocations at once. Shrinking it to 0×0 hands the memory
+      // back now. See `releaseCanvas` for why 0×0 rather than `clearRect`.
+      const dropOffscreen = () => {
+        off.width = 0
+        off.height = 0
+      }
       renderTask = p.render({ canvasContext: offCtx, viewport: renderViewport })
       try {
         await renderTask.promise
       } catch {
+        dropOffscreen()
         // Cancelled (a newer scale took over — its own render is on the way),
         // or a real failure such as an allocation refused mid-burst. A real
         // failure retries once after a beat rather than leaving the page
@@ -186,12 +198,19 @@ function PdfPage({ doc, pageIndex, scale, isXfa, active, onSized }: Props) {
         }
         return
       }
-      if (cancelled) return
+      if (cancelled) {
+        dropOffscreen()
+        return
+      }
       const ctx = canvas.getContext('2d')
-      if (!ctx) return
+      if (!ctx) {
+        dropOffscreen()
+        return
+      }
       canvas.width = off.width
       canvas.height = off.height
       ctx.drawImage(off, 0, 0)
+      dropOffscreen()
       // Page 1 is on screen — the viewer is worth showing now. Reported after
       // the blit, not after `renderTask.promise`, because it is this line that
       // puts pixels in front of the reader.
@@ -220,6 +239,25 @@ function PdfPage({ doc, pageIndex, scale, isXfa, active, onSized }: Props) {
     // all, so a page entering the band has to rasterize and one leaving it has
     // to let go.
   }, [doc, pageIndex, scale, isXfa, active])
+
+  // ⚠️ Free pdf.js's own copy of the page when it leaves the band. The bitmap is
+  // dropped above, but the operator list and decoded images pdf.js parsed it
+  // into live on the page proxy, which the document caches for good — so
+  // without this every page ever scrolled past stays parsed in memory. See
+  // `pageRetention`.
+  //
+  // A separate effect, keyed on `active` and NOT on `scale`, on purpose: the
+  // parsed page is what makes a re-render at a new zoom cheap, so a zoom must
+  // keep it. Only leaving the band lets go. Declared AFTER the render effect so
+  // React runs that one's cleanup — which cancels the render task — first; a
+  // page with a task in flight is only marked for cleanup by pdf.js, not freed.
+  //
+  // Not for XFA: those pages are drawn by `XfaPage` whether or not they are in
+  // the band, and never rasterize through the operator list anyway.
+  useEffect(() => {
+    if (!active || !page || isXfa) return
+    return holdPage(page)
+  }, [page, active, isXfa])
 
   // Layout effect, not effect: this has to run in the same commit that wrote
   // the new width/height, before the paint. See `onSized`.

@@ -106,7 +106,7 @@ const sign: Messages['sign'] = {
   'import_processing': 'Wird verarbeitet…',
   'import_preview_alt': 'Vorschau der Unterschrift',
   'import_no_preview': 'Keine Vorschau',
-  'import_remove_bg': 'Weißen Hintergrund entfernen',
+  'import_keep_bg': 'Weißen Hintergrund behalten',
   'import_choose_different': 'Andere Datei auswählen',
   'import_name_placeholder': 'Name (optional)',
 
@@ -272,6 +272,7 @@ const sign: Messages['sign'] = {
   'hosted_browser': 'Im Browser speichern',
   'hosted_browser_chip': 'Lokal · vorübergehend',
   'hosted_browser_body': 'Dieses PDF wird bereits automatisch auf diesem Gerät aufbewahrt, sodass es nach einem Neuladen wieder geöffnet wird. Es bleibt in diesem Browser und verlässt ihn nie.',
+  'hosted_browser_body_locked': 'Nicht bei diesem PDF. Es war beim Öffnen passwortgeschützt, deshalb wird keine Kopie auf diesem Gerät aufbewahrt.',
   'hosted_desktop': 'Auf dem Computer speichern',
   'hosted_desktop_chip': 'Später importieren',
   'hosted_desktop_body': 'Lade dieses PDF und deine Kommentare als eine Sicherungsdatei herunter. Importiere sie jederzeit – auf jedem Gerät –, um genau dort weiterzumachen, wo du aufgehört hast.',

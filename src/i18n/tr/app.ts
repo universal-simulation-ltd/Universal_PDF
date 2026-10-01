@@ -46,6 +46,7 @@ const app: Messages['app'] = {
   'unsaved_body': '“{name}” belgesinde henüz kaydedilmiş bir dosyada bulunmayan değişiklikler var. {consequence}',
   'unsaved_this_pdf': 'Bu PDF',
   'unsaved_marks_stay': 'İşaretleriniz her durumda bu cihazda şu listede kalır: {recent}. Kaydetmek ise onları gönderebileceğiniz, saklayabileceğiniz veya yazdırabileceğiniz bir PDF’e yazar.',
+  'unsaved_locked_not_kept': 'Bu PDF açtığınızda kilitliydi, bu yüzden bu cihazda hiçbir şey saklanmaz. Kaydetmeden çıkarsanız değişiklikleriniz kaybolur.',
   'recent_files': 'Son dosyalar',
   'unsaved_redact_title': 'Kalıcı karartma',
   'unsaved_redact_body_one': 'Kaydetmek {count} karartma kutusunu düzleştirir ve altındaki metni kalıcı olarak kaldırır. Bu işlem geri alınamaz.',

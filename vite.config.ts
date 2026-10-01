@@ -1,5 +1,8 @@
 import { execSync } from 'node:child_process'
-import { defineConfig, loadEnv } from 'vite'
+import { readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
+import { dirname, join } from 'node:path'
+import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -58,6 +61,72 @@ function resolveBuildSha(): string {
 }
 const BUILD_SHA = resolveBuildSha()
 
+// ── On-device OCR runtime ────────────────────────────────────────────────────
+// Tesseract.js runs in a Web Worker that `importScripts` its WebAssembly core.
+// Left to its defaults it fetches BOTH from cdn.jsdelivr.net on first use —
+// executable code, from a third party, into an app that otherwise runs
+// entirely on the user's machine (and into the desktop app, the phone apps and
+// the extension, which have no business running remote code at all). So the
+// worker script and the core ship with the app instead, copied out of
+// node_modules into `ocr/<versions>/` in the build output and served from the
+// same place by the dev server.
+//
+// ⚠️ The folder name carries BOTH versions. The service worker caches these
+// files CacheFirst, and an unversioned URL would keep handing an upgraded
+// worker last release's core — a mismatch that fails at the first OCR, long
+// after the deploy, on exactly the machines that used OCR before.
+//
+// ⚠️ Only the two LSTM-only cores are shipped, because `lib/ocr.ts` creates its
+// worker with OEM 1 (LSTM only), and tesseract then asks for
+// `tesseract-core-simd-lstm.wasm.js`, or `tesseract-core-lstm.wasm.js` on an
+// engine without WebAssembly SIMD — it picks between them at runtime, given
+// the folder (see `getCore.js` in tesseract.js). Each is ~3.9 MB with the wasm
+// inlined; a user downloads one. Asking for the legacy engine (OEM 0/2) would
+// want the other two files, which are deliberately not here.
+//
+// The English model (eng.traineddata, ~3 MB) is NOT shipped: it is data, not
+// code, and stays on tesseract's CDN — see `lib/ocr.ts`.
+const requireFromHere = createRequire(import.meta.url)
+const TESSERACT_JS_DIR = dirname(requireFromHere.resolve('tesseract.js/package.json'))
+// The core tesseract.js itself resolves, not whatever copy happens to be
+// hoisted to the top of node_modules.
+const TESSERACT_CORE_DIR = dirname(
+  createRequire(join(TESSERACT_JS_DIR, 'package.json')).resolve('tesseract.js-core/package.json'),
+)
+const versionOf = (dir: string): string =>
+  JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')).version
+const OCR_RUNTIME_DIR = `ocr/tesseract-${versionOf(TESSERACT_JS_DIR)}-core-${versionOf(TESSERACT_CORE_DIR)}/`
+const OCR_RUNTIME_FILES: Record<string, string> = {
+  'worker.min.js': join(TESSERACT_JS_DIR, 'dist', 'worker.min.js'),
+  'tesseract-core-simd-lstm.wasm.js': join(TESSERACT_CORE_DIR, 'tesseract-core-simd-lstm.wasm.js'),
+  'tesseract-core-lstm.wasm.js': join(TESSERACT_CORE_DIR, 'tesseract-core-lstm.wasm.js'),
+}
+
+function ocrRuntime(): Plugin {
+  return {
+    name: 'ocr-runtime',
+    // Dev: answer `<anything>/ocr/<versions>/<file>` from node_modules, so the
+    // same URL `lib/ocr.ts` builds from BASE_URL works under any base.
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const pathname = (req.url ?? '').split('?')[0]
+        const at = pathname.indexOf(`/${OCR_RUNTIME_DIR}`)
+        const file = at === -1 ? undefined : OCR_RUNTIME_FILES[pathname.slice(at + OCR_RUNTIME_DIR.length + 1)]
+        if (!file) return next()
+        res.setHeader('Content-Type', 'text/javascript')
+        res.end(readFileSync(file))
+      })
+    },
+    // Build: copied verbatim — they are already minified, and the core's
+    // inlined wasm is not something a bundler should touch.
+    generateBundle() {
+      for (const [name, file] of Object.entries(OCR_RUNTIME_FILES)) {
+        this.emitFile({ type: 'asset', fileName: `${OCR_RUNTIME_DIR}${name}`, source: readFileSync(file) })
+      }
+    },
+  }
+}
+
 export default defineConfig(({ command, mode }) => {
   // ⚠️ Refuse to BUILD without the Supabase pair `src/main.tsx` inlines. Vite
   // substitutes `undefined` for a missing variable and reports success, so the
@@ -84,7 +153,9 @@ export default defineConfig(({ command, mode }) => {
     base: BASE_PATH,
     define: {
       __APP_VERSION__: JSON.stringify(pkg.version),
-      'import.meta.env.VITE_BUILD_SHA': JSON.stringify(BUILD_SHA)
+      'import.meta.env.VITE_BUILD_SHA': JSON.stringify(BUILD_SHA),
+      // Where `ocrRuntime()` put the OCR worker + core, relative to BASE_URL.
+      'import.meta.env.VITE_OCR_RUNTIME_DIR': JSON.stringify(OCR_RUNTIME_DIR)
     },
     plugins: [
       {
@@ -97,6 +168,7 @@ export default defineConfig(({ command, mode }) => {
       },
       react(),
       tailwindcss(),
+      ocrRuntime(),
       // The PWA service worker is for the hosted web app only — under Electron's
       // `file://` origin it cannot register and is unnecessary, so skip it.
       ...(isDesktop ? [] : [VitePWA({
@@ -161,15 +233,19 @@ export default defineConfig(({ command, mode }) => {
           // only to somebody opening a Word file in one of those alphabets.
           // Same bargain again: out of the install-time precache, fetched by
           // `lib/fallbackFont.ts` when a document actually needs it.
-          globIgnores: ['**/heic-to-*.js', 'fonts/*.ttf'],
-          // The on-device OCR runtime (Tesseract.js WASM core + English model)
-          // is large (~15 MB) and only fetched from the Tesseract CDN when the
-          // optional "Make searchable (OCR)" tool is used. Keep it OUT of the
-          // install-time precache (it would bloat the PWA install and blow past
-          // workbox's file-size limit — the assets live cross-origin anyway) and
-          // cache it at runtime on first use, so OCR still works offline once the
-          // user has run it once. Same pattern as Universal Images' background
-          // removal. Cross-origin responses are opaque (status 0), so allow that.
+          // ⚠️ The OCR runtime (`ocrRuntime()` above) likewise: ~4 MB per core,
+          // two cores of which any one browser uses one, all for an optional
+          // tool. And it would not even fail loudly if precached — each core
+          // sits JUST under the 4 MiB limit above, so it would quietly go into
+          // every install.
+          globIgnores: ['**/heic-to-*.js', 'fonts/*.ttf', 'ocr/**'],
+          // The OCR runtime (worker + WASM core, served with the app) and the
+          // English model (from tesseract's CDN) are only fetched when the
+          // optional "Make searchable (OCR)" tool is used. Kept OUT of the
+          // install-time precache and cached at runtime on first use, so OCR
+          // still works offline once the user has run it once. Same pattern as
+          // Universal Images' background removal. The model's response is
+          // cross-origin and may be opaque (status 0), so allow that.
           runtimeCaching: [
             {
               // The fallback face — cached after the first document that needs
@@ -194,16 +270,22 @@ export default defineConfig(({ command, mode }) => {
               },
             },
             {
-              urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/npm\/tesseract\.js.*/,
+              // Versioned folder (see OCR_RUNTIME_DIR), so an upgrade is a new
+              // URL rather than a stale hit; the cap clears the old ones out.
+              urlPattern: /\/ocr\/tesseract-[^/]+\/[^/]+\.js$/,
               handler: 'CacheFirst',
               options: {
                 cacheName: 'tesseract-runtime',
-                expiration: { maxEntries: 12, maxAgeSeconds: 60 * 60 * 24 * 30 },
-                cacheableResponse: { statuses: [0, 200] },
+                expiration: { maxEntries: 4, maxAgeSeconds: 60 * 60 * 24 * 90 },
+                cacheableResponse: { statuses: [200] },
               },
             },
             {
-              urlPattern: /^https:\/\/tessdata\.projectnaptha\.com\/.*/,
+              // ⚠️ tesseract.js 5 fetches its models from jsDelivr's
+              // `@tesseract.js-data` packages. This rule used to match
+              // tessdata.projectnaptha.com — tesseract.js 4's host — and so
+              // cached nothing at all.
+              urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/npm\/@tesseract\.js-data\/.*/,
               handler: 'CacheFirst',
               options: {
                 cacheName: 'tesseract-langdata',
