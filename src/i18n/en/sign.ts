@@ -12,7 +12,7 @@ export default {
   'loading': 'Loading…',
   'none_yet': 'None yet.',
   'no_tokens_left': "You've used your free online storage for PDFs.",
-  'get_tokens': 'Get more →',
+  'need_more': 'Need more? Tell us', // low-key link to the support page, under the at-limit note
   'open_universal_pdf': 'Open Universal PDF',
   'could_not_store': 'Could not store this PDF.',
   'default_signature_name': 'Signature {n}', // default name of a saved signature in the library, n = its number
@@ -207,7 +207,6 @@ export default {
   'send_confirmation_resent': 'Confirmation email re-sent to {email}.',
   'send_not_verified': 'Not verified yet — click the link in your email first.',
   'send_protect_needs_email': 'Enter the recipient’s email address — a protected link is checked against it.',
-  'send_no_tokens_get_more': "You've used your free online storage for PDFs. Delete a stored PDF (Actions → Back up…) to make room, or get more.",
   'send_could_not_create': 'Could not create the signing link.',
   'send_could_not_protect': 'Could not protect this link ({error}), so it has not been shared. Nothing was sent.',
   'send_unknown_error': 'unknown error',
@@ -253,8 +252,7 @@ export default {
   'send_also_pin_hint': "We'll generate one to read out to them by phone or text. Use it if their inbox itself might not be private.",
   'send_storing': 'Storing…',
   'send_store_create': 'Store online & create sign link',
-  'send_token_held': "You've used your free online storage for PDFs. Delete a stored PDF (Actions → Back up…) to make room, or get more.",
-  'send_token_held_native': "You've used your free online storage for PDFs. Delete a stored PDF (Actions → Back up…) to make room.",
+  'send_token_held': "You've used your free online storage for PDFs. Delete a stored PDF (Actions → Back up…) to make room.", // at the free limit, web and phone apps alike
   'send_step2': '2 · Email it to someone',
   'send_step2_hint': "They'll get the PDF attached plus a button to sign it online. You'll be emailed when it's signed.",
   'send_sent_to': "✓ Sent to {to} — we'll email you at {email} once it's signed.",
@@ -268,7 +266,6 @@ export default {
   'send_revoke': 'Revoke',
 
   // HostedStoreDialog
-  'hosted_no_tokens_get_more': "You've used your free online storage for PDFs. Delete a stored PDF to make room, or get more.",
   'hosted_could_not_delete': 'Could not delete this PDF.',
   'hosted_title': 'Back up this PDF',
   'hosted_browser': 'Save to browser',
@@ -292,8 +289,7 @@ export default {
   'hosted_backing_up': 'Backing up…',
   'hosted_backed_up': '✓ Backed up',
   'hosted_back_up_online': 'Back up this PDF online',
-  'hosted_token_held': "You've used your free online storage for PDFs. Delete a stored PDF below to make room, or get more.",
-  'hosted_token_held_native': "You've used your free online storage for PDFs. Delete a stored PDF below to make room.",
+  'hosted_token_held': "You've used your free online storage for PDFs. Delete a stored PDF below to make room.", // at the free limit, web and phone apps alike
   'free_storage_near_limit': "You've used {used} MB of your {limit} MB of free online storage. It's shared by Universal PDF, Images, Exports and Recorder.", // used/limit = whole megabytes
   'hosted_open_to_backup': 'Open a PDF to back it up.',
   'hosted_no_company': 'Online files are kept with your company, and your Universal ID doesn’t have one yet. Setting one up is free.', // signed in, but the Universal ID belongs to no company yet

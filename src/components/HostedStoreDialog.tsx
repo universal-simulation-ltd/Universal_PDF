@@ -19,12 +19,11 @@ import { useFreeAllowance, nearFreeLimit } from '../lib/useFreeAllowance'
 // opens the SDK's in-app <SignInDialog /> instead; the href survives so a
 // middle- or ctrl-click on the web still opens the hub in a tab.
 const SIGNIN_URL = 'https://app.unisim.co.uk/login'
-// Was /subscription.html until 2026-09-07, when the marketing site split its
-// one pricing page in two. The token card moved to /everyday; /subscription is
-// now the Assess Suite's seats and licences and sells no tokens at all — so a
-// link left pointing there sends someone who wants one upload to a £5,000/year
-// enterprise plan. Not a 404: it renders fine, which is why it needed finding.
-const GET_TOKENS_URL = 'https://www.unisim.co.uk/everyday'
+// Nothing is for sale for the everyday apps (2026-10-03): at the free limit the
+// note says how to make room, and one quiet link asks people who need more to
+// tell us — that is the signal for when a paid tier is worth building. It is a
+// support link, not a purchase link, so the phone apps show it too.
+const NEED_MORE_URL = 'https://www.unisim.co.uk/support'
 // Where a signed-in Universal ID with no company sets one up. Opened in a new
 // tab so the PDF open here is not navigated away from.
 const SET_UP_COMPANY_URL = 'https://app.unisim.co.uk/branding'
@@ -123,7 +122,7 @@ export default function HostedStoreDialog() {
       if (!res.ok) {
         setError(
           res.error === 'no_credits'
-            ? (isNativeShell() ? t('sign.no_tokens_left') : t('sign.hosted_no_tokens_get_more'))
+            ? (isNativeShell() ? t('sign.no_tokens_left') : t('sign.hosted_token_held'))
             : res.error ?? t('sign.could_not_store'),
         )
       } else {
@@ -331,14 +330,12 @@ export default function HostedStoreDialog() {
                     <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
                       <p className="text-sm text-amber-800">
                         {freeToken === 'held'
-                          ? (isNativeShell() ? t('sign.hosted_token_held_native') : t('sign.hosted_token_held'))
+                          ? t('sign.hosted_token_held')
                           : t('sign.no_tokens_left')}
                       </p>
-                      {!isNativeShell() && (
-                        <a href={GET_TOKENS_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded-lg bg-orange-700 px-3.5 py-2 text-sm font-semibold text-white hover:bg-orange-800">
-                          {t('sign.get_tokens')}
-                        </a>
-                      )}
+                      <a href={NEED_MORE_URL} target="_blank" rel="noreferrer" className="mt-1.5 inline-block text-xs text-amber-800 underline underline-offset-2 hover:text-amber-950">
+                        {t('sign.need_more')}
+                      </a>
                     </div>
                   )
                 ) : (
