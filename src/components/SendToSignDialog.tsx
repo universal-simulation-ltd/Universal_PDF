@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import {
   useUniversal,
   useUser,
+  useOrg,
   useCredits,
   useAppFreeToken,
   useSignRequests,
@@ -49,6 +50,9 @@ const HUB_LOGIN_URL = 'https://app.unisim.co.uk/login'
 // link left pointing there sends someone who wants one upload to a £5,000/year
 // enterprise plan. Not a 404: it renders fine, which is why it needed finding.
 const GET_TOKENS_URL = 'https://www.unisim.co.uk/everyday'
+// Where a signed-in Universal ID with no company sets one up. Opened in a new
+// tab so the PDF open here is not navigated away from.
+const SET_UP_COMPANY_URL = 'https://app.unisim.co.uk/branding'
 
 // Export → "Send to sign": store the current PDF online (one token — the free
 // app token first, returned when the stored file is deleted), mint a
@@ -80,6 +84,11 @@ export default function SendToSignDialog() {
   const redactConfirmed = !needsRedactConfirm || redactConfirm.trim().toLowerCase() === 'redact'
 
   const { supabase, session, activeOrgId } = useUniversal()
+  // A sign request is stored and sent from a company, so a signed-in ID that
+  // belongs to none cannot make one. Only a SUCCESSFUL empty read counts as "no
+  // company" — a failed read is unknown, and never a reason to offer one.
+  const { orgs, loading: orgsLoading, error: orgsError } = useOrg()
+  const noCompany = !orgsLoading && !orgsError && orgs.length === 0
   const { user } = useUser()
   const { credits, refresh: refreshCredits } = useCredits()
   const { status: freeToken, refresh: refreshFreeToken } = useAppFreeToken('pdf')
@@ -429,7 +438,14 @@ export default function SendToSignDialog() {
                   {!native && tokens > 0 && <ValueChip size="sm" label={tokens}>{t.plural('sign.send_tokens_unit', tokens)}</ValueChip>}
                 </div>
 
-                {!doc ? (
+                {noCompany && !minted ? (
+                  <div className="mt-3" data-testid="send-no-company">
+                    <p className="text-sm text-slate-600">{t('sign.send_no_company')}</p>
+                    <a href={SET_UP_COMPANY_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800">
+                      {t('sign.setup_company_button')}
+                    </a>
+                  </div>
+                ) : !doc ? (
                   <p className="mt-2 text-xs text-slate-500">{t('sign.send_open_pdf_first')}</p>
                 ) : !minted && !hasSignHereBox ? (
                   <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">

@@ -227,6 +227,7 @@ export default {
   'send_tokens_unit_one': 'token', // follows a number shown in a separate chip, e.g. [3] tokens
   'send_tokens_unit_other': 'tokens',
   'send_open_pdf_first': 'Open a PDF first.',
+  'send_no_company': 'Sign requests are sent from your company, and your Universal ID doesn’t have one yet. Setting one up is free.', // signed in, but the Universal ID belongs to no company yet
   'send_add_box_first': 'Add a “Sign here” box first',
   'send_add_box_body': 'Every sign request needs at least one signature box so the signer knows where to sign. Open the {menu} menu → {item} and drop one where each person should sign, then come back here.', // menu = "Sign ▾", item = "Place signature box", both in bold
   'send_only_recipient': 'Only {email} can open and sign {doc} — they must confirm a code sent to that address (expires in 30 days, or when you delete the stored copy):',
@@ -294,6 +295,8 @@ export default {
   'hosted_token_held_native': "You've used your free online storage for PDFs. Delete a stored PDF below to make room.",
   'free_storage_near_limit': "You've used {used} MB of your {limit} MB of free online storage. It's shared by Universal PDF, Images, Exports and Recorder.", // used/limit = whole megabytes
   'hosted_open_to_backup': 'Open a PDF to back it up.',
+  'hosted_no_company': 'Online files are kept with your company, and your Universal ID doesn’t have one yet. Setting one up is free.', // signed in, but the Universal ID belongs to no company yet
+  'setup_company_button': 'Set up a company →', // links to the page where a company is set up
   'hosted_your_backups': 'Your backups',
   'hosted_open': 'Open',
   'hosted_delete_title': 'Delete this stored PDF',

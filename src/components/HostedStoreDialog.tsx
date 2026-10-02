@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Chip, SignInDialog, useUniversal, useUser, useCredits, useHostedUploads, useAppFreeToken, type HostedUpload } from '@unisim/sdk'
+import { Chip, SignInDialog, useUniversal, useUser, useOrg, useCredits, useHostedUploads, useAppFreeToken, type HostedUpload } from '@unisim/sdk'
 import { usePdfStore } from '../stores/pdfStore'
 import LockedOriginNote from './Lock/LockedOriginNote'
 // App Review 3.1.1: the phone app must not point people to buying tokens on
@@ -25,6 +25,9 @@ const SIGNIN_URL = 'https://app.unisim.co.uk/login'
 // link left pointing there sends someone who wants one upload to a £5,000/year
 // enterprise plan. Not a 404: it renders fine, which is why it needed finding.
 const GET_TOKENS_URL = 'https://www.unisim.co.uk/everyday'
+// Where a signed-in Universal ID with no company sets one up. Opened in a new
+// tab so the PDF open here is not navigated away from.
+const SET_UP_COMPANY_URL = 'https://app.unisim.co.uk/branding'
 
 // "Store this PDF" — the free local option (already automatic via recents) plus
 // the paid "Hosted by UNI·SIM" cloud option (one token per upload, refunded on
@@ -39,6 +42,11 @@ export default function HostedStoreDialog() {
   const openedLocked = usePdfStore((s) => s.openedLocked)
 
   const { supabase, session, activeOrgId } = useUniversal()
+  // Online copies are kept with a company, so a signed-in ID that belongs to
+  // none has nowhere to store one. Only a SUCCESSFUL empty read counts as "no
+  // company" — a failed read is unknown, and never a reason to offer one.
+  const { orgs, loading: orgsLoading, error: orgsError } = useOrg()
+  const noCompany = !orgsLoading && !orgsError && orgs.length === 0
   const { user } = useUser()
   const { credits, refresh: refreshCredits } = useCredits()
   // Every org gets one free returnable PDF token (migration 0045) — the RPC
@@ -74,7 +82,7 @@ export default function HostedStoreDialog() {
   const canStore = freeToken === 'available' || tokens > 0
   // Talk about the limit only once it is close: 80%+ used and still room. At
   // the limit the existing at-limit message takes over instead.
-  const near = signedIn && freeToken !== 'held' ? nearFreeLimit(allowance) : null
+  const near = signedIn && !noCompany && freeToken !== 'held' ? nearFreeLimit(allowance) : null
   const fmt = new Intl.NumberFormat(intlLocale(t.lang))
 
   function close() {
@@ -303,7 +311,14 @@ export default function HostedStoreDialog() {
                   )}
                 </div>
 
-                {doc ? (
+                {noCompany ? (
+                  <div className="mt-3" data-testid="hosted-no-company">
+                    <p className="text-sm text-slate-600">{t('sign.hosted_no_company')}</p>
+                    <a href={SET_UP_COMPANY_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800">
+                      {t('sign.setup_company_button')}
+                    </a>
+                  </div>
+                ) : doc ? (
                   canStore ? (
                     <button
                       onClick={onStore}
