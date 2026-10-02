@@ -17,6 +17,7 @@ export default {
   'could_not_store': 'Could not store this PDF.',
   'default_signature_name': 'Signature {n}', // default name of a saved signature in the library, n = its number
   'default_stamp_name': 'Stamp {n}', // default name of an imported stamp in the library, n = its number
+  'main_signature_name': 'Universal ID signature', // the library entry for the signature saved to the user's Universal ID (their main signature)
 
   // SignaturePad
   'pad_title_draw': 'Draw signature',

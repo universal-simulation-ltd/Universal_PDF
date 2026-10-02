@@ -17,6 +17,7 @@ const sign: Messages['sign'] = {
   'could_not_store': 'Impossible de stocker ce PDF.',
   'default_signature_name': 'Signature {n}',
   'default_stamp_name': 'Tampon {n}',
+  'main_signature_name': 'Signature Universal ID',
 
   // SignaturePad
   'pad_title_draw': 'Dessiner la signature',

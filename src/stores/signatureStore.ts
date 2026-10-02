@@ -44,9 +44,26 @@ export interface PendingExtra {
 
 export type ImportTarget = 'signature' | 'stamp'
 
+// The signed-in Universal ID's MAIN signature (platform 0224 — saved on the
+// hub's Me page or in Universal Signatures) is mirrored into the library as
+// one entry with this id prefix + its cert id. MainSignatureSync keeps it in
+// step; removing it here only hides it until a different main is saved.
+export const UID_MAIN_PREFIX = 'uid-main:'
+
+export interface UniversalIdSignature {
+  certId: string
+  name: string
+  dataUrl: string
+  width: number
+  height: number
+}
+
 interface SignatureState {
   signatures: Signature[]
   activeId: string | null
+  // Cert id of a Universal ID main signature the user removed from this
+  // library — not re-added unless the main signature changes.
+  dismissedMainCert: string | null
   // Text pieces (name/date) waiting to be click-placed after a separate
   // signature is dropped. Transient — not persisted.
   pendingExtras: PendingExtra[]
@@ -66,6 +83,8 @@ interface SignatureState {
   signingFieldId: string | null
   add: (sig: Omit<Signature, 'id' | 'createdAt'>) => string
   remove: (id: string) => void
+  // Mirror the Universal ID's main signature (null = signed out / none).
+  syncUniversalIdSignature: (main: UniversalIdSignature | null) => void
   setActive: (id: string | null) => void
   setPendingExtras: (items: PendingExtra[]) => void
   consumePendingExtra: () => void
@@ -88,6 +107,7 @@ export const useSignatureStore = create<SignatureState>()(
     (set) => ({
       signatures: [],
       activeId: null,
+      dismissedMainCert: null,
       pendingExtras: [],
       padOpen: false,
       importOpen: false,
@@ -108,8 +128,40 @@ export const useSignatureStore = create<SignatureState>()(
       remove: (id) =>
         set((s) => ({
           signatures: s.signatures.filter((x) => x.id !== id),
-          activeId: s.activeId === id ? null : s.activeId
+          activeId: s.activeId === id ? null : s.activeId,
+          dismissedMainCert: id.startsWith(UID_MAIN_PREFIX)
+            ? id.slice(UID_MAIN_PREFIX.length)
+            : s.dismissedMainCert
         })),
+      syncUniversalIdSignature: (main) =>
+        set((s) => {
+          const existing = s.signatures.find((x) => x.id.startsWith(UID_MAIN_PREFIX))
+          const rest = s.signatures.filter((x) => !x.id.startsWith(UID_MAIN_PREFIX))
+          const dropActive = (keepId: string | null) =>
+            s.activeId && s.activeId.startsWith(UID_MAIN_PREFIX) && s.activeId !== keepId ? null : s.activeId
+          if (!main) {
+            return existing ? { signatures: rest, activeId: dropActive(null) } : {}
+          }
+          const id = UID_MAIN_PREFIX + main.certId
+          if (existing?.id === id) {
+            return existing.name === main.name
+              ? {}
+              : { signatures: s.signatures.map((x) => (x.id === id ? { ...x, name: main.name } : x)) }
+          }
+          if (s.dismissedMainCert === main.certId) {
+            return existing ? { signatures: rest, activeId: dropActive(null) } : {}
+          }
+          const entry: Signature = {
+            id,
+            name: main.name,
+            dataUrl: main.dataUrl,
+            width: main.width,
+            height: main.height,
+            createdAt: Date.now()
+          }
+          // First in the list: it is the one most people will reach for.
+          return { signatures: [entry, ...rest], activeId: dropActive(id) }
+        }),
       // Switching the active signature abandons any half-finished placement.
       setActive: (activeId) => set({ activeId, pendingExtras: [] }),
       setPendingExtras: (pendingExtras) => set({ pendingExtras }),
@@ -133,7 +185,7 @@ export const useSignatureStore = create<SignatureState>()(
     }),
     {
       name: 'universal-pdf-signatures',
-      partialize: (s) => ({ signatures: s.signatures, activeId: s.activeId })
+      partialize: (s) => ({ signatures: s.signatures, activeId: s.activeId, dismissedMainCert: s.dismissedMainCert })
     }
   )
 )

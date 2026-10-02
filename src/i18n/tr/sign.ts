@@ -17,6 +17,7 @@ const sign: Messages['sign'] = {
   'could_not_store': 'Bu PDF depolanamadı.',
   'default_signature_name': 'İmza {n}',
   'default_stamp_name': 'Damga {n}',
+  'main_signature_name': 'Universal ID imzası',
 
   // SignaturePad
   'pad_title_draw': 'İmza çiz',

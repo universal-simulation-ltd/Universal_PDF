@@ -17,6 +17,7 @@ const sign: Messages['sign'] = {
   'could_not_store': 'Impossibile archiviare questo PDF.',
   'default_signature_name': 'Firma {n}',
   'default_stamp_name': 'Timbro {n}',
+  'main_signature_name': 'Firma Universal ID',
 
   // SignaturePad
   'pad_title_draw': 'Disegna firma',

@@ -17,6 +17,7 @@ const sign: Messages['sign'] = {
   'could_not_store': 'No se ha podido almacenar este PDF.',
   'default_signature_name': 'Firma {n}',
   'default_stamp_name': 'Sello {n}',
+  'main_signature_name': 'Firma de Universal ID',
 
   // SignaturePad
   'pad_title_draw': 'Dibujar firma',

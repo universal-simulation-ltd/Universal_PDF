@@ -9,6 +9,7 @@ import PdfViewer from './components/Viewer/PdfViewer'
 import PageNavigator from './components/Viewer/PageNavigator'
 import PlacementHint from './components/Viewer/PlacementHint'
 import SignaturePad from './components/Signature/SignaturePad'
+import MainSignatureSync from './components/Signature/MainSignatureSync'
 import StampPicker from './components/Signature/StampPicker'
 import SignatureImport from './components/Signature/SignatureImport'
 import LandingPage from './components/Landing/LandingPage'
@@ -781,6 +782,7 @@ export default function App() {
 
       <PageNavigator />
       <SignaturePad />
+      <MainSignatureSync />
       <SignatureImport />
       {stampPickerOpen && <StampPicker />}
       <LivePreview />

@@ -17,6 +17,7 @@ const sign: Messages['sign'] = {
   'could_not_store': 'Não foi possível armazenar este PDF.',
   'default_signature_name': 'Assinatura {n}',
   'default_stamp_name': 'Carimbo {n}',
+  'main_signature_name': 'Assinatura do Universal ID',
 
   // SignaturePad
   'pad_title_draw': 'Desenhar assinatura',

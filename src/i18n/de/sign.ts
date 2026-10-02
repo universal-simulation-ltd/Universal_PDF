@@ -17,6 +17,7 @@ const sign: Messages['sign'] = {
   'could_not_store': 'Dieses PDF konnte nicht gespeichert werden.',
   'default_signature_name': 'Unterschrift {n}',
   'default_stamp_name': 'Stempel {n}',
+  'main_signature_name': 'Universal-ID-Unterschrift',
 
   // SignaturePad
   'pad_title_draw': 'Unterschrift zeichnen',
