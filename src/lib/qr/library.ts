@@ -21,7 +21,7 @@
 // and the account's DYNAMIC codes — the re-pointable, scan-counted ones, which
 // are rows in `qr_dynamic_codes` and appear in neither of the other two.
 
-import { HOSTED_BUCKET, useUniversal, type HostedUpload } from '@unisim/sdk'
+import { downloadHostedObject, useUniversal, type HostedUpload } from '@unisim/sdk'
 import { hostedQrPathCandidates, qrSidecarPath } from '../hostedQrPaths'
 import { DEFAULT_DESIGN, type QrDesign } from '@unisim/qr'
 import { renderQrPng } from './render'
@@ -80,7 +80,9 @@ export function loadSavedQrDesigns(): SavedQrDesign[] {
 // the hosted bucket, and saves made since 2026-08-26 carry the full design as
 // a `<png-path>.json` sidecar. With the sidecar the code comes in editable,
 // exactly like a local save; without it (older saves) all we have is the
-// rendered PNG, which can still be placed as a plain image.
+// rendered PNG, which can still be placed as a plain image. Saves made since
+// migration 0226 may sit in Cloudflare R2 rather than the Supabase bucket —
+// the row's `storage_backend` says which, and both reads below follow it.
 
 type Supabase = ReturnType<typeof useUniversal>['supabase']
 
@@ -129,7 +131,7 @@ export async function loadHostedQrDesigns(
         const candidates = hostedQrPathCandidates(u)
 
         for (const path of candidates) {
-          const sidecar = await supabase.storage.from(HOSTED_BUCKET).download(qrSidecarPath(path))
+          const sidecar = await downloadHostedObject(supabase, { backend: u.storage_backend, path: qrSidecarPath(path) })
           if (!sidecar.error && sidecar.data) {
             const design = { ...DEFAULT_DESIGN, ...(JSON.parse(await sidecar.data.text()) as Partial<QrDesign>) }
             if (design.data) {
@@ -150,7 +152,7 @@ export async function loadHostedQrDesigns(
         // AND no usable PNG at the recorded path, so giving up here would lose
         // exactly the saves this is meant to recover.
         for (const path of candidates) {
-          const pngRes = await supabase.storage.from(HOSTED_BUCKET).download(path)
+          const pngRes = await downloadHostedObject(supabase, { backend: u.storage_backend, path })
           if (pngRes.error || !pngRes.data) continue
           const png = await blobToDataUrl(pngRes.data)
           return {

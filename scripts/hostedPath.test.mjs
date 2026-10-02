@@ -106,6 +106,18 @@ eq(
   'the two never duplicate when they agree',
 )
 
+console.log('\nR2 rows (migration 0226 -- storage_backend says where the bytes live):')
+eq(
+  hostedPdfPathCandidates({ id: UPLOAD, org_id: ORG, storage_path: `${ORG}/pdf/moved-elsewhere.pdf`, file_name: 'Contract.pdf', storage_backend: 'r2' }),
+  [`${ORG}/pdf/moved-elsewhere.pdf`],
+  'an R2 row is its recorded path only -- no legacy guess the R2 signer would refuse',
+)
+eq(
+  hostedPdfPathCandidates({ id: UPLOAD, org_id: ORG, storage_path: `${ORG}/pdf/moved-elsewhere.pdf`, file_name: 'Contract.pdf', storage_backend: 'supabase' }),
+  [`${ORG}/pdf/moved-elsewhere.pdf`, `${ORG}/pdf/${UPLOAD}-contract.pdf`],
+  "a 'supabase' row keeps the legacy fallback exactly as before",
+)
+
 console.log('\nnewObjectId (no secure-context dependency — the desktop app is file://):')
 const idA = newObjectId()
 const idB = newObjectId()
@@ -146,6 +158,11 @@ eq(
   hostedQrPathCandidates({ id: UPLOAD, org_id: ORG, storage_path: 'pending', file_name: 'my-code.png' }).map(qrSidecarPath),
   [`${ORG}/qr/${UPLOAD}-my-code.png.json`],
   'including for a legacy row, which is the whole point',
+)
+eq(
+  hostedQrPathCandidates({ id: UPLOAD, org_id: ORG, storage_path: `${ORG}/qr/other-name.png`, file_name: 'my-code.png', storage_backend: 'r2' }),
+  [`${ORG}/qr/other-name.png`],
+  'an R2 QR row is its recorded path only',
 )
 
 console.log(`\n${pass} passed, ${fail} failed`)

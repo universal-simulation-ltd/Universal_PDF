@@ -121,6 +121,8 @@ export interface HostedUploadRef {
   org_id: string
   storage_path: string | null
   file_name: string | null
+  /** Where the bytes live (migration 0226). Missing means 'supabase'. */
+  storage_backend?: 'supabase' | 'r2' | null
 }
 
 /**
@@ -130,11 +132,17 @@ export interface HostedUploadRef {
  *
  * De-duplicated, so a healthy row yields exactly one candidate and callers can
  * treat "all of them missed" as a genuine miss.
+ *
+ * An R2 row (0226) yields its recorded path only. The 'pending' rows all
+ * predate R2, every R2 row is written by a client that names the object first,
+ * and the R2 signer only ever answers for a row's own path — so a rebuilt
+ * guess there could never be found, only cost a round trip.
  */
 export function hostedPdfPathCandidates(upload: HostedUploadRef): string[] {
   const out: string[] = []
   const recorded = upload.storage_path?.trim()
   if (isUsableStoragePath(recorded, upload.org_id) && recorded) out.push(recorded)
+  if (upload.storage_backend === 'r2') return out
   const legacy = hostedPdfPath(upload.org_id, upload.id, upload.file_name)
   if (!out.includes(legacy)) out.push(legacy)
   return out
