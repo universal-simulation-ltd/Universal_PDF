@@ -2,19 +2,20 @@ import {
   consumeHostedUpload,
   refundHostedUpload,
   HOSTED_BUCKET,
-  type HostedUpload,
 } from '@unisim/sdk'
 import { buildAnnotatedPdfBytes } from './export'
-import { hostedPdfPath, hostedPdfPathCandidates, newObjectId } from './hostedPaths'
+import { signRequestPdfPath, hostedPdfPathCandidates, newObjectId, SIGN_PRODUCT } from './hostedPaths'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useFormStore } from '../stores/formStore'
 import { usePdfStore } from '../stores/pdfStore'
 import { getT } from '../i18n'
 
-// "Hosted by UNI·SIM" cloud storage for Universal PDF. Local storage (the
-// IndexedDB recents) stays free + temporary; hosting keeps a PDF online against
-// the user's Universal ID for one token (subscriptions.credits), refunded on
-// delete. Backend: migration 0041 + the @unisim/sdk hosted helpers.
+// The one PDF Universal PDF stores online: the copy a "Send to sign" request
+// needs so its recipient can open it. Free for everyone (migration 0227, its
+// own 'pdf_sign' budget). There is no general online backup any more — James,
+// 2026-10-03: "we don't want to be a file hoster when they have so many other
+// free choices for that". Local storage (the IndexedDB recents) and the
+// downloadable backup file are the ways to keep a PDF.
 
 type Supabase = Parameters<typeof consumeHostedUpload>[0]
 
@@ -37,7 +38,6 @@ export async function currentPdfBytes(): Promise<{ bytes: Uint8Array; fileName: 
 export interface StoreResult {
   ok: boolean
   error?: string
-  creditsRemaining?: number
   /** The hosted_uploads ledger id — "Send to sign" mints its request against
    *  this. Present on a successful store. */
   uploadId?: string
@@ -45,30 +45,22 @@ export interface StoreResult {
   fileName?: string
 }
 
-/** Spend one token and store the current PDF in the cloud. Reserves the token
- *  first (so the wallet can't be over-spent), then uploads; if the upload fails
- *  the token is refunded so the user is never charged for a file that isn't
- *  there. `orgId` is the signed-in user's org (path segment that drives RLS). */
-export async function storeCurrentPdf(supabase: Supabase, orgId: string): Promise<StoreResult> {
+/** Store the current PDF online for a sign request. Records the ledger row
+ *  first, then uploads; if the upload fails the row is removed again so no
+ *  entry is left pointing at nothing. `orgId` is the signed-in user's org (the
+ *  path segment that drives RLS). */
+export async function storeForSignRequest(supabase: Supabase, orgId: string): Promise<StoreResult> {
   const { bytes, fileName } = await currentPdfBytes()
 
-  // ⚠️ NAME THE OBJECT FIRST. This used to reserve the row with a placeholder
-  // `storagePath: 'pending'`, upload, then UPDATE the row with the real path —
-  // and that update silently did nothing on every account that isn't the
-  // platform admin, because `hosted_uploads` grants members SELECT and nothing
-  // else (0041). So the ledger kept saying `pending`, the dialog listed a
-  // backup, and opening it asked storage for an object named `pending`:
-  // "Object not found", for a file that had uploaded perfectly. See
-  // `hostedPaths.ts` for the full write-up and the legacy recovery.
-  //
-  // A client-side object id removes the round trip the RLS was blocking: the
-  // path is known before the token is reserved, so the RPC records the truth
-  // at insert time and there is no second write to fail.
-  const path = hostedPdfPath(orgId, newObjectId(), fileName)
+  // ⚠️ NAME THE OBJECT FIRST. `hosted_uploads` grants members SELECT and
+  // nothing else (0041), so the path cannot be filled in after the row exists —
+  // that is how every old backup ended up filed as `pending`. See
+  // `hostedPaths.ts` for the full write-up.
+  const path = signRequestPdfPath(orgId, newObjectId(), fileName)
 
-  // 1) Reserve the token + ledger row (the RPC charges the caller's primary org).
+  // 1) Record the ledger row (the RPC files it under the caller's primary org).
   const consumed = await consumeHostedUpload(supabase, {
-    product: 'pdf',
+    product: SIGN_PRODUCT,
     storagePath: path,
     fileName,
     sizeBytes: bytes.byteLength,
@@ -77,41 +69,47 @@ export async function storeCurrentPdf(supabase: Supabase, orgId: string): Promis
     return { ok: false, error: consumed.error ?? getT()('lib.hosted_reserve_failed') }
   }
 
-  // 2) Upload to hosted-uploads/<org>/pdf/<object_id>-<stem>.pdf
+  // 2) Upload to hosted-uploads/<org>/pdf_sign/<object_id>-<stem>.pdf
   const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
   const { error: upErr } = await supabase.storage
     .from(HOSTED_BUCKET)
     .upload(path, blob, { contentType: 'application/pdf', upsert: true })
 
   if (upErr) {
-    // Roll the token back so a failed upload never costs the user.
     await refundHostedUpload(supabase, consumed.upload_id)
     return { ok: false, error: upErr.message }
   }
 
-  return {
-    ok: true,
-    creditsRemaining: consumed.credits,
-    uploadId: consumed.upload_id,
-    storagePath: path,
-    fileName,
-  }
+  return { ok: true, uploadId: consumed.upload_id, storagePath: path, fileName }
 }
 
-/** Delete a hosted PDF (storage object first, then the ledger row + token
- *  refund). Idempotent — a missing row still refunds nothing extra.
+/** Remove what a revoked sign request had stored: the copy it was sent with
+ *  and, if one party had already signed, the signed copy. Best-effort and
+ *  called AFTER the request row is gone — a leftover file is a tidy-up miss,
+ *  but a request whose document vanished first would greet its recipient with
+ *  "no longer stored".
  *
- *  Removes EVERY path the bytes could be under, not just the one the ledger
- *  names: a legacy row says `pending`, so deleting only that would refund the
- *  token and leave the real 50 MB object orphaned in the bucket forever, with
- *  the row that pointed at it gone. */
-export async function deleteHostedPdf(supabase: Supabase, upload: HostedUpload): Promise<StoreResult> {
-  // Remove the objects under the member-delete policy; ignore a "not found" so
-  // a half-deleted upload can still be cleared.
-  await supabase.storage.from(HOSTED_BUCKET).remove(hostedPdfPathCandidates(upload))
-  const res = await refundHostedUpload(supabase, upload.id)
-  if (!res.ok) return { ok: false, error: res.error ?? getT()('lib.hosted_refund_failed') }
-  return { ok: true, creditsRemaining: res.credits }
+ *  `signedCopyPath` must be read before the request row is deleted; the
+ *  upload's ledger row outlives it (the foreign key only nulls). */
+export async function removeSignRequestFiles(
+  supabase: Supabase,
+  uploadId: string | null,
+  signedCopyPath: string | null,
+): Promise<void> {
+  const paths: string[] = []
+  if (signedCopyPath) paths.push(signedCopyPath)
+  if (uploadId) {
+    const { data: row } = await supabase
+      .from('hosted_uploads')
+      .select('id, org_id, storage_path, file_name')
+      .eq('id', uploadId)
+      .maybeSingle()
+    // Every path the bytes could be under: requests made before 0227 were
+    // stored as `pdf`, and the oldest of those were filed as `pending`.
+    if (row) paths.push(...hostedPdfPathCandidates(row))
+  }
+  if (paths.length > 0) await supabase.storage.from(HOSTED_BUCKET).remove(paths)
+  if (uploadId) await refundHostedUpload(supabase, uploadId)
 }
 
 /** Open a signed copy filed by a sign-request recipient (it lives under
@@ -128,53 +126,4 @@ export async function openSignedCopy(
   const base = (docName ?? 'document.pdf').replace(/\.pdf$/i, '')
   const file = new File([data], `${base}-signed.pdf`, { type: 'application/pdf' })
   await usePdfStore.getState().loadFile(file)
-}
-
-/**
- * Thrown when a listed backup has no object behind it anywhere we know to look.
- *
- * A distinct type so the dialog can answer honestly — name the file, say the
- * upload never completed, and offer to clear the entry and take the token back
- * — instead of surfacing storage's bare "Object not found", which reads like
- * the app has lost the user's document.
- */
-export class HostedObjectMissingError extends Error {
-  readonly fileName: string
-  constructor(fileName: string) {
-    super(`"${fileName}" is listed as backed up, but there is no file behind it.`)
-    this.name = 'HostedObjectMissingError'
-    this.fileName = fileName
-  }
-}
-
-/**
- * Open a hosted PDF back into the editor (download → loadFile).
- *
- * Tries every candidate path in turn (see `hostedPdfPathCandidates`), so the
- * backups the old three-step store flow filed as `pending` still open: their
- * bytes are in the bucket under the name the uploader used, which is fully
- * recoverable from the row itself. Only when nothing is there does this throw
- * — as `HostedObjectMissingError`, so the caller can offer the cleanup.
- */
-export async function openHostedPdf(supabase: Supabase, upload: HostedUpload): Promise<void> {
-  const name = upload.file_name ?? 'document.pdf'
-  let lastError: string | null = null
-
-  for (const path of hostedPdfPathCandidates(upload)) {
-    const { data, error } = await supabase.storage.from(HOSTED_BUCKET).download(path)
-    if (data && !error) {
-      const file = new File([data], name, { type: 'application/pdf' })
-      await usePdfStore.getState().loadFile(file)
-      return
-    }
-    lastError = error?.message ?? null
-  }
-
-  // Every candidate missed. Distinguish "not there" from "could not ask" — a
-  // dropped connection or an expired session must NOT be reported as a dead
-  // backup, or the user is invited to delete a document that is perfectly fine.
-  if (lastError && !/not.?found|does not exist|404/i.test(lastError)) {
-    throw new Error(lastError)
-  }
-  throw new HostedObjectMissingError(name)
 }

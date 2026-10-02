@@ -36,6 +36,13 @@
 /** The `pdf` segment of every Universal PDF object path. */
 export const HOSTED_PRODUCT = 'pdf'
 
+/**
+ * The product a "Send to sign" copy is stored under (migration 0227): its own
+ * free, uncounted budget, so a sign request never draws on the shared files
+ * pool or a purchased token. Old backups and older sign requests stay `pdf`.
+ */
+export const SIGN_PRODUCT = 'pdf_sign'
+
 /** The placeholder the old three-step flow filed rows under. */
 export const PENDING_PATH = 'pending'
 
@@ -88,6 +95,11 @@ export function newObjectId(): string {
  */
 export function hostedPdfPath(orgId: string, objectId: string, fileName: string | null | undefined): string {
   return `${orgId}/${HOSTED_PRODUCT}/${objectId}-${safeStem(fileName)}.pdf`
+}
+
+/** Where a "Send to sign" copy lives: `hosted-uploads/<org_id>/pdf_sign/<object_id>-<stem>.pdf`. */
+export function signRequestPdfPath(orgId: string, objectId: string, fileName: string | null | undefined): string {
+  return `${orgId}/${SIGN_PRODUCT}/${objectId}-${safeStem(fileName)}.pdf`
 }
 
 /**

@@ -4,8 +4,6 @@ import {
   useUniversal,
   useUser,
   useOrg,
-  useCredits,
-  useAppFreeToken,
   useSignRequests,
   createSignRequest,
   updateSignRequestRecipient,
@@ -17,11 +15,8 @@ import {
 } from '@unisim/sdk'
 import { usePdfStore } from '../stores/pdfStore'
 import LockedOriginNote from './Lock/LockedOriginNote'
-// App Review 3.1.1: the phone app must not point people to buying tokens on
-// the web. The web and desktop builds keep the link and the wording.
-import { isNativeShell } from '../lib/nativeOpen'
 import { useAnnotationStore } from '../stores/annotationStore'
-import { storeCurrentPdf, currentPdfBytes } from '../lib/hostedStore'
+import { storeForSignRequest, currentPdfBytes, removeSignRequestFiles } from '../lib/hostedStore'
 import {
   applySignRequestProtection,
   generateAccessPin,
@@ -31,7 +26,6 @@ import {
   signRequestMailto,
 } from '../lib/signRequestClient'
 import { useT, intlLocale, type MessageKey } from '../i18n'
-import { useFreeAllowance, nearFreeLimit } from '../lib/useFreeAllowance'
 
 // Human labels for a request's signing state (either-order two-party flow).
 // A toned state is a Value chip (the tone fills its key); the neutral one is
@@ -44,17 +38,12 @@ const STATUS_UI: Record<string, { label: MessageKey; tone?: 'good' | 'warn' }> =
 }
 
 const HUB_LOGIN_URL = 'https://app.unisim.co.uk/login'
-// Nothing is for sale for the everyday apps (2026-10-03): at the free limit the
-// note says how to make room, and one quiet link asks people who need more to
-// tell us — that is the signal for when a paid tier is worth building. It is a
-// support link, not a purchase link, so the phone apps show it too.
-const NEED_MORE_URL = 'https://www.unisim.co.uk/support'
 // Where a signed-in Universal ID with no company sets one up. Opened in a new
 // tab so the PDF open here is not navigated away from.
 const SET_UP_COMPANY_URL = 'https://app.unisim.co.uk/branding'
 
-// Export → "Send to sign": store the current PDF online (one token — the free
-// app token first, returned when the stored file is deleted), mint a
+// Export → "Send to sign": store the current PDF online (free for everyone —
+// its own uncounted 'pdf_sign' budget, migration 0227), mint a
 // pdf_sign_requests capability link (?signdoc=<id>), and hand it to the
 // recipient — copied, or emailed with the PDF attached via send-sign-request
 // (mailto: fallback when that isn't configured). Gated on a signed-in,
@@ -89,11 +78,7 @@ export default function SendToSignDialog() {
   const { orgs, loading: orgsLoading, error: orgsError } = useOrg()
   const noCompany = !orgsLoading && !orgsError && orgs.length === 0
   const { user } = useUser()
-  const { credits, refresh: refreshCredits } = useCredits()
-  const { status: freeToken, refresh: refreshFreeToken } = useAppFreeToken('pdf')
   const { requests, loading: listLoading, refresh: refreshList } = useSignRequests()
-  // The shared free "files" pool's numbers — only for the near-the-limit line.
-  const { status: allowance, refresh: refreshAllowance } = useFreeAllowance('pdf', open)
 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -132,18 +117,6 @@ export default function SendToSignDialog() {
 
   const signedIn = !!session?.user && session.user.is_anonymous !== true
   const emailVerified = !!session?.user?.email_confirmed_at
-  // App Review 3.1.1 (1.0.4, 2026-09-25): the phone app may not use tokens
-  // bought on the web, because it sells none through In-App Purchase. So in a
-  // native shell only the free per-app token counts — the purchased balance is
-  // neither shown nor offered, and the button stays off once the free token is
-  // held (the server spends the free token first, so gating here is enough).
-  const native = isNativeShell()
-  const tokens = native ? 0 : (credits ?? 0)
-  const canStore = freeToken === 'available' || tokens > 0
-  // Talk about the limit only once it is close: 80%+ used and still room. At
-  // the limit the existing at-limit message takes over instead.
-  const near = signedIn && freeToken !== 'held' ? nearFreeLimit(allowance) : null
-  const fmt = new Intl.NumberFormat(intlLocale(t.lang))
 
   function close() {
     setOpen(false)
@@ -205,13 +178,11 @@ export default function SendToSignDialog() {
     setBusy(true)
     setError(null)
     try {
-      const stored = await storeCurrentPdf(supabase, activeOrgId)
+      const stored = await storeForSignRequest(supabase, activeOrgId)
       if (!stored.ok || !stored.uploadId) {
-        setError(
-          stored.error === 'no_credits'
-            ? (isNativeShell() ? t('sign.no_tokens_left') : t('sign.send_token_held'))
-            : stored.error ?? t('sign.could_not_store'),
-        )
+        // 'storage_full' is the suite-wide safety cap (0227), not this
+        // person's doing — the generic "could not store" is the honest answer.
+        setError(!stored.error || stored.error === 'storage_full' ? t('sign.could_not_store') : stored.error)
         return
       }
       const req = await createSignRequest(supabase, {
@@ -253,9 +224,6 @@ export default function SendToSignDialog() {
         requesterLink: requester ? signRequestLink(requester.token) : null,
         docName: stored.fileName ?? 'document.pdf',
       })
-      refreshCredits()
-      refreshFreeToken()
-      refreshAllowance()
       refreshList()
     } finally {
       setBusy(false)
@@ -338,12 +306,19 @@ export default function SendToSignDialog() {
     setBusy(true)
     setError(null)
     try {
+      // Read before the row goes: the signed copy's path lives only on it.
+      const { data: row } = await supabase
+        .from('pdf_sign_requests')
+        .select('latest_storage_path')
+        .eq('id', req.id)
+        .maybeSingle()
       const res = await deleteSignRequest(supabase, req.id)
       if (!res.ok) setError(res.error ?? t('sign.send_could_not_revoke'))
       else {
         if (minted?.id === req.id) setMinted(null)
-        refreshAllowance()
         refreshList()
+        // A revoked request's document is not kept: nothing else stores PDFs.
+        removeSignRequestFiles(supabase, req.upload_id, (row?.latest_storage_path as string | null) ?? null).catch(() => {})
       }
     } finally {
       setBusy(false)
@@ -430,12 +405,7 @@ export default function SendToSignDialog() {
             <>
               {/* ── Step 1: store + mint the link ── */}
               <div className="rounded-xl border border-orange-200 bg-white p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-semibold text-slate-900">{t('sign.send_step1')}</span>
-                  {/* No allowance talk while the free allowance covers it — only a
-                      neutral count of purchased tokens, when there are any. */}
-                  {!native && tokens > 0 && <ValueChip size="sm" label={tokens}>{t.plural('sign.send_tokens_unit', tokens)}</ValueChip>}
-                </div>
+                <span className="text-sm font-semibold text-slate-900">{t('sign.send_step1')}</span>
 
                 {noCompany && !minted ? (
                   <div className="mt-3" data-testid="send-no-company">
@@ -518,7 +488,7 @@ export default function SendToSignDialog() {
                       )}
                     </div>
                   </div>
-                ) : canStore ? (
+                ) : (
                   <>
                   {needsRedactConfirm && (
                     <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3">
@@ -626,23 +596,7 @@ export default function SendToSignDialog() {
                   >
                     {busy ? t('sign.send_storing') : t('sign.send_store_create')}
                   </button>
-                  {near && (
-                    <p className="mt-2 text-xs text-slate-500" data-testid="free-storage-near-limit">
-                      {t('sign.free_storage_near_limit', { used: fmt.format(near.usedMb), limit: fmt.format(near.limitMb) })}
-                    </p>
-                  )}
                   </>
-                ) : freeToken === null ? null : (
-                  <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                    <p className="text-sm text-amber-800">
-                      {freeToken === 'held'
-                        ? t('sign.send_token_held')
-                        : t('sign.no_tokens_left')}
-                    </p>
-                    <a href={NEED_MORE_URL} target="_blank" rel="noreferrer" className="mt-1.5 inline-block text-xs text-amber-800 underline underline-offset-2 hover:text-amber-950">
-                      {t('sign.need_more')}
-                    </a>
-                  </div>
                 )}
               </div>
 

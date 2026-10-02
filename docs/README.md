@@ -20,9 +20,10 @@ Scanned / image-only PDFs can be made **searchable on-device via OCR**
 - **Wrappers:** an `electron/` folder provides a desktop build
   (`npm run dist`), and a `capacitor.config.ts` exists for native mobile
   packaging. Desktop apps are shipped unsigned per suite policy.
-- **Optional cloud storage:** the Actions → Store dialog offers local (free)
-  vs "Hosted by UNI·SIM" storage — the latter is Universal-ID-gated and
-  consumes an upload token via the shared suite Supabase project.
+- **No online backup:** File → Back up offers only local options (the
+  automatic browser copy and a re-importable backup file). The one PDF stored
+  online is a Send to sign copy — free, Universal-ID-gated, in the shared suite
+  Supabase project (migration 0227, product `pdf_sign`).
 
 MIT licensed — free and open source, like all Universal Apps.
 
@@ -310,12 +311,19 @@ eyeballing the signed-in chrome; `e2e/actions-menu.e2e.mjs` runs on it.
 frozen object — which is why `e2e/profile-identity.e2e.mjs` seeds a session
 into `universal-suite-auth` and stubs `/rest/v1/*` itself instead.
 
-## Hosted backups — and the `pending` path that broke every one of them
+## Hosted copies — and the `pending` path that broke every one of them
 
-**Back up → "Hosted by UNI·SIM"** keeps a flattened PDF in the private
-`hosted-uploads` bucket against the user's Universal ID for one token, refunded
-on delete. `src/lib/hostedStore.ts` does the work; `src/lib/hostedPaths.ts` owns
-the object names.
+**Retired 2026-10-03:** "Back up → Hosted by UNI·SIM" is gone (James: "we don't
+want to be a file hoster when they have so many other free choices for that").
+The only PDF stored online now is the copy **Send to sign** needs, under
+`<org>/pdf_sign/…` — free for everyone, its own uncounted budget (migration
+0227), refused only with `storage_full` when the suite-wide storage caps are
+reached. Revoking a request deletes its copy (and any signed copy). Old `pdf`
+rows (two backups on prod at retirement) were left in place. The history below
+still explains why paths are named before the ledger row exists.
+
+`src/lib/hostedStore.ts` does the work; `src/lib/hostedPaths.ts` owns the
+object names.
 
 ### ⚠️ `hosted_uploads` grants members SELECT and nothing else
 

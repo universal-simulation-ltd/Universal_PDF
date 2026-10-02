@@ -101,7 +101,6 @@ const lib: Messages['lib'] = {
 
   // hostedStore
   'hosted_reserve_failed': 'Não foi possível reservar armazenamento online para este PDF.',
-  'hosted_refund_failed': 'Não foi possível libertar o armazenamento online deste PDF.',
   'hosted_signed_download_failed': 'Não foi possível transferir o PDF assinado.',
 
   // signRequestClient

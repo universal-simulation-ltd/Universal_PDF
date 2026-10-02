@@ -101,7 +101,6 @@ export default {
 
   // hostedStore
   'hosted_reserve_failed': 'Could not reserve online storage for this PDF.',
-  'hosted_refund_failed': 'Could not free up the online storage for this PDF.',
   'hosted_signed_download_failed': 'Could not download the signed PDF.',
 
   // signRequestClient

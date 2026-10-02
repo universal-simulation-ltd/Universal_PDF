@@ -11,8 +11,6 @@ export default {
   'sending': 'Sending…',
   'loading': 'Loading…',
   'none_yet': 'None yet.',
-  'no_tokens_left': "You've used your free online storage for PDFs.",
-  'need_more': 'Need more? Tell us', // low-key link to the support page, under the at-limit note
   'open_universal_pdf': 'Open Universal PDF',
   'could_not_store': 'Could not store this PDF.',
   'default_signature_name': 'Signature {n}', // default name of a saved signature in the library, n = its number
@@ -224,8 +222,6 @@ export default {
   'send_resend': 'Resend confirmation email',
   'send_recheck': "I've verified — check again",
   'send_step1': '1 · Save online & create the link',
-  'send_tokens_unit_one': 'token', // follows a number shown in a separate chip, e.g. [3] tokens
-  'send_tokens_unit_other': 'tokens',
   'send_open_pdf_first': 'Open a PDF first.',
   'send_no_company': 'Sign requests are sent from your company, and your Universal ID doesn’t have one yet. Setting one up is free.', // signed in, but the Universal ID belongs to no company yet
   'send_add_box_first': 'Add a “Sign here” box first',
@@ -252,7 +248,6 @@ export default {
   'send_also_pin_hint': "We'll generate one to read out to them by phone or text. Use it if their inbox itself might not be private.",
   'send_storing': 'Storing…',
   'send_store_create': 'Store online & create sign link',
-  'send_token_held': "You've used your free online storage for PDFs. Delete a stored PDF (Actions → Back up…) to make room.", // at the free limit, web and phone apps alike
   'send_step2': '2 · Email it to someone',
   'send_step2_hint': "They'll get the PDF attached plus a button to sign it online. You'll be emailed when it's signed.",
   'send_sent_to': "✓ Sent to {to} — we'll email you at {email} once it's signed.",
@@ -266,7 +261,6 @@ export default {
   'send_revoke': 'Revoke',
 
   // HostedStoreDialog
-  'hosted_could_not_delete': 'Could not delete this PDF.',
   'hosted_title': 'Back up this PDF',
   'hosted_browser': 'Save to browser',
   'hosted_browser_chip': 'Local · temporary',
@@ -279,26 +273,7 @@ export default {
   'hosted_importing': 'Importing…',
   'hosted_import_backup': 'Import a backup',
   'hosted_open_to_backup_or_import': 'Open a PDF to back it up — or import a backup to restore one.',
-  'hosted_cloud': 'Hosted by UNI SIM',
-  'hosted_cloud_chip': 'Universal subscription',
-  'hosted_cloud_body': 'Keep this PDF online against your Universal ID, so you can open it on any device.',
-  'hosted_sign_in': 'Create a {id} to back up PDFs online for FREE.', // id = "Universal ID" in bold
-  'hosted_sign_in_button': 'Create / sign in with Universal ID →',
-  'hosted_tokens_one': '{count} token',
-  'hosted_tokens_other': '{count} tokens',
-  'hosted_backing_up': 'Backing up…',
-  'hosted_backed_up': '✓ Backed up',
-  'hosted_back_up_online': 'Back up this PDF online',
-  'hosted_token_held': "You've used your free online storage for PDFs. Delete a stored PDF below to make room.", // at the free limit, web and phone apps alike
-  'free_storage_near_limit': "You've used {used} MB of your {limit} MB of free online storage. It's shared by Universal PDF, Images, Exports and Recorder.", // used/limit = whole megabytes
-  'hosted_open_to_backup': 'Open a PDF to back it up.',
-  'hosted_no_company': 'Online files are kept with your company, and your Universal ID doesn’t have one yet. Setting one up is free.', // signed in, but the Universal ID belongs to no company yet
   'setup_company_button': 'Set up a company →', // links to the page where a company is set up
-  'hosted_your_backups': 'Your backups',
-  'hosted_open': 'Open',
-  'hosted_delete_title': 'Delete this stored PDF',
-  'hosted_missing': '{file} is listed here, but there is no file behind it — this upload never finished, so nothing was ever stored. Remove the entry to free up its space.', // file = file name in bold
-  'hosted_remove_entry': 'Remove this entry',
 
   // saved stamp names (SignatureMenu, StampPicker)
   'stamp_named': '{name} Stamp', // {name} is the stamp's own word, e.g. APPROVED

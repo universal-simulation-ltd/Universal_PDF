@@ -101,7 +101,6 @@ const lib: Messages['lib'] = {
 
   // hostedStore
   'hosted_reserve_failed': 'Bu PDF için çevrimiçi depolama alanı ayrılamadı.',
-  'hosted_refund_failed': 'Bu PDF’in çevrimiçi depolama alanı boşaltılamadı.',
   'hosted_signed_download_failed': 'İmzalı PDF indirilemedi.',
 
   // signRequestClient

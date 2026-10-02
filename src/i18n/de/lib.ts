@@ -101,7 +101,6 @@ const lib: Messages['lib'] = {
 
   // hostedStore
   'hosted_reserve_failed': 'Online-Speicher für dieses PDF konnte nicht reserviert werden.',
-  'hosted_refund_failed': 'Online-Speicher für dieses PDF konnte nicht freigegeben werden.',
   'hosted_signed_download_failed': 'Das unterschriebene PDF konnte nicht heruntergeladen werden.',
 
   // signRequestClient

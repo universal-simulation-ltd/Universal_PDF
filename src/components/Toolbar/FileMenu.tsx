@@ -533,7 +533,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                 </button>
               )}
 
-              {/* Backup: free local (automatic) vs paid "Hosted by UNI·SIM" cloud. */}
+              {/* Backup: both local — automatic recents, or a re-importable file. */}
               <button
                 onClick={() => { setHostedStoreOpen(true); closeMenu() }}
                 className="w-full flex items-center gap-3 pl-8 pr-3 py-2.5 text-sm text-slate-700 hover:bg-white transition-colors"
