@@ -27,6 +27,33 @@ export function safeLinkUrl(raw: unknown): string | null {
   return SAFE_PROTOCOLS.has(parsed.protocol) ? parsed.href : null
 }
 
+/**
+ * What someone TYPED into "Link URL", as the href to store — or null if it
+ * isn't something a link can point at.
+ *
+ * People type `example.com`, not `https://example.com`, and that used to be
+ * stored as it stood: a RELATIVE href, which in the editor resolved against the
+ * app's own origin and in the exported PDF became a /URI no reader could
+ * follow. A bare address gets `https://`, a bare email address `mailto:`.
+ * Anything with a scheme goes through `safeLinkUrl`, so `javascript:` and
+ * `data:` can't be typed (or pasted) into a document's links either.
+ */
+export function userLinkHref(input: string): string | null {
+  const raw = input.trim()
+  if (!raw || /\s/.test(raw)) return null
+  if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) {
+    // `localhost:3000` reads as a scheme to URL — treat host:port as an address.
+    if (/^[\w.-]+:\d+(\/|$)/.test(raw)) return safeLinkUrl(`https://${raw}`)
+    return safeLinkUrl(raw)
+  }
+  if (/^[^@/]+@[^@/]+\.[^@/]+$/.test(raw)) return safeLinkUrl(`mailto:${raw}`)
+  if (raw.startsWith('//')) return safeLinkUrl(`https:${raw}`)
+  // A host needs a dot (example.com, www.gov.uk) — "hello" is not an address.
+  const host = raw.split(/[/?#]/)[0]
+  if (!/^[\w-]+(\.[\w-]+)+(:\d+)?$/.test(host)) return null
+  return safeLinkUrl(`https://${raw}`)
+}
+
 /** A url short enough to sit in a tooltip without filling the screen. */
 export function linkLabel(url: string): string {
   return url.length > 80 ? `${url.slice(0, 77)}…` : url

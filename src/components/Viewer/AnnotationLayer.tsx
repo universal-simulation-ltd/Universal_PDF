@@ -36,6 +36,7 @@ import { requestWordSelect } from '../../lib/wordSelect'
 import { isPaleFill, redactFillHex } from '../../lib/redactGate'
 import { FONT_CSS } from '../../lib/fonts'
 import { effectiveRuns, runFontStyle, runHasStyle, runUnderlined, runsToPlainText, runsToHtml, parseRunsFromDom, mergeRuns } from '../../lib/textRuns'
+import { userLinkHref } from '../../lib/links'
 import { centreOnTap, tapRedactBox } from '../../lib/tapPlacement'
 import { LINE_HEIGHT, layoutText, textBoxSize } from '../../lib/textLayout'
 import type { Annotation, DrawAnnotation, ImageAnnotation, ImageBorder, SignatureData, SignatureFieldAnnotation, SigAlign, TextAnnotation, Tool, TextRun } from '../../types/annotations'
@@ -3172,8 +3173,18 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             const cur = runs.find((r) => r.link)?.link ?? ''
             const next = window.prompt(t('annotate.text.link_prompt'), cur || 'https://')
             if (next === null) return
-            const url = next.trim()
-            writeRuns(runs.map((r) => ({ ...r, link: url ? url : undefined })))
+            // Blank (or the untouched "https://" prefill) removes the link.
+            const typed = next.trim()
+            if (!typed || typed === 'https://') {
+              writeRuns(runs.map((r) => ({ ...r, link: undefined })))
+              return
+            }
+            const href = userLinkHref(typed)
+            if (!href) {
+              window.alert(t('annotate.text.link_invalid', { url: typed }))
+              return
+            }
+            writeRuns(runs.map((r) => ({ ...r, link: href })))
             return
           }
           const on = !allHave(kind)
@@ -4322,6 +4333,10 @@ function TextEditor({
           const saved = sel && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null
           formattingRef.current = true
           const url = window.prompt(getT()('annotate.text.link_prompt_selection'), '')
+          // Checked while the prompt's blur guard is still up, so the alert
+          // can't commit the edit underneath it either.
+          const href = url && url.trim() ? userLinkHref(url) : null
+          if (url && url.trim() && !href) window.alert(getT()('annotate.text.link_invalid', { url: url.trim() }))
           el.focus()
           if (saved) {
             const s = window.getSelection()
@@ -4330,8 +4345,8 @@ function TextEditor({
           }
           formattingRef.current = false
           if (url === null) return
-          if (url.trim()) document.execCommand('createLink', false, url.trim())
-          else document.execCommand('unlink')
+          if (!url.trim()) document.execCommand('unlink')
+          else if (href) document.execCommand('createLink', false, href)
           return
         }
         el.focus()
@@ -4359,6 +4374,15 @@ function TextEditor({
       className="upd-text-editor"
       contentEditable
       suppressContentEditableWarning
+      // Paste as plain text. A rich paste brought the source page's markup in
+      // with it — its links (any scheme), remote images that loaded from a
+      // third party the moment they landed, and bold/italic spans the run
+      // parser then half-understood. Styling is the pill's job.
+      onPaste={(e) => {
+        const text = e.clipboardData.getData('text/plain')
+        e.preventDefault()
+        if (text) document.execCommand('insertText', false, text.replace(/\s*[\r\n]+\s*/g, ' '))
+      }}
       onBlur={() => {
         // If we blur in the same frame as mount (focus never landed), or a link
         // prompt has focus, keep the editor open.

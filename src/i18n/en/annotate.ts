@@ -42,6 +42,7 @@ export default {
   'text.add_link': 'Add link',
   'text.link_prompt': 'Link URL (leave blank to remove):',
   'text.link_prompt_selection': 'Link URL for the selected text (blank to remove):',
+  'text.link_invalid': '“{url}” isn’t a web or email address, so no link was added. Try something like example.com.',
   'text.size_decrease': 'Decrease text size',
   'text.size_field': 'Font size in points',
   'text.size_increase': 'Increase text size',

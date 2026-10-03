@@ -42,6 +42,7 @@ const annotate: Messages['annotate'] = {
   'text.add_link': 'Bağlantı ekle',
   'text.link_prompt': 'Bağlantı URL’si (kaldırmak için boş bırakın):',
   'text.link_prompt_selection': 'Seçili metin için bağlantı URL’si (kaldırmak için boş bırakın):',
+  'text.link_invalid': '“{url}” bir web ya da e-posta adresi değil, bu yüzden bağlantı eklenmedi. Örneğin example.com gibi bir adres deneyin.',
   'text.size_decrease': 'Metin boyutunu küçült',
   'text.size_field': 'Punto cinsinden yazı tipi boyutu',
   'text.size_increase': 'Metin boyutunu büyüt',

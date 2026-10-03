@@ -1,4 +1,5 @@
 import type { TextAnnotation, TextRun } from '../types/annotations'
+import { safeLinkUrl } from './links.ts'
 
 // The style keys that vary per run (everything else — colour, size, family — is
 // whole-annotation).
@@ -117,7 +118,9 @@ function walk(node: Node, ctx: RunStyle, out: TextRun[]): void {
     if (tag === 'I' || tag === 'EM') next.italic = true
     if (tag === 'U') next.underline = true
     if (tag === 'A') {
-      const href = el.getAttribute('href')
+      // Only a link we would follow ourselves — see `safeLinkUrl`. Every href
+      // the editor writes is already absolute (`userLinkHref`).
+      const href = safeLinkUrl(el.getAttribute('href'))
       if (href) next.link = href
     }
     const st = el.style

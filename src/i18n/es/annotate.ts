@@ -42,6 +42,7 @@ const annotate: Messages['annotate'] = {
   'text.add_link': 'Añadir enlace',
   'text.link_prompt': 'URL del enlace (déjalo en blanco para quitarlo):',
   'text.link_prompt_selection': 'URL del enlace para el texto seleccionado (en blanco para quitarlo):',
+  'text.link_invalid': '«{url}» no es una dirección web ni de correo, así que no se ha añadido el enlace. Prueba algo como ejemplo.com.',
   'text.size_decrease': 'Reducir tamaño del texto',
   'text.size_field': 'Tamaño de fuente en puntos',
   'text.size_increase': 'Aumentar tamaño del texto',

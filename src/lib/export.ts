@@ -12,6 +12,7 @@ import { LINE_HEIGHT, layoutText } from './textLayout'
 import { runUnderlined } from './textRuns'
 import { openPdf, type PDFDocumentProxy } from './pdfjs'
 import { redactFillHex } from './redactGate'
+import { safeLinkUrl } from './links'
 import { saveBlob } from '@unisim/media/save'
 import { getT } from '../i18n'
 import { loadFallbackFont } from './fallbackFont'
@@ -487,8 +488,12 @@ async function drawAnnotations(
                   // A clickable URI link over just this run's box. The rect is
                   // axis-aligned (run rotation of the hit area is dropped —
                   // acceptable for a link target).
-                  if (run.link) {
-                    links.push({ pageIndex, x1: rx, y1: lineY, x2: rx + runW, y2: lineY + a.fontSize * 1.2, uri: run.link })
+                  // Through `safeLinkUrl` again: an annotation saved before
+                  // links were checked on entry may still carry a relative or
+                  // script URL, and it must not be written into the file.
+                  const uri = run.link ? safeLinkUrl(run.link) : null
+                  if (uri) {
+                    links.push({ pageIndex, x1: rx, y1: lineY, x2: rx + runW, y2: lineY + a.fontSize * 1.2, uri })
                   }
                 }
                 offset += runW
