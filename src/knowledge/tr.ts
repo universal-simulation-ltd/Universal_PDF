@@ -115,11 +115,10 @@ Son açılan dosyalar, bu cihazdaki tarayıcınızın kendi depolama alanında t
 
 ## Bir kopya saklamak
 
-**Yedekle** seçeneği üç düzey sunar:
+**Yedekle** seçeneği iki düzey sunar, ikisi de sizin tarafınızda:
 
 1. **Tarayıcıya kaydet.** Otomatiktir ve yalnızca bu cihazda geçerlidir.
 2. **Masaüstüne kaydet.** Özgün PDF’i ve düzenlemelerinizi hâlâ düzenlenebilir şekilde içeren tek bir yedek dosyası indirir. Kaldığınız yerden devam etmek için bu dosyayı daha sonra herhangi bir cihazda içe aktarabilirsiniz. Dosya şifrelenmez; bu nedenle ona PDF’in kendisine gösterdiğiniz özeni gösterin.
-3. **UNI·SIM tarafından barındırılır.** Bitmiş PDF’i Universal ID’nize bağlı olarak çevrimiçi depolar; böylece onu başka bir cihazda açabilirsiniz. Universal ID ile ücretsizdir; ücretsiz hesapların cömert bir sınırı vardır — bu sınıra ulaşırsanız yer açmak için artık ihtiyacınız olmayan bir şeyi silin.
 
 ## Telefonunuzla imzalamak
 
@@ -166,7 +165,7 @@ Bu bir hukuki tavsiye değildir. Bir elektronik imzanın kabul edilebilir olup o
 ## Adımlar
 
 1. **İmzalanacak yeri işaretleyin.** Karşı tarafın imzasının nereye geleceğini bilmesi için belgeye en az bir "Burayı imzalayın" kutusu ekleyin.
-2. **Çevrimiçi depolayın.** Eklediğiniz her şeyin birleştirildiği bitmiş PDF, Universal ID’nize bağlı olarak çevrimiçi depolanır. Universal ID ile ücretsizdir; ücretsiz hesapların cömert bir sınırı vardır — bu sınıra ulaşırsanız yer açmak için artık ihtiyacınız olmayan bir şeyi silin.
+2. **Çevrimiçi depolayın.** Eklediğiniz her şeyin birleştirildiği bitmiş PDF, Universal ID’nize bağlı olarak çevrimiçi depolanır. Universal ID ile ücretsizdir.
 3. **Kimin açabileceğini seçin.** Ya bağlantıya sahip herkes ya da yalnızca alıcı olarak belirttiğiniz kişi. Bu seçimin neyi değiştirdiğini öğrenmek için "İmzaya gönder ne kadar güvenli?" makalesine bakın.
 4. **Gönderin.** Bağlantıyı kopyalayıp kendiniz gönderin ya da kişinin e-posta adresini girin, uygulama sizin yerinize e-postayla göndersin. Açık bir bağlantıda e-posta, PDF’i ek olarak içerir. Korumalı bir bağlantıda ise içermez, çünkü ek korumayı atlatmış olurdu.
 

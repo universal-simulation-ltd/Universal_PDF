@@ -115,11 +115,10 @@ Los archivos abiertos recientemente se guardan en el almacenamiento del propio n
 
 ## Conservar una copia
 
-La opción **Hacer copia de seguridad** ofrece tres niveles:
+La opción **Hacer copia de seguridad** ofrece dos niveles, ambos en su lado:
 
 1. **Guardar en el navegador.** Automático, y solo en este dispositivo.
 2. **Guardar en el ordenador.** Descarga un único archivo de copia de seguridad que contiene el PDF original y sus cambios, que siguen siendo editables. Impórtelo más adelante, en cualquier dispositivo, para seguir donde lo dejó. El archivo no está cifrado, así que cuídelo igual que el propio PDF.
-3. **Alojado por UNI·SIM.** Guarda el PDF terminado en internet, asociado a su Universal ID, para que pueda abrirlo en otro dispositivo. Es gratis con un Universal ID; las cuentas gratuitas tienen un límite generoso: si alguna vez lo alcanza, elimine algo que ya no necesite para dejar espacio.
 
 ## Firmar con el móvil
 
@@ -166,7 +165,7 @@ Esto no es asesoramiento jurídico. Que una firma electrónica sea aceptable dep
 ## Los pasos
 
 1. **Marque dónde firmar.** Añada al documento al menos un recuadro «Firma aquí», para que la otra persona sepa dónde va su firma.
-2. **Guárdelo en internet.** El PDF terminado, con todo lo que haya añadido ya integrado, se guarda en internet asociado a su Universal ID. Es gratis con un Universal ID; las cuentas gratuitas tienen un límite generoso: si alguna vez lo alcanza, elimine algo que ya no necesite para dejar espacio.
+2. **Guárdelo en internet.** El PDF terminado, con todo lo que haya añadido ya integrado, se guarda en internet asociado a su Universal ID. Es gratis con un Universal ID.
 3. **Elija quién puede abrirlo.** O bien cualquiera con el enlace, o bien solo la persona a la que va dirigido. Consulte «¿Qué seguridad ofrece Enviar para firmar?» para saber qué cambia con esa elección.
 4. **Envíelo.** Copie el enlace y envíelo usted mismo, o escriba la dirección de correo de la otra persona y la aplicación se lo enviará por usted. Con un enlace abierto, el correo incluye el PDF como archivo adjunto. Con un enlace protegido no lo incluye, porque el adjunto se saltaría la protección.
 

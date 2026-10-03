@@ -1,4 +1,4 @@
-// Signatures, stamps, sign on a phone, send to sign, sign requests and certificates, online backup.
+// Signatures, stamps, sign on a phone, send to sign, sign requests and certificates, and the local backup dialog.
 // English is the source of truth: add a key here first, then to every other language.
 export default {
   // Shared across this namespace

@@ -115,11 +115,10 @@ Les fichiers récemment ouverts sont conservés dans le stockage propre à votre
 
 ## Conserver une copie
 
-L’option **Sauvegarder** propose trois niveaux :
+L’option **Sauvegarder** propose deux niveaux, tous deux de votre côté :
 
 1. **Enregistrer dans le navigateur.** Automatique, et uniquement sur cet appareil.
 2. **Enregistrer sur l’ordinateur.** Télécharge un fichier de sauvegarde unique contenant le PDF d’origine et vos modifications, toujours modifiables. Importez-le plus tard, sur n’importe quel appareil, pour reprendre là où vous vous étiez arrêté. Le fichier n’est pas chiffré : prenez-en soin comme du PDF lui-même.
-3. **Hébergé par UNI·SIM.** Stocke le PDF terminé en ligne, associé à votre Universal ID, pour que vous puissiez l’ouvrir sur un autre appareil. C’est gratuit avec un Universal ID ; les comptes gratuits disposent d’une limite généreuse — si vous l’atteignez un jour, supprimez quelque chose dont vous n’avez plus besoin pour faire de la place.
 
 ## Signer sur votre téléphone
 
@@ -166,7 +165,7 @@ Ceci ne constitue pas un conseil juridique. L’acceptabilité d’une signature
 ## Les étapes
 
 1. **Indiquez où signer.** Ajoutez au moins un cadre « Signez ici » au document, pour que l’autre personne sache où apposer sa signature.
-2. **Stockez-le en ligne.** Le PDF terminé, avec tous vos ajouts intégrés, est stocké en ligne et associé à votre Universal ID. C’est gratuit avec un Universal ID ; les comptes gratuits disposent d’une limite généreuse — si vous l’atteignez un jour, supprimez quelque chose dont vous n’avez plus besoin pour faire de la place.
+2. **Stockez-le en ligne.** Le PDF terminé, avec tous vos ajouts intégrés, est stocké en ligne et associé à votre Universal ID. C’est gratuit avec un Universal ID.
 3. **Choisissez qui peut l’ouvrir.** Soit « Toute personne disposant du lien », soit « Uniquement la personne à qui vous l’adressez ». Consultez « Envoyer pour signature est-il sûr ? » pour savoir ce que ce choix change.
 4. **Envoyez-le.** Copiez le lien et envoyez-le vous-même, ou saisissez l’adresse e-mail de la personne et l’application le lui envoie par e-mail. Avec un lien ouvert, l’e-mail contient le PDF en pièce jointe. Avec un lien protégé, ce n’est pas le cas, car la pièce jointe contournerait la protection.
 

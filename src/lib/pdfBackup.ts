@@ -5,8 +5,8 @@ import type { Annotation } from '../types/annotations'
 import { saveBlob } from '@unisim/media/save'
 import { getT } from '../i18n'
 
-// "Save to desktop" backup for Universal PDF — the editable middle tier between
-// the free in-browser recents and the paid "Hosted by UNI·SIM" cloud. A backup
+// "Save to desktop" backup for Universal PDF — the editable option beside the
+// free in-browser recents (there is no online backup). A backup
 // bundles the ORIGINAL PDF bytes plus the user's annotations and form values as
 // one JSON file the guest keeps and re-imports later to carry on editing.
 //
