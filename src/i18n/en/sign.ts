@@ -223,7 +223,6 @@ export default {
   'send_recheck': "I've verified — check again",
   'send_step1': '1 · Save online & create the link',
   'send_open_pdf_first': 'Open a PDF first.',
-  'send_no_company': 'Sign requests are sent from your company, and your Universal ID doesn’t have one yet. Setting one up is free.', // signed in, but the Universal ID belongs to no company yet
   'send_add_box_first': 'Add a “Sign here” box first',
   'send_add_box_body': 'Every sign request needs at least one signature box so the signer knows where to sign. Open the {menu} menu → {item} and drop one where each person should sign, then come back here.', // menu = "Sign ▾", item = "Place signature box", both in bold
   'send_only_recipient': 'Only {email} can open and sign {doc} — they must confirm a code sent to that address (expires in 30 days, or when you delete the stored copy):',
@@ -273,7 +272,6 @@ export default {
   'hosted_importing': 'Importing…',
   'hosted_import_backup': 'Import a backup',
   'hosted_open_to_backup_or_import': 'Open a PDF to back it up — or import a backup to restore one.',
-  'setup_company_button': 'Set up a company →', // links to the page where a company is set up
 
   // saved stamp names (SignatureMenu, StampPicker)
   'stamp_named': '{name} Stamp', // {name} is the stamp's own word, e.g. APPROVED

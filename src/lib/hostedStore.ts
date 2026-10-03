@@ -4,7 +4,7 @@ import {
   HOSTED_BUCKET,
 } from '@unisim/sdk'
 import { buildAnnotatedPdfBytes } from './export'
-import { signRequestPdfPath, hostedPdfPathCandidates, newObjectId, SIGN_PRODUCT } from './hostedPaths'
+import { signRequestPdfPath, personalSignRequestPdfPath, hostedPdfPathCandidates, newObjectId, SIGN_PRODUCT } from './hostedPaths'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useFormStore } from '../stores/formStore'
 import { usePdfStore } from '../stores/pdfStore'
@@ -47,18 +47,25 @@ export interface StoreResult {
 
 /** Store the current PDF online for a sign request. Records the ledger row
  *  first, then uploads; if the upload fails the row is removed again so no
- *  entry is left pointing at nothing. `orgId` is the signed-in user's org (the
- *  path segment that drives RLS). */
-export async function storeForSignRequest(supabase: Supabase, orgId: string): Promise<StoreResult> {
+ *  entry is left pointing at nothing. `owner` is the signed-in user's org (the
+ *  path segment that drives RLS) or, with no company, the user themselves —
+ *  a personal copy (migration 0228). */
+export async function storeForSignRequest(
+  supabase: Supabase,
+  owner: { orgId: string } | { userId: string },
+): Promise<StoreResult> {
   const { bytes, fileName } = await currentPdfBytes()
 
   // ⚠️ NAME THE OBJECT FIRST. `hosted_uploads` grants members SELECT and
   // nothing else (0041), so the path cannot be filled in after the row exists —
   // that is how every old backup ended up filed as `pending`. See
   // `hostedPaths.ts` for the full write-up.
-  const path = signRequestPdfPath(orgId, newObjectId(), fileName)
+  const path = 'orgId' in owner
+    ? signRequestPdfPath(owner.orgId, newObjectId(), fileName)
+    : personalSignRequestPdfPath(owner.userId, newObjectId(), fileName)
 
-  // 1) Record the ledger row (the RPC files it under the caller's primary org).
+  // 1) Record the ledger row (the RPC files it under the caller's primary org,
+  //    or as personal when they have none).
   const consumed = await consumeHostedUpload(supabase, {
     product: SIGN_PRODUCT,
     storagePath: path,
@@ -69,7 +76,7 @@ export async function storeForSignRequest(supabase: Supabase, orgId: string): Pr
     return { ok: false, error: consumed.error ?? getT()('lib.hosted_reserve_failed') }
   }
 
-  // 2) Upload to hosted-uploads/<org>/pdf_sign/<object_id>-<stem>.pdf
+  // 2) Upload to hosted-uploads/<org>/pdf_sign/… or personal/<user>/pdf_sign/…
   const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
   const { error: upErr } = await supabase.storage
     .from(HOSTED_BUCKET)
@@ -105,8 +112,10 @@ export async function removeSignRequestFiles(
       .eq('id', uploadId)
       .maybeSingle()
     // Every path the bytes could be under: requests made before 0227 were
-    // stored as `pdf`, and the oldest of those were filed as `pending`.
-    if (row) paths.push(...hostedPdfPathCandidates(row))
+    // stored as `pdf`, and the oldest of those were filed as `pending`. A
+    // personal row (no company, 0228) has only ever had its recorded path.
+    if (row?.org_id) paths.push(...hostedPdfPathCandidates(row))
+    else if (row?.storage_path) paths.push(row.storage_path)
   }
   if (paths.length > 0) await supabase.storage.from(HOSTED_BUCKET).remove(paths)
   if (uploadId) await refundHostedUpload(supabase, uploadId)

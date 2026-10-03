@@ -223,7 +223,6 @@ const sign: Messages['sign'] = {
   'send_recheck': 'Doğruladım — yeniden kontrol et',
   'send_step1': '1 · Çevrimiçi kaydet ve bağlantı oluştur',
   'send_open_pdf_first': 'Önce bir PDF açın.',
-  'send_no_company': 'İmza istekleri şirketiniz adına gönderilir ve Universal ID’nizin henüz bir şirketi yok. Şirket oluşturmak ücretsizdir.',
   'send_add_box_first': 'Önce bir “Burayı imzalayın” kutusu ekleyin',
   'send_add_box_body': 'İmzalayanın nereye imza atacağını bilmesi için her imza isteğinde en az bir imza kutusu olmalıdır. {menu} menüsünü açın → {item} seçeneğiyle her kişinin imzalayacağı yere bir kutu bırakın, sonra buraya dönün.',
   'send_only_recipient': '“{doc}” belgesini yalnızca {email} açıp imzalayabilir — bu adrese gönderilen bir kodu onaylaması gerekir (30 gün sonra veya depolanan kopyayı sildiğinizde sona erer):',
@@ -273,7 +272,6 @@ const sign: Messages['sign'] = {
   'hosted_importing': 'İçe aktarılıyor…',
   'hosted_import_backup': 'Yedek içe aktar',
   'hosted_open_to_backup_or_import': 'Yedeklemek için bir PDF açın — veya geri yüklemek için bir yedeği içe aktarın.',
-  'setup_company_button': 'Şirket oluştur →',
 
   // saved stamp names (SignatureMenu, StampPicker)
   'stamp_named': '{name} damgası',

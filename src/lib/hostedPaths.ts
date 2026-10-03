@@ -103,6 +103,15 @@ export function signRequestPdfPath(orgId: string, objectId: string, fileName: st
 }
 
 /**
+ * Where a company-less "Send to sign" copy lives (migration 0228):
+ * `hosted-uploads/personal/<user_id>/pdf_sign/<object_id>-<stem>.pdf`. The
+ * owner-only storage policies match exactly this prefix.
+ */
+export function personalSignRequestPdfPath(userId: string, objectId: string, fileName: string | null | undefined): string {
+  return `personal/${userId}/${SIGN_PRODUCT}/${objectId}-${safeStem(fileName)}.pdf`
+}
+
+/**
  * True when a ledger row's `storage_path` can be handed to storage as-is:
  * non-empty, not the `pending` placeholder, and rooted at the row's own org so
  * the bucket's member-read policy will allow it.

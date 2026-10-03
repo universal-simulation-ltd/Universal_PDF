@@ -17,6 +17,7 @@ import { usePdfStore } from '../stores/pdfStore'
 import LockedOriginNote from './Lock/LockedOriginNote'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { storeForSignRequest, currentPdfBytes, removeSignRequestFiles } from '../lib/hostedStore'
+import { createPersonalSignRequest, usePersonalSignRequests } from '../lib/personalSignRequests'
 import {
   applySignRequestProtection,
   generateAccessPin,
@@ -38,9 +39,6 @@ const STATUS_UI: Record<string, { label: MessageKey; tone?: 'good' | 'warn' }> =
 }
 
 const HUB_LOGIN_URL = 'https://app.unisim.co.uk/login'
-// Where a signed-in Universal ID with no company sets one up. Opened in a new
-// tab so the PDF open here is not navigated away from.
-const SET_UP_COMPANY_URL = 'https://app.unisim.co.uk/branding'
 
 // Export → "Send to sign": store the current PDF online (free for everyone —
 // its own uncounted 'pdf_sign' budget, migration 0227), mint a
@@ -72,13 +70,23 @@ export default function SendToSignDialog() {
   const redactConfirmed = !needsRedactConfirm || redactConfirm.trim().toLowerCase() === 'redact'
 
   const { supabase, session, activeOrgId } = useUniversal()
-  // A sign request is stored and sent from a company, so a signed-in ID that
-  // belongs to none cannot make one. Only a SUCCESSFUL empty read counts as "no
-  // company" — a failed read is unknown, and never a reason to offer one.
+  // A signed-in ID with a company sends from it; one with no company sends a
+  // PERSONAL request (migration 0228). Only a SUCCESSFUL empty read counts as
+  // "no company" — a failed or pending read is unknown, and sending waits
+  // rather than guessing, because the server files the copy by the real answer.
   const { orgs, loading: orgsLoading, error: orgsError } = useOrg()
   const noCompany = !orgsLoading && !orgsError && orgs.length === 0
+  const canSendFrom = noCompany || !!activeOrgId
   const { user } = useUser()
-  const { requests, loading: listLoading, refresh: refreshList } = useSignRequests()
+  const userId = session?.user?.id ?? null
+  // The company's requests, plus any personal ones — sent before the ID joined
+  // a company, or the only kind it has.
+  const orgList = useSignRequests()
+  const personalList = usePersonalSignRequests(supabase, userId, !!userId)
+  const requests = [...orgList.requests, ...personalList.requests]
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+  const listLoading = orgList.loading || personalList.loading
+  const refreshList = () => { orgList.refresh(); personalList.refresh() }
 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -167,7 +175,7 @@ export default function SendToSignDialog() {
 
   // ── Store + mint the link ──
   async function onCreateLink() {
-    if (!doc || !activeOrgId || busy) return
+    if (!doc || !canSendFrom || busy) return
     // ⚠️ The stored address is the ONE thing the gate compares against, so a
     // protected request cannot be minted without it. Filling it in later is not
     // an option worth offering: it has to be right before the link exists.
@@ -178,20 +186,25 @@ export default function SendToSignDialog() {
     setBusy(true)
     setError(null)
     try {
-      const stored = await storeForSignRequest(supabase, activeOrgId)
+      const stored = await storeForSignRequest(
+        supabase,
+        noCompany || !activeOrgId ? { userId: userId ?? '' } : { orgId: activeOrgId },
+      )
       if (!stored.ok || !stored.uploadId) {
         // 'storage_full' is the suite-wide safety cap (0227), not this
         // person's doing — the generic "could not store" is the honest answer.
         setError(!stored.error || stored.error === 'storage_full' ? t('sign.could_not_store') : stored.error)
         return
       }
-      const req = await createSignRequest(supabase, {
-        orgId: activeOrgId,
+      const reqInput = {
         uploadId: stored.uploadId,
         docName: stored.fileName ?? fileName ?? 'document.pdf',
         requesterEmail: user?.email ?? '',
         recipientEmail: email.trim() || undefined,
-      })
+      }
+      const req = noCompany || !activeOrgId
+        ? await createPersonalSignRequest(supabase, reqInput)
+        : await createSignRequest(supabase, { ...reqInput, orgId: activeOrgId })
       if (!req.ok || !req.requestId) {
         setError(req.error ?? t('sign.send_could_not_create'))
         return
@@ -407,14 +420,7 @@ export default function SendToSignDialog() {
               <div className="rounded-xl border border-orange-200 bg-white p-4">
                 <span className="text-sm font-semibold text-slate-900">{t('sign.send_step1')}</span>
 
-                {noCompany && !minted ? (
-                  <div className="mt-3" data-testid="send-no-company">
-                    <p className="text-sm text-slate-600">{t('sign.send_no_company')}</p>
-                    <a href={SET_UP_COMPANY_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800">
-                      {t('sign.setup_company_button')}
-                    </a>
-                  </div>
-                ) : !doc ? (
+                {!doc ? (
                   <p className="mt-2 text-xs text-slate-500">{t('sign.send_open_pdf_first')}</p>
                 ) : !minted && !hasSignHereBox ? (
                   <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
@@ -591,7 +597,7 @@ export default function SendToSignDialog() {
                   <button
                     type="button"
                     onClick={onCreateLink}
-                    disabled={busy || !redactConfirmed}
+                    disabled={busy || !redactConfirmed || !canSendFrom}
                     className="mt-3 w-full rounded-lg bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {busy ? t('sign.send_storing') : t('sign.send_store_create')}

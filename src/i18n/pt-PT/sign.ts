@@ -223,7 +223,6 @@ const sign: Messages['sign'] = {
   'send_recheck': 'Já verifiquei — verificar novamente',
   'send_step1': '1 · Guardar online e criar a ligação',
   'send_open_pdf_first': 'Abra primeiro um PDF.',
-  'send_no_company': 'Os pedidos de assinatura são enviados pela sua empresa, e o seu Universal ID ainda não tem uma. Criá-la é gratuito.',
   'send_add_box_first': 'Adicione primeiro uma caixa «Assinar aqui»',
   'send_add_box_body': 'Cada pedido de assinatura precisa de pelo menos uma caixa de assinatura para que o signatário saiba onde assinar. Abra o menu {menu} → {item}, coloque uma caixa onde cada pessoa deve assinar e depois volte aqui.',
   'send_only_recipient': 'Só {email} pode abrir e assinar {doc} — terá de confirmar um código enviado para esse endereço (expira em 30 dias ou quando a cópia armazenada for eliminada):',
@@ -273,7 +272,6 @@ const sign: Messages['sign'] = {
   'hosted_importing': 'A importar…',
   'hosted_import_backup': 'Importar uma cópia de segurança',
   'hosted_open_to_backup_or_import': 'Abra um PDF para fazer uma cópia de segurança — ou importe uma cópia de segurança para o restaurar.',
-  'setup_company_button': 'Criar uma empresa →',
 
   // saved stamp names (SignatureMenu, StampPicker)
   'stamp_named': 'Carimbo {name}',

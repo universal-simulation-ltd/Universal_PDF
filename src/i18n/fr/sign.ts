@@ -223,7 +223,6 @@ const sign: Messages['sign'] = {
   'send_recheck': 'C’est vérifié — vérifier à nouveau',
   'send_step1': '1 · Enregistrer en ligne et créer le lien',
   'send_open_pdf_first': 'Ouvrez d’abord un PDF.',
-  'send_no_company': 'Les demandes de signature sont envoyées depuis votre entreprise, et votre Universal ID n’en a pas encore. La créer est gratuit.',
   'send_add_box_first': 'Ajoutez d’abord une zone « Signez ici »',
   'send_add_box_body': 'Chaque demande de signature nécessite au moins une zone de signature pour que le signataire sache où signer. Ouvrez le menu {menu} → {item} et déposez-en une là où chaque personne doit signer, puis revenez ici.',
   'send_only_recipient': 'Seul {email} peut ouvrir et signer {doc} — le destinataire doit confirmer un code envoyé à cette adresse (expire dans 30 jours, ou lorsque vous supprimez la copie stockée) :',
@@ -273,7 +272,6 @@ const sign: Messages['sign'] = {
   'hosted_importing': 'Importation…',
   'hosted_import_backup': 'Importer une sauvegarde',
   'hosted_open_to_backup_or_import': 'Ouvrez un PDF pour le sauvegarder — ou importez une sauvegarde pour en restaurer un.',
-  'setup_company_button': 'Créer une entreprise →',
 
   // saved stamp names (SignatureMenu, StampPicker)
   'stamp_named': 'Tampon {name}',

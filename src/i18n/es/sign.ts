@@ -223,7 +223,6 @@ const sign: Messages['sign'] = {
   'send_recheck': 'Ya lo he verificado: comprobar de nuevo',
   'send_step1': '1 · Guardar en línea y crear el enlace',
   'send_open_pdf_first': 'Primero abre un PDF.',
-  'send_no_company': 'Las solicitudes de firma se envían desde tu empresa, y tu Universal ID aún no tiene una. Crearla es gratis.',
   'send_add_box_first': 'Primero añade un recuadro «Firma aquí»',
   'send_add_box_body': 'Cada solicitud de firma necesita al menos un recuadro de firma para que el firmante sepa dónde firmar. Abre el menú {menu} → {item}, coloca uno donde deba firmar cada persona y vuelve aquí.',
   'send_only_recipient': 'Solo {email} puede abrir y firmar {doc}: tendrá que confirmar un código enviado a esa dirección (caduca a los 30 días o cuando elimines la copia almacenada):',
@@ -273,7 +272,6 @@ const sign: Messages['sign'] = {
   'hosted_importing': 'Importando…',
   'hosted_import_backup': 'Importar una copia de seguridad',
   'hosted_open_to_backup_or_import': 'Abre un PDF para hacer una copia de seguridad o importa una copia para restaurarlo.',
-  'setup_company_button': 'Crear una empresa →',
 
   // saved stamp names (SignatureMenu, StampPicker)
   'stamp_named': 'Sello {name}',

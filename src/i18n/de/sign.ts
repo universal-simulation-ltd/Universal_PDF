@@ -223,7 +223,6 @@ const sign: Messages['sign'] = {
   'send_recheck': 'Ich habe bestätigt – erneut prüfen',
   'send_step1': '1 · Online speichern und Link erstellen',
   'send_open_pdf_first': 'Öffne zuerst ein PDF.',
-  'send_no_company': 'Unterschriftsanfragen werden von deinem Unternehmen aus gesendet, und deine Universal ID hat noch keins. Die Einrichtung ist kostenlos.',
   'send_add_box_first': 'Füge zuerst ein „Hier unterschreiben“-Feld hinzu',
   'send_add_box_body': 'Jede Unterschriftsanfrage braucht mindestens ein Unterschriftsfeld, damit klar ist, wo unterschrieben werden soll. Öffne das Menü {menu} → {item}, setze ein Feld dorthin, wo jede Person unterschreiben soll, und komm dann hierher zurück.',
   'send_only_recipient': 'Nur {email} kann {doc} öffnen und unterschreiben – dazu muss ein an diese Adresse gesendeter Code bestätigt werden (läuft nach 30 Tagen ab oder wenn du die gespeicherte Kopie löschst):',
@@ -273,7 +272,6 @@ const sign: Messages['sign'] = {
   'hosted_importing': 'Wird importiert…',
   'hosted_import_backup': 'Sicherung importieren',
   'hosted_open_to_backup_or_import': 'Öffne ein PDF, um es zu sichern – oder importiere eine Sicherung, um eines wiederherzustellen.',
-  'setup_company_button': 'Unternehmen einrichten →',
 
   // saved stamp names (SignatureMenu, StampPicker)
   'stamp_named': 'Stempel {name}',

@@ -318,7 +318,11 @@ want to be a file hoster when they have so many other free choices for that").
 The only PDF stored online now is the copy **Send to sign** needs, under
 `<org>/pdf_sign/…` — free for everyone, its own uncounted budget (migration
 0227), refused only with `storage_full` when the suite-wide storage caps are
-reached. Revoking a request deletes its copy (and any signed copy). Old `pdf`
+reached. Revoking a request deletes its copy (and any signed copy). A
+Universal ID with **no company** sends a *personal* request (migration 0228):
+rows with `org_id` null owned by `created_by_id`, the copy under
+`personal/<user_id>/pdf_sign/…`, created and listed by
+`src/lib/personalSignRequests.ts` because the SDK's helpers are company-only. Old `pdf`
 rows (two backups on prod at retirement) were left in place. The history below
 still explains why paths are named before the ledger row exists.
 

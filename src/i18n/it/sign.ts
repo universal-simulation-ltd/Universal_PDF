@@ -223,7 +223,6 @@ const sign: Messages['sign'] = {
   'send_recheck': 'Ho verificato, controlla di nuovo',
   'send_step1': '1 · Salva online e crea il link',
   'send_open_pdf_first': 'Prima apri un PDF.',
-  'send_no_company': 'Le richieste di firma vengono inviate dalla tua azienda, e il tuo Universal ID non ne ha ancora una. Crearla è gratis.',
   'send_add_box_first': 'Prima aggiungi un riquadro «Firma qui»',
   'send_add_box_body': 'Ogni richiesta di firma deve avere almeno un riquadro firma, così il firmatario sa dove firmare. Apri il menu {menu} → {item} e inseriscine uno dove deve firmare ciascuna persona, poi torna qui.',
   'send_only_recipient': 'Solo {email} può aprire e firmare {doc}: deve confermare un codice inviato a quell’indirizzo (scade tra 30 giorni o quando elimini la copia archiviata):',
@@ -273,7 +272,6 @@ const sign: Messages['sign'] = {
   'hosted_importing': 'Importazione…',
   'hosted_import_backup': 'Importa un backup',
   'hosted_open_to_backup_or_import': 'Apri un PDF per farne il backup, oppure importa un backup per ripristinarne uno.',
-  'setup_company_button': 'Crea un’azienda →',
 
   // saved stamp names (SignatureMenu, StampPicker)
   'stamp_named': 'Timbro {name}',
