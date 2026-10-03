@@ -22,6 +22,8 @@ of that file, and everything after that happens on your machine:
 | Drawing the pages | your browser, via Mozilla's PDF.js | [`src/lib/pdfjs.ts`](src/lib/pdfjs.ts) |
 | Your annotations, form filling and signatures | your browser | [`src/lib/export.ts`](src/lib/export.ts), [`src/lib/composeSignature.ts`](src/lib/composeSignature.ts) |
 | Reading text out of a scan (OCR) | your browser, via Tesseract | [`src/lib/ocr.ts`](src/lib/ocr.ts) |
+| Scanning a page with the camera (phone apps) | your phone, via its own document scanner — Apple's VisionKit on iOS, Google's ML Kit (part of Play services) on Android | [`ios/App/App/DocumentScanner.swift`](ios/App/App/DocumentScanner.swift), [`android/app/src/main/java/uk/co/unisim/pdf/DocumentScannerPlugin.java`](android/app/src/main/java/uk/co/unisim/pdf/DocumentScannerPlugin.java) |
+| Straightening a photo of a page (Photo to PDF) | your browser | [`src/lib/scan.ts`](src/lib/scan.ts) |
 | Saving the finished PDF | your browser's download | [`src/lib/saveDocument.ts`](src/lib/saveDocument.ts) |
 
 **Recent files stay on your device.** The app remembers what you had open using

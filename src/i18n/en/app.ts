@@ -119,6 +119,8 @@ export default {
   'landing_headline_em': 'just work', // highlighted end of "PDFs that just work."; one line on a phone, keep short
   'landing_lead': 'View, annotate, sign and export.',
   'landing_converting': 'Converting…',
+  'landing_scan': 'Scan a document',
+  'landing_scan_failed': 'Could not scan: {message}',
   'landing_drop_here': 'Drop a PDF here', // inside a small circle; keep short
   'landing_click_to_browse': 'or click to browse — {types}', // {types} is ".pdf, .docx, .odt"
   'landing_or': 'or', // separator between two options
@@ -131,6 +133,7 @@ export default {
   'landing_merge': 'Merge PDFs — combine several into one',
   'landing_convert': 'Convert — PDF ↔ images (PNG/JPG)',
   'landing_ocr': 'Make searchable (OCR) — read a scan',
+  'landing_photo_scan': 'Photo to PDF — straighten a photo of a page',
   'landing_redact': 'Redact text — make portions unreadable to humans and machines',
   'landing_transform': 'Transform text into a PDF — paste Markdown',
   'landing_system_options': 'System options',

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { DropAnywhere, DropRing, PrivacyNote, useFileDrop } from '@unisim/sdk'
 import { openFiles as openFilesInTabs } from '../../stores/tabStore'
 import { usePdfStore } from '../../stores/pdfStore'
@@ -13,6 +13,9 @@ import ConvertDialog, { type ConvertMode } from '../Convert/ConvertDialog'
 import RecentFilesList from '../RecentFiles/RecentFilesList'
 import OcrModal from '../Ocr/OcrModal'
 import TransformPanel from '../Transform/TransformPanel'
+import ScanDialog, { type ScanSource } from '../Scan/ScanDialog'
+import { isDocumentScanAvailable, scanWithCamera } from '../../lib/documentScanner'
+import { pageFromJpeg, type ScanPage } from '../../lib/scan'
 import PdfIllustration from './PdfIllustration'
 import DownloadRow from './DownloadRow'
 import DropRingWatermark from './DropRingWatermark'
@@ -99,6 +102,21 @@ export default function LandingPage() {
   const [mergeOpen, setMergeOpen] = useState(false)
   const [convertMode, setConvertMode] = useState<ConvertMode | null>(null)
   const [ocrJob, setOcrJob] = useState<{ bytes: ArrayBuffer; name: string } | null>(null)
+  const [scanJob, setScanJob] = useState<{ source: ScanSource; pages?: ScanPage[] } | null>(null)
+  // The camera scanner is the phone apps' own (VisionKit / ML Kit), so the
+  // pill for it exists only there — and only once the device has said it can.
+  // The browser gets the photo road instead, under the advanced options.
+  const [canScan, setCanScan] = useState(false)
+  const [scanning, setScanning] = useState(false)
+  useEffect(() => {
+    let live = true
+    void isDocumentScanAvailable().then((ok) => {
+      if (live) setCanScan(ok)
+    })
+    return () => {
+      live = false
+    }
+  }, [])
 
   // The suite's shared drop mechanics — drag depth, the hidden input, click and
   // Enter and Space, resetting the value so the same file can be picked twice.
@@ -118,7 +136,7 @@ export default function LandingPage() {
   // its own, and swapping the document out from behind it would leave the dialog
   // describing something that is no longer there.
   const modalOpen =
-    !!compressJob || !!batchJob || transformOpen || mergeOpen || !!convertMode || !!ocrJob
+    !!compressJob || !!batchJob || transformOpen || mergeOpen || !!convertMode || !!ocrJob || !!scanJob
   const drop = useFileDrop({
     // Wrapped rather than passed straight through: `openFiles` reports whether
     // the document actually opened (the redact entry point below only arms the
@@ -269,6 +287,24 @@ export default function LandingPage() {
     setOcrJob({ bytes: await file.arrayBuffer(), name: file.name })
   }
 
+  // The phone's scanner first, the dialog after: it opens straight onto the
+  // camera, and the dialog only appears once there are pages to show. Backing
+  // out of the camera leaves the landing page exactly as it was.
+  async function scanDocument() {
+    if (scanning) return
+    setScanning(true)
+    try {
+      const jpegs = await scanWithCamera()
+      if (!jpegs) return
+      setScanJob({ source: 'camera', pages: await Promise.all(jpegs.map(pageFromJpeg)) })
+    } catch (err) {
+      console.error(err)
+      alert(t('app.landing_scan_failed', { message: (err as Error).message }))
+    } finally {
+      setScanning(false)
+    }
+  }
+
   // Universal Images' front door is a stack of full-width centred pills with an
   // "or" between them, and this box now speaks the same language. The old rows
   // here were chunky cards — 48px icon tile, title, subtitle, trailing arrow —
@@ -415,6 +451,21 @@ export default function LandingPage() {
                 </details>
               ) : (
                 <div className="mt-5">{exampleButton}</div>
+              )}
+
+              {/* Phone apps only (see `canScan`). Up here rather than in the
+                  advanced options: on a phone, pointing the camera at a letter
+                  is as everyday a way to start as opening a file. */}
+              {canScan && (
+                <button
+                  type="button"
+                  onClick={() => void scanDocument()}
+                  disabled={scanning}
+                  className={`${PILL} ${PILL_IDLE} mt-3 disabled:opacity-60 disabled:cursor-wait`}
+                >
+                  <span aria-hidden="true">📷</span>
+                  {t('app.landing_scan')}
+                </button>
               )}
 
               <div className="mt-4 flex items-center gap-3 text-xs text-slate-500">
@@ -573,6 +624,19 @@ export default function LandingPage() {
                   hidden
                   onChange={onOcrFile}
                 />
+
+                {/* Photo to PDF — the browser's road to a scan: pick a photo of
+                    a page, line up its corners, and it is straightened into a
+                    page here. Advanced, because most people never need it; the
+                    phone apps have the camera scanner above as well. */}
+                <button
+                  type="button"
+                  onClick={() => setScanJob({ source: 'photo' })}
+                  className={`${PILL} ${PILL_IDLE} mt-3`}
+                >
+                  <span aria-hidden="true">📷</span>
+                  {t('app.landing_photo_scan')}
+                </button>
 
                 {/* Redact — the one entry here that opens the editor rather
                     than running a job, so it says what it will do to the
@@ -773,6 +837,10 @@ export default function LandingPage() {
             })
           }}
         />
+      )}
+
+      {scanJob && (
+        <ScanDialog source={scanJob.source} initialPages={scanJob.pages} onClose={() => setScanJob(null)} />
       )}
 
       {/* The other half of `pageWide` — the circle lights up wherever the drag

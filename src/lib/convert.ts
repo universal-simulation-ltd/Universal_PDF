@@ -146,7 +146,7 @@ const HEIC_PDF_QUALITY = 0.9
  * ~3MB, so it is dynamic-imported on the first HEIC and costs nothing to anyone
  * who never converts one.
  */
-async function heicToJpegBytes(file: File): Promise<Uint8Array> {
+export async function heicToJpegBytes(file: File): Promise<Uint8Array> {
   const { heicTo } = await import('heic-to')
   try {
     const blob = await heicTo({ blob: file, type: 'image/jpeg', quality: HEIC_PDF_QUALITY })

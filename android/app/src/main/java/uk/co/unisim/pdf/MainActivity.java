@@ -65,6 +65,10 @@ public class MainActivity extends BridgeActivity {
             intent.setData(null);
             setIntent(intent);
         }
+        // This project's own plugins, which `npx cap sync` does not know
+        // about. Before super.onCreate: the Bridge is built there and only
+        // loads what is registered by then.
+        registerPlugin(DocumentScannerPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

@@ -28,7 +28,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = scene as? UIWindowScene else { return }
 
         window = UIWindow(windowScene: windowScene)
-        window?.rootViewController = CAPBridgeViewController()
+        // `MainViewController` (DocumentScanner.swift), not a bare
+        // `CAPBridgeViewController`: it registers this project's own plugins.
+        window?.rootViewController = MainViewController()
         window?.makeKeyAndVisible()
 
         guard connectionOptions.urlContexts.contains(where: Self.isInPlaceDocument) else {
