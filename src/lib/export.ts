@@ -15,6 +15,7 @@ import { redactFillHex } from './redactGate'
 import { saveBlob } from '@unisim/media/save'
 import { getT } from '../i18n'
 import { loadFallbackFont } from './fallbackFont'
+import { uprightJpeg } from './jpegOrientation'
 
 // Custom PDF catalog key carrying the unsigned signature-request boxes, so a
 // reopened or shared file's boxes stay interactive (movable / click-to-sign) in
@@ -281,7 +282,8 @@ class ExportImages {
   private async load(src: string): Promise<PDFImage> {
     const bytes = await imageBytes(src)
     if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return this.pdf.embedPng(bytes)
-    if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return this.pdf.embedJpg(bytes)
+    // A phone photo's EXIF turn is applied on screen but not by embedJpg — see jpegOrientation.ts.
+    if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return this.pdf.embedJpg(await uprightJpeg(bytes))
     return this.pdf.embedPng(await redrawAsPng(bytes))
   }
 }

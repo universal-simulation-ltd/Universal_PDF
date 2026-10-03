@@ -1,5 +1,6 @@
 import { PDFDocument } from 'pdf-lib'
 import { isHeicFile } from './heicSniff'
+import { uprightJpeg } from './jpegOrientation'
 import { pdfjsLib } from './pdfjs'
 import type { ZipEntry } from './zip'
 import { getT } from '../i18n'
@@ -160,7 +161,8 @@ export async function heicToJpegBytes(file: File): Promise<Uint8Array> {
 
 // Build a PDF with one page per image, each page sized to its image's native
 // pixel dimensions (1px → 1pt). JPEGs and PNGs embed directly (lossless
-// pass-through of the original bytes); HEIC is decoded to JPEG; anything else
+// pass-through of the original bytes — bar a JPEG with an EXIF turn, which is
+// redrawn upright); HEIC is decoded to JPEG; anything else
 // is normalized to PNG first so it can be embedded at all.
 export async function imagesToPdf(files: File[]): Promise<Uint8Array> {
   if (files.length === 0) throw new Error(getT()('lib.images_none'))
@@ -170,7 +172,8 @@ export async function imagesToPdf(files: File[]): Promise<Uint8Array> {
     const isPng = /\.png$/i.test(file.name) || file.type === 'image/png'
     let img
     if (isJpeg) {
-      img = await out.embedJpg(new Uint8Array(await file.arrayBuffer()))
+      // Turned the way the photo says (EXIF) — PDF pages don't read the tag.
+      img = await out.embedJpg(await uprightJpeg(new Uint8Array(await file.arrayBuffer())))
     } else if (isPng) {
       img = await out.embedPng(new Uint8Array(await file.arrayBuffer()))
     } else if (await isHeicFile(file)) {
