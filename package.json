@@ -68,6 +68,7 @@
     "test:render-queue": "node --experimental-strip-types scripts/renderQueue.test.mjs",
     "test:tap-placement": "node --experimental-strip-types scripts/tapPlacement.test.mjs",
     "test:scan-geometry": "node --experimental-strip-types scripts/scanGeometry.test.mjs",
+    "test:scan-detect": "node --experimental-strip-types scripts/scanDetect.test.mjs",
     "test:photo-scan": "node e2e/photo-scan.e2e.mjs",
     "test:link-underline": "node --experimental-strip-types scripts/linkUnderline.test.mjs",
     "test:link-style": "node e2e/link-style.e2e.mjs",

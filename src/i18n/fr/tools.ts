@@ -201,7 +201,7 @@ const tools: Messages['tools'] = {
 
   // ScanDialog + CropEditor
   'scan.title': 'Numériser en PDF',
-  'scan.intro_photo': 'Prenez ou choisissez une photo de chaque page, puis faites glisser les quatre coins sur les coins de la feuille. La photo est redressée sur cet appareil — rien n’est envoyé en ligne.',
+  'scan.intro_photo': 'Prenez ou choisissez une photo de chaque page. La page est détectée et redressée sur cet appareil — rien n’est envoyé en ligne — et vous pouvez déplacer les coins s’ils sont mal placés.',
   'scan.intro_camera': 'Numérisé avec votre appareil photo, sur cet appareil — rien n’est envoyé en ligne.',
   'scan.choose_photo': 'Ajouter une photo d’une page…',
   'scan.opening_photo': 'Ouverture de la photo…',
@@ -210,6 +210,10 @@ const tools: Messages['tools'] = {
   'scan.crop_title': 'Alignez les coins',
   'scan.crop_hint': 'Faites glisser chaque cercle sur un coin de la page.',
   'scan.crop_bad': 'Les coins se croisent. Placez chacun sur son propre coin de la page.',
+  'scan.crop_found': 'Page détectée. Vérifiez les coins et déplacez ceux qui sont mal placés.',
+  'scan.crop_missed': 'Impossible de trouver les bords de la page. Faites glisser chaque cercle sur un coin.',
+  'scan.find_page': 'Détecter la page',
+  'scan.adjust': 'Ajuster le recadrage de la page {n}',
   'scan.corner_tl': 'Coin supérieur gauche',
   'scan.corner_tr': 'Coin supérieur droit',
   'scan.corner_br': 'Coin inférieur droit',

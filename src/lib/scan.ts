@@ -2,6 +2,7 @@ import { PDFDocument } from 'pdf-lib'
 import { heicToJpegBytes } from './convert'
 import { isHeicFile } from './heicSniff'
 import { homography, outputSize, scanPageSize, type Paper, type Quad } from './scanGeometry'
+import { DETECT_EDGE, detectQuad } from './scanDetect'
 import { getT } from '../i18n'
 
 /**
@@ -10,8 +11,9 @@ import { getT } from '../i18n'
  * Two roads lead here. On the phone apps the operating system's own document
  * scanner (VisionKit on iOS, ML Kit on Android — see `documentScanner.ts`)
  * hands back pages that are already found, cropped and flattened. Everywhere
- * else the user picks a photo and drags its four corners onto the page's
- * corners; `flattenPhoto` below does the rest. Both end in `scansToPdf`.
+ * else the user picks a photo, `detectDocument` puts the four corners on the
+ * page (scanDetect.ts), the user moves any it got wrong, and `flattenPhoto`
+ * does the rest. Both end in `scansToPdf`.
  */
 
 /** A finished page: JPEG bytes and their pixel size. */
@@ -62,6 +64,33 @@ export async function decodePhoto(file: File): Promise<HTMLCanvasElement> {
   } finally {
     bitmap.close()
   }
+}
+
+/**
+ * Where the page is in a decoded photo, in its pixels — or null if it could
+ * not be found (see scanDetect.ts for how, and when it refuses). The photo is
+ * shrunk to DETECT_EDGE first: finding four corners needs the shape, not the
+ * detail, and it keeps this to a few tens of milliseconds on a phone.
+ */
+export function detectDocument(photo: HTMLCanvasElement): Quad | null {
+  const scale = Math.min(1, DETECT_EDGE / Math.max(photo.width, photo.height))
+  const w = Math.max(1, Math.round(photo.width * scale))
+  const h = Math.max(1, Math.round(photo.height * scale))
+  const small = document.createElement('canvas')
+  small.width = w
+  small.height = h
+  const ctx = small.getContext('2d', { willReadFrequently: true })
+  if (!ctx) return null
+  ctx.drawImage(photo, 0, 0, w, h)
+  const { data } = ctx.getImageData(0, 0, w, h)
+  const grey = new Float32Array(w * h)
+  for (let i = 0, p = 0; p < grey.length; i += 4, p++) grey[p] = luma(data, i)
+  const q = detectQuad(grey, w, h)
+  if (!q) return null
+  const sx = photo.width / w
+  const sy = photo.height / h
+  const clamp = (v: number, max: number) => Math.min(max, Math.max(0, v))
+  return q.map((c) => ({ x: clamp(c.x * sx, photo.width), y: clamp(c.y * sy, photo.height) })) as Quad
 }
 
 /**

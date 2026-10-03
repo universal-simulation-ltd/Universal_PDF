@@ -9,8 +9,13 @@
 //
 //   • The tool is under the advanced options on the landing page, and the
 //     camera's "Scan a document" pill is NOT on the page in a browser.
-//   • A picked photo opens the corner editor; corners that cross over are
-//     refused before anything is made.
+//   • A picked photo opens the corner editor with the corners ALREADY on the
+//     sheet (owner, 2026-10-03: "it also needs to crop the photo to the
+//     document and offer a manual crop in case it gets it wrong"). A photo
+//     with no sheet in it says so and leaves the corners to the user.
+//   • "Adjust crop" on a page reopens the editor with the corners it was cut
+//     with, and adding from there replaces the page. Corners that cross over
+//     are refused before anything is made.
 //   • With the corners on the paper, the page that comes out IS the paper: its
 //     corners are white (not the dark desk around it), the dark bar printed
 //     near the top of the sheet is near the top of the page, and the bottom of
@@ -170,15 +175,25 @@ async function dragCorner(i, to) {
   await page.mouse.up()
 }
 
-console.log('\ncorners that cross over are refused')
-await dragCorner(0, { x: 1300, y: 1100 }) // top-left dragged past bottom-right
 const addPage = page.locator('button:has-text("Add page")')
-check('"Add page" is disabled', await addPage.isDisabled())
-check('and the editor says why', await page.locator('text=The corners cross over').isVisible())
+const hint = page.locator('[data-testid="scan-crop-hint"]')
+const corners = () =>
+  page.evaluate(() =>
+    [...document.querySelectorAll('[data-corner] circle:last-child')].map((c) => ({
+      x: Number(c.getAttribute('cx')),
+      y: Number(c.getAttribute('cy')),
+    })),
+  )
+const worstOff = (got) => Math.max(...got.map((c, i) => Math.hypot(c.x - SHEET[i].x, c.y - SHEET[i].y)))
 
-console.log('\nwith the corners on the paper, the page that comes out is the paper')
-for (let i = 0; i < 4; i++) await dragCorner(i, SHEET[i])
-check('"Add page" is enabled again', await addPage.isEnabled())
+console.log('\nthe page is found on its own')
+check('the editor says it found the page', (await hint.getAttribute('data-found')) === 'found', await hint.innerText())
+const auto = await corners()
+check(
+  'and the corners start on the sheet’s corners (within 2% of the photo)',
+  worstOff(auto) < 0.02 * PHOTO.w,
+  `worst ${worstOff(auto).toFixed(1)} px: ${JSON.stringify(auto.map((c) => [Math.round(c.x), Math.round(c.y)]))}`,
+)
 // ⚠️ In COLOUR. Black & white is no use for checking where the crop landed:
 // its threshold is local, so a plain desk comes out as white as the paper and
 // a page cropped to include the desk would still pass "corners are white".
@@ -187,15 +202,41 @@ await page.waitForSelector('ol img', { timeout: 15000 })
 check('one page in the list', (await page.locator('ol > li').count()) === 1)
 check('A4 is the default paper for en-GB', (await page.locator('button[aria-pressed="true"]:has-text("A4")').count()) === 1)
 
+console.log('\nthe page that comes out is the paper')
 const pixels = await readPage(0)
 check('its corners are white, not desk', pixels.corners < 0.05, JSON.stringify(pixels))
 check('the bar near the top of the sheet is near the top of the page', pixels.bar > 0.8, JSON.stringify(pixels))
 check('the rest of the page is blank', pixels.bottom < 0.02, JSON.stringify(pixels))
 
+console.log('\n"Adjust crop" goes back to the photo, with the corners where they were')
+await page.click('button[aria-label="Adjust the crop of page 1"]')
+await overlay.waitFor({ timeout: 10000 })
+check('the editor says this is an adjustment', (await hint.getAttribute('data-found')) === 'editing')
+const again = await corners()
+check(
+  'with the same corners',
+  again.every((c, i) => Math.hypot(c.x - auto[i].x, c.y - auto[i].y) < 1),
+  JSON.stringify(again),
+)
+check('and Cancel instead of Skip photo', (await page.locator('button:has-text("Skip photo")').count()) === 0)
+
+console.log('\ncorners that cross over are refused')
+await dragCorner(0, { x: 1300, y: 1100 }) // top-left dragged past bottom-right
+check('"Add page" is disabled', await addPage.isDisabled())
+check('and the editor says why', await page.locator('text=The corners cross over').isVisible())
+
+console.log('\nmoving the corners by hand and adding replaces the page, not adds one')
+for (let i = 0; i < 4; i++) await dragCorner(i, SHEET[i])
+check('"Add page" is enabled again', await addPage.isEnabled())
+await addPage.click()
+await page.waitForSelector('ol img', { timeout: 15000 })
+check('still one page', (await page.locator('ol > li').count()) === 1)
+const redone = await readPage(0)
+check('and it is still the paper', redone.corners < 0.05 && redone.bar > 0.8, JSON.stringify(redone))
+
 console.log('\nblack & white turns the page into pure ink and paper')
 await page.setInputFiles('[data-testid="scan-photo-input"]', { name: 'letter-2.png', mimeType: 'image/png', buffer: photo })
 await overlay.waitFor({ timeout: 10000 })
-for (let i = 0; i < 4; i++) await dragCorner(i, SHEET[i])
 await page.click('button:has-text("Black & white")')
 await addPage.click()
 await page.waitForFunction(() => document.querySelectorAll('ol > li').length === 2, null, { timeout: 15000 })
@@ -203,6 +244,26 @@ const bw = await readPage(1)
 check('the bar is still there', bw.bar > 0.8, JSON.stringify(bw))
 check('the paper is clean white', bw.bottom === 0, JSON.stringify(bw))
 check('nothing is left in between ink and paper', bw.midtones < 0.03, JSON.stringify(bw))
+
+console.log('\na photo with no page in it says so, and leaves the corners to you')
+const desk = Buffer.from(
+  await page.evaluate(async () => {
+    const c = document.createElement('canvas')
+    c.width = 1200
+    c.height = 900
+    const ctx = c.getContext('2d')
+    ctx.fillStyle = '#3a3026'
+    ctx.fillRect(0, 0, 1200, 900)
+    const blob = await new Promise((r) => c.toBlob(r, 'image/png'))
+    return Array.from(new Uint8Array(await blob.arrayBuffer()))
+  }),
+)
+await page.setInputFiles('[data-testid="scan-photo-input"]', { name: 'desk.png', mimeType: 'image/png', buffer: desk })
+await overlay.waitFor({ timeout: 10000 })
+check('the editor says it could not find the page', (await hint.getAttribute('data-found')) === 'missed', await hint.innerText())
+await page.click('button:has-text("Skip photo")')
+await page.waitForSelector('ol img')
+check('skipping it adds nothing', (await page.locator('ol > li').count()) === 2)
 
 async function readPage(n) {
   return page.evaluate(async (n) => {

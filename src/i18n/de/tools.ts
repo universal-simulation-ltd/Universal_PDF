@@ -201,7 +201,7 @@ const tools: Messages['tools'] = {
 
   // ScanDialog + CropEditor
   'scan.title': 'Als PDF scannen',
-  'scan.intro_photo': 'Mach oder wähle ein Foto jeder Seite und zieh dann die vier Ecken auf die Ecken des Blatts. Das Foto wird auf diesem Gerät begradigt – es wird nichts hochgeladen.',
+  'scan.intro_photo': 'Mach oder wähle ein Foto jeder Seite. Die Seite wird auf diesem Gerät gefunden und begradigt – es wird nichts hochgeladen –, und du kannst die Ecken verschieben, falls sie nicht passen.',
   'scan.intro_camera': 'Mit deiner Kamera gescannt, auf diesem Gerät – es wird nichts hochgeladen.',
   'scan.choose_photo': 'Foto einer Seite hinzufügen…',
   'scan.opening_photo': 'Foto wird geöffnet…',
@@ -210,6 +210,10 @@ const tools: Messages['tools'] = {
   'scan.crop_title': 'Ecken ausrichten',
   'scan.crop_hint': 'Zieh jeden Kreis auf eine Ecke der Seite.',
   'scan.crop_bad': 'Die Ecken überkreuzen sich. Setz jede auf ihre eigene Ecke der Seite.',
+  'scan.crop_found': 'Seite gefunden. Prüf die Ecken und zieh alle, die nicht passen.',
+  'scan.crop_missed': 'Die Ränder der Seite wurden nicht gefunden. Zieh jeden Kreis auf eine Ecke.',
+  'scan.find_page': 'Seite finden',
+  'scan.adjust': 'Zuschnitt von Seite {n} anpassen',
   'scan.corner_tl': 'Ecke oben links',
   'scan.corner_tr': 'Ecke oben rechts',
   'scan.corner_br': 'Ecke unten rechts',

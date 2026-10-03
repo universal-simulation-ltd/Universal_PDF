@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import CropEditor from './CropEditor'
 import { decodePhoto, pageFromJpeg, rotatePage, scansToPdf, type ScanColour, type ScanPage } from '../../lib/scan'
-import { paperForLocale, scanFileName, type Paper } from '../../lib/scanGeometry'
+import { fullQuad, paperForLocale, scanFileName, type Paper, type Quad } from '../../lib/scanGeometry'
 import { scanWithCamera } from '../../lib/documentScanner'
 import { makeSearchablePdf } from '../../lib/ocr'
 import { openFiles } from '../../stores/tabStore'
@@ -25,11 +25,37 @@ interface Entry {
   id: number
   page: ScanPage
   url: string
+  /** What the page was cut from, so "Adjust crop" can go back to it: the
+   *  picked photo and its corners, or — for a page from the phone's scanner,
+   *  which arrives already cropped — the page itself, corner to corner.
+   *  The File, not the decoded canvas: a 4000 px canvas is ~64 MB held per
+   *  page, and re-decoding on the rare adjust costs a second. */
+  source: { file: File; quad: Quad | null; colour: ScanColour }
 }
 
 let nextId = 1
-function entry(page: ScanPage): Entry {
-  return { id: nextId++, page, url: URL.createObjectURL(new Blob([page.jpeg as BlobPart], { type: 'image/jpeg' })) }
+function entry(page: ScanPage, source: Entry['source']): Entry {
+  return {
+    id: nextId++,
+    page,
+    url: URL.createObjectURL(new Blob([page.jpeg as BlobPart], { type: 'image/jpeg' })),
+    source,
+  }
+}
+
+/** A scanner page as its own source: re-cropped from itself, full frame. */
+function scannerEntry(page: ScanPage): Entry {
+  const file = new File([page.jpeg as BlobPart], 'scan.jpg', { type: 'image/jpeg' })
+  return entry(page, { file, quad: null, colour: 'colour' })
+}
+
+/** The photo in the corner editor: a new one, or a page being re-cropped. */
+interface Cropping {
+  key: number
+  canvas: HTMLCanvasElement
+  file: File
+  quad?: Quad
+  replaceId?: number
 }
 
 /**
@@ -41,10 +67,10 @@ function entry(page: ScanPage): Entry {
  */
 export default function ScanDialog({ source, initialPages, onClose }: Props) {
   const t = useT()
-  const [pages, setPages] = useState<Entry[]>(() => (initialPages ?? []).map(entry))
+  const [pages, setPages] = useState<Entry[]>(() => (initialPages ?? []).map(scannerEntry))
   // Photos picked but not yet cropped, and the one being cropped now.
   const [queue, setQueue] = useState<File[]>([])
-  const [photo, setPhoto] = useState<HTMLCanvasElement | null>(null)
+  const [photo, setPhoto] = useState<Cropping | null>(null)
   const [decoding, setDecoding] = useState(false)
   const [colour, setColour] = useState<ScanColour>('colour')
   const [paper, setPaper] = useState<Paper>(() => paperForLocale(navigator.language))
@@ -63,7 +89,7 @@ export default function ScanDialog({ source, initialPages, onClose }: Props) {
     const [file, ...rest] = queue
     setDecoding(true)
     decodePhoto(file)
-      .then((canvas) => setPhoto(canvas))
+      .then((canvas) => setPhoto({ key: nextId++, canvas, file }))
       .catch((err) => {
         console.error(err)
         alert((err as Error).message)
@@ -77,9 +103,47 @@ export default function ScanDialog({ source, initialPages, onClose }: Props) {
   const cropping = !!photo
   const working = busy !== null
 
-  function addPage(page: ScanPage) {
-    setPages((p) => [...p, entry(page)])
+  function addPage(page: ScanPage, quad: Quad) {
+    const c = photo
+    if (!c) return
+    const made = entry(page, { file: c.file, quad, colour })
+    if (c.replaceId !== undefined) {
+      setPages((p) =>
+        p.map((e) => {
+          if (e.id !== c.replaceId) return e
+          URL.revokeObjectURL(e.url)
+          return made
+        }),
+      )
+    } else {
+      setPages((p) => [...p, made])
+    }
     setPhoto(null)
+  }
+
+  // "Adjust crop": back into the corner editor with the page's own source
+  // and the corners it was cut with. A scanner page has no earlier corners,
+  // so it opens on the whole page — the scanner's crop — ready to tighten.
+  async function adjust(id: number) {
+    const target = pages.find((e) => e.id === id)
+    if (!target || decoding) return
+    setDecoding(true)
+    try {
+      const canvas = await decodePhoto(target.source.file)
+      setColour(target.source.colour)
+      setPhoto({
+        key: nextId++,
+        canvas,
+        file: target.source.file,
+        quad: target.source.quad ?? fullQuad(canvas.width, canvas.height),
+        replaceId: id,
+      })
+    } catch (err) {
+      console.error(err)
+      alert(t('tools.scan.failed', { message: (err as Error).message }))
+    } finally {
+      setDecoding(false)
+    }
   }
 
   function removePage(id: number) {
@@ -93,7 +157,14 @@ export default function ScanDialog({ source, initialPages, onClose }: Props) {
   async function rotate(id: number) {
     const target = pages.find((e) => e.id === id)
     if (!target) return
-    const turned = entry(await rotatePage(target.page))
+    // Rotating bakes the turn into the page and makes it its own source: the
+    // old corners were for the photo the right way round.
+    const turnedPage = await rotatePage(target.page)
+    const turned = entry(turnedPage, {
+      file: new File([turnedPage.jpeg as BlobPart], 'page.jpg', { type: 'image/jpeg' }),
+      quad: null,
+      colour: 'colour',
+    })
     URL.revokeObjectURL(target.url)
     setPages((p) => p.map((e) => (e.id === id ? turned : e)))
   }
@@ -103,7 +174,7 @@ export default function ScanDialog({ source, initialPages, onClose }: Props) {
       const jpegs = await scanWithCamera()
       if (!jpegs) return
       const more = await Promise.all(jpegs.map(pageFromJpeg))
-      setPages((p) => [...p, ...more.map(entry)])
+      setPages((p) => [...p, ...more.map(scannerEntry)])
     } catch (err) {
       console.error(err)
       alert(t('tools.scan.failed', { message: (err as Error).message }))
@@ -184,11 +255,14 @@ export default function ScanDialog({ source, initialPages, onClose }: Props) {
           {photo ? (
             <>
               <CropEditor
-                photo={photo}
+                key={photo.key}
+                photo={photo.canvas}
+                initialQuad={photo.quad}
                 colour={colour}
                 onColourChange={setColour}
                 onDone={addPage}
                 onSkip={() => setPhoto(null)}
+                skipLabel={photo.replaceId !== undefined ? t('tools.common.cancel') : undefined}
               />
               {queue.length > 0 && (
                 <p className="mt-2 text-xs text-slate-500 text-right">
@@ -210,7 +284,18 @@ export default function ScanDialog({ source, initialPages, onClose }: Props) {
                       <span className="absolute left-1 top-1 rounded bg-white/90 px-1 text-[11px] tabular-nums text-slate-600">
                         {i + 1}
                       </span>
-                      <div className="absolute right-1 top-1 flex gap-1">
+                      {/* Along the bottom, so the page number in the corner stays visible. */}
+                      <div className="absolute inset-x-1 bottom-1 flex justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={() => void adjust(e.id)}
+                          disabled={working || decoding}
+                          aria-label={t('tools.scan.adjust', { n: i + 1 })}
+                          title={t('tools.scan.adjust', { n: i + 1 })}
+                          className="w-7 h-7 rounded-full bg-white/90 text-slate-700 shadow text-sm leading-none hover:bg-white disabled:opacity-50"
+                        >
+                          ✂
+                        </button>
                         <button
                           type="button"
                           onClick={() => void rotate(e.id)}

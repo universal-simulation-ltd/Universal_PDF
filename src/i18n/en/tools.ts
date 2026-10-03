@@ -201,7 +201,7 @@ export default {
 
   // ScanDialog + CropEditor
   'scan.title': 'Scan to PDF',
-  'scan.intro_photo': 'Take or choose a photo of each page, then drag the four corners onto the corners of the paper. The photo is straightened on this device — nothing is uploaded.',
+  'scan.intro_photo': 'Take or choose a photo of each page. The page is found and straightened on this device — nothing is uploaded — and you can drag the corners if it gets them wrong.',
   'scan.intro_camera': 'Scanned with your camera, on this device — nothing is uploaded.',
   'scan.choose_photo': 'Add a photo of a page…',
   'scan.opening_photo': 'Opening photo…',
@@ -210,6 +210,10 @@ export default {
   'scan.crop_title': 'Line up the corners',
   'scan.crop_hint': 'Drag each circle onto a corner of the page.',
   'scan.crop_bad': 'The corners cross over. Put each one on its own corner of the page.',
+  'scan.crop_found': 'Found the page. Check the corners and drag any that are off.',
+  'scan.crop_missed': 'Couldn’t find the edges of the page. Drag each circle onto a corner.',
+  'scan.find_page': 'Find the page',
+  'scan.adjust': 'Adjust the crop of page {n}',
   'scan.corner_tl': 'Top-left corner',
   'scan.corner_tr': 'Top-right corner',
   'scan.corner_br': 'Bottom-right corner',
