@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, degrees, type PDFFont } from 'pdf-lib'
-import { pdfjsLib, type PDFDocumentProxy } from './pdfjs'
+import { openPdf, type PDFDocumentProxy } from './pdfjs'
 import { getT } from '../i18n'
 
 /**
@@ -234,7 +234,7 @@ export async function makeSearchablePdf(
 
   // pdf.js detaches any ArrayBuffer it's handed — give it its own copy and keep
   // the caller's `sourceBytes` intact for pdf-lib below.
-  const pdfjsDoc = await pdfjsLib.getDocument({ data: sourceBytes.slice(0) }).promise
+  const pdfjsDoc = await openPdf(sourceBytes.slice(0)).promise
   const numPages = pdfjsDoc.numPages
 
   // Decide up front which pages need OCR so progress + the model-load weighting

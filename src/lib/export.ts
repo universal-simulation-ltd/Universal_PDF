@@ -10,7 +10,7 @@ import { hexToPdfRgb } from './colors'
 import { fontBase, type PdfBaseFont } from './fonts'
 import { LINE_HEIGHT, layoutText } from './textLayout'
 import { runUnderlined } from './textRuns'
-import { pdfjsLib, type PDFDocumentProxy } from './pdfjs'
+import { openPdf, type PDFDocumentProxy } from './pdfjs'
 import { redactFillHex } from './redactGate'
 import { saveBlob } from '@unisim/media/save'
 import { getT } from '../i18n'
@@ -819,35 +819,40 @@ export async function buildAnnotatedPdfBytes(
   let pdf: PDFDocument
   if (redactsByPage.size > 0) {
     const flatBytes = await sourcePdf.save()
-    // ⚠️ Not destroyed afterwards. Every pdf.js document shares the one worker
-    // port (lib/pdfjs.ts), and a destroy that is still in flight fails any
-    // document that starts loading meanwhile — which the export dialog does,
-    // building and estimating side by side.
-    const pdfjsDoc = await pdfjsLib.getDocument({ data: flatBytes.slice() }).promise
+    // Destroyed as soon as the pages are drawn. This used to be left alive on
+    // purpose — destroying it could kill the shared worker under a document
+    // loading beside it — which `openPdf`'s app-owned worker has since made
+    // safe (lib/pdfjs.ts). Left alive, it kept a whole copy of the document in
+    // the worker for every export until the tab closed.
+    const pdfjsDoc = await openPdf(flatBytes.slice()).promise
     const out = await PDFDocument.create()
-    for (let i = 0; i < sourcePdf.getPageCount(); i++) {
-      const redacts = redactsByPage.get(i)
-      if (redacts) {
-        const { jpeg, width, height } = await rasterizePage(pdfjsDoc, i, 2, 0.92, (ctx, k) => {
-          // The block only — never the editor's "This will be redacted on
-          // export" hint, which is drawn by the annotation layer and has no
-          // counterpart here.
-          for (const r of redacts) {
-            ctx.fillStyle = redactFillHex(r.fill)
-            ctx.fillRect((r.x / scale) * k, (r.y / scale) * k, (r.width / scale) * k, (r.height / scale) * k)
-          }
-        })
-        // ⚠️ Sized to the page AS SEEN — rotation and crop already applied
-        // by the render — and given no /Rotate of its own. Sizing it from
-        // the MediaBox (as this did) squashed a rotated page's picture into
-        // portrait and stretched a cropped one over the uncropped area.
-        const img = await out.embedJpg(jpeg)
-        const newPage = out.addPage([width, height])
-        newPage.drawImage(img, { x: 0, y: 0, width, height })
-      } else {
-        const [copied] = await out.copyPages(sourcePdf, [i])
-        out.addPage(copied)
+    try {
+      for (let i = 0; i < sourcePdf.getPageCount(); i++) {
+        const redacts = redactsByPage.get(i)
+        if (redacts) {
+          const { jpeg, width, height } = await rasterizePage(pdfjsDoc, i, 2, 0.92, (ctx, k) => {
+            // The block only — never the editor's "This will be redacted on
+            // export" hint, which is drawn by the annotation layer and has no
+            // counterpart here.
+            for (const r of redacts) {
+              ctx.fillStyle = redactFillHex(r.fill)
+              ctx.fillRect((r.x / scale) * k, (r.y / scale) * k, (r.width / scale) * k, (r.height / scale) * k)
+            }
+          })
+          // ⚠️ Sized to the page AS SEEN — rotation and crop already applied
+          // by the render — and given no /Rotate of its own. Sizing it from
+          // the MediaBox (as this did) squashed a rotated page's picture into
+          // portrait and stretched a cropped one over the uncropped area.
+          const img = await out.embedJpg(jpeg)
+          const newPage = out.addPage([width, height])
+          newPage.drawImage(img, { x: 0, y: 0, width, height })
+        } else {
+          const [copied] = await out.copyPages(sourcePdf, [i])
+          out.addPage(copied)
+        }
       }
+    } finally {
+      void pdfjsDoc.destroy()
     }
     pdf = out
     await drawAnnotations(pdf, over, scale, links)
@@ -1117,7 +1122,7 @@ export interface RasterEstimate {
  * option. The size the dialog reports is always really measured.
  */
 export async function estimateRasterSizes(sourceBytes: ArrayBuffer): Promise<RasterEstimate> {
-  const pdfjsDoc = await pdfjsLib.getDocument({ data: sourceBytes.slice(0) }).promise
+  const pdfjsDoc = await openPdf(sourceBytes.slice(0)).promise
   const pageCount = pdfjsDoc.numPages
   const sampleIndex = Math.floor(pageCount / 2)
   const measure = async (q: 'balanced' | 'strong') => {
@@ -1126,7 +1131,11 @@ export async function estimateRasterSizes(sourceBytes: ArrayBuffer): Promise<Ras
     // + a little per page for the PDF object overhead wrapping each image.
     return (jpeg.byteLength + 512) * pageCount
   }
-  return { balanced: await measure('balanced'), strong: await measure('strong') }
+  try {
+    return { balanced: await measure('balanced'), strong: await measure('strong') }
+  } finally {
+    void pdfjsDoc.destroy()
+  }
 }
 
 export async function compressPdf(
@@ -1164,19 +1173,26 @@ export async function compressPdf(
   // pdfjs detaches the buffer it's handed, so give it a copy and keep the
   // original for pdf-lib (which we use for each page's size, and for the
   // lossless yardstick below).
-  const pdfjsDoc = await pdfjsLib.getDocument({ data: sourceBytes.slice(0) }).promise
+  const pdfjsDoc = await openPdf(sourceBytes.slice(0)).promise
   const srcPdf = await PDFDocument.load(sourceBytes, { updateMetadata: false })
   const out = await PDFDocument.create()
   const pageCount = srcPdf.getPageCount()
-  for (let i = 0; i < pageCount; i++) {
-    // ⚠️ The size comes from the render, not `getSize()` (the MediaBox): on a
-    // rotated or cropped page those differ, and the picture was squashed to fit.
-    const { jpeg, width, height } = await rasterizePage(pdfjsDoc, i, renderScale, jpegQuality)
-    const img = await out.embedJpg(jpeg)
-    const page = out.addPage([width, height])
-    page.drawImage(img, { x: 0, y: 0, width, height })
-    // Rendering is nearly all the wall-clock, so the bar is the page counter.
-    onProgress(0.05 + ((i + 1) / pageCount) * 0.9)
+  try {
+    for (let i = 0; i < pageCount; i++) {
+      // ⚠️ The size comes from the render, not `getSize()` (the MediaBox): on a
+      // rotated or cropped page those differ, and the picture was squashed to fit.
+      const { jpeg, width, height } = await rasterizePage(pdfjsDoc, i, renderScale, jpegQuality)
+      const img = await out.embedJpg(jpeg)
+      const page = out.addPage([width, height])
+      page.drawImage(img, { x: 0, y: 0, width, height })
+      // Rendering is nearly all the wall-clock, so the bar is the page counter.
+      onProgress(0.05 + ((i + 1) / pageCount) * 0.9)
+    }
+  } finally {
+    // Every page is drawn: free pdf.js's copy of the document (and its decoded
+    // images) before the save below needs the memory — on a big scan this is
+    // the difference that mattered.
+    void pdfjsDoc.destroy()
   }
   const bytes = await out.save({ useObjectStreams: true })
   // ⚠️ Rasterising is only a win when there is something raster-shaped to win.

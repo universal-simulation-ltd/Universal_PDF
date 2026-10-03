@@ -1,7 +1,7 @@
 import { PDFDocument } from 'pdf-lib'
 import { isHeicFile } from './heicSniff'
 import { uprightJpeg } from './jpegOrientation'
-import { pdfjsLib } from './pdfjs'
+import { openPdf, type PDFDocumentProxy } from './pdfjs'
 import type { ZipEntry } from './zip'
 import { getT } from '../i18n'
 
@@ -33,7 +33,7 @@ export type ImageFormat = 'png' | 'jpeg'
 // encoded bytes. JPEG has no alpha, so we paint white behind it first (matching
 // rasterizePageToJpeg in export.ts) — otherwise transparent regions go black.
 async function renderPageToImage(
-  pdfjsDoc: Awaited<ReturnType<typeof pdfjsLib.getDocument>['promise']>,
+  pdfjsDoc: PDFDocumentProxy,
   pageIndex: number,
   format: ImageFormat,
   scale: number,
@@ -81,17 +81,22 @@ export async function pdfToImages(
 ): Promise<ZipEntry[]> {
   const { format = 'png', scale = 2, jpegQuality = 0.92, onProgress } = opts
   // pdfjs detaches the buffer it's handed, so give it a copy.
-  const pdfjsDoc = await pdfjsLib.getDocument({ data: sourceBytes.slice(0) }).promise
+  const pdfjsDoc = await openPdf(sourceBytes.slice(0)).promise
   const total = pdfjsDoc.numPages
   const ext = format === 'png' ? 'png' : 'jpg'
   const stem = baseName.replace(/\.pdf$/i, '')
   const pad = String(total).length
   const entries: ZipEntry[] = []
-  for (let i = 0; i < total; i++) {
-    const data = await renderPageToImage(pdfjsDoc, i, format, scale, jpegQuality)
-    const suffix = total > 1 ? `-${String(i + 1).padStart(pad, '0')}` : ''
-    entries.push({ name: `${stem}${suffix}.${ext}`, data })
-    onProgress?.(i + 1, total)
+  try {
+    for (let i = 0; i < total; i++) {
+      const data = await renderPageToImage(pdfjsDoc, i, format, scale, jpegQuality)
+      const suffix = total > 1 ? `-${String(i + 1).padStart(pad, '0')}` : ''
+      entries.push({ name: `${stem}${suffix}.${ext}`, data })
+      onProgress?.(i + 1, total)
+    }
+  } finally {
+    // A throwaway copy — safe to free now that documents don't own the worker.
+    void pdfjsDoc.destroy()
   }
   return entries
 }

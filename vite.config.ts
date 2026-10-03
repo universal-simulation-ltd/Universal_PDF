@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
@@ -127,6 +127,62 @@ function ocrRuntime(): Plugin {
   }
 }
 
+// ── pdf.js font data ─────────────────────────────────────────────────────────
+// pdf.js needs two folders of data that ship in `pdfjs-dist` but are NOT part of
+// its bundle, and fetches them only when a document asks for them:
+//
+//   • cmaps/ — the packed character maps behind every CJK font a PDF names but
+//     doesn't embed (`UniJIS-UCS2-H` and friends). Without them pdf.js logs
+//     "Ensure that the cMapUrl and cMapPacked API parameters are provided" and
+//     DROPS THE TEXT: a Japanese, Chinese or Korean PDF opened with the words
+//     simply missing from the page (seen 2026-10-04 with a hand-built fixture).
+//   • standard_fonts/ — the Foxit/Liberation faces it substitutes for the 14
+//     standard fonts when a PDF doesn't embed them. Symbol and ZapfDingbats
+//     (the tick in a form check box) always come from here.
+//
+// Copied out of node_modules into `pdfjs/<version>/` and served from the same
+// place by the dev server, exactly like the OCR runtime above and for the same
+// reasons: same-origin, versioned (so the service worker's CacheFirst can never
+// hand a new pdf.js an old file), and kept OUT of the install-time precache —
+// 2.4 MB that only some documents need, fetched one small file at a time.
+const PDFJS_DIR = dirname(requireFromHere.resolve('pdfjs-dist/package.json'))
+const PDFJS_DATA_DIR = `pdfjs/${versionOf(PDFJS_DIR)}/`
+const PDFJS_DATA_FOLDERS = ['cmaps', 'standard_fonts'] as const
+
+function pdfjsData(): Plugin {
+  const resolveFile = (rel: string): string | undefined => {
+    const [folder, name, ...rest] = rel.split('/')
+    if (rest.length || !name || !(PDFJS_DATA_FOLDERS as readonly string[]).includes(folder)) return undefined
+    if (!/^[\w.-]+$/.test(name)) return undefined
+    const file = join(PDFJS_DIR, folder, name)
+    return existsSync(file) ? file : undefined
+  }
+  return {
+    name: 'pdfjs-data',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const pathname = (req.url ?? '').split('?')[0]
+        const at = pathname.indexOf(`/${PDFJS_DATA_DIR}`)
+        const file = at === -1 ? undefined : resolveFile(pathname.slice(at + PDFJS_DATA_DIR.length + 1))
+        if (!file) return next()
+        res.setHeader('Content-Type', 'application/octet-stream')
+        res.end(readFileSync(file))
+      })
+    },
+    generateBundle() {
+      for (const folder of PDFJS_DATA_FOLDERS) {
+        for (const name of readdirSync(join(PDFJS_DIR, folder))) {
+          this.emitFile({
+            type: 'asset',
+            fileName: `${PDFJS_DATA_DIR}${folder}/${name}`,
+            source: readFileSync(join(PDFJS_DIR, folder, name)),
+          })
+        }
+      }
+    },
+  }
+}
+
 export default defineConfig(({ command, mode }) => {
   // ⚠️ Refuse to BUILD without the Supabase pair `src/main.tsx` inlines. Vite
   // substitutes `undefined` for a missing variable and reports success, so the
@@ -155,7 +211,9 @@ export default defineConfig(({ command, mode }) => {
       __APP_VERSION__: JSON.stringify(pkg.version),
       'import.meta.env.VITE_BUILD_SHA': JSON.stringify(BUILD_SHA),
       // Where `ocrRuntime()` put the OCR worker + core, relative to BASE_URL.
-      'import.meta.env.VITE_OCR_RUNTIME_DIR': JSON.stringify(OCR_RUNTIME_DIR)
+      'import.meta.env.VITE_OCR_RUNTIME_DIR': JSON.stringify(OCR_RUNTIME_DIR),
+      // Where `pdfjsData()` put pdf.js's CMaps and standard fonts.
+      'import.meta.env.VITE_PDFJS_DATA_DIR': JSON.stringify(PDFJS_DATA_DIR)
     },
     plugins: [
       {
@@ -169,6 +227,7 @@ export default defineConfig(({ command, mode }) => {
       react(),
       tailwindcss(),
       ocrRuntime(),
+      pdfjsData(),
       // The PWA service worker is for the hosted web app only — under Electron's
       // `file://` origin it cannot register and is unnecessary, so skip it.
       ...(isDesktop ? [] : [VitePWA({
@@ -238,7 +297,7 @@ export default defineConfig(({ command, mode }) => {
           // tool. And it would not even fail loudly if precached — each core
           // sits JUST under the 4 MiB limit above, so it would quietly go into
           // every install.
-          globIgnores: ['**/heic-to-*.js', 'fonts/*.ttf', 'ocr/**'],
+          globIgnores: ['**/heic-to-*.js', 'fonts/*.ttf', 'ocr/**', 'pdfjs/**'],
           // The OCR runtime (worker + WASM core, served with the app) and the
           // English model (from tesseract's CDN) are only fetched when the
           // optional "Make searchable (OCR)" tool is used. Kept OUT of the
@@ -277,6 +336,19 @@ export default defineConfig(({ command, mode }) => {
               options: {
                 cacheName: 'tesseract-runtime',
                 expiration: { maxEntries: 4, maxAgeSeconds: 60 * 60 * 24 * 90 },
+                cacheableResponse: { statuses: [200] },
+              },
+            },
+            {
+              // pdf.js's CMaps and standard fonts (see `pdfjsData()`) — each
+              // cached the first time a document needs it, so that document
+              // still renders its text offline afterwards. Versioned folder,
+              // so an upgrade is a new URL; the cap sweeps the old ones out.
+              urlPattern: /\/pdfjs\/[^/]+\/(cmaps|standard_fonts)\/[^/]+$/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'pdfjs-data',
+                expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 90 },
                 cacheableResponse: { statuses: [200] },
               },
             },

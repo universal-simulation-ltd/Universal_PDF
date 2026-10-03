@@ -3,7 +3,7 @@ import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { useFormStore } from '../../stores/formStore'
 import { buildAnnotatedPdfBytes, downloadPdfBytes } from '../../lib/export'
-import { pdfjsLib, type PDFDocumentProxy } from '../../lib/pdfjs'
+import { openPdf, type PDFDocumentProxy } from '../../lib/pdfjs'
 import { layerPixelRatio, pagePixelBudget } from '../../lib/renderBudget'
 import { getT, useT } from '../../i18n'
 
@@ -52,7 +52,7 @@ export default function LivePreview() {
         // pdfjs consumes the buffer; hand it a copy so we keep `out` intact
         // for the Download button.
         const renderCopy = out.slice().buffer
-        const nextDoc = await pdfjsLib.getDocument({ data: renderCopy }).promise
+        const nextDoc = await openPdf(renderCopy).promise
         if (myId !== buildIdRef.current) {
           nextDoc.destroy()
           return

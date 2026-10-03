@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { buildAnnotatedPdfBytes } from '../../lib/export'
-import { pdfjsLib, type PDFDocumentProxy } from '../../lib/pdfjs'
+import { openPdf, type PDFDocumentProxy } from '../../lib/pdfjs'
 import { getT, useT } from '../../i18n'
 
 // 1:1 with the editor's PDF-point coordinate space — see ExportModal.tsx.
@@ -45,7 +45,7 @@ export default function PresentMode() {
         const out = await buildAnnotatedPdfBytes(copy, annotations, EXPORT_SCALE)
         if (myId !== buildIdRef.current) return
         const renderCopy = out.slice().buffer
-        const nextDoc = await pdfjsLib.getDocument({ data: renderCopy }).promise
+        const nextDoc = await openPdf(renderCopy).promise
         if (myId !== buildIdRef.current) {
           nextDoc.destroy()
           return
