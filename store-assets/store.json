@@ -3,6 +3,7 @@
   "icon": "../ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png",
   "captures": "draw",
   "devices": ["iphone", "ipad", "android"],
+  "video": { "raw": ["01-start", "03-draw-signature", "05-annotate", "06-more-tools"] },
   "screens": [
     { "id": "01-hero", "layout": "hero-open", "raw": ["04-signed", "06-more-tools"] },
     { "id": "02-hero", "layout": "hero-close", "raw": "06-more-tools" },
