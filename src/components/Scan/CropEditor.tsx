@@ -1,16 +1,27 @@
 import { useEffect, useRef, useState } from 'react'
 import { defaultQuad, fullQuad, isConvexQuad, type Quad } from '../../lib/scanGeometry'
-import { flattenPhoto, type ScanColour, type ScanPage } from '../../lib/scan'
+import { detectDocument, flattenPhoto, type ScanColour, type ScanPage } from '../../lib/scan'
 import { useT, type MessageKey } from '../../i18n'
 
 interface Props {
   /** The decoded photo (see `decodePhoto`). */
   photo: HTMLCanvasElement
+  /** Where the corners were last time, when re-cropping a page already
+   *  added. Omitted for a new photo, which starts from the detected page. */
+  initialQuad?: Quad
   colour: ScanColour
   onColourChange: (c: ScanColour) => void
-  onDone: (page: ScanPage) => void
+  /** The finished page, and the corners it was cut with (kept so the crop
+   *  can be adjusted again later). */
+  onDone: (page: ScanPage, quad: Quad) => void
+  /** "Skip photo" for a new photo, "Cancel" when re-cropping. */
   onSkip: () => void
+  skipLabel?: string
 }
+
+/** What the hint line says: the page was found, it wasn't, or the user is
+ *  adjusting a crop they made before. */
+type Found = 'found' | 'missed' | 'editing'
 
 const CORNER_LABELS: MessageKey[] = [
   'tools.scan.corner_tl',
@@ -26,7 +37,9 @@ const HIT_PX = 44
 const DOT_PX = 11
 
 /**
- * Drag four corners onto the corners of the page in a photo.
+ * Four corners on the corners of the page in a photo: placed by detection
+ * (scanDetect.ts) when the page can be found, and always draggable, because
+ * detection can be wrong and the user is the judge of where the page is.
  *
  * The photo is shown as an <img> and the outline as an SVG laid exactly over
  * it, sharing its coordinate system: the SVG's viewBox is the photo's own
@@ -34,11 +47,31 @@ const DOT_PX = 11
  * converted when it is handed to `flattenPhoto`. Only the pointer needs
  * scaling, from screen to photo, at the moment it moves.
  */
-export default function CropEditor({ photo, colour, onColourChange, onDone, onSkip }: Props) {
+function locate(photo: HTMLCanvasElement): { quad: Quad; found: Found } {
+  let q: Quad | null = null
+  try {
+    q = detectDocument(photo)
+  } catch (err) {
+    console.error(err)
+  }
+  return q ? { quad: q, found: 'found' } : { quad: defaultQuad(photo.width, photo.height), found: 'missed' }
+}
+
+export default function CropEditor({ photo, initialQuad, colour, onColourChange, onDone, onSkip, skipLabel }: Props) {
   const t = useT()
   const w = photo.width
   const h = photo.height
-  const [quad, setQuad] = useState<Quad>(() => defaultQuad(w, h))
+  // A new photo starts with its corners on the page, if the page can be
+  // found; otherwise on the default inset outline, with a line saying so.
+  // Detection runs on a 360 px copy (see `detectDocument`), quick enough to do
+  // before the editor's first paint — so it never flashes "couldn't find" and
+  // then jumps. The parent keys this component by photo, so a new photo is a
+  // new mount and this runs again.
+  const [start] = useState<{ quad: Quad; found: Found }>(() =>
+    initialQuad ? { quad: initialQuad, found: 'editing' } : locate(photo),
+  )
+  const [quad, setQuad] = useState<Quad>(start.quad)
+  const [found, setFound] = useState<Found>(start.found)
   const [url, setUrl] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   // Photo pixels per screen pixel, so handles stay a constant size on screen.
@@ -58,12 +91,17 @@ export default function CropEditor({ photo, colour, onColourChange, onDone, onSk
       'image/jpeg',
       0.85,
     )
-    setQuad(defaultQuad(photo.width, photo.height))
     return () => {
       revoked = true
       if (made) URL.revokeObjectURL(made)
     }
   }, [photo])
+
+  function findPage() {
+    const r = locate(photo)
+    setQuad(r.quad)
+    setFound(r.found)
+  }
 
   useEffect(() => {
     const el = svgRef.current
@@ -110,7 +148,7 @@ export default function CropEditor({ photo, colour, onColourChange, onDone, onSk
       // Let the "Straightening…" label paint before the pixel loop holds the
       // main thread.
       await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)))
-      onDone(await flattenPhoto(photo, quad, colour))
+      onDone(await flattenPhoto(photo, quad, colour), quad)
     } catch (err) {
       console.error(err)
       alert(t('tools.scan.failed', { message: (err as Error).message }))
@@ -126,7 +164,13 @@ export default function CropEditor({ photo, colour, onColourChange, onDone, onSk
 
   return (
     <div>
-      <p className="text-xs text-slate-500 mb-2">{t('tools.scan.crop_hint')}</p>
+      <p className="text-xs text-slate-500 mb-2" data-testid="scan-crop-hint" data-found={found}>
+        {found === 'found'
+          ? t('tools.scan.crop_found')
+          : found === 'missed'
+            ? t('tools.scan.crop_missed')
+            : t('tools.scan.crop_hint')}
+      </p>
       <div className="flex justify-center rounded-lg bg-slate-900/90 p-2">
         {/* `touch-none` on the overlay stops a drag from scrolling the dialog
             or pinch-zooming the page out from under the finger. */}
@@ -227,21 +271,31 @@ export default function CropEditor({ photo, colour, onColourChange, onDone, onSk
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2 justify-end">
-        <button
-          type="button"
-          onClick={() => setQuad(fullQuad(w, h))}
-          disabled={busy}
-          className="mr-auto px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 disabled:opacity-50"
-        >
-          {t('tools.scan.whole_photo')}
-        </button>
+        <div className="mr-auto flex flex-wrap gap-x-1">
+          <button
+            type="button"
+            onClick={findPage}
+            disabled={busy}
+            className="px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 disabled:opacity-50"
+          >
+            {t('tools.scan.find_page')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setQuad(fullQuad(w, h))}
+            disabled={busy}
+            className="px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 disabled:opacity-50"
+          >
+            {t('tools.scan.whole_photo')}
+          </button>
+        </div>
         <button
           type="button"
           onClick={onSkip}
           disabled={busy}
           className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700 disabled:opacity-50"
         >
-          {t('tools.scan.skip_photo')}
+          {skipLabel ?? t('tools.scan.skip_photo')}
         </button>
         <button
           type="button"

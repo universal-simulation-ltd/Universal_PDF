@@ -201,7 +201,7 @@ const tools: Messages['tools'] = {
 
   // ScanDialog + CropEditor
   'scan.title': 'PDF’e tara',
-  'scan.intro_photo': 'Her sayfanın fotoğrafını çekin veya seçin, sonra dört köşeyi kâğıdın köşelerine sürükleyin. Fotoğraf bu cihazda düzeltilir — hiçbir şey yüklenmez.',
+  'scan.intro_photo': 'Her sayfanın fotoğrafını çekin veya seçin. Sayfa bu cihazda bulunur ve düzeltilir — hiçbir şey yüklenmez — köşeler yanlışsa sürükleyebilirsiniz.',
   'scan.intro_camera': 'Kameranızla, bu cihazda tarandı — hiçbir şey yüklenmez.',
   'scan.choose_photo': 'Bir sayfanın fotoğrafını ekle…',
   'scan.opening_photo': 'Fotoğraf açılıyor…',
@@ -210,6 +210,10 @@ const tools: Messages['tools'] = {
   'scan.crop_title': 'Köşeleri hizalayın',
   'scan.crop_hint': 'Her daireyi sayfanın bir köşesine sürükleyin.',
   'scan.crop_bad': 'Köşeler çaprazlanıyor. Her birini sayfanın kendi köşesine yerleştirin.',
+  'scan.crop_found': 'Sayfa bulundu. Köşeleri kontrol edin ve yanlış olanları sürükleyin.',
+  'scan.crop_missed': 'Sayfanın kenarları bulunamadı. Her daireyi bir köşeye sürükleyin.',
+  'scan.find_page': 'Sayfayı bul',
+  'scan.adjust': '{n}. sayfanın kırpmasını ayarla',
   'scan.corner_tl': 'Sol üst köşe',
   'scan.corner_tr': 'Sağ üst köşe',
   'scan.corner_br': 'Sağ alt köşe',

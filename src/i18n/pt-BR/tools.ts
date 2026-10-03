@@ -201,7 +201,7 @@ const tools: Messages['tools'] = {
 
   // ScanDialog + CropEditor
   'scan.title': 'Escanear para PDF',
-  'scan.intro_photo': 'Tire ou escolha uma foto de cada página e arraste os quatro cantos até os cantos do papel. A foto é endireitada neste aparelho — nada é enviado pela internet.',
+  'scan.intro_photo': 'Tire ou escolha uma foto de cada página. A página é encontrada e endireitada neste aparelho — nada é enviado pela internet — e você pode arrastar os cantos se estiverem fora do lugar.',
   'scan.intro_camera': 'Escaneado com a câmera, neste aparelho — nada é enviado pela internet.',
   'scan.choose_photo': 'Adicionar a foto de uma página…',
   'scan.opening_photo': 'Abrindo a foto…',
@@ -210,6 +210,10 @@ const tools: Messages['tools'] = {
   'scan.crop_title': 'Alinhe os cantos',
   'scan.crop_hint': 'Arraste cada círculo até um canto da página.',
   'scan.crop_bad': 'Os cantos estão se cruzando. Coloque cada um no seu próprio canto da página.',
+  'scan.crop_found': 'Página encontrada. Confira os cantos e arraste os que estiverem fora do lugar.',
+  'scan.crop_missed': 'Não foi possível encontrar as bordas da página. Arraste cada círculo até um canto.',
+  'scan.find_page': 'Encontrar a página',
+  'scan.adjust': 'Ajustar o recorte da página {n}',
   'scan.corner_tl': 'Canto superior esquerdo',
   'scan.corner_tr': 'Canto superior direito',
   'scan.corner_br': 'Canto inferior direito',

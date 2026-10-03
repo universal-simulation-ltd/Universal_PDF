@@ -201,7 +201,7 @@ const tools: Messages['tools'] = {
 
   // ScanDialog + CropEditor
   'scan.title': 'Scansiona in PDF',
-  'scan.intro_photo': 'Scatta o scegli una foto di ogni pagina, poi trascina i quattro angoli sugli angoli del foglio. La foto viene raddrizzata su questo dispositivo: nulla viene caricato.',
+  'scan.intro_photo': 'Scatta o scegli una foto di ogni pagina. La pagina viene trovata e raddrizzata su questo dispositivo (nulla viene caricato) e puoi trascinare gli angoli se sono fuori posto.',
   'scan.intro_camera': 'Scansionato con la fotocamera, su questo dispositivo: nulla viene caricato.',
   'scan.choose_photo': 'Aggiungi la foto di una pagina…',
   'scan.opening_photo': 'Apertura della foto…',
@@ -210,6 +210,10 @@ const tools: Messages['tools'] = {
   'scan.crop_title': 'Allinea gli angoli',
   'scan.crop_hint': 'Trascina ogni cerchio su un angolo della pagina.',
   'scan.crop_bad': 'Gli angoli si incrociano. Metti ciascuno sul proprio angolo della pagina.',
+  'scan.crop_found': 'Pagina trovata. Controlla gli angoli e trascina quelli fuori posto.',
+  'scan.crop_missed': 'Impossibile trovare i bordi della pagina. Trascina ogni cerchio su un angolo.',
+  'scan.find_page': 'Trova la pagina',
+  'scan.adjust': 'Regola il ritaglio della pagina {n}',
   'scan.corner_tl': 'Angolo in alto a sinistra',
   'scan.corner_tr': 'Angolo in alto a destra',
   'scan.corner_br': 'Angolo in basso a destra',
