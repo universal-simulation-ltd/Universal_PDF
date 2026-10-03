@@ -52,6 +52,7 @@ nouns get a capital; German nouns keep theirs).
 | image | image | imagen | immagine | Bild | imagem | imagem | görsel (resim for photos on a page) |
 | OCR / make searchable | rendre interrogeable (OCR) | permitir búsquedas (OCR) | rendi ricercabile (OCR) | durchsuchbar machen (OCR) | tornar pesquisável (OCR) | tornar pesquisável (OCR) | aranabilir hale getir (OCR) |
 | scanned | numérisé | escaneado | scansionato | gescannt | escaneado | digitalizado | taranmış |
+| scan (verb: with the camera, to PDF) | numériser | escanear | scansiona | scannen | escanear | digitalizar | tara |
 | lock (password-protect) | verrouiller | bloquear | proteggi con password | mit Passwort schützen | proteger com senha | proteger com palavra-passe | kilitle |
 | password | mot de passe | contraseña | password | Passwort | senha | palavra-passe | parola |
 | unlock | déverrouiller | desbloquear | sblocca | entsperren | desbloquear | desbloquear | kilidi aç |

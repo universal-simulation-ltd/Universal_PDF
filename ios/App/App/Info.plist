@@ -92,19 +92,20 @@
 	     one (see Docs_UNI_SIM/landmines.md — it took Universal Family's iOS
 	     app down on the first tap of the microphone).
 
-	     Nothing here calls the camera directly. The web layer's image pickers
-	     do, by proxy: an <input type="file"> that accepts images makes the
-	     WebView offer "Take Photo" alongside the photo library, and tapping it
-	     opens the camera with our bundle's usage string. Add a picture to a
-	     page, import a signature, convert an image to PDF — all three reach
-	     it. `npm run check:ios-launch` fails if such an input exists in src/
+	     Two things reach the camera. "Scan a document" opens VisionKit's
+	     document camera (DocumentScanner.swift), which asks with this string.
+	     And the web layer's image pickers do, by proxy: an <input type="file">
+	     that accepts images makes the WebView offer "Take Photo" alongside the
+	     photo library, and tapping it opens the camera with our bundle's usage
+	     string. Add a picture to a page, import a signature, convert an image
+	     to PDF, photo to PDF — all four reach it. `npm run check:ios-launch` fails if such an input exists in src/
 	     and this key does not.
 
 	     Video is deliberately NOT accepted anywhere, so there is no
 	     NSMicrophoneUsageDescription: iOS only offers "Take Video" (and only
 	     then asks for the microphone) when the input accepts a video type. -->
 	<key>NSCameraUsageDescription</key>
-	<string>Take a photo to add to your PDF — a picture, a signature or a page to convert. Photos stay on this device.</string>
+	<string>Scan a document, or take a photo to add to your PDF — a picture, a signature or a page. Scans and photos stay on this device.</string>
 	<!-- Puts Universal PDF in the Files app's "Open With" menu and the share
 	     sheet for PDFs. iOS 26 DOES have a default app per file type — the Open
 	     With menu marks one "Default" — so registering here is what makes the
