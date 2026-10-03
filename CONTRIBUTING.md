@@ -77,4 +77,4 @@ English (`en`), French, Spanish, Italian, German, Portuguese (`pt-BR` and
 ## Security
 
 Please do **not** open a public issue for a security problem. Email
-<inbox@jamesmarkey.co.uk> instead.
+<inbox@unisim.co.uk> instead.
