@@ -17,7 +17,6 @@ import { usePdfStore } from '../stores/pdfStore'
 import LockedOriginNote from './Lock/LockedOriginNote'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { storeForSignRequest, currentPdfBytes, removeSignRequestFiles } from '../lib/hostedStore'
-import { createPersonalSignRequest, usePersonalSignRequests } from '../lib/personalSignRequests'
 import {
   applySignRequestProtection,
   generateAccessPin,
@@ -79,14 +78,9 @@ export default function SendToSignDialog() {
   const canSendFrom = noCompany || !!activeOrgId
   const { user } = useUser()
   const userId = session?.user?.id ?? null
-  // The company's requests, plus any personal ones — sent before the ID joined
-  // a company, or the only kind it has.
-  const orgList = useSignRequests()
-  const personalList = usePersonalSignRequests(supabase, userId, !!userId)
-  const requests = [...orgList.requests, ...personalList.requests]
-    .sort((a, b) => b.created_at.localeCompare(a.created_at))
-  const listLoading = orgList.loading || personalList.loading
-  const refreshList = () => { orgList.refresh(); personalList.refresh() }
+  // The company's requests plus any personal ones (sent before the ID joined a
+  // company, or the only kind it has) — the SDK lists both since 0.176.
+  const { requests, loading: listLoading, refresh: refreshList } = useSignRequests()
 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -196,15 +190,14 @@ export default function SendToSignDialog() {
         setError(!stored.error || stored.error === 'storage_full' ? t('sign.could_not_store') : stored.error)
         return
       }
-      const reqInput = {
+      const req = await createSignRequest(supabase, {
+        // null = a personal request (platform 0228, SDK 0.176).
+        orgId: noCompany || !activeOrgId ? null : activeOrgId,
         uploadId: stored.uploadId,
         docName: stored.fileName ?? fileName ?? 'document.pdf',
         requesterEmail: user?.email ?? '',
         recipientEmail: email.trim() || undefined,
-      }
-      const req = noCompany || !activeOrgId
-        ? await createPersonalSignRequest(supabase, reqInput)
-        : await createSignRequest(supabase, { ...reqInput, orgId: activeOrgId })
+      })
       if (!req.ok || !req.requestId) {
         setError(req.error ?? t('sign.send_could_not_create'))
         return

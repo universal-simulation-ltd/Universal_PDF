@@ -321,8 +321,8 @@ The only PDF stored online now is the copy **Send to sign** needs, under
 reached. Revoking a request deletes its copy (and any signed copy). A
 Universal ID with **no company** sends a *personal* request (migration 0228):
 rows with `org_id` null owned by `created_by_id`, the copy under
-`personal/<user_id>/pdf_sign/…`, created and listed by
-`src/lib/personalSignRequests.ts` because the SDK's helpers are company-only. Old `pdf`
+`personal/<user_id>/pdf_sign/…`, created and listed by the SDK's
+`createSignRequest` (`orgId: null`) and `useSignRequests` since 0.176. Old `pdf`
 rows (two backups on prod at retirement) were left in place. The history below
 still explains why paths are named before the ledger row exists.
 
