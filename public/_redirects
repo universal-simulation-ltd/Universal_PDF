@@ -19,6 +19,10 @@
 /pdf/favicon.svg          /favicon.svg          200
 /pdf/og-image.png         /og-image.png         200
 /pdf/unisim-icon.png      /unisim-icon.png      200
+# The "could not start" fallback (index.html loads it as a file so the CSP in
+# _headers needs no 'unsafe-inline'). Without this line the SPA fallback below
+# would answer with index.html and the fallback would never run.
+/pdf/boot-fallback.js     /boot-fallback.js     200
 
 # The fallback font (@unisim/doc embeds it so Cyrillic, Greek and Hebrew stop
 # converting to '?'). ⚠️ It was missing from this list for the whole of the day

@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process'
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { appendFileSync, existsSync, readdirSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
@@ -183,6 +183,49 @@ function pdfjsData(): Plugin {
   }
 }
 
+// ── Content-Security-Policy in dev ───────────────────────────────────────────
+// The production policy lives in `public/_headers` (Cloudflare Pages applies
+// it), and nothing else serves it — so without this the dev server, and every
+// e2e that runs against it, would never meet the policy at all. This reads the
+// policy out of `_headers` (one source of truth) and serves it, Report-Only,
+// on every page the dev server answers, plus what dev alone needs: Vite's
+// inline react-refresh preamble and its HMR websocket.
+//
+// Violations are POSTed (`report-uri`) to `/__csp-report` and appended, one
+// JSON line each, to $CSP_REPORT_LOG when it is set — that is how a whole e2e
+// run is checked, workers included (a page listener can't hear a worker's
+// violations; see e2e/csp-collect.mjs for the page side).
+function cspDev(): Plugin {
+  const headers = readFileSync(new URL('./public/_headers', import.meta.url), 'utf8')
+  const line = headers.split('\n').find((l) => /^\s*Content-Security-Policy(-Report-Only)?:/.test(l) && /default-src/.test(l))
+  const policy = line ? line.slice(line.indexOf(':') + 1).trim() : ''
+  const dev = policy
+    .replace(/script-src ([^;]*)/, "script-src $1 'unsafe-inline'")
+    .replace(/connect-src ([^;]*)/, 'connect-src $1 ws: wss:')
+  return {
+    name: 'csp-dev',
+    apply: 'serve',
+    configureServer(server) {
+      if (!policy) return
+      server.middlewares.use((req, res, next) => {
+        if (req.url?.startsWith('/__csp-report')) {
+          let body = ''
+          req.on('data', (c) => (body += c))
+          req.on('end', () => {
+            const log = process.env.CSP_REPORT_LOG
+            if (log) appendFileSync(log, body.replace(/\n/g, ' ') + '\n')
+            res.statusCode = 204
+            res.end()
+          })
+          return
+        }
+        res.setHeader('Content-Security-Policy-Report-Only', `${dev}; report-uri /__csp-report`)
+        next()
+      })
+    },
+  }
+}
+
 export default defineConfig(({ command, mode }) => {
   // ⚠️ Refuse to BUILD without the Supabase pair `src/main.tsx` inlines. Vite
   // substitutes `undefined` for a missing variable and reports success, so the
@@ -228,6 +271,7 @@ export default defineConfig(({ command, mode }) => {
       tailwindcss(),
       ocrRuntime(),
       pdfjsData(),
+      cspDev(),
       // The PWA service worker is for the hosted web app only — under Electron's
       // `file://` origin it cannot register and is unnecessary, so skip it.
       ...(isDesktop ? [] : [VitePWA({

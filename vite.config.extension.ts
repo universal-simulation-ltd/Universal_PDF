@@ -38,13 +38,14 @@ function viewerShim(): Plugin {
     transformIndexHtml: {
       order: 'post' as const,
       handler(html: string) {
-        // ⚠️ The app's own inline `<script>` — the 8-second "Failed to load"
-        // fallback in index.html — cannot run here at all: an MV3 extension
+        // ⚠️ Any inline `<script>` cannot run here at all: an MV3 extension
         // page's CSP is `script-src 'self'`, which forbids inline execution.
         // Left in, it does nothing except log a CSP violation on every single
         // page load, which is exactly the kind of permanent red herring that
-        // makes a real error impossible to spot. Everything Vite emits for this
-        // build carries a `src`, so this only ever matches that one block.
+        // makes a real error impossible to spot. Since 2026-10-04 the app's
+        // "Failed to load" fallback is a file (boot-fallback.js) and carries a
+        // `src`, so it stays and now works here too; this only strips the
+        // JSON-LD block, which is data and never needed in an extension.
         return {
           html: html.replace(/[ \t]*<script(?![^>]*\ssrc=)[^>]*>[\s\S]*?<\/script>\n?/gi, ''),
           tags: [{ tag: 'script', attrs: { src: './launch-shim.js' }, injectTo: 'head-prepend' as const }]

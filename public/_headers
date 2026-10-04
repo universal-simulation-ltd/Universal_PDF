@@ -2,6 +2,25 @@
 # marketing site). The HTTP→HTTPS redirect itself is the Cloudflare zone
 # "Always Use HTTPS" setting.
 #
+# Content-Security-Policy (2026-10-04), REPORT-ONLY first. What the app
+# really reaches for, and nothing else:
+#   • script-src: its own bundle; 'wasm-unsafe-eval' for the OCR engine's
+#     WebAssembly core (served from ./ocr, never a CDN); Google's sign-in
+#     script (the SDK loads accounts.google.com/gsi/client on demand).
+#     No 'unsafe-inline' and no 'unsafe-eval' — pdf.js runs with
+#     isEvalSupported:false, and index.html's fallback is a file.
+#   • style-src 'unsafe-inline': React style attributes, everywhere.
+#   • connect-src: Supabase (API, auth, storage, realtime), the suite
+#     changelog, the OCR language models on jsDelivr (@tesseract.js-data
+#     only), the R2 hosted-files Worker, Google sign-in.
+#   • worker-src 'self' blob:: pdf.js's and tesseract's workers are files here.
+#   • frame-src: blob: previews and print, the certificate page's PDF (a
+#     Supabase or R2 signed URL), Google sign-in.
+#   • img-src https:: avatars and QR logos come from anywhere a user points.
+# Checked by e2e/csp.e2e.mjs (the production build with these headers, every
+# flow that loads something) and by the whole e2e suite against the dev server,
+# which serves the same policy (vite.config.ts, cspDev()).
+#
 # Hardening (2026-10-04). Nothing in the suite frames this app (checked: the
 # hub, the website, the SDK), and the app only ever frames its OWN blob: and
 # storage URLs, which these don't govern — so refusing to be framed elsewhere
@@ -13,3 +32,4 @@
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: SAMEORIGIN
   Content-Security-Policy: frame-ancestors 'self'
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https:; font-src 'self' data: blob:; connect-src 'self' data: blob: https://rygfxgalojojppxmhddo.supabase.co wss://rygfxgalojojppxmhddo.supabase.co https://changelog.unisim.co.uk https://cdn.jsdelivr.net/npm/@tesseract.js-data/ https://unisim-hosted-files.inbox-12f.workers.dev https://accounts.google.com/gsi/; worker-src 'self' blob:; frame-src 'self' blob: https://rygfxgalojojppxmhddo.supabase.co https://unisim-hosted-files.inbox-12f.workers.dev https://accounts.google.com/gsi/; media-src 'self' blob: data:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'

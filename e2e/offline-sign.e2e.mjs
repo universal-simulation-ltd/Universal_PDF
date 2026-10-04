@@ -91,14 +91,14 @@ async function world() {
     if (state.offline) return route.abort('internetdisconnected')
     const json = (status, data) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) })
     if (body.action === 'begin') return json(200, { ok: true, docName: 'Lease.pdf', requireVerification: false })
-    if (body.action === 'load') return json(200, { ok: true, docName: 'Lease.pdf', signedUrl: 'https://files.example.test/lease.pdf' })
+    if (body.action === 'load') return json(200, { ok: true, docName: 'Lease.pdf', signedUrl: 'https://rygfxgalojojppxmhddo.supabase.co/storage/v1/object/sign/hosted-uploads/test/lease.pdf?token=t' })
     if (body.action === 'submit') {
       const a = state.submitAnswer
       return json(a.ok ? 200 : 409, a)
     }
     return json(400, { ok: false, error: 'unexpected action ' + body.action })
   })
-  await context.route('https://files.example.test/**', (route) =>
+  await context.route('https://rygfxgalojojppxmhddo.supabase.co/storage/**', (route) =>
     state.offline ? route.abort('internetdisconnected') : route.fulfill({ status: 200, contentType: 'application/pdf', body: pdf }),
   )
   const page = await context.newPage()
