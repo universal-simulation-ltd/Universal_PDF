@@ -160,6 +160,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const setMergeOpen = usePdfStore((s) => s.setMergeOpen)
   const setConvertOpen = usePdfStore((s) => s.setConvertOpen)
   const setMetadataOpen = usePdfStore((s) => s.setMetadataOpen)
+  const setCompareOpen = usePdfStore((s) => s.setCompareOpen)
   const setKnowledgeBaseOpen = usePdfStore((s) => s.setKnowledgeBaseOpen)
   const { language } = useLanguage()
   const setAdvancedExportOpen = usePdfStore((s) => s.setAdvancedExportOpen)
@@ -643,6 +644,12 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                     label={t('menu.merge')}
                     info={t('menu.merge_info')}
                     onSelect={() => { setMergeOpen(true); closeMenu() }}
+                  />
+                  <InfoRow
+                    icon="◧"
+                    label={t('menu.compare')}
+                    info={t('menu.compare_info')}
+                    onSelect={() => { setCompareOpen(true); closeMenu() }}
                   />
                   <InfoRow
                     icon="⇄"

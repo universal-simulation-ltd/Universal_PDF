@@ -32,6 +32,8 @@ const menu: Messages['menu'] = {
   'ocr_info': 'Ler um PDF digitalizado no próprio dispositivo para poder procurar e selecionar o texto.',
   'merge': 'Juntar com outro PDF',
   'merge_info': 'Combinar este ficheiro com outros — reordenar antes de exportar.',
+  'compare': 'Comparar com outro PDF',
+  'compare_info': 'Veja o que mudou entre duas versões, página a página e palavra a palavra.',
   'convert': 'Converter em imagens',
   'convert_info': 'Converter cada página em PNG ou JPG (um ZIP para várias páginas).',
   'advanced_export': 'Exportação avançada',

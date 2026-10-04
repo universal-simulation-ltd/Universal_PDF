@@ -111,6 +111,7 @@ const PresentMode = lazy(() => import('./components/Present/PresentMode'))
 const SendToSignDialog = lazy(() => import('./components/SendToSignDialog'))
 const AdvancedExportDialog = lazy(() => import('./components/Export/AdvancedExportDialog'))
 const MetadataDialog = lazy(() => import('./components/Metadata/MetadataDialog'))
+const CompareDialog = lazy(() => import('./components/Compare/CompareDialog'))
 const QrDialog = lazy(() => import('./components/Qr/QrDialog'))
 
 /** True from the first time `open` is, for good. */
@@ -151,6 +152,8 @@ export default function App() {
   const sendToSignMounted = useOpenedOnce(usePdfStore((s) => s.sendToSignOpen))
   const qrMounted = useOpenedOnce(usePdfStore((s) => s.qrOpen))
   const setMetadataOpen = usePdfStore((s) => s.setMetadataOpen)
+  const compareOpen = usePdfStore((s) => s.compareOpen)
+  const setCompareOpen = usePdfStore((s) => s.setCompareOpen)
   const sourceBytes = usePdfStore((s) => s.sourceBytes)
   const fileName = usePdfStore((s) => s.fileName)
   const importNotice = usePdfStore((s) => s.importNotice)
@@ -837,6 +840,13 @@ export default function App() {
         )}
         {metadataOpen && sourceBytes && (
           <MetadataDialog sourceBytes={sourceBytes} onClose={() => setMetadataOpen(false)} />
+        )}
+        {compareOpen && sourceBytes && (
+          <CompareDialog
+            firstBytes={sourceBytes}
+            firstName={fileName ?? 'document.pdf'}
+            onClose={() => setCompareOpen(false)}
+          />
         )}
       </Suspense>
       {/* Last in the list and highest in the stack: the question about leaving

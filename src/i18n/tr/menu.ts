@@ -32,6 +32,8 @@ const menu: Messages['menu'] = {
   'ocr_info': 'Taranmış bir PDF’i cihazda okuyun; böylece metnini bulup seçebilirsiniz.',
   'merge': 'Başka bir PDF ile birleştir',
   'merge_info': 'Bu dosyayı başkalarıyla birleştirin — dışa aktarmadan önce sıralayın.',
+  'compare': 'Başka bir PDF ile karşılaştır',
+  'compare_info': 'İki sürüm arasında neyin değiştiğini sayfa sayfa ve kelime kelime görün.',
   'convert': 'Görsellere dönüştür',
   'convert_info': 'Her sayfayı PNG veya JPG olarak oluşturun (birden çok sayfa için ZIP).',
   'advanced_export': 'Gelişmiş dışa aktarma',

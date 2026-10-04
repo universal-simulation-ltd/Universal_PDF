@@ -32,6 +32,8 @@ const menu: Messages['menu'] = {
   'ocr_info': 'Lee un PDF escaneado en el dispositivo para que puedas buscar y seleccionar su texto.',
   'merge': 'Unir con otro PDF',
   'merge_info': 'Combina este archivo con otros y cambia el orden antes de exportar.',
+  'compare': 'Comparar con otro PDF',
+  'compare_info': 'Mira qué ha cambiado entre dos versiones, página a página y palabra por palabra.',
   'convert': 'Convertir en imágenes',
   'convert_info': 'Convierte cada página en PNG o JPG (un ZIP si hay varias páginas).',
   'advanced_export': 'Exportación avanzada',

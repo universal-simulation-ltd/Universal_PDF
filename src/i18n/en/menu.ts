@@ -32,6 +32,8 @@ export default {
   'ocr_info': 'Read a scanned PDF on-device so you can find & select its text.',
   'merge': 'Merge with another PDF',
   'merge_info': 'Combine this file with others — reorder before you export.',
+  'compare': 'Compare with another PDF',
+  'compare_info': 'See what changed between two versions — page by page and word by word.',
   'convert': 'Convert into images',
   'convert_info': 'Render each page to PNG or JPG (a ZIP for multiple pages).',
   'advanced_export': 'Advanced export',

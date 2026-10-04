@@ -201,6 +201,35 @@ export default {
   'ocr.run_anyway': 'Run OCR anyway',
   'ocr.open': 'Open searchable PDF',
   'ocr.failed': 'OCR failed: {message}',
+  'compare.title': 'Compare PDFs',
+  'compare.first_is': 'Comparing {name} with…', // {name} is the open file's name
+  'compare.intro': 'Choose the other version. Nothing is uploaded: both PDFs are compared on this device.',
+  'compare.pick': 'Choose the other PDF',
+  'compare.opening': 'Opening…',
+  'compare.failed': 'Couldn’t open that PDF: {message}',
+  'compare.side_by_side': 'Side by side',
+  'compare.overlay': 'Overlay',
+  'compare.text': 'Text',
+  'compare.only_in': 'Only in {name}', // legend beside a colour swatch; {name} is a file name
+  'compare.change_second': 'Choose a different PDF',
+  'compare.prev': 'Previous page',
+  'compare.next': 'Next page',
+  'compare.page_of': 'Page {page} of {total}',
+  'compare.scanning': 'Comparing pages… {done} of {total}',
+  'compare.no_changes': 'No visible differences on any page.',
+  'compare.changed_pages': 'Changed pages:',
+  'compare.no_page': 'No page {page} in this PDF',
+  'compare.identical_page': 'This page looks identical in both.',
+  'compare.changed_pct': '{pct}% of this page changed', // {pct} is a number like 2.5
+  'compare.reading_text': 'Reading the text of both PDFs…',
+  'compare.text_unavailable': 'Comparing text needs both PDFs to have selectable text. For a scan, use Make searchable (OCR) first, or compare it Side by side or as an Overlay.',
+  'compare.too_different': 'These two PDFs are too different to compare word by word. Side by side and Overlay still work.',
+  'compare.text_same': 'The text is the same in both.',
+  'compare.text_summary': 'Words added: {added} · Words removed: {removed}',
+  'compare.skipped_one': '{count} unchanged word',
+  'compare.skipped_other': '{count} unchanged words',
+  'compare.page_in_first': 'Page {page}',
+  'compare.page_in_second': 'Page {page} of the second PDF', // label on a change that is only in the second PDF
 
   // ScanDialog + CropEditor
   'scan.title': 'Scan to PDF',
