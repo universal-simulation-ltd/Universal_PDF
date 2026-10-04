@@ -164,6 +164,20 @@ export default {
   'request_sending_back': 'Sending back…',
   'request_finish_send': 'Finish & send back to sender',
   'request_finish_signing': 'Finish signing →',
+  'offline_banner': 'You’re offline. You can still sign — it will be sent back as soon as you’re online.',
+  'offline_not_cached': 'You’re offline, and this document hasn’t been opened on this device before. Connect to the internet and open the link again.',
+  'offline_queued_title': 'Signed — waiting to send',
+  'offline_queued_body': 'Your signed copy of {doc} is saved on this device and will be sent back automatically as soon as you’re online. Keep this page open, or open the link or Universal PDF again later.', // {doc} is the document name, shown in bold
+  'offline_send_now': 'Send now',
+  'offline_sending': 'Sending…',
+  'offline_still_offline': 'Still offline — it will be sent when the connection is back.',
+  'offline_needs_verification': 'Confirm your email address to send your signed copy of {doc}.',
+  'offline_confirm_send': 'Confirm and send',
+  'offline_stale': 'Someone else signed {doc} after you opened it, so your copy can’t be sent back as it is: it would erase their signature. Open the latest version and sign again — your copy is still here to download.',
+  'offline_open_latest': 'Open the latest version',
+  'offline_failed': 'Your signed copy of {doc} couldn’t be sent back: {error}',
+  'offline_sent_toast': 'Your signed copy of {name} was sent back.',
+  'gate_offline': 'You’re offline. Connect to the internet to get and check your code — nothing you try offline uses up any of your tries.',
 
   // SignCertificatePage
   'cert_action_opened': 'Opened the document',

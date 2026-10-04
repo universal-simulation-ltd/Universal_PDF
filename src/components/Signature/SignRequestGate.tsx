@@ -44,6 +44,22 @@ export default function SignRequestGate({
   const [notice, setNotice] = useState<string | null>(null)
   const [cooldown, setCooldown] = useState(0)
   const codeRef = useRef<HTMLInputElement>(null)
+  // ⚠️ OFFLINE, NOTHING IS TRIED. The emailed code has five tries
+  // (MAX_CODE_ATTEMPTS in pdf-sign-request); with no connection a press can
+  // only fail, and on a connection that drops mid-request it can reach the
+  // server, spend a try and lose the answer. So the buttons wait for a
+  // connection and say why.
+  const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine !== false)
+  useEffect(() => {
+    const up = () => setOnline(true)
+    const down = () => setOnline(false)
+    window.addEventListener('online', up)
+    window.addEventListener('offline', down)
+    return () => {
+      window.removeEventListener('online', up)
+      window.removeEventListener('offline', down)
+    }
+  }, [])
 
   useEffect(() => {
     if (cooldown <= 0) return
@@ -57,7 +73,7 @@ export default function SignRequestGate({
 
   async function onSendCode(e: React.FormEvent) {
     e.preventDefault()
-    if (busy || !email.trim()) return
+    if (busy || !email.trim() || !online) return
     setBusy(true)
     setError(null)
     setNotice(null)
@@ -75,7 +91,7 @@ export default function SignRequestGate({
 
   async function onVerify(e: React.FormEvent) {
     e.preventDefault()
-    if (busy || code.length < 6) return
+    if (busy || code.length < 6 || !online) return
     setBusy(true)
     setError(null)
     const res = await verifyAccess(supabase, token, { code, pin: hasPin ? pin : undefined })
@@ -114,6 +130,12 @@ export default function SignRequestGate({
           )}
         </p>
 
+        {!online && (
+          <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800" data-gate-offline>
+            {t('sign.gate_offline')}
+          </p>
+        )}
+
         {step === 'email' ? (
           <form onSubmit={onSendCode} className="mt-5 space-y-3">
             <div>
@@ -135,7 +157,7 @@ export default function SignRequestGate({
             </div>
             <button
               type="submit"
-              disabled={busy || !email.trim() || cooldown > 0}
+              disabled={busy || !email.trim() || cooldown > 0 || !online}
               className="w-full rounded-lg bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy ? t('sign.sending') : cooldown > 0 ? t('sign.gate_wait', { seconds: cooldown }) : t('sign.gate_email_me')}
@@ -189,7 +211,7 @@ export default function SignRequestGate({
 
             <button
               type="submit"
-              disabled={busy || code.length < 6 || (hasPin && pin.length < 4)}
+              disabled={busy || code.length < 6 || (hasPin && pin.length < 4) || !online}
               className="w-full rounded-lg bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy ? t('sign.gate_checking') : t('sign.gate_open')}

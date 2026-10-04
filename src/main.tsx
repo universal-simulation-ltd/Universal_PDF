@@ -7,6 +7,7 @@ console.log(`build: ${import.meta.env.VITE_BUILD_SHA}`)
 import App from './App'
 import SignMobilePage from './components/Signature/SignMobilePage'
 import SignRequestPage from './components/Signature/SignRequestPage'
+import SignQueueSync from './components/Signature/SignQueueSync'
 import SignCertificatePage from './components/Signature/SignCertificatePage'
 import { UsageTracker } from '@unisim/sdk'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -72,7 +73,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           {signToken ? <SignMobilePage token={signToken} />
             : signDocToken ? <SignRequestPage token={signDocToken} />
             : certId ? <SignCertificatePage certId={certId} />
-            : <App />}
+            : <><App /><SignQueueSync /></>}
         </I18nRoot>
       </UniversalProvider>
     </ErrorBoundary>

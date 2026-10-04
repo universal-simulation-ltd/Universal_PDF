@@ -1,11 +1,22 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useUniversal } from '@unisim/sdk'
 import App from '../../App'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { currentPdfBytes } from '../../lib/hostedStore'
 import { downloadPdfBytes } from '../../lib/download'
-import { beginSignRequest, loadSignRequest, submitSignedPdf, certLink } from '../../lib/signRequestClient'
+import { beginSignRequest, loadSignRequest, submitSignedPdf, certLink, queueSubmitter } from '../../lib/signRequestClient'
+import {
+  cacheSignDoc,
+  enqueueSubmission,
+  getCachedSignDoc,
+  getQueued,
+  isOffline,
+  removeQueued,
+  sendQueued,
+  sha256Hex,
+  type QueuedSubmission,
+} from '../../lib/signQueue'
 import SignRequestGate from './SignRequestGate'
 import { useT } from '../../i18n'
 
@@ -16,6 +27,14 @@ import { useT } from '../../i18n'
  * readEmbeddedSigFields) — under a banner explaining what's being asked.
  * "Finish & send back" flattens the recipient's work and files it to the
  * sender via the pdf-sign-request Edge Function; no account needed.
+ *
+ * OFFLINE (2026-10-04). In the installed web app a signer can do all of it
+ * without a connection: a request opened once before opens from this device
+ * (`lib/signQueue.ts` — unprotected requests only), and "Finish & send back"
+ * with no connection keeps the signed copy here (`queued`) and sends it the
+ * moment the device is back online. Every submission carries the hash of the
+ * version it was signed on, so one that waited while somebody else signed is
+ * refused (`stale`) instead of erasing their signature.
  */
 export default function SignRequestPage({ token }: { token: string }) {
   const t = useT()
@@ -25,7 +44,17 @@ export default function SignRequestPage({ token }: { token: string }) {
 
   // 'gate' = a protected link waiting on the recipient to prove the email
   // address it was sent to is theirs. See SignRequestGate.
-  const [phase, setPhase] = useState<'loading' | 'gate' | 'ready' | 'submitting' | 'done' | 'error'>('loading')
+  // 'queued' = signed and waiting on this device for a connection (or for the
+  // signer to verify / reopen — see `queued.state`).
+  const [phase, setPhase] = useState<'loading' | 'gate' | 'ready' | 'submitting' | 'queued' | 'done' | 'error'>('loading')
+  const [queued, setQueued] = useState<QueuedSubmission | null>(null)
+  const [syncing, setSyncing] = useState(false)
+  const [syncNote, setSyncNote] = useState<string | null>(null)
+  // The hash of the version on screen — sent with the submit (stale guard).
+  const [baseSha, setBaseSha] = useState<string | null>(null)
+  // True when the document came from this device because there was no
+  // connection: the banner says signing will be sent later.
+  const [offlineCopy, setOfflineCopy] = useState(false)
   const [gate, setGate] = useState<{ docName: string; maskedEmail: string | null; hasPin: boolean } | null>(null)
   // ⚠️ Held in React state only — deliberately NOT in localStorage or the URL.
   // It is a bearer credential for this document, and the whole point of the
@@ -43,16 +72,49 @@ export default function SignRequestPage({ token }: { token: string }) {
   const [signedCopy, setSignedCopy] = useState<Uint8Array | null>(null)
   const [outcome, setOutcome] = useState<{ completed: boolean; certId: string | null }>({ completed: false, certId: null })
   const startedRef = useRef(false)
+  // Live connection state, for the banner.
+  const [online, setOnline] = useState(() => !isOffline())
+  useEffect(() => {
+    const up = () => setOnline(true)
+    const down = () => setOnline(false)
+    window.addEventListener('online', up)
+    window.addEventListener('offline', down)
+    return () => {
+      window.removeEventListener('online', up)
+      window.removeEventListener('offline', down)
+    }
+  }, [])
 
   useEffect(() => {
     if (startedRef.current) return // StrictMode double-mount guard
     startedRef.current = true
     ;(async () => {
+      // A signed copy already waiting on this device: show that, never the
+      // editor again (a second signature would only be refused).
+      const waiting = await getQueued(token)
       // ⚠️ `begin` first, always. It returns no document and no signed URL, so
       // a link scanner that fetches the URL learns nothing and moves nothing —
       // and for an unprotected request it simply says so and we fall straight
       // through to the load below, exactly as before 0131.
-      const pre = await beginSignRequest(supabase, token)
+      const pre = isOffline() ? { ok: false, network: true } as Awaited<ReturnType<typeof beginSignRequest>> : await beginSignRequest(supabase, token)
+      if (pre.ok && pre.requireVerification) {
+        setGate({
+          docName: pre.docName ?? 'document.pdf',
+          maskedEmail: pre.maskedEmail ?? null,
+          hasPin: !!pre.hasPin,
+        })
+      }
+      if (waiting) {
+        setQueued(waiting)
+        setDocName(waiting.docName)
+        setPhase('queued')
+        if (waiting.state === 'queued' && !pre.network) void trySend(waiting)
+        return
+      }
+      if (pre.network) {
+        await openFromDevice()
+        return
+      }
       if (pre.ok && pre.requireVerification) {
         setGate({
           docName: pre.docName ?? 'document.pdf',
@@ -67,12 +129,31 @@ export default function SignRequestPage({ token }: { token: string }) {
     })()
   }, [supabase, token, loadFile])
 
+  // No connection: open the copy this device kept the last time, if any.
+  async function openFromDevice() {
+    const cached = await getCachedSignDoc(token)
+    if (!cached) {
+      setError(t('sign.offline_not_cached'))
+      setPhase('error')
+      return
+    }
+    setDocName(cached.docName)
+    setBaseSha(cached.sha256)
+    setOfflineCopy(true)
+    await loadFile(new File([cached.bytes], cached.docName, { type: 'application/pdf' }))
+    setPhase('ready')
+  }
+
   // Fetch + load the document. `sess` is required for a verified request and
   // ignored by the server for any other.
   async function openDocument(sess: string | undefined) {
     setPhase('loading')
     {
       const res = await loadSignRequest(supabase, token, sess)
+      if (res.network && !sess) {
+        await openFromDevice()
+        return
+      }
       if (!res.ok || !res.signedUrl) {
         setError(
           res.code === 'expired' ? t('sign.request_expired')
@@ -90,7 +171,14 @@ export default function SignRequestPage({ token }: { token: string }) {
         const blob = await pdfRes.blob()
         const name = res.docName ?? 'document.pdf'
         setDocName(name)
-        await loadFile(new File([blob], name, { type: 'application/pdf' }))
+        const bytes = await blob.arrayBuffer()
+        const sha = await sha256Hex(bytes)
+        setBaseSha(sha)
+        setOfflineCopy(false)
+        // Kept for offline use — ⚠️ never for a request behind email
+        // verification (`sess` set): see lib/signQueue.ts.
+        if (!sess) void cacheSignDoc({ token, docName: name, bytes, sha256: sha, savedAt: Date.now() })
+        await loadFile(new File([bytes], name, { type: 'application/pdf' }))
         setPhase('ready')
       } catch (e) {
         setError((e as Error).message)
@@ -115,9 +203,34 @@ export default function SignRequestPage({ token }: { token: string }) {
     setError(null)
     try {
       const { bytes } = await currentPdfBytes()
+      // Only what the server classifies — the queue keeps this on the device.
+      const slim = anns.map((a) => ({ type: a.type, opacity: (a as { opacity?: number }).opacity, pageIndex: a.pageIndex }))
+      const keep = async (state: QueuedSubmission['state'] = 'queued', lastError?: string) => {
+        const item: QueuedSubmission = {
+          token, docName, bytes, annotations: slim, baseSha256: baseSha, queuedAt: Date.now(), state, lastError,
+        }
+        await enqueueSubmission(item)
+        setQueued(item)
+        setSignedCopy(bytes)
+        setPhase('queued')
+      }
+      // No connection: keep it and send it later. Not even attempted, so a
+      // flaky "online" that is really offline can't half-send it either.
+      if (isOffline()) {
+        await keep()
+        return
+      }
       // Send the structured annotation set too, so the server can classify what
       // was added (signature vs other edits) into the provenance log.
-      const res = await submitSignedPdf(supabase, token, bytes, anns, sessionOverride ?? session)
+      const res = await submitSignedPdf(supabase, token, bytes, slim, sessionOverride ?? session, baseSha)
+      if (!res.ok && res.network) {
+        await keep()
+        return
+      }
+      if (!res.ok && res.code === 'stale_version') {
+        await keep('stale', res.error)
+        return
+      }
       if (!res.ok) {
         if (res.code === 'verification_expired' || res.code === 'verification_required') {
           setError(t('sign.request_verification_expired'))
@@ -143,13 +256,75 @@ export default function SignRequestPage({ token }: { token: string }) {
   }
 
   function downloadCopy() {
-    if (!signedCopy) return
-    downloadPdfBytes(signedCopy.slice(), docName.replace(/\.pdf$/i, '') + '-signed.pdf')
+    const copy = signedCopy ?? queued?.bytes
+    if (!copy) return
+    downloadPdfBytes(copy.slice(), docName.replace(/\.pdf$/i, '') + '-signed.pdf')
+  }
+
+  // Send a waiting copy. `sess` only after the signer verified by hand —
+  // ⚠️ nothing here ever asks for or checks a code on its own.
+  const trySend = useCallback(
+    async (item: QueuedSubmission, sess?: string) => {
+      setSyncing(true)
+      setSyncNote(null)
+      const r = await sendQueued(item, queueSubmitter(supabase), sess)
+      setSyncing(false)
+      if (r.result === 'sent') {
+        setSignedCopy(item.bytes)
+        setOutcome({ completed: r.completed, certId: r.certId })
+        setQueued(null)
+        setPhase('done')
+        return
+      }
+      if (r.result === 'already') {
+        setQueued(null)
+        setError(t('sign.request_already_signed_nothing'))
+        setPhase('error')
+        return
+      }
+      if (r.result === 'offline') {
+        setSyncNote(t('sign.offline_still_offline'))
+        return
+      }
+      setQueued((await getQueued(token)) ?? item)
+    },
+    [supabase, t, token],
+  )
+
+  // Back online with a copy waiting: send it straight away.
+  useEffect(() => {
+    if (phase !== 'queued' || !queued || queued.state !== 'queued') return
+    const onOnline = () => void trySend(queued)
+    window.addEventListener('online', onOnline)
+    return () => window.removeEventListener('online', onOnline)
+  }, [phase, queued, trySend])
+
+  // Start again on the latest version: the stale copy goes (it can still be
+  // downloaded first), and the link is opened afresh.
+  async function openLatest() {
+    await removeQueued(token)
+    window.location.reload()
   }
 
   // Re-verification after an expiry mid-signature: the same gate, but reached
   // from the editor, and on success it retries the submit instead of reloading
-  // the file.
+  // the file. A QUEUED copy that needs verification comes through here too,
+  // and on success sends that copy.
+  if (reverify && gate && phase === 'queued' && queued) {
+    return (
+      <SignRequestGate
+        token={token}
+        docName={gate.docName}
+        maskedEmail={gate.maskedEmail}
+        hasPin={gate.hasPin}
+        onVerified={(s) => {
+          setSession(s)
+          setReverify(false)
+          void trySend({ ...queued, state: 'queued' }, s)
+        }}
+      />
+    )
+  }
   if (reverify && gate) {
     return (
       <SignRequestGate
@@ -192,6 +367,64 @@ export default function SignRequestPage({ token }: { token: string }) {
         <a href={import.meta.env.BASE_URL} className="mt-2 rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800">
           {t('sign.open_universal_pdf')}
         </a>
+      </main>
+    )
+  }
+
+  if (phase === 'queued' && queued) {
+    const doc = <strong className="text-slate-200">{docName}</strong>
+    const state = queued.state
+    return (
+      <main className="flex min-h-svh flex-col items-center justify-center gap-3 bg-slate-900 p-6 text-center text-white" data-sign-queued={state}>
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/20 text-3xl">{state === 'stale' || state === 'failed' ? '!' : '⏳'}</div>
+        <h1 className="text-lg font-semibold">{t('sign.offline_queued_title')}</h1>
+        <p className="max-w-sm text-sm text-slate-400">
+          {state === 'stale'
+            ? t.rich('sign.offline_stale', { doc })
+            : state === 'needs_verification'
+              ? t.rich('sign.offline_needs_verification', { doc })
+              : state === 'failed'
+                ? t.rich('sign.offline_failed', { doc, error: queued.lastError ?? '' })
+                : t.rich('sign.offline_queued_body', { doc })}
+        </p>
+        {syncNote && <p className="max-w-sm text-xs text-amber-300" data-sign-sync-note>{syncNote}</p>}
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+          {state === 'queued' && (
+            <button
+              type="button"
+              onClick={() => void trySend(queued)}
+              disabled={syncing}
+              className="rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold hover:bg-orange-800 disabled:opacity-60"
+            >
+              {syncing ? t('sign.offline_sending') : t('sign.offline_send_now')}
+            </button>
+          )}
+          {state === 'needs_verification' && gate && (
+            <button
+              type="button"
+              onClick={() => setReverify(true)}
+              className="rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold hover:bg-orange-800"
+            >
+              {t('sign.offline_confirm_send')}
+            </button>
+          )}
+          {state === 'stale' && (
+            <button
+              type="button"
+              onClick={() => void openLatest()}
+              className="rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold hover:bg-orange-800"
+            >
+              {t('sign.offline_open_latest')}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={downloadCopy}
+            className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800"
+          >
+            {t('sign.request_download_copy')}
+          </button>
+        </div>
       </main>
     )
   }
@@ -259,6 +492,11 @@ export default function SignRequestPage({ token }: { token: string }) {
             <p className="mt-2 text-xs text-slate-500">
               {t.rich('sign.request_hint', { box: <strong>{t('sign.request_sign_here')}</strong> })}
             </p>
+            {(offlineCopy || !online) && (
+              <p className="mt-2 rounded-md bg-amber-50 px-2 py-1.5 text-xs text-amber-800" data-sign-offline-banner>
+                {t('sign.offline_banner')}
+              </p>
+            )}
             {error && <p className="mt-2 text-xs text-rose-600">{error}</p>}
             <button
               type="button"

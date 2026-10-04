@@ -44,8 +44,22 @@ function base64FromBytes(bytes: Uint8Array): string {
   return btoa(bin)
 }
 
+/**
+ * True for a call that never reached the function — no connection, DNS, a
+ * dropped request. supabase-js raises `FunctionsFetchError` for exactly that,
+ * as opposed to `FunctionsHttpError` (the function answered with an error).
+ * The offline signing path keys off it: a network failure queues the signed
+ * copy; an answer from the server never does.
+ */
+function isNetworkError(error: unknown): boolean {
+  const name = (error as { name?: string } | null)?.name
+  return name === 'FunctionsFetchError' || name === 'TypeError'
+}
+
 export interface LoadSignRequestResult {
   ok: boolean
+  /** The function could not be reached (offline). */
+  network?: boolean
   error?: string
   code?: 'invalid_token' | 'expired' | 'already_signed' | 'deleted' | 'completed'
     | 'verification_required' | 'verification_expired' | 'no_recipient' | (string & {})
@@ -63,6 +77,7 @@ export async function loadSignRequest(supabase: Supabase, token: string, session
     body: { action: 'load', token, session },
   })
   if (error) {
+    if (isNetworkError(error)) return { ok: false, network: true, error: error.message }
     // FunctionsHttpError carries the response — surface the body's message/code.
     const body = await parseFunctionError(error)
     return { ok: false, error: body.error ?? error.message, code: body.code }
@@ -72,6 +87,8 @@ export async function loadSignRequest(supabase: Supabase, token: string, session
 
 export interface SubmitSignedResult {
   ok: boolean
+  /** The function could not be reached — the caller queues the copy. */
+  network?: boolean
   error?: string
   code?: string
   notified?: boolean
@@ -89,14 +106,23 @@ export async function submitSignedPdf(
   bytes: Uint8Array,
   annotations: Array<{ type?: string; opacity?: number; pageIndex?: number }>,
   session?: string,
+  baseSha256?: string | null,
 ): Promise<SubmitSignedResult> {
   // ⚠️ The session goes on the SUBMIT too, not just the load. The server
   // enforces it on both — guarding only the view would leave a forwarded link
   // able to sign the document without ever opening it.
+  //
+  // `baseSha256` is the hash of the version this signer opened. The server
+  // refuses the copy (`stale_version`) if another party has signed since,
+  // rather than let it replace — and erase — their signature.
   const { data, error } = await supabase.functions.invoke('pdf-sign-request', {
-    body: { action: 'submit', token, pdfBase64: base64FromBytes(bytes), annotations, session },
+    body: {
+      action: 'submit', token, pdfBase64: base64FromBytes(bytes), annotations, session,
+      ...(baseSha256 ? { baseSha256 } : {}),
+    },
   })
   if (error) {
+    if (isNetworkError(error)) return { ok: false, network: true, error: error.message }
     const body = await parseFunctionError(error)
     return { ok: false, error: body.error ?? error.message, code: body.code }
   }
@@ -180,6 +206,8 @@ async function parseFunctionError(error: unknown): Promise<{ error?: string; cod
 
 export interface BeginSignRequestResult {
   ok: boolean
+  /** The function could not be reached (offline). */
+  network?: boolean
   error?: string
   code?: string
   docName?: string
@@ -201,6 +229,7 @@ export async function beginSignRequest(supabase: Supabase, token: string): Promi
     body: { action: 'begin', token },
   })
   if (error) {
+    if (isNetworkError(error)) return { ok: false, network: true, error: error.message }
     const body = await parseFunctionError(error)
     return { ok: false, error: body.error ?? error.message, code: body.code }
   }
@@ -300,4 +329,12 @@ export async function applySignRequestProtection(
   const { error } = await supabase.from('pdf_sign_requests').update(patch).eq('id', requestId)
   if (error) return { ok: false, error: error.message }
   return { ok: true }
+}
+
+/** The offline queue's sender (see `signQueue.ts`), bound to a client. */
+export function queueSubmitter(supabase: Supabase) {
+  return (
+    item: { token: string; bytes: Uint8Array; annotations: Array<{ type?: string; opacity?: number; pageIndex?: number }>; baseSha256: string | null },
+    session?: string,
+  ) => submitSignedPdf(supabase, item.token, item.bytes, item.annotations, session, item.baseSha256)
 }
