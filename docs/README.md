@@ -96,10 +96,22 @@ cache) so it works offline afterwards.
 - **Engine:** [`tesseract.js`](https://github.com/naptha/tesseract.js) v5 (a
   WASM port of Tesseract), imported dynamically in `src/lib/ocr.ts`.
 - **How it works:** each page is rendered to a canvas via pdf.js, recognised to
-  word boxes, and an **invisible text layer** (transparent Helvetica, opacity 0)
-  is baked over the original page with pdf-lib — so the scanned image still
-  shows but Find / copy-paste / redact-by-search all light up. Word positioning
-  is rotation- and CropBox-aware via `viewport.convertToPdfPoint`.
+  word boxes, and an **invisible text layer** is baked over the original page
+  with pdf-lib — so the scanned image still shows but Find / copy-paste /
+  redact-by-search all light up. Word positioning is rotation- and
+  CropBox-aware via `viewport.convertToPdfPoint`.
+- **Any script (2026-10-04):** the layer is written in a *glyphless* Type0 font
+  (Tesseract's own `pdf.ttf`, Identity-H + identity ToUnicode, render mode 3 —
+  `src/lib/ocrTextLayer.ts`), not Helvetica: Helvetica's WinAnsi encoding
+  silently dropped every CJK character and Turkish ğ ş ı İ. Japanese and
+  Chinese are laid out per **line**, because Tesseract's word boxes for them
+  drift by up to a character (a Find highlight landed one character off).
+- **Languages (2026-10-04):** the dialog asks first — English, French,
+  Spanish, Italian, German, Portuguese, Turkish, Japanese, Chinese (Simplified
+  and Traditional) and Korean (`src/lib/ocrLanguages.ts`) — starting on the
+  PDF's own `/Lang`, else the app's language. Each model (0.7–3 MB) comes on
+  demand from jsDelivr's `@tesseract.js-data`, like English always did.
+  `npm run test:ocr-languages` OCRs real image-only scans in each script.
 - **`auto` mode** (default) skips pages that already have selectable text, so a
   mixed PDF only OCRs its image pages; **`all`** forces every page.
 - **UI:** `src/components/Ocr/OcrModal.tsx` shows a determinate progress bar
@@ -109,8 +121,7 @@ cache) so it works offline afterwards.
   the Tesseract CDN (`cdn.jsdelivr.net/npm/tesseract.js*`) and language data
   (`tessdata.projectnaptha.com`); the assets are cross-origin so they're never
   in the install-time precache.
-- **Limitations / follow-ups:** English (`eng`) model only for now (the OCR text
-  is WinAnsi-sanitised, matching the Standard-14 font export path); the desktop
+- **Limitations / follow-ups:** the desktop
   (Electron `file://`) build can't reach the CDN, so OCR there needs a network
   connection or a future self-hosted-assets path (as Images does with
   `VITE_BG_REMOVAL_PATH`).
@@ -436,6 +447,69 @@ cosmetic: storing runs the same `buildAnnotatedPdfBytes` flatten as export, so
 it is equally a point of no return for redactions. Any future surface that
 launches the dialog inherits the gate for free, which is the point of it living
 on the action rather than the launcher.
+
+### Signing offline (2026-10-04)
+
+The recipient side works with no connection, in the installed web app
+(`src/lib/signQueue.ts`):
+
+- A request opened once is kept on the device (IndexedDB, 30 days, deleted once
+  sent) and opens offline afterwards — ⚠️ **only for requests without email
+  verification**; a verified request's whole point is that the link alone is not
+  enough, and its session is never stored either.
+- *Finish & send back* with no connection keeps the signed copy ("Signed —
+  waiting to send") and sends it when the device is back online — from the
+  signing page, or from `SignQueueSync` the next time Universal PDF starts.
+- Every submit carries `baseSha256`, the hash of the version signed. The
+  `pdf-sign-request` function answers `409 stale_version` if another party has
+  signed since (the signed copy *replaces* the latest version, so it would erase
+  theirs); the page offers *Open the latest version*.
+- ⚠️ The sync only ever **submits**. It never requests or checks an access
+  code — the code has five tries, and a retry loop must not spend them. A queued
+  copy that needs verification waits for the signer to verify by hand, and the
+  gate's buttons are off while offline.
+- `npm run test:offline-sign`.
+
+## Compare two PDFs
+
+**Actions → Advanced → Compare with another PDF** (`components/Compare/`,
+`lib/compare.ts`): side by side, an overlay (ink only in the first red, only in
+the second green, the rest washed out), a background scan listing the changed
+pages, and a word diff of the whole text (Myers, with a chunked fallback; CJK
+per character). Both documents go through `openPdf`, so they share the app's one
+pdf.js worker. `npm run test:compare` / `test:compare:e2e`.
+
+## Links inside PDFs ask first when they should
+
+`lib/links.ts` `judgePdfLink`: lookalike/punycode hosts, `user@host`, bare IPs,
+`http:` and shorteners show where the link really goes and need *Open anyway*;
+`javascript:`, `data:`, `file:` and friends are never followed and say why. The
+classifier is a vendored copy of Universal QR's (`lib/scanResult.ts`) — swap to
+the `@unisim/sdk` export once it is published. `npm run test:link-safety`.
+
+## Content-Security-Policy
+
+Enforced from `public/_headers` (it went out Report-Only first). The header's
+comment lists every origin and why. The dev server serves the same policy,
+Report-Only, with a `report-uri` that logs to `$CSP_REPORT_LOG`
+(`cspDev()` in `vite.config.ts`). To check a change: `npm run build && npm run
+test:csp` (the production build with these headers, every flow that loads
+something), and run any e2e with `node --import ./e2e/csp-collect.mjs` and
+`CSP_LOG=…` to collect page violations. ⚠️ Cloudflare injects its Web Analytics
+beacon into the live HTML — invisible to the build and the tests; the policy
+allows it. The desktop (Electron, `file://`) and extension builds don't use
+`_headers`.
+
+## pdf-lib is not in the start-up bundle
+
+It loads on first use (`npm run test:lazy-pdf-lib`). The one thing that still
+reaches for it on OPEN is the "Sign here" boxes an earlier export embedded in
+the catalog (`readEmbeddedSigFields`): pdf.js can't read an arbitrary catalog
+key and pdf-lib's default save compresses the catalog into an object stream, so
+there is no cheaper way to find them — opening a document fetches the chunk in
+the background. Keep `export.ts`, `pdfPages.ts`, `pdfMetadata.ts` and
+`pdfEncrypt.ts` out of static imports from the start-up path; the pdf-lib-free
+helpers are `lib/download.ts` and `lib/pdfEncryptSniff.ts`.
 
 ## "Tap the page to place it" — the armed-placement banner
 
