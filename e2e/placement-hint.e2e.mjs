@@ -306,11 +306,18 @@ check('the banner goes when the last piece lands', seen[3] === '', `still reads:
 // describing is still armed — the tap must still place a QR code.
 console.log('\n"Don\'t show again" silences the card without disarming the placement')
 await page.locator('button[title="Add a QR code"]').click()
-await page.waitForTimeout(400)
+await page.waitForSelector('h2:has-text("Add a QR code")', { timeout: 5000 })
 await page.locator('input[type="text"], input[type="url"]').first().fill('https://unisim.co.uk')
 await page.locator('button:has-text("Add to page")').click()
-await page.waitForTimeout(700)
-check('a card is up again', (await anyBanner.count()) > 0)
+// ⚠️ WAIT FOR THE CARD, not for a fixed time. "Add to page" renders the QR
+// image before it arms the placement, and on a cold or busy machine that took
+// longer than the 700 ms this used to sleep — the check then failed with the
+// card arriving a moment later (the next two checks, which click it, passed).
+const cardUp = await anyBanner
+  .waitFor({ state: 'visible', timeout: 10000 })
+  .then(() => true)
+  .catch(() => false)
+check('a card is up again', cardUp)
 
 await page.locator('button:has-text("Don\'t show again")').click()
 await page.waitForTimeout(400)
