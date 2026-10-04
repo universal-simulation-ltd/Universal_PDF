@@ -200,6 +200,8 @@ function cspDev(): Plugin {
   const line = headers.split('\n').find((l) => /^\s*Content-Security-Policy(-Report-Only)?:/.test(l) && /default-src/.test(l))
   const policy = line ? line.slice(line.indexOf(':') + 1).trim() : ''
   const dev = policy
+    // Report-Only can't carry frame-ancestors (the browser warns and ignores it).
+    .replace(/;\s*frame-ancestors[^;]*/, '')
     .replace(/script-src ([^;]*)/, "script-src $1 'unsafe-inline'")
     .replace(/connect-src ([^;]*)/, 'connect-src $1 ws: wss:')
   return {
