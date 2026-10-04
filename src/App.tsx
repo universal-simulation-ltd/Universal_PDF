@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import {
   ToolbarDesktopActions,
   ToolbarDesktopTools,
@@ -10,22 +10,15 @@ import PageNavigator from './components/Viewer/PageNavigator'
 import PlacementHint from './components/Viewer/PlacementHint'
 import SignaturePad from './components/Signature/SignaturePad'
 import MainSignatureSync from './components/Signature/MainSignatureSync'
-import StampPicker from './components/Signature/StampPicker'
 import SignatureImport from './components/Signature/SignatureImport'
 import LandingPage from './components/Landing/LandingPage'
-import LivePreview from './components/Preview/LivePreview'
-import PresentMode from './components/Present/PresentMode'
 import ProductLogo from './components/Header/ProductLogo'
 import ToolbarUserProfile from './components/Header/ToolbarUserProfile'
 import FileMenu from './components/Toolbar/FileMenu'
 import HostedStoreDialog from './components/HostedStoreDialog'
-import SendToSignDialog from './components/SendToSignDialog'
 import OcrModal from './components/Ocr/OcrModal'
 import MergeDialog from './components/Convert/MergeDialog'
 import ConvertDialog from './components/Convert/ConvertDialog'
-import AdvancedExportDialog from './components/Export/AdvancedExportDialog'
-import MetadataDialog from './components/Metadata/MetadataDialog'
-import QrDialog from './components/Qr/QrDialog'
 import MobileWelcomeToast from './components/Onboarding/MobileWelcomeToast'
 import UnsavedChangesDialog from './components/Exit/UnsavedChangesDialog'
 import LockedFilePrompt from './components/Lock/LockedFilePrompt'
@@ -68,7 +61,7 @@ import { useFormStore } from './stores/formStore'
 import { useTabStore, anyDocumentAmended, exitEveryDocument, openFiles, openHandedOver } from './stores/tabStore'
 import { onSavedStateChanged } from './lib/unsavedChanges'
 import { CONTAINER } from './lib/layout'
-import { isConvertibleName } from './lib/officeToPdf'
+import { isConvertibleName } from './lib/officeFiles'
 import DocumentTabs from './components/Tabs/DocumentTabs'
 import { isNativeShell, setStatusBarOverDarkChrome, subscribeNativeOpenPdf } from './lib/nativeOpen'
 import { installExternalLinkHandler } from './lib/externalLinks'
@@ -106,6 +99,27 @@ const DOC_RIGHT_STRIP = `max(0px, calc((100vw - var(--doc-scrollbar-width, 0px) 
 // Finder or Explorer went to pdf.js as though it were a PDF and came back as
 // "Failed to load PDF" — while the same file dropped on the window converted.
 
+// ⚠️ Loaded the first time each is opened, not at start-up. These are the
+// app's occasional tools — the QR designer alone brings @unisim/qr with it —
+// and every one of them was parsed before the first page could paint. Once
+// opened, each STAYS mounted (`useOpenedOnce`), exactly as it always was, so
+// anything a dialog keeps while closed (the QR text being designed, say) is
+// still there the second time.
+const StampPicker = lazy(() => import('./components/Signature/StampPicker'))
+const LivePreview = lazy(() => import('./components/Preview/LivePreview'))
+const PresentMode = lazy(() => import('./components/Present/PresentMode'))
+const SendToSignDialog = lazy(() => import('./components/SendToSignDialog'))
+const AdvancedExportDialog = lazy(() => import('./components/Export/AdvancedExportDialog'))
+const MetadataDialog = lazy(() => import('./components/Metadata/MetadataDialog'))
+const QrDialog = lazy(() => import('./components/Qr/QrDialog'))
+
+/** True from the first time `open` is, for good. */
+function useOpenedOnce(open: boolean): boolean {
+  const [opened, setOpened] = useState(open)
+  if (open && !opened) setOpened(true)
+  return opened || open
+}
+
 export default function App() {
   const t = useT()
   // The landing navbar's "Reset to defaults" (foot of Tune this app) — the
@@ -130,7 +144,12 @@ export default function App() {
   const setConvertOpen = usePdfStore((s) => s.setConvertOpen)
   const advancedExportOpen = usePdfStore((s) => s.advancedExportOpen)
   const setAdvancedExportOpen = usePdfStore((s) => s.setAdvancedExportOpen)
+  const advancedExportMounted = useOpenedOnce(advancedExportOpen)
   const metadataOpen = usePdfStore((s) => s.metadataOpen)
+  const previewMounted = useOpenedOnce(usePdfStore((s) => s.previewOpen))
+  const presentMounted = useOpenedOnce(usePdfStore((s) => s.presentOpen))
+  const sendToSignMounted = useOpenedOnce(usePdfStore((s) => s.sendToSignOpen))
+  const qrMounted = useOpenedOnce(usePdfStore((s) => s.qrOpen))
   const setMetadataOpen = usePdfStore((s) => s.setMetadataOpen)
   const sourceBytes = usePdfStore((s) => s.sourceBytes)
   const fileName = usePdfStore((s) => s.fileName)
@@ -784,12 +803,16 @@ export default function App() {
       <SignaturePad />
       <MainSignatureSync />
       <SignatureImport />
-      {stampPickerOpen && <StampPicker />}
-      <LivePreview />
-      <PresentMode />
+      <Suspense fallback={null}>
+        {stampPickerOpen && <StampPicker />}
+        {previewMounted && <LivePreview />}
+        {presentMounted && <PresentMode />}
+      </Suspense>
       <HostedStoreDialog />
-      <SendToSignDialog />
-      <QrDialog />
+      <Suspense fallback={null}>
+        {sendToSignMounted && <SendToSignDialog />}
+        {qrMounted && <QrDialog />}
+      </Suspense>
       {ocrOpen && sourceBytes && (
         <OcrModal
           sourceBytes={sourceBytes}
@@ -808,10 +831,14 @@ export default function App() {
       {convertOpen && (
         <ConvertDialog initialMode="pdf-to-images" initialPdf={currentDocFile} onClose={() => setConvertOpen(false)} />
       )}
-      <AdvancedExportDialog open={advancedExportOpen} onClose={() => setAdvancedExportOpen(false)} />
-      {metadataOpen && sourceBytes && (
-        <MetadataDialog sourceBytes={sourceBytes} onClose={() => setMetadataOpen(false)} />
-      )}
+      <Suspense fallback={null}>
+        {advancedExportMounted && (
+          <AdvancedExportDialog open={advancedExportOpen} onClose={() => setAdvancedExportOpen(false)} />
+        )}
+        {metadataOpen && sourceBytes && (
+          <MetadataDialog sourceBytes={sourceBytes} onClose={() => setMetadataOpen(false)} />
+        )}
+      </Suspense>
       {/* Last in the list and highest in the stack: the question about leaving
           has to be answerable whatever else is open on top of the document. */}
       <UnsavedChangesDialog />

@@ -13,7 +13,7 @@ import {
   type SavedBaseline
 } from '../lib/unsavedChanges'
 import { captureView, restoreViewFor, type ViewState } from '../lib/viewMemory'
-import { OfficeImportError, toViewablePdf } from '../lib/officeToPdf'
+import { OfficeImportError, toViewablePdf } from '../lib/officeFiles'
 import type { PDFDocumentProxy } from '../lib/pdfjs'
 import type { Annotation } from '../types/annotations'
 import { getT } from '../i18n'

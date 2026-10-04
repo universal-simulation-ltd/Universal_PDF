@@ -26,6 +26,20 @@
 import { DEFAULT_PDF_SETTINGS, ZipArchive, docToPdf, readDocx, readOdt } from '@unisim/doc'
 import { loadFallbackFont } from './fallbackFont'
 import { getT } from '../i18n'
+import { ADVISED_NAME, isOfficeFile, isPdfFile, OfficeImportError } from './officeFiles'
+
+// The light half lives in `officeFiles.ts` (so the open/drop paths don't pull
+// this module, and @unisim/doc with it, into the start-up bundle) and is
+// re-exported here so existing imports keep working.
+export {
+  isConvertibleName,
+  isOfficeFile,
+  isOfficeFileName,
+  isPdfFile,
+  OFFICE_EXTENSIONS,
+  OfficeImportError,
+  PDF_OR_OFFICE_ACCEPT
+} from './officeFiles'
 
 export type OfficeFormat = 'docx' | 'odt'
 
@@ -44,46 +58,11 @@ export interface OfficeConversion {
 }
 
 /** Thrown for anything the user needs told about. The message is written to be read. */
-export class OfficeImportError extends Error {}
-
 /** Shown once a converted document is open, so nobody mistakes it for a copy. */
 export function importNotice(format: OfficeFormat): string {
   return getT()(format === 'docx' ? 'lib.import_notice_docx' : 'lib.import_notice_odt')
 }
 
-/** File extensions the open/drop paths accept alongside PDFs. */
-export const OFFICE_EXTENSIONS = ['.docx', '.odt'] as const
-
-const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-const ODT_MIME = 'application/vnd.oasis.opendocument.text'
-
-/** `accept` for a picker that takes PDFs and the office formats alike. */
-export const PDF_OR_OFFICE_ACCEPT = `application/pdf,.pdf,.docx,.odt,${DOCX_MIME},${ODT_MIME}`
-
-/** True for a name this module will have a go at converting. */
-export function isOfficeFileName(name: string): boolean {
-  return /\.(docx|odt)$/i.test(name)
-}
-
-/** The older formats `toViewablePdf` answers with advice, not a generic refusal. */
-const ADVISED_NAME = /\.(doc|rtf|pages)$/i
-
-/**
- * True for a name `toViewablePdf` does something with OTHER than open it as a
- * PDF: the formats it converts, and the ones it answers with advice. A file the
- * OS hands over arrives as bytes and a name, and this is what decides whether
- * it is typed as a PDF or left to be judged by that name.
- *
- * ⚠️ `electron/main.cjs` keeps its own copy of this list (`OPENABLE_DOCUMENT`),
- * because it decides which paths Windows hands over reach the page at all.
- */
-export function isConvertibleName(name: string): boolean {
-  return isOfficeFileName(name) || ADVISED_NAME.test(name)
-}
-
-export function isOfficeFile(file: File): boolean {
-  return isOfficeFileName(file.name) || file.type === DOCX_MIME || file.type === ODT_MIME
-}
 
 /**
  * The formats that get a *useful* refusal rather than a generic one. Both are
@@ -225,10 +204,6 @@ function droppedSentence(dropped: string[]): string {
 export function importNoticeFor(conversion: OfficeConversion): string {
   const dropped = droppedSentence(conversion.dropped)
   return dropped ? `${importNotice(conversion.format)} ${dropped}` : importNotice(conversion.format)
-}
-
-export function isPdfFile(file: File): boolean {
-  return file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
 }
 
 /**

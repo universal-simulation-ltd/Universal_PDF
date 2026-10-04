@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { usePdfStore } from '../../stores/pdfStore'
-import { markdownToPdfFile, type Orientation } from '../../lib/markdownToPdf'
+import type { Orientation } from '../../lib/markdownToPdf'
 import { useT } from '../../i18n'
 
 interface Props {
@@ -47,6 +47,9 @@ export default function TransformPanel({ open, onClose }: Props) {
     if (!text.trim() || busy) return
     setBusy(true)
     try {
+      // Loaded on use: the typesetter (@unisim/doc) has no business in the
+      // start-up bundle for the people who never press this.
+      const { markdownToPdfFile } = await import('../../lib/markdownToPdf')
       const file = await markdownToPdfFile(text, { orientation })
       await loadFile(file)
       onClose()

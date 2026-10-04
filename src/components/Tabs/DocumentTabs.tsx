@@ -12,7 +12,7 @@ import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { useFormStore } from '../../stores/formStore'
 import { onSavedStateChanged } from '../../lib/unsavedChanges'
-import { PDF_OR_OFFICE_ACCEPT } from '../../lib/officeToPdf'
+import { PDF_OR_OFFICE_ACCEPT } from '../../lib/officeFiles'
 import { useT } from '../../i18n'
 
 // The strip of open documents, shown only while the window holds two or more
