@@ -2,8 +2,10 @@
 # marketing site). The HTTP→HTTPS redirect itself is the Cloudflare zone
 # "Always Use HTTPS" setting.
 #
-# Content-Security-Policy (2026-10-04), REPORT-ONLY first. What the app
-# really reaches for, and nothing else:
+# Content-Security-Policy (2026-10-04) — ENFORCED. It went out Report-Only
+# first (ef160de, 6ab37f8) and was switched on once every flow ran clean —
+# in the e2e suite, on the production build, and on the live site. What the
+# app really reaches for, and nothing else:
 #   • script-src: its own bundle; 'wasm-unsafe-eval' for the OCR engine's
 #     WebAssembly core (served from ./ocr, never a CDN); Google's sign-in
 #     script (the SDK loads accounts.google.com/gsi/client on demand).
@@ -36,5 +38,4 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: frame-ancestors 'self'
-  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https:; font-src 'self' data: blob:; connect-src 'self' data: blob: https://rygfxgalojojppxmhddo.supabase.co wss://rygfxgalojojppxmhddo.supabase.co https://changelog.unisim.co.uk https://cdn.jsdelivr.net/npm/@tesseract.js-data/ https://unisim-hosted-files.inbox-12f.workers.dev https://accounts.google.com/gsi/ https://cloudflareinsights.com; worker-src 'self' blob:; frame-src 'self' blob: https://rygfxgalojojppxmhddo.supabase.co https://unisim-hosted-files.inbox-12f.workers.dev https://accounts.google.com/gsi/; media-src 'self' blob: data:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https:; font-src 'self' data: blob:; connect-src 'self' data: blob: https://rygfxgalojojppxmhddo.supabase.co wss://rygfxgalojojppxmhddo.supabase.co https://changelog.unisim.co.uk https://cdn.jsdelivr.net/npm/@tesseract.js-data/ https://unisim-hosted-files.inbox-12f.workers.dev https://accounts.google.com/gsi/ https://cloudflareinsights.com; worker-src 'self' blob:; frame-src 'self' blob: https://rygfxgalojojppxmhddo.supabase.co https://unisim-hosted-files.inbox-12f.workers.dev https://accounts.google.com/gsi/; media-src 'self' blob: data:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'
