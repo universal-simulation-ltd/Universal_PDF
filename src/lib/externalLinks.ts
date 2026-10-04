@@ -80,6 +80,28 @@ async function openInAppBrowser(url: string): Promise<boolean> {
 }
 
 /**
+ * Open an external address from script — what a link does after the reader has
+ * said "Open anyway" to a warning, when there is no `<a>` click left to ride.
+ *
+ * Native shells: the in-app browser, for the same reason as the click handler
+ * below. Web: a new tab (`noopener`, so the page gets no handle back to the
+ * document). Electron: the same `window.open`, which `setWindowOpenHandler` in
+ * `electron/main.cjs` hands to the system browser for http(s)/mailto/tel only.
+ *
+ * ⚠️ Call it synchronously from the click that asked for it — a popup opened
+ * after an `await` has lost the user activation and is blocked.
+ */
+export function openExternalUrl(href: string): void {
+  if (isNativeShell() && isExternalHttpUrl(href, window.location.href)) {
+    void openInAppBrowser(href).then((opened) => {
+      if (!opened) window.open(href, '_blank', 'noopener,noreferrer')
+    })
+    return
+  }
+  window.open(href, '_blank', 'noopener,noreferrer')
+}
+
+/**
  * Routes external link clicks through the in-app browser inside the native
  * shells. Returns an unsubscribe function.
  *

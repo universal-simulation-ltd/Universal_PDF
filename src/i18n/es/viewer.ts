@@ -114,6 +114,16 @@ const viewer: Messages['viewer'] = {
   // LinkLayer
   'link.open': 'Abrir enlace: {label}',
   'link.go_to_page': 'Ir a la página {page}',
+  'link.check_title': 'Revisa este enlace antes de abrirlo',
+  'link.goes_to': 'Lleva a',
+  'link.warn_insecure': 'Sin cifrar (http://): cualquiera en la misma red puede ver o cambiar la página.',
+  'link.warn_lookalike': 'Esta dirección usa letras de otro alfabeto, que pueden imitar un nombre conocido. Tu navegador la mostrará como {host}.',
+  'link.warn_credentials': 'La parte antes de «@» no es adonde lleva este enlace. En realidad abre {host}.',
+  'link.warn_ip': 'Apunta a un número (una dirección IP) en lugar de a un sitio web con nombre.',
+  'link.warn_shortener': 'Es un enlace acortado, así que no puedes ver adónde lleva hasta que lo abras.',
+  'link.open_anyway': 'Abrir de todos modos ↗',
+  'link.blocked_title': 'Este enlace no se abrirá',
+  'link.blocked': 'Este enlace contiene una dirección «{scheme}:», que podría ejecutar código o abrir archivos en tu dispositivo. Universal PDF no la abrirá.',
 
   // PageNavigator
   'nav.close': 'Cerrar páginas',

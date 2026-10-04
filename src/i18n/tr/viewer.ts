@@ -114,6 +114,16 @@ const viewer: Messages['viewer'] = {
   // LinkLayer
   'link.open': 'Bağlantıyı aç: {label}',
   'link.go_to_page': '{page}. sayfaya git',
+  'link.check_title': 'Açmadan önce bu bağlantıyı kontrol edin',
+  'link.goes_to': 'Gideceği yer',
+  'link.warn_insecure': 'Şifrelenmemiş (http://): aynı ağdaki herkes sayfayı görebilir veya değiştirebilir.',
+  'link.warn_lookalike': 'Bu adres, tanıdık bir adı taklit edebilen başka bir alfabeden harfler kullanıyor. Tarayıcınız onu {host} olarak gösterecek.',
+  'link.warn_credentials': '“@” işaretinden önceki kısım bu bağlantının gittiği yer değil. Bağlantı aslında {host} adresini açar.',
+  'link.warn_ip': 'Adlandırılmış bir web sitesi yerine bir sayıya (IP adresine) yönlendiriyor.',
+  'link.warn_shortener': 'Bu kısaltılmış bir bağlantı; gerçekte nereye gittiğini açana kadar göremezsiniz.',
+  'link.open_anyway': 'Yine de aç ↗',
+  'link.blocked_title': 'Bu bağlantı açılmayacak',
+  'link.blocked': 'Bu bağlantı, cihazınızda kod çalıştırabilecek veya dosya açabilecek bir “{scheme}:” adresi içeriyor. Universal PDF bunu açmaz.',
 
   // PageNavigator
   'nav.close': 'Sayfaları kapat',

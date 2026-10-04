@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PDFDocumentProxy, PDFPageProxy } from '../../lib/pdfjs'
 import { useAnnotationStore } from '../../stores/annotationStore'
-import { linkLabel, safeLinkUrl, scrollToPage } from '../../lib/links'
+import { hrefToOpen, judgePdfLink, linkLabel, scrollToPage, type PdfLinkVerdict } from '../../lib/links'
+import { openExternalUrl } from '../../lib/externalLinks'
 import { useT } from '../../i18n'
+import LinkWarningDialog from './LinkWarningDialog'
 
 // The page's own hyperlinks, made clickable.
 //
@@ -27,9 +29,11 @@ interface LinkBox {
   w: number
   h: number
   // Exactly one of these. A link with neither (a bare /Launch or /JavaScript
-  // action, or a URI we refuse to follow) is dropped rather than rendered as a
-  // box that does nothing.
-  url: string | null
+  // action, a relative or unknown-scheme URI) is dropped rather than rendered
+  // as a box that does nothing. `verdict` is a URI link's — followed, or a
+  // blocked scheme (`javascript:`, `data:`, `file:`…) that only ever explains
+  // itself (see `judgePdfLink`).
+  verdict: PdfLinkVerdict | null
   page: number | null
 }
 
@@ -91,10 +95,14 @@ export default function LinkLayer({
       for (let i = 0; i < anns.length; i++) {
         const ann = anns[i] as Record<string, unknown>
         if (ann.subtype !== 'Link' || !Array.isArray(ann.rect)) continue
-        const url = safeLinkUrl(ann.url)
-        const target = url ? null : await destinationPage(doc, ann.dest)
+        // pdf.js leaves a URI it judged unsafe (or could not make absolute)
+        // out of `url` and keeps the raw string in `unsafeUrl` — read that
+        // too, so a `javascript:` link can say it was blocked instead of
+        // being a dead patch of underlined text.
+        const verdict = judgePdfLink(ann.url) ?? judgePdfLink(ann.unsafeUrl)
+        const target = verdict ? null : await destinationPage(doc, ann.dest)
         if (cancelled) return
-        if (!url && target === null) continue
+        if (!verdict && target === null) continue
         const [x1, y1, x2, y2] = viewport.convertToViewportRectangle(
           ann.rect as number[]
         ) as number[]
@@ -108,7 +116,7 @@ export default function LinkLayer({
           y: Math.min(y1, y2),
           w,
           h,
-          url,
+          verdict,
           page: target
         })
       }
@@ -135,10 +143,22 @@ export default function LinkLayer({
     return Math.abs(e.clientX - start.x) > 5 || Math.abs(e.clientY - start.y) > 5
   }
 
+  // The link whose warning (or "blocked") box is up.
+  const [asking, setAsking] = useState<PdfLinkVerdict | null>(null)
+
   if (links.length === 0) return null
 
   return (
     <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 15 }}>
+      {asking && (
+        <LinkWarningDialog
+          verdict={asking}
+          onOpen={() => {
+            if (asking.kind === 'follow') openExternalUrl(hrefToOpen(asking.href))
+          }}
+          onClose={() => setAsking(null)}
+        />
+      )}
       {links.map((l) => {
         const style: React.CSSProperties = {
           position: 'absolute',
@@ -152,20 +172,48 @@ export default function LinkLayer({
           'block rounded-[2px] cursor-pointer transition-colors ' +
           'hover:bg-blue-500/20 hover:outline hover:outline-1 hover:outline-blue-500/60 ' +
           'focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600'
-        if (l.url) {
+        const v = l.verdict
+        // A blocked scheme, or a link with something to notice: a BUTTON that
+        // asks first, not an <a>. An anchor would still open on a middle-click,
+        // a ⌘-click or "Open link in new tab", and in the native shells the
+        // document-level link handler (`externalLinks.ts`) would follow it
+        // before this layer's click ran — every one a way round the warning.
+        if (v && (v.kind === 'blocked' || v.warnings.length > 0)) {
+          const label = v.kind === 'follow' ? linkLabel(v.href) : `${v.scheme}:`
+          return (
+            <button
+              key={l.key}
+              type="button"
+              {...(v.kind === 'follow'
+                ? { 'data-pdf-link': v.href, 'data-link-warnings': v.warnings.join(' ') }
+                : { 'data-pdf-link-blocked': v.scheme })}
+              title={label}
+              aria-label={t('viewer.link.open', { label })}
+              style={style}
+              className={className}
+              onPointerDown={onPointerDown}
+              onClick={(e) => {
+                if (dragged(e)) return
+                setAsking(v)
+              }}
+            />
+          )
+        }
+        if (v?.kind === 'follow') {
+          const url = v.href
           return (
             <a
               key={l.key}
-              data-pdf-link={l.url}
-              href={l.url}
+              data-pdf-link={url}
+              href={url}
               // A new tab, so the click can never throw away the document the
               // reader has open — with unfilled form fields and unsaved
               // annotations in it. `noopener` also denies the target page a
               // handle back to this one.
               target="_blank"
               rel="noopener noreferrer"
-              title={linkLabel(l.url)}
-              aria-label={t('viewer.link.open', { label: linkLabel(l.url) })}
+              title={linkLabel(url)}
+              aria-label={t('viewer.link.open', { label: linkLabel(url) })}
               style={style}
               className={className}
               onPointerDown={onPointerDown}

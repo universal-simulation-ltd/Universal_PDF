@@ -114,6 +114,16 @@ export default {
   // LinkLayer
   'link.open': 'Open link: {label}', // {label} is the link's address
   'link.go_to_page': 'Go to page {page}',
+  'link.check_title': 'Check this link before you open it', // title of the box shown before opening a risky link from inside a PDF
+  'link.goes_to': 'Goes to', // label above the website name a link really opens, e.g. "Goes to example.com"
+  'link.warn_insecure': 'Not encrypted (http://): anyone on the same network can see or change the page.',
+  'link.warn_lookalike': 'This address uses letters from another alphabet, which can imitate a familiar name. Your browser will show it as {host}.', // {host} is the real address, never translated
+  'link.warn_credentials': 'The part before “@” is not where this link goes. It really opens {host}.', // {host} is the real address, never translated
+  'link.warn_ip': 'It points at a number (an IP address) instead of a named website.',
+  'link.warn_shortener': 'It’s a shortened link, so you can’t see where it really goes until you open it.',
+  'link.open_anyway': 'Open anyway ↗', // button; keep the ↗ arrow
+  'link.blocked_title': 'This link won’t be opened', // title of the box shown when a PDF's link could run code
+  'link.blocked': 'This link holds a “{scheme}:” address, which could run code or open files on your device. Universal PDF won’t open it.', // {scheme} is e.g. javascript or data, never translated
 
   // PageNavigator
   'nav.close': 'Close pages',

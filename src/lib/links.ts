@@ -1,3 +1,5 @@
+import { classifyScan, urlWarnings, type UrlWarning } from './scanResult'
+
 // Following a link out of a PDF.
 //
 // A PDF's link annotations carry a URI straight out of the file, so the file
@@ -8,6 +10,44 @@
 // is dropped. `javascript:` and `data:` are the ones that matter — both would
 // run in the app's own origin, where the user's document is.
 const SAFE_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:'])
+
+export type { UrlWarning }
+
+/**
+ * What clicking a PDF's link should do.
+ *
+ * • `follow` — open `href`. `warnings` is empty for an ordinary link; anything
+ *   in it means the click asks first, showing `host` (what the address bar will
+ *   really say — punycode for an IDN host, the part AFTER the `@` for a
+ *   `trusted.com@evil.example` link).
+ * • `blocked` — a `javascript:`, `data:`, `file:`… address. Never followed;
+ *   the click says why instead of silently doing nothing.
+ */
+export type PdfLinkVerdict =
+  | { kind: 'follow'; href: string; host: string | null; warnings: UrlWarning[] }
+  | { kind: 'blocked'; scheme: string }
+
+/**
+ * Judge a link annotation's URI. Null for one there is nothing to do with (a
+ * relative address, an unknown scheme) — the viewer drops those.
+ *
+ * ⚠️ The blocked-scheme test runs FIRST and on the raw string, using the
+ * classifier's own normalisation (`JaVa\tScRiPt:` is caught the way a browser
+ * would run it), so nothing below can be talked into following one.
+ */
+export function judgePdfLink(raw: unknown): PdfLinkVerdict | null {
+  if (typeof raw !== 'string' || raw.trim() === '') return null
+  const scan = classifyScan(raw)
+  if (scan.kind === 'blocked') return { kind: 'blocked', scheme: scan.scheme }
+  const href = safeLinkUrl(raw.trim())
+  if (!href) return null
+  const url = new URL(href)
+  if (url.protocol === 'http:' || url.protocol === 'https:') {
+    return { kind: 'follow', href, host: url.host, warnings: urlWarnings(url) }
+  }
+  // mailto: / tel: — the OS opens Mail or the dialler; nothing to warn about.
+  return { kind: 'follow', href, host: null, warnings: [] }
+}
 
 /**
  * The href to hand an <a>, or null if we won't follow it.
@@ -52,6 +92,27 @@ export function userLinkHref(input: string): string | null {
   const host = raw.split(/[/?#]/)[0]
   if (!/^[\w-]+(\.[\w-]+)+(:\d+)?$/.test(host)) return null
   return safeLinkUrl(`https://${raw}`)
+}
+
+/**
+ * The address to actually open once the reader has said "Open anyway".
+ *
+ * A `trusted.com@evil.example` link opens WITHOUT its user-info: the reader has
+ * been shown that the host is evil.example, so that is where they go, and the
+ * disguise is not sent along as a login. Chromium refuses to `window.open` a
+ * URL with embedded credentials at all, so leaving it on would make "Open
+ * anyway" silently do nothing.
+ */
+export function hrefToOpen(href: string): string {
+  try {
+    const url = new URL(href)
+    if (!url.username && !url.password) return href
+    url.username = ''
+    url.password = ''
+    return url.href
+  } catch {
+    return href
+  }
 }
 
 /** A url short enough to sit in a tooltip without filling the screen. */

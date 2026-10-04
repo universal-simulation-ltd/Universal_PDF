@@ -75,6 +75,7 @@
     "test:photo-scan": "node e2e/photo-scan.e2e.mjs",
     "test:link-underline": "node --experimental-strip-types scripts/linkUnderline.test.mjs",
     "test:user-link": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/userLink.test.mjs",
+    "test:link-safety": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/linkSafety.test.mjs",
     "test:link-style": "node e2e/link-style.e2e.mjs",
     "check:mobile-bundle": "node scripts/verify-mobile-bundle.mjs",
     "check:ios-launch": "node scripts/verify-ios-launch.mjs",

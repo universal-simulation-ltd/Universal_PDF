@@ -28,6 +28,9 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:5174/'
 const TARGET = 'https://example.com/universal-pdf/link-target'
+// A link dressed up as one site that really opens another (user@host), over
+// plain http, to a bare IP: three warnings at once.
+const RISKY = 'http://yourbank.example@10.9.8.7/login'
 
 const PLAYWRIGHT_CANDIDATES = [
   '../../Universal_Beam/node_modules/playwright/index.js',
@@ -78,6 +81,8 @@ async function testPdf() {
   p1.drawText('Visit the site', { x: 60, y: 760, size: 20, font })
   p1.drawText('Jump to page two', { x: 60, y: 700, size: 20, font })
   p1.drawText('Do not run this', { x: 60, y: 640, size: 20, font })
+  p1.drawText('Sign in to your bank', { x: 60, y: 580, size: 20, font })
+  p1.drawText('Nor this', { x: 60, y: 520, size: 20, font })
   p2.drawText('This is page two.', { x: 60, y: 400, size: 20, font })
 
   const annots = []
@@ -94,6 +99,8 @@ async function testPdf() {
     Dest: doc.context.obj([p2.ref, PDFName.of('XYZ'), null, null, null])
   })
   addLink([58, 636, 210, 662], uri('javascript:window.__pwned=1'))
+  addLink([58, 576, 270, 602], uri(RISKY))
+  addLink([58, 516, 150, 542], uri('data:text/html,<script>opener.__pwned=2</script>'))
 
   p1.node.set(PDFName.of('Annots'), doc.context.obj(annots))
   return Buffer.from(await doc.save())
@@ -135,7 +142,7 @@ const boxes = page.locator('[data-page-index="0"] [data-pdf-link]')
 console.log('')
 console.log("The page's links are there")
 const targets = await boxes.evaluateAll((els) => els.map((e) => e.dataset.pdfLink))
-check('both followable links render, and only those two', targets.length === 2, `got ${JSON.stringify(targets)}`)
+check('the three followable links render, and only those', targets.length === 3, `got ${JSON.stringify(targets)}`)
 check('the javascript: URI is refused', !targets.some((t) => (t ?? '').startsWith('javascript:')), JSON.stringify(targets))
 check('the external link points where the PDF says', targets.includes(TARGET), JSON.stringify(targets))
 
@@ -157,6 +164,77 @@ check('opens the URL in a new tab', popupUrl === TARGET, popupUrl)
 check(
   'and leaves the document open on the same tab',
   !page.isClosed() && (await page.locator('[data-page-index="0"]').count()) === 1
+)
+
+console.log('')
+console.log('A link with something to notice asks first (2026-10-04)')
+// Keep it off the network too — and count whether anything was opened.
+await context.route('http://10.9.8.7/**', (route) =>
+  route.fulfill({ status: 200, contentType: 'text/html', body: '<title>risky</title>ok' })
+)
+let popups = 0
+context.on('page', () => (popups += 1))
+const risky = page.locator(`[data-pdf-link="${RISKY}"]`)
+check(
+  'it is flagged with all three warnings',
+  (await risky.getAttribute('data-link-warnings').catch(() => '')) === 'insecure credentials ip',
+  await risky.getAttribute('data-link-warnings').catch(() => 'no such box'),
+)
+check('and is not a plain <a> that a middle-click could open', (await risky.evaluate((el) => el.tagName).catch(() => '')) === 'BUTTON')
+await risky.click({ timeout: 5000 }).catch(() => {})
+const dialog = page.locator('[data-link-warning="check"]')
+await dialog.waitFor({ timeout: 5000 }).catch(() => {})
+check('a click puts up the warning instead of opening', (await dialog.count()) === 1)
+check('which names the host it REALLY opens', ((await dialog.locator('[data-link-host]').innerText().catch(() => '')) || '').trim() === '10.9.8.7')
+check(
+  'and says why, once per warning',
+  (await dialog.locator('[data-link-warning-item]').count()) === 3,
+)
+await dialog.locator('button', { hasText: 'Cancel' }).click({ timeout: 5000 }).catch(() => {})
+await page.waitForTimeout(500)
+check('Cancel closes it and opens nothing', (await dialog.count()) === 0 && popups === 0, `popups=${popups}`)
+
+await risky.click({ timeout: 5000 }).catch(() => {})
+await dialog.waitFor({ timeout: 5000 }).catch(() => {})
+let riskyUrl = ''
+try {
+  const [popup] = await Promise.all([
+    context.waitForEvent('page', { timeout: 8000 }),
+    dialog.locator('button', { hasText: 'Open anyway' }).click(),
+  ])
+  await popup.waitForLoadState('domcontentloaded').catch(() => {})
+  riskyUrl = popup.url()
+  await popup.close()
+} catch (e) {
+  riskyUrl = `no popup (${e.message.split('\n')[0]})`
+}
+check(
+  '"Open anyway" opens the REAL host in a new tab, without the user@ disguise',
+  riskyUrl === 'http://10.9.8.7/login',
+  riskyUrl,
+)
+
+console.log('')
+console.log('A script or data link says it is blocked, and never runs')
+const blocked = page.locator('[data-page-index="0"] [data-pdf-link-blocked]')
+const schemes = await blocked.evaluateAll((els) => els.map((e) => e.dataset.pdfLinkBlocked))
+check('both are there as blocked boxes', JSON.stringify(schemes.sort()) === '["data","javascript"]', JSON.stringify(schemes))
+const before = popups
+await page.locator('[data-pdf-link-blocked="javascript"]').click({ timeout: 5000 }).catch(() => {})
+const blockedDialog = page.locator('[data-link-warning="blocked"]')
+await blockedDialog.waitFor({ timeout: 5000 }).catch(() => {})
+check('a click explains instead', /javascript:/.test(await blockedDialog.innerText().catch(() => '')))
+check('with no way to open it', (await blockedDialog.locator('button', { hasText: /open/i }).count()) === 0)
+await blockedDialog.locator('button', { hasText: 'Close' }).click({ timeout: 5000 }).catch(() => {})
+await page.locator('[data-pdf-link-blocked="data"]').click({ timeout: 5000 }).catch(() => {})
+await page.waitForTimeout(300)
+await page.keyboard.press('Escape')
+await page.waitForTimeout(400)
+check('Escape closes it', (await blockedDialog.count()) === 0)
+check(
+  'and nothing ran or opened',
+  popups === before && (await page.evaluate(() => window.__pwned)) === undefined,
+  `popups ${before}->${popups}`,
 )
 
 console.log('')
