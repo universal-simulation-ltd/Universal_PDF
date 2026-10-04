@@ -189,6 +189,9 @@ export default {
   'ocr.failed_fallback': 'OCR failed',
   'ocr.title': 'Make searchable (OCR)',
   'ocr.intro': 'Runs entirely on your device — nothing is uploaded. The first run downloads the OCR model (~15 MB) once, then works offline.',
+  'ocr.language': 'Language of the scan', // label over a list of languages to read a scanned document in
+  'ocr.language_hint': 'Each language downloads its own OCR model (up to 3 MB) the first time it is used.',
+  'ocr.start': 'Make searchable', // button that starts OCR
   'ocr.already_searchable': 'Every page already looks like it has selectable text, so nothing was added.',
   'ocr.added_one': 'Added a searchable text layer to {count} page.',
   'ocr.added_other': 'Added a searchable text layer to {count} pages.',

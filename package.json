@@ -77,6 +77,8 @@
     "test:user-link": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/userLink.test.mjs",
     "test:link-safety": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/linkSafety.test.mjs",
     "test:link-style": "node e2e/link-style.e2e.mjs",
+    "test:ocr-languages": "node e2e/ocr-languages.e2e.mjs",
+    "test:ocr-langs": "node --experimental-strip-types scripts/ocrLanguages.test.mjs",
     "check:mobile-bundle": "node scripts/verify-mobile-bundle.mjs",
     "check:ios-launch": "node scripts/verify-ios-launch.mjs",
     "electron": "electron .",

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { makeSearchablePdf, type OcrProgress, type OcrResult } from '../../lib/ocr'
+import { useLanguage } from '@unisim/sdk'
+import { documentLanguage, makeSearchablePdf, type OcrProgress, type OcrResult } from '../../lib/ocr'
+import { OCR_LANGUAGES, defaultOcrLanguage } from '../../lib/ocrLanguages'
 import { downloadPdfBytes } from '../../lib/export'
 import { getT, useT } from '../../i18n'
 
@@ -16,11 +18,19 @@ interface Props {
   onOpen?: (file: File) => void
 }
 
-type Phase = 'running' | 'done' | 'error'
+// 'choose' first: OCR reads ONE language per model, and reading a Japanese scan
+// with the English model gives confident nonsense — so the language is picked
+// (defaulting to the document's, then the app's) before anything downloads.
+type Phase = 'choose' | 'running' | 'done' | 'error'
 
 export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Props) {
   const t = useT()
-  const [phase, setPhase] = useState<Phase>('running')
+  const { language: uiLanguage } = useLanguage()
+  const [phase, setPhase] = useState<Phase>('choose')
+  const [lang, setLang] = useState(() => defaultOcrLanguage(null, uiLanguage))
+  // Once the reader has picked, the document's own /Lang arriving late must
+  // not change it under them.
+  const pickedRef = useRef(false)
   const [progress, setProgress] = useState<OcrProgress>({
     phase: 'load',
     fraction: 0,
@@ -36,7 +46,7 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
   const liveRef = useRef(true)
 
   const run = useCallback(
-    (m: 'auto' | 'all') => {
+    (m: 'auto' | 'all', model: string) => {
       liveRef.current = true
       setMode(m)
       setResult(null)
@@ -46,7 +56,7 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
       // Fresh copy per run — pdf.js detaches the ArrayBuffer it's handed.
       makeSearchablePdf(sourceBytes.slice(0), fileName, (p) => {
         if (liveRef.current) setProgress(p)
-      }, { mode: m })
+      }, { mode: m, lang: model })
         .then((r) => {
           if (!liveRef.current) return
           setResult(r)
@@ -63,11 +73,16 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
   )
 
   useEffect(() => {
-    run('auto')
+    liveRef.current = true
+    // Start on the document's own language when it names one.
+    void documentLanguage(sourceBytes).then((docLang) => {
+      if (!liveRef.current || pickedRef.current || !docLang) return
+      setLang(defaultOcrLanguage(docLang, uiLanguage))
+    })
     return () => {
       liveRef.current = false
     }
-    // Run once on mount — the source + name don't change for a given modal.
+    // Once per modal — the source doesn't change for a given modal.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -121,6 +136,48 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
           {t('tools.ocr.intro')}
         </p>
 
+        {phase === 'choose' && (
+          <div className="py-1">
+            <label htmlFor="ocr-language" className="block text-sm font-medium text-slate-700 mb-1">
+              {t('tools.ocr.language')}
+            </label>
+            <select
+              id="ocr-language"
+              data-testid="ocr-language"
+              value={lang}
+              onChange={(e) => {
+                pickedRef.current = true
+                setLang(e.target.value)
+              }}
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
+            >
+              {OCR_LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1.5 text-[11px] leading-snug text-slate-500">{t('tools.ocr.language_hint')}</p>
+            <div className="mt-4 flex items-center gap-2 justify-end">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700"
+              >
+                {t('tools.common.cancel')}
+              </button>
+              <button
+                onClick={() => {
+                  pickedRef.current = true
+                  run('auto', lang)
+                }}
+                className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium"
+              >
+                {t('tools.ocr.start')}
+              </button>
+            </div>
+          </div>
+        )}
+
         {phase === 'running' && (
           <div className="py-2">
             <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
@@ -168,7 +225,7 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
               </button>
               {alreadySearchable && mode === 'auto' && (
                 <button
-                  onClick={() => run('all')}
+                  onClick={() => run('all', lang)}
                   className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium"
                 >
                   {t('tools.ocr.run_anyway')}

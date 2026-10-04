@@ -1,6 +1,8 @@
-import { PDFDocument, StandardFonts, degrees, type PDFFont } from 'pdf-lib'
+import { PDFDocument } from 'pdf-lib'
 import { openPdf, type PDFDocumentProxy } from './pdfjs'
 import { getT } from '../i18n'
+import { drawInvisibleWords, embedGlyphlessFont, type InvisibleWord } from './ocrTextLayer'
+import { joinLineWords, laysOutByLine } from './ocrLanguages'
 
 /**
  * In-browser OCR — turns scanned / image-only PDFs into searchable, selectable
@@ -9,16 +11,18 @@ import { getT } from '../i18n'
  * The recognition runs on-device via Tesseract.js (a WebAssembly port of the
  * Tesseract engine). Its worker script and WASM core ship WITH the app (see
  * `ocrRuntime()` in vite.config.ts); the one thing fetched from elsewhere is
- * the English language model (~3 MB), from Tesseract's CDN on first use and
- * then cached by tesseract (IndexedDB) and by the PWA service worker. Nothing
+ * the language model (0.7–3 MB, one per language — see `ocrLanguages.ts`), from
+ * Tesseract's CDN on first use and then cached by tesseract (IndexedDB) and by
+ * the PWA service worker. Nothing
  * of the user's goes anywhere. This
  * keeps the feature on-brand with the rest of the suite: local-first, no server
  * round-trip, no account — the same pattern the Images app uses for its
  * on-device background removal.
  *
  * We keep the original PDF pages intact and add an **invisible text layer** on
- * top: every recognised word is drawn transparently (opacity 0) at its detected
- * position, so the scanned image still shows through but the text underneath is
+ * top: every recognised word is written in text-rendering mode 3 (invisible),
+ * in a glyphless font that carries any script (`ocrTextLayer.ts`), at its
+ * detected position, so the scanned image still shows through but the text underneath is
  * selectable and searchable (Find, copy/paste, redact-by-search all light up).
  */
 
@@ -49,10 +53,11 @@ const TEXTUAL_PAGE_MIN_CHARS = 16
 // on. Naming one file here would hand the SIMD build to a browser that cannot
 // run it, or the slow build to every one that can.
 //
-// ⚠️ The language model is NOT self-hosted. `langPath` is left unset, so it
-// comes from tesseract's own CDN (cdn.jsdelivr.net/npm/@tesseract.js-data) —
-// ~3 MB of data rather than code, fetched once and cached, and shipping it
-// would add that to every install for a tool most people never open.
+// ⚠️ The language models are NOT self-hosted. `langPath` is left unset, so
+// each comes from tesseract's own CDN (cdn.jsdelivr.net/npm/@tesseract.js-data)
+// — 0.7–3 MB of data rather than code per language, fetched once and cached,
+// and shipping all eleven would add ~19 MB to every install for a tool most
+// people never open.
 const OCR_RUNTIME_URL = `${import.meta.env.BASE_URL}${import.meta.env.VITE_OCR_RUNTIME_DIR}`
 
 export interface OcrProgress {
@@ -86,31 +91,8 @@ export interface OcrOptions {
    * image-only pages get OCR'd. `all` forces OCR on every page.
    */
   mode?: 'auto' | 'all'
-  /** Tesseract language code(s), e.g. `'eng'` (default) or `'eng+fra'`. */
+  /** Tesseract model(s), e.g. `'eng'` (default), `'jpn'` or `'eng+fra'` — see `lib/ocrLanguages.ts`. */
   lang?: string
-}
-
-// WinAnsi (cp1252) coverage beyond ASCII + Latin-1, mirroring export.ts — the
-// standard Helvetica we embed can't encode arbitrary Unicode, so anything
-// outside this set is dropped from a word rather than crashing the encode. The
-// visible glyph still comes from the scanned image; this only affects the
-// invisible search text, so a dropped exotic char just isn't independently
-// searchable.
-const WIN_ANSI_EXTRAS = new Set([
-  0x20ac, 0x201a, 0x0192, 0x201e, 0x2026, 0x2020, 0x2021, 0x02c6, 0x2030, 0x0160,
-  0x2039, 0x0152, 0x017d, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014,
-  0x02dc, 0x2122, 0x0161, 0x203a, 0x0153, 0x017e, 0x0178,
-])
-
-function sanitizeForWinAnsi(text: string): string {
-  let out = ''
-  for (const ch of text) {
-    const cp = ch.codePointAt(0)!
-    if ((cp >= 0x20 && cp <= 0x7e) || (cp >= 0xa0 && cp <= 0xff) || WIN_ANSI_EXTRAS.has(cp)) {
-      out += ch
-    }
-  }
-  return out
 }
 
 // How much of a page's own text pdf.js can already extract. Used by `auto` mode
@@ -159,58 +141,73 @@ interface OcrWord {
   confidence: number
 }
 
-// Draw one recognised word as invisible, correctly-placed text. Handles page
-// rotation/CropBox transparently by mapping pixel corners through pdf.js's
-// viewport, then deriving the baseline direction + length as vectors — so the
-// layer lines up whether the page is upright or rotated.
-function drawInvisibleWord(
-  page: ReturnType<PDFDocument['getPage']>,
-  font: PDFFont,
-  viewport: RenderedPage['viewport'],
-  word: OcrWord,
-): number {
-  const text = sanitizeForWinAnsi(word.text).trim()
-  if (!text) return 0
+interface OcrLine {
+  bbox: OcrWord['bbox']
+  words: OcrWord[]
+}
 
+/**
+ * What to write for one recognised page. Per word for most scripts; per LINE
+ * for Japanese and Chinese, whose word boxes drift (see `laysOutByLine`).
+ */
+function pageWords(
+  data: { words?: OcrWord[]; lines?: OcrLine[] },
+  byLine: boolean,
+  viewport: RenderedPage['viewport'],
+): InvisibleWord[] {
+  const placed: InvisibleWord[] = []
+  if (byLine) {
+    for (const line of data.lines ?? []) {
+      const text = joinLineWords((line.words ?? []).filter((w) => w && w.confidence >= MIN_CONFIDENCE).map((w) => w.text))
+      const p = text ? placeWord(viewport, { text, bbox: line.bbox, confidence: 100 }) : null
+      if (p) placed.push(p)
+    }
+    return placed
+  }
+  for (const w of data.words ?? []) {
+    if (!w || w.confidence < MIN_CONFIDENCE) continue
+    const p = placeWord(viewport, w)
+    if (p) placed.push(p)
+  }
+  return placed
+}
+
+// Map one recognised word's pixel box onto the page as an invisible word.
+// Handles page rotation/CropBox transparently by mapping pixel corners through
+// pdf.js's viewport, then deriving the baseline direction + length as vectors —
+// so the layer lines up whether the page is upright or rotated.
+function placeWord(viewport: RenderedPage['viewport'], word: OcrWord): InvisibleWord | null {
+  const text = word.text.trim()
+  if (!text) return null
   const { x0, y0, x1, y1 } = word.bbox
   // convertToPdfPoint maps a canvas (device) pixel to a PDF user-space point,
   // accounting for scale, rotation and the CropBox origin.
   const [blx, bly] = viewport.convertToPdfPoint(x0, y1) // baseline start (bottom-left)
   const [brx, bry] = viewport.convertToPdfPoint(x1, y1) // baseline end (bottom-right)
   const [tlx, tly] = viewport.convertToPdfPoint(x0, y0) // top-left
+  const width = Math.hypot(brx - blx, bry - bly)
+  const height = Math.hypot(tlx - blx, tly - bly)
+  if (!(width > 0) || !(height > 0)) return null
+  return { text, x: blx, y: bly, width, height, angle: Math.atan2(bry - bly, brx - blx) }
+}
 
-  const baseDx = brx - blx
-  const baseDy = bry - bly
-  const boxWidth = Math.hypot(baseDx, baseDy)
-  const boxHeight = Math.hypot(tlx - blx, tly - bly)
-  if (boxWidth <= 0 || boxHeight <= 0) return 0
-
-  const angleDeg = (Math.atan2(baseDy, baseDx) * 180) / Math.PI
-
-  // Fit the font so the word's rendered width matches the detected box width —
-  // this keeps search-highlight / selection rectangles aligned with the glyphs
-  // in the image. Fall back to a height-based size if the metric is unusable.
-  const widthAtOne = font.widthOfTextAtSize(text, 1)
-  let fontSize = widthAtOne > 0 ? boxWidth / widthAtOne : boxHeight * 0.8
-  if (!Number.isFinite(fontSize) || fontSize <= 0) fontSize = boxHeight * 0.8
-  // Guard against a runaway size from a 1-char box or bad metric.
-  fontSize = Math.min(fontSize, boxHeight * 2)
-
-  // Nudge the baseline up off the box bottom by a typical descender fraction,
-  // along the box's "up" direction (handles rotation).
-  const upX = (tlx - blx) / boxHeight
-  const upY = (tly - bly) / boxHeight
-  const lift = boxHeight * 0.15
-
-  page.drawText(text, {
-    x: blx + upX * lift,
-    y: bly + upY * lift,
-    size: fontSize,
-    font,
-    opacity: 0, // invisible: the scanned image shows through, text stays selectable
-    rotate: angleDeg !== 0 ? degrees(angleDeg) : undefined,
-  })
-  return text.length
+/**
+ * The language a PDF says its text is in (the catalog's /Lang), or null. The
+ * OCR dialog starts on it when there is one — a scan usually has none, and the
+ * app's own language is the fallback.
+ */
+export async function documentLanguage(sourceBytes: ArrayBuffer): Promise<string | null> {
+  let doc: PDFDocumentProxy | null = null
+  try {
+    doc = await openPdf(sourceBytes.slice(0)).promise
+    const { info } = await doc.getMetadata()
+    const lang = (info as { Language?: unknown } | undefined)?.Language
+    return typeof lang === 'string' && lang.trim() ? lang.trim() : null
+  } catch {
+    return null
+  } finally {
+    void doc?.destroy()
+  }
 }
 
 /**
@@ -300,7 +297,9 @@ export async function makeSearchablePdf(
   modelLoaded = true
 
   const outDoc = await PDFDocument.load(sourceBytes, { updateMetadata: false })
-  const font = await outDoc.embedFont(StandardFonts.Helvetica)
+  // One invisible font for every script — see `lib/ocrTextLayer.ts`.
+  const font = embedGlyphlessFont(outDoc)
+  const byLine = laysOutByLine(lang)
   const outPages = outDoc.getPages()
 
   let charsAdded = 0
@@ -322,13 +321,10 @@ export async function makeSearchablePdf(
       canvas.width = 0
       canvas.height = 0
 
-      const words = (data.words ?? []) as OcrWord[]
       const page = outPages[pageIndex]
       if (page) {
-        for (const w of words) {
-          if (!w || w.confidence < MIN_CONFIDENCE) continue
-          charsAdded += drawInvisibleWord(page, font, viewport, w)
-        }
+        const placed = pageWords(data as { words?: OcrWord[]; lines?: OcrLine[] }, byLine, viewport)
+        charsAdded += drawInvisibleWords(page, font, placed)
       }
 
       onProgress?.({
