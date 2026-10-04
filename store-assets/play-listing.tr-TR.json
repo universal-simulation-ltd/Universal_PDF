@@ -6,10 +6,10 @@
     "contactWebsite": "https://www.unisim.co.uk"
   },
   "listing": {
-    "title": "Universal PDF",
+    "title": "Universal PDF: Düzenle, İmzala",
     "shortDescription": "Telefonda PDF doldurun, imzalayın ve işaretleyin. Reklam yok, izleme yok.",
     "fullDescription": [
-      "Universal PDF, telefonda PDF’leri açar, doldurur, imzalar ve işaretler. İşlemler cihazda yapılır: belge görüntülenmek veya düzenlenmek için yüklenmez ve bunu açıkça belirten bir düğmeye basılmadıkça sunucularımızda kopyası bulunmaz.",
+      "Bir PDF düzenleyici ve imza aracı. Universal PDF, telefonda PDF’leri açar, doldurur, imzalar ve işaretler. İşlemler cihazda yapılır: belge görüntülenmek veya düzenlenmek için yüklenmez ve bunu açıkça belirten bir düğmeye basılmadıkça sunucularımızda kopyası bulunmaz.",
       "",
       "DOLDURMA VE İMZALAMA",
       "• Doğrudan PDF’in form alanlarına yazın.",
@@ -38,6 +38,13 @@
       "• Son dosyalar yalnızca bu cihazda hatırlanır.",
       "• Reklam yok, izleme yok, üçüncü taraf analiz yok.",
       "• Universal ID isteğe bağlıdır. İmzaya gönderme özelliğini ekler; hesap uygulamanın içinden silinebilir.",
+      "",
+      "ŞUNLAR İÇİN İDEAL",
+      "• Sözleşme, kira kontratı veya okul formu imzalamak.",
+      "• Bir başvuruyu yazdırmadan doldurmak.",
+      "• Bir rapor veya çizim seti üzerine not almak.",
+      "• Bir PDF’i e-postayla gönderilecek kadar küçültmek.",
+      "• Fiş fotoğraflarını tek bir PDF’te birleştirmek.",
       "",
       "Universal PDF ücretsiz ve açık kaynaklıdır (AGPL-3.0). Kod ve cihazdan neyin ne zaman çıktığını tam olarak açıklayan bir sayfa GitHub’da: github.com/universal-simulation-ltd/Universal_PDF",
       "",

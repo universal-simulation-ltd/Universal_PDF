@@ -6,10 +6,10 @@
     "contactWebsite": "https://www.unisim.co.uk"
   },
   "listing": {
-    "title": "Universal PDF",
+    "title": "Universal PDF: Editor y Firma",
     "shortDescription": "Rellena, firma y anota PDF en tu móvil. Sin anuncios ni rastreo.",
     "fullDescription": [
-      "Universal PDF abre, rellena, firma y anota PDF en tu móvil. Todo ocurre en el dispositivo: tu documento no se sube para mostrarlo ni editarlo, y no hay ninguna copia en nuestros servidores salvo que pulses un botón que lo indique.",
+      "Un editor de PDF para rellenar y firmar. Universal PDF abre, rellena, firma y anota PDF en tu móvil. Todo ocurre en el dispositivo: tu documento no se sube para mostrarlo ni editarlo, y no hay ninguna copia en nuestros servidores salvo que pulses un botón que lo indique.",
       "",
       "RELLENA Y FIRMA",
       "• Escribe directamente en los campos de formulario de un PDF.",
@@ -38,6 +38,13 @@
       "• Los archivos recientes solo se recuerdan en este dispositivo.",
       "• Sin anuncios, sin rastreo, sin analíticas de terceros.",
       "• El Universal ID es opcional. Añade el envío para firmar, y puedes eliminar la cuenta desde la propia app.",
+      "",
+      "IDEAL PARA",
+      "• Firmar un contrato, un alquiler o una autorización del colegio.",
+      "• Rellenar una solicitud sin imprimirla.",
+      "• Anotar un informe o un juego de planos.",
+      "• Reducir un PDF para enviarlo por correo.",
+      "• Unir fotos de recibos en un solo PDF.",
       "",
       "Universal PDF es gratuito y de código abierto (AGPL-3.0). El código, y una página que explica exactamente qué sale de tu dispositivo y cuándo, están en GitHub: github.com/universal-simulation-ltd/Universal_PDF",
       "",

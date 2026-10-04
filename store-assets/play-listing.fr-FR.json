@@ -6,10 +6,10 @@
     "contactWebsite": "https://www.unisim.co.uk"
   },
   "listing": {
-    "title": "Universal PDF",
+    "title": "Universal PDF : Signature",
     "shortDescription": "Remplissez, signez et annotez vos PDF sur votre téléphone. Sans pub ni pistage.",
     "fullDescription": [
-      "Universal PDF ouvre, remplit, signe et annote les PDF sur votre téléphone. Tout se passe sur l’appareil : votre document n’est pas envoyé en ligne pour être affiché ou modifié, et il n’en existe aucune copie sur nos serveurs, sauf si vous appuyez sur un bouton qui l’indique.",
+      "Un éditeur de PDF pour remplir et signer. Universal PDF ouvre, remplit, signe et annote les PDF sur votre téléphone. Tout se passe sur l’appareil : votre document n’est pas envoyé en ligne pour être affiché ou modifié, et il n’en existe aucune copie sur nos serveurs, sauf si vous appuyez sur un bouton qui l’indique.",
       "",
       "REMPLIR ET SIGNER",
       "• Saisissez directement dans les champs de formulaire d’un PDF.",
@@ -38,6 +38,13 @@
       "• Les fichiers récents sont mémorisés sur cet appareil uniquement.",
       "• Aucune publicité, aucun pistage, aucun outil d’analyse tiers.",
       "• L’Universal ID est facultatif. Il ajoute l’envoi pour signature, et vous pouvez supprimer le compte depuis l’application.",
+      "",
+      "IDÉAL POUR",
+      "• Signer un contrat, un bail ou une autorisation scolaire.",
+      "• Remplir un dossier sans l’imprimer.",
+      "• Annoter un rapport ou un jeu de plans.",
+      "• Alléger un PDF pour l’envoyer par e-mail.",
+      "• Réunir des photos de tickets de caisse dans un seul PDF.",
       "",
       "Universal PDF est gratuit et open source (AGPL-3.0). Le code, ainsi qu’une page qui explique précisément ce qui quitte votre appareil et à quel moment, se trouvent sur GitHub : github.com/universal-simulation-ltd/Universal_PDF",
       "",

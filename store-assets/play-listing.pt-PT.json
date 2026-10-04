@@ -6,10 +6,10 @@
     "contactWebsite": "https://www.unisim.co.uk"
   },
   "listing": {
-    "title": "Universal PDF",
+    "title": "Universal PDF: Assinatura",
     "shortDescription": "Preencher, assinar e anotar PDF no telemóvel. Sem anúncios nem rastreio.",
     "fullDescription": [
-      "O Universal PDF abre, preenche, assina e anota PDF no telemóvel. Tudo acontece no dispositivo: o documento não é carregado para a Internet para ser apresentado ou editado, e não existe nenhuma cópia nos nossos servidores, a não ser que toque num botão que o indique.",
+      "Um editor de PDF para preencher e assinar. O Universal PDF abre, preenche, assina e anota PDF no telemóvel. Tudo acontece no dispositivo: o documento não é carregado para a Internet para ser apresentado ou editado, e não existe nenhuma cópia nos nossos servidores, a não ser que toque num botão que o indique.",
       "",
       "PREENCHER E ASSINAR",
       "• Escreva diretamente nos campos de formulário de um PDF.",
@@ -38,6 +38,13 @@
       "• Os ficheiros recentes ficam memorizados apenas neste dispositivo.",
       "• Sem anúncios, sem rastreio, sem análises de terceiros.",
       "• O Universal ID é opcional. Acrescenta o envio para assinatura, e a conta pode ser eliminada a partir da própria app.",
+      "",
+      "IDEAL PARA",
+      "• Assinar um contrato, um arrendamento ou uma autorização da escola.",
+      "• Preencher uma candidatura sem a imprimir.",
+      "• Anotar um relatório ou um conjunto de plantas.",
+      "• Reduzir um PDF para o enviar por e-mail.",
+      "• Juntar fotografias de recibos num só PDF.",
       "",
       "O Universal PDF é gratuito e de código aberto (AGPL-3.0). O código, e uma página que explica exatamente o que sai do dispositivo e quando, estão no GitHub: github.com/universal-simulation-ltd/Universal_PDF",
       "",

@@ -6,10 +6,10 @@
     "contactWebsite": "https://www.unisim.co.uk"
   },
   "listing": {
-    "title": "Universal PDF",
+    "title": "Universal PDF: Unterschrift",
     "shortDescription": "PDFs ausfüllen, unterschreiben und kommentieren. Ohne Werbung, ohne Tracking.",
     "fullDescription": [
-      "Universal PDF öffnet PDFs auf deinem Handy, füllt sie aus, unterschreibt und kommentiert sie. Die Arbeit passiert auf dem Gerät: Dein Dokument wird nicht hochgeladen, um angezeigt oder bearbeitet zu werden, und auf unseren Servern liegt keine Kopie, außer du tippst auf eine Schaltfläche, die genau das sagt.",
+      "Ein PDF-Editor zum Ausfüllen und Unterschreiben. Universal PDF öffnet PDFs auf deinem Handy, füllt sie aus, unterschreibt und kommentiert sie. Die Arbeit passiert auf dem Gerät: Dein Dokument wird nicht hochgeladen, um angezeigt oder bearbeitet zu werden, und auf unseren Servern liegt keine Kopie, außer du tippst auf eine Schaltfläche, die genau das sagt.",
       "",
       "AUSFÜLLEN UND UNTERSCHREIBEN",
       "• Schreibe direkt in die Formularfelder eines PDFs.",
@@ -38,6 +38,13 @@
       "• Zuletzt verwendete Dateien merkt sich nur dieses Gerät.",
       "• Keine Werbung, kein Tracking, keine Analysedienste von Drittanbietern.",
       "• Eine Universal ID ist optional. Sie ergänzt das Senden zum Unterschreiben, und du kannst das Konto direkt in der App löschen.",
+      "",
+      "GUT FÜR",
+      "• Einen Vertrag, einen Mietvertrag oder ein Schulformular unterschreiben.",
+      "• Einen Antrag ausfüllen, ohne ihn auszudrucken.",
+      "• Einen Bericht oder Pläne kommentieren.",
+      "• Ein PDF so klein machen, dass es in eine E-Mail passt.",
+      "• Fotos von Belegen zu einem PDF zusammenfassen.",
       "",
       "Universal PDF ist kostenlos und Open Source (AGPL-3.0). Der Code und eine Seite, die genau erklärt, was dein Gerät wann verlässt, sind auf GitHub: github.com/universal-simulation-ltd/Universal_PDF",
       "",
