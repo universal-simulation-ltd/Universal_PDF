@@ -1,5 +1,15 @@
 # Force HTTPS: instruct browsers to only ever connect over TLS (mirrors the
 # marketing site). The HTTP→HTTPS redirect itself is the Cloudflare zone
 # "Always Use HTTPS" setting.
+#
+# Hardening (2026-10-04). Nothing in the suite frames this app (checked: the
+# hub, the website, the SDK), and the app only ever frames its OWN blob: and
+# storage URLs, which these don't govern — so refusing to be framed elsewhere
+# costs nothing and closes off click-jacking the Send-to-sign and account
+# actions. No Permissions-Policy: Scan needs the camera.
 /*
   Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN
+  Content-Security-Policy: frame-ancestors 'self'

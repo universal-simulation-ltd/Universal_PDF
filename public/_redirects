@@ -29,6 +29,16 @@
 # ⚠️ These files are all 200s — check `content-type`, not the status code.
 /pdf/fonts/*              /fonts/:splat         200
 
+# Fetched at runtime from folders of their own, so each needs its rule.
+# ⚠️ BOTH WERE MISSING until 2026-10-04 and nothing showed it, for exactly the
+# reason the fonts note above gives: the SPA fallback answers 200 with
+# index.html. The OCR worker (`ocr/…`, see `ocrRuntime()` in vite.config.ts)
+# was served as HTML, so "Make searchable (OCR)" could not start on the web;
+# pdf.js's CMaps and standard fonts (`pdfjs/…`, `pdfjsData()`) would have been
+# too. The desktop, phone and extension builds never go through this file.
+/pdf/ocr/*                /ocr/:splat           200
+/pdf/pdfjs/*              /pdfjs/:splat         200
+
 # PWA install icons. The generated manifest names icon-192 and icon-512 and
 # resolves them against the /pdf/ scope, so without these the installed app
 # falls back to favicon.svg and the PNGs are dead. icon-180 is the iOS
