@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
-import { downloadPdfBytes } from '../../lib/export'
+import { downloadPdfBytes } from '../../lib/download'
 import { nextExportName, previewExportName } from '../../lib/exportName'
 import { countRedactions, isRedactConfirmed, REDACT_CONFIRM_WORD } from '../../lib/redactGate'
 import { markSaved } from '../../lib/unsavedChanges'

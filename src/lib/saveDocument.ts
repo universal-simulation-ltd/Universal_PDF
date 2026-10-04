@@ -1,4 +1,4 @@
-import { downloadPdfBytes } from './export'
+import { downloadPdfBytes } from './download'
 import { nextExportName, previewExportName } from './exportName'
 import { currentPdfBytes } from './hostedStore'
 import { usePdfStore } from '../stores/pdfStore'

@@ -1,10 +1,21 @@
 import { create } from 'zustand'
 import { loadPdf, type PDFDocumentProxy } from '../lib/pdfjs'
 import { listRecents, saveRecent, getRecent, getRecentBySlug, getRecentEdits, updateRecentEdits, deleteRecent, renameRecent, type RecentMeta, type RecentEdits } from '../lib/recents'
-import { readEmbeddedSigFields } from '../lib/export'
-import { applyPageOrderToPdf, buildPageIndexMap } from '../lib/pdfPages'
-import { scrubPdfMetadata } from '../lib/pdfMetadata'
-import { decryptPdf, isEncryptedPdf, WrongPasswordError } from '../lib/pdfEncrypt'
+import { isEncryptedPdf, WrongPasswordError } from '../lib/pdfEncryptSniff'
+// ⚠️ pdf-lib is NOT imported statically anywhere on the start-up path. Every
+// module below that needs it (export, page order, metadata scrub, decryption)
+// is loaded on first use.
+//
+// The one load that still reaches for it on OPEN is the signature-request boxes
+// a previous export embedded in the catalog (`readEmbeddedSigFields`): pdf.js
+// can't read an arbitrary catalog key, and pdf-lib's default save packs the
+// catalog into a compressed object stream, so a byte scan would miss them. So
+// opening a document fetches the pdf-lib chunk in the background, AFTER the
+// first page is on screen — never before the landing page can be used.
+async function readEmbeddedSigFields(bytes: ArrayBuffer) {
+  const { readEmbeddedSigFields: read } = await import('../lib/export')
+  return read(bytes)
+}
 import { useAnnotationStore } from './annotationStore'
 import { useFormStore } from './formStore'
 import { useSearchStore } from './searchStore'
@@ -390,6 +401,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     // first, and only swap state once it has loaded. Annotations and form
     // values are deliberately left alone — stripping metadata doesn't touch a
     // single page, so the user's work in progress survives it.
+    const { scrubPdfMetadata } = await import('../lib/pdfMetadata')
     const newBytes = await scrubPdfMetadata(bytes.slice(0))
     const doc = await loadPdf(newBytes.slice(0)).promise
     get().doc?.destroy()
@@ -420,6 +432,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
           return
         }
         try {
+          const { decryptPdf } = await import('../lib/pdfEncrypt')
           buf = (await decryptPdf(new Uint8Array(buf), options.password)).slice().buffer as ArrayBuffer
         } catch (e) {
           set({
@@ -607,6 +620,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     // through here too, so this one call covers all three.
     get().snapshotDocument('page change')
 
+    const { applyPageOrderToPdf, buildPageIndexMap } = await import('../lib/pdfPages')
     const newBytes = await applyPageOrderToPdf(bytes, newOrder)
     const indexMap = buildPageIndexMap(newOrder)
 
@@ -702,11 +716,14 @@ export async function openDocumentOffscreen(
       slug: Promise.resolve(null)
     }
   }
+  // Started alongside the pdf.js load, so fetching the pdf-lib chunk the first
+  // time overlaps with parsing the document instead of following it.
+  const sigFields = readEmbeddedSigFields(buf.slice(0)).catch(() => [] as Annotation[])
   const doc = await loadPdf(buf.slice(0)).promise
   rememberOpenFolder(file)
   let annotations: Annotation[] = []
   try {
-    annotations = await readEmbeddedSigFields(buf.slice(0))
+    annotations = await sigFields
   } catch {
     // Best-effort, as in loadFile.
   }

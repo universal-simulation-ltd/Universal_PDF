@@ -16,9 +16,6 @@ import ProductLogo from './components/Header/ProductLogo'
 import ToolbarUserProfile from './components/Header/ToolbarUserProfile'
 import FileMenu from './components/Toolbar/FileMenu'
 import HostedStoreDialog from './components/HostedStoreDialog'
-import OcrModal from './components/Ocr/OcrModal'
-import MergeDialog from './components/Convert/MergeDialog'
-import ConvertDialog from './components/Convert/ConvertDialog'
 import MobileWelcomeToast from './components/Onboarding/MobileWelcomeToast'
 import UnsavedChangesDialog from './components/Exit/UnsavedChangesDialog'
 import LockedFilePrompt from './components/Lock/LockedFilePrompt'
@@ -112,6 +109,11 @@ const SendToSignDialog = lazy(() => import('./components/SendToSignDialog'))
 const AdvancedExportDialog = lazy(() => import('./components/Export/AdvancedExportDialog'))
 const MetadataDialog = lazy(() => import('./components/Metadata/MetadataDialog'))
 const CompareDialog = lazy(() => import('./components/Compare/CompareDialog'))
+// These three carry pdf-lib (OCR's text layer, merge, conversion): lazy so it
+// stays out of the start-up bundle. Each is mounted only while open.
+const OcrModal = lazy(() => import('./components/Ocr/OcrModal'))
+const MergeDialog = lazy(() => import('./components/Convert/MergeDialog'))
+const ConvertDialog = lazy(() => import('./components/Convert/ConvertDialog'))
 const QrDialog = lazy(() => import('./components/Qr/QrDialog'))
 
 /** True from the first time `open` is, for good. */
@@ -816,6 +818,7 @@ export default function App() {
         {sendToSignMounted && <SendToSignDialog />}
         {qrMounted && <QrDialog />}
       </Suspense>
+      <Suspense fallback={null}>
       {ocrOpen && sourceBytes && (
         <OcrModal
           sourceBytes={sourceBytes}
@@ -834,6 +837,7 @@ export default function App() {
       {convertOpen && (
         <ConvertDialog initialMode="pdf-to-images" initialPdf={currentDocFile} onClose={() => setConvertOpen(false)} />
       )}
+      </Suspense>
       <Suspense fallback={null}>
         {advancedExportMounted && (
           <AdvancedExportDialog open={advancedExportOpen} onClose={() => setAdvancedExportOpen(false)} />

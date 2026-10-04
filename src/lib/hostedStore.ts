@@ -3,7 +3,6 @@ import {
   refundHostedUpload,
   HOSTED_BUCKET,
 } from '@unisim/sdk'
-import { buildAnnotatedPdfBytes } from './export'
 import { signRequestPdfPath, personalSignRequestPdfPath, hostedPdfPathCandidates, newObjectId, SIGN_PRODUCT } from './hostedPaths'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useFormStore } from '../stores/formStore'
@@ -31,6 +30,8 @@ export async function currentPdfBytes(): Promise<{ bytes: Uint8Array; fileName: 
   if (!sourceBytes) throw new Error(getT()('lib.no_pdf_open'))
   const annotations = useAnnotationStore.getState().annotations
   const formValues = useFormStore.getState().values
+  // On demand: export.ts carries pdf-lib, which start-up must not load.
+  const { buildAnnotatedPdfBytes } = await import('./export')
   const bytes = await buildAnnotatedPdfBytes(sourceBytes.slice(0), annotations, EXPORT_SCALE, formValues)
   return { bytes, fileName: fileName ?? 'document.pdf' }
 }

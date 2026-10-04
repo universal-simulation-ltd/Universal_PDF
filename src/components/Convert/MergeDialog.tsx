@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { mergePdfs } from '../../lib/convert'
-import { downloadPdfBytes } from '../../lib/export'
+import { downloadPdfBytes } from '../../lib/download'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useExitGuard } from '../../stores/exitGuard'
 import { useT } from '../../i18n'

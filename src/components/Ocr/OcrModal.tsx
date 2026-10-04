@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLanguage } from '@unisim/sdk'
 import { documentLanguage, makeSearchablePdf, type OcrProgress, type OcrResult } from '../../lib/ocr'
 import { OCR_LANGUAGES, defaultOcrLanguage } from '../../lib/ocrLanguages'
-import { downloadPdfBytes } from '../../lib/export'
+import { downloadPdfBytes } from '../../lib/download'
 import { getT, useT } from '../../i18n'
 
 interface Props {

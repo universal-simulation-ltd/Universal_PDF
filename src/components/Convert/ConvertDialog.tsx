@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { pdfToImages, imagesToPdf, type ImageFormat } from '../../lib/convert'
-import { downloadPdfBytes } from '../../lib/export'
+import { downloadPdfBytes } from '../../lib/download'
 import { downloadZip } from '../../lib/zip'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useExitGuard } from '../../stores/exitGuard'

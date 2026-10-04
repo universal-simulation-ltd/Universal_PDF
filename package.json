@@ -80,6 +80,7 @@
     "test:ocr-languages": "node e2e/ocr-languages.e2e.mjs",
     "test:compare": "node --experimental-strip-types scripts/compare.test.mjs",
     "test:compare:e2e": "node e2e/compare.e2e.mjs",
+    "test:lazy-pdf-lib": "node e2e/lazy-pdf-lib.e2e.mjs",
     "test:ocr-langs": "node --experimental-strip-types scripts/ocrLanguages.test.mjs",
     "check:mobile-bundle": "node scripts/verify-mobile-bundle.mjs",
     "check:ios-launch": "node scripts/verify-ios-launch.mjs",

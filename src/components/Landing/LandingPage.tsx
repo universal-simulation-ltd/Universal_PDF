@@ -1,21 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { DropAnywhere, DropRing, PrivacyNote, useFileDrop } from '@unisim/sdk'
 import { openFiles as openFilesInTabs } from '../../stores/tabStore'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
-import { createExamplePdfFile } from '../../lib/examplePdf'
-import { compressPdf, type CompressQuality, type CompressResult } from '../../lib/export'
+import type { CompressQuality, CompressResult } from '../../lib/export'
 import { isPdfFile, PDF_OR_OFFICE_ACCEPT } from '../../lib/officeFiles'
-import CompressResultModal from '../Compress/CompressResultModal'
-import BatchCompressModal, { type BatchSource } from '../Compress/BatchCompressModal'
-import MergeDialog from '../Convert/MergeDialog'
-import ConvertDialog, { type ConvertMode } from '../Convert/ConvertDialog'
+import type { BatchSource } from '../Compress/BatchCompressModal'
+import type { ConvertMode } from '../Convert/ConvertDialog'
 import RecentFilesList from '../RecentFiles/RecentFilesList'
-import OcrModal from '../Ocr/OcrModal'
 import TransformPanel from '../Transform/TransformPanel'
-import ScanDialog, { type ScanSource } from '../Scan/ScanDialog'
+import type { ScanSource } from '../Scan/ScanDialog'
 import { isDocumentScanAvailable, scanWithCamera } from '../../lib/documentScanner'
-import { pageFromJpeg, type ScanPage } from '../../lib/scan'
+import type { ScanPage } from '../../lib/scan'
 import PdfIllustration from './PdfIllustration'
 import DownloadRow from './DownloadRow'
 import DropRingWatermark from './DropRingWatermark'
@@ -26,6 +22,19 @@ import { PreviewPanePill } from '../Onboarding/PreviewPaneOffer'
 import { usePreviewPane } from '../../hooks/usePreviewPane'
 import { CONTAINER } from '../../lib/layout'
 import { useT, type MessageKey } from '../../i18n'
+
+// ⚠️ Every tool below carries pdf-lib, and the landing page is the first thing
+// anybody sees — so each is its own chunk, fetched when the tool is used
+// (`compressPdf`, the example document and the camera scan likewise import
+// their modules on the click). Start-up downloads and parses none of it.
+const CompressResultModal = lazy(() => import('../Compress/CompressResultModal'))
+const BatchCompressModal = lazy(() => import('../Compress/BatchCompressModal'))
+const MergeDialog = lazy(() => import('../Convert/MergeDialog'))
+const ConvertDialog = lazy(() => import('../Convert/ConvertDialog'))
+const OcrModal = lazy(() => import('../Ocr/OcrModal'))
+const ScanDialog = lazy(() => import('../Scan/ScanDialog'))
+const compressPdf: typeof import('../../lib/export').compressPdf = async (...args) =>
+  (await import('../../lib/export')).compressPdf(...args)
 
 // Balanced is the default when compressing — 'light' is lossless but usually
 // barely shrinks, so people expect the "Compress PDF(s)" default to actually
@@ -255,6 +264,7 @@ export default function LandingPage() {
     if (opening) return
     setOpening(true)
     try {
+      const { createExamplePdfFile } = await import('../../lib/examplePdf')
       const file = await createExamplePdfFile()
       await loadFile(file)
     } catch (err) {
@@ -296,6 +306,7 @@ export default function LandingPage() {
     try {
       const jpegs = await scanWithCamera()
       if (!jpegs) return
+      const { pageFromJpeg } = await import('../../lib/scan')
       setScanJob({ source: 'camera', pages: await Promise.all(jpegs.map(pageFromJpeg)) })
     } catch (err) {
       console.error(err)
@@ -798,6 +809,7 @@ export default function LandingPage() {
         <DownloadRow />
       </div>
 
+      <Suspense fallback={null}>
       {compressJob && (
         <CompressResultModal
           sourceBytes={compressJob.sourceBytes}
@@ -842,6 +854,7 @@ export default function LandingPage() {
       {scanJob && (
         <ScanDialog source={scanJob.source} initialPages={scanJob.pages} onClose={() => setScanJob(null)} />
       )}
+      </Suspense>
 
       {/* The other half of `pageWide` — the circle lights up wherever the drag
           is, and this says why, in the margin where the pointer actually is. */}

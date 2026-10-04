@@ -1,9 +1,24 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { usePdfStore } from '../../stores/pdfStore'
 import SignatureMenu from '../Signature/SignatureMenu'
-import ExportModal from '../Export/ExportModal'
+// ⚠️ Lazy: the Export dialog carries the whole export pipeline (export.ts and
+// pdf-lib). It is fetched the first time Export is pressed and stays mounted
+// after, so nothing it holds is lost between openings.
+const ExportModal = lazy(() => import('../Export/ExportModal'))
+function LazyExportModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [mounted, setMounted] = useState(open)
+  useEffect(() => {
+    if (open) setMounted(true)
+  }, [open])
+  if (!mounted && !open) return null
+  return (
+    <Suspense fallback={null}>
+      <ExportModal open={open} onClose={onClose} />
+    </Suspense>
+  )
+}
 import { FONT_DEFS } from '../../lib/fonts'
 import { useCoarsePointer } from '../../hooks/useCoarsePointer'
 import { useUndo } from '../../hooks/useUndo'
@@ -847,7 +862,7 @@ export function ToolbarDesktopActions() {
           {t('viewer.toolbar.export')}
         </button>
       </div>
-      <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} />
+      <LazyExportModal open={exportOpen} onClose={() => setExportOpen(false)} />
     </>
   )
 }
@@ -1275,7 +1290,7 @@ export function ToolbarMobile() {
         </button>
       </nav>
 
-      <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} />
+      <LazyExportModal open={exportOpen} onClose={() => setExportOpen(false)} />
     </div>
   )
 }

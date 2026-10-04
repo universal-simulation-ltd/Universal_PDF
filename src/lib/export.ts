@@ -13,7 +13,7 @@ import { runUnderlined } from './textRuns'
 import { openPdf, type PDFDocumentProxy } from './pdfjs'
 import { redactFillHex } from './redactGate'
 import { safeLinkUrl } from './links'
-import { saveBlob } from '@unisim/media/save'
+import { downloadPdfBytes } from './download'
 import { getT } from '../i18n'
 import { loadFallbackFont } from './fallbackFont'
 import { uprightJpeg } from './jpegOrientation'
@@ -950,10 +950,7 @@ export async function readEmbeddedSigFields(
   }
 }
 
-export function downloadPdfBytes(bytes: Uint8Array, fileName: string) {
-  const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' })
-  saveBlob(blob, fileName)
-}
+export { downloadPdfBytes }
 
 export async function exportPdfWithAnnotations(
   sourceBytes: ArrayBuffer,

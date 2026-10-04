@@ -35,7 +35,12 @@ const PLAYWRIGHT_CANDIDATES = [
 let pw = null
 for (const rel of PLAYWRIGHT_CANDIDATES) {
   try {
-    pw = (await import(pathToFileURL(join(HERE, rel)).href)).default
+    const mod = (await import(pathToFileURL(join(HERE, rel)).href)).default
+    // ⚠️ Probe a launch, like every other spec: a sibling's Playwright can be
+    // installed without its browser, and importing it proves nothing.
+    const probe = await mod.chromium.launch()
+    await probe.close()
+    pw = mod
     break
   } catch { /* try the next one */ }
 }
@@ -43,7 +48,7 @@ if (!pw) {
   console.error('No Playwright found. Install it in a sibling Universal app.')
   process.exit(2)
 }
-const BASE = process.env.BASE ?? 'http://localhost:5174/'
+const BASE = process.env.BASE ?? process.env.E2E_BASE_URL ?? 'http://localhost:5174/'
 const NAME = process.env.NAME ?? BASE
 const WANT_PRIVACY = (process.env.PRIVACY ?? 'yes') === 'yes'
 const SHOT = process.env.SHOT

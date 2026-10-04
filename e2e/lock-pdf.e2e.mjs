@@ -199,6 +199,9 @@ check('the lock lives at Actions ▸ Advanced ▸ Advanced export',
 await waitReady(page)
 
 const lockBox = page.getByRole('checkbox', { name: /Lock with a password/i })
+// ⚠️ Waited, not counted: the dialog is a lazy chunk, and on a cold dev server
+// the check box can arrive a beat after the heading `waitReady` saw.
+await lockBox.first().waitFor({ state: 'attached', timeout: 10000 }).catch(() => {})
 check('the advanced-export dialog offers "Lock with a password"', (await lockBox.count()) > 0)
 
 const downloadBtn = page.getByRole('button', { name: /Download|Locking/ }).first()
