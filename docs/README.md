@@ -484,8 +484,8 @@ pdf.js worker. `npm run test:compare` / `test:compare:e2e`.
 `lib/links.ts` `judgePdfLink`: lookalike/punycode hosts, `user@host`, bare IPs,
 `http:` and shorteners show where the link really goes and need *Open anyway*;
 `javascript:`, `data:`, `file:` and friends are never followed and say why. The
-classifier is a vendored copy of Universal QR's (`lib/scanResult.ts`) — swap to
-the `@unisim/sdk` export once it is published. `npm run test:link-safety`.
+classifier is the suite's shared one, `@unisim/sdk/link-safety` (`dangerousScheme`,
+`linkReasons`; SDK ≥ 0.179.1). `npm run test:link-safety`.
 
 ## Content-Security-Policy
 

@@ -177,7 +177,7 @@ context.on('page', () => (popups += 1))
 const risky = page.locator(`[data-pdf-link="${RISKY}"]`)
 check(
   'it is flagged with all three warnings',
-  (await risky.getAttribute('data-link-warnings').catch(() => '')) === 'insecure credentials ip',
+  (await risky.getAttribute('data-link-warnings').catch(() => '')) === 'http userinfo ip',
   await risky.getAttribute('data-link-warnings').catch(() => 'no such box'),
 )
 check('and is not a plain <a> that a middle-click could open', (await risky.evaluate((el) => el.tagName).catch(() => '')) === 'BUTTON')

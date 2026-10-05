@@ -14,9 +14,9 @@ import { useT, type MessageKey } from '../../i18n'
 // (`javascript:`, `data:`, `file:`…) can only be acknowledged, never opened.
 
 const WARNING_KEYS: Record<UrlWarning, MessageKey> = {
-  insecure: 'viewer.link.warn_insecure',
+  http: 'viewer.link.warn_insecure',
   lookalike: 'viewer.link.warn_lookalike',
-  credentials: 'viewer.link.warn_credentials',
+  userinfo: 'viewer.link.warn_credentials',
   ip: 'viewer.link.warn_ip',
   shortener: 'viewer.link.warn_shortener',
 }

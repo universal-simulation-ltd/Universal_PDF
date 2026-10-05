@@ -30,12 +30,12 @@ test('mailto and tel are followed and never warned about', () => {
 })
 
 test('http: is flagged as unencrypted', () => {
-  assert.deepEqual(warn('http://example.com/'), ['insecure'])
+  assert.deepEqual(warn('http://example.com/'), ['http'])
 })
 
 test('user@host shows the host it really opens', () => {
   const v = judgePdfLink('https://paypal.com@evil.example/login')
-  assert.deepEqual(v.warnings, ['credentials'])
+  assert.deepEqual(v.warnings, ['userinfo'])
   assert.equal(v.host, 'evil.example')
 })
 
@@ -59,7 +59,7 @@ test('shorteners are flagged', () => {
 })
 
 test('several tricks at once are all reported', () => {
-  assert.deepEqual(warn('http://bank.com@10.0.0.1/'), ['insecure', 'credentials', 'ip'])
+  assert.deepEqual(warn('http://bank.com@10.0.0.1/'), ['http', 'userinfo', 'ip'])
 })
 
 test('script, data and file addresses are blocked in any spelling', () => {

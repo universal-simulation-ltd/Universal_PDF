@@ -1,4 +1,4 @@
-import { classifyScan, urlWarnings, type UrlWarning } from './scanResult'
+import { dangerousScheme, linkReasons, type LinkReason } from '@unisim/sdk/link-safety'
 
 // Following a link out of a PDF.
 //
@@ -11,7 +11,9 @@ import { classifyScan, urlWarnings, type UrlWarning } from './scanResult'
 // run in the app's own origin, where the user's document is.
 const SAFE_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:'])
 
-export type { UrlWarning }
+/** Why a followable link asks first — the SDK's link-safety reasons, less
+ *  `dangerous-scheme` (a link with one of those is `blocked`, never followed). */
+export type UrlWarning = Exclude<LinkReason, 'dangerous-scheme'>
 
 /**
  * What clicking a PDF's link should do.
@@ -31,19 +33,21 @@ export type PdfLinkVerdict =
  * Judge a link annotation's URI. Null for one there is nothing to do with (a
  * relative address, an unknown scheme) — the viewer drops those.
  *
- * ⚠️ The blocked-scheme test runs FIRST and on the raw string, using the
- * classifier's own normalisation (`JaVa\tScRiPt:` is caught the way a browser
- * would run it), so nothing below can be talked into following one.
+ * ⚠️ The blocked-scheme test runs FIRST and on the raw string, using
+ * `@unisim/sdk/link-safety`'s normalisation (`JaVa\tScRiPt:` is caught the way
+ * a browser would run it), so nothing below can be talked into following one.
+ * The warnings are the same module's `linkReasons`, so a PDF's link is judged
+ * the way every suite app judges one.
  */
 export function judgePdfLink(raw: unknown): PdfLinkVerdict | null {
   if (typeof raw !== 'string' || raw.trim() === '') return null
-  const scan = classifyScan(raw)
-  if (scan.kind === 'blocked') return { kind: 'blocked', scheme: scan.scheme }
+  const scheme = dangerousScheme(raw)
+  if (scheme) return { kind: 'blocked', scheme }
   const href = safeLinkUrl(raw.trim())
   if (!href) return null
   const url = new URL(href)
   if (url.protocol === 'http:' || url.protocol === 'https:') {
-    return { kind: 'follow', href, host: url.host, warnings: urlWarnings(url) }
+    return { kind: 'follow', href, host: url.host, warnings: linkReasons(url) as UrlWarning[] }
   }
   // mailto: / tel: — the OS opens Mail or the dialler; nothing to warn about.
   return { kind: 'follow', href, host: null, warnings: [] }
