@@ -33,7 +33,7 @@ if (import.meta.env.DEV) {
 const isDesktop = import.meta.env.MODE === 'desktop'
 
 // `?mockauth=1` in a DEV build only: the SDK serves its offline fixture world
-// (james@unisim.co.uk / KyJam91, org "UNI·SIM Demo") instead of the real
+// (demo@example.invalid / offline-demo, org "UNI·SIM Demo") instead of the real
 // Supabase project, so the signed-in chrome — the profile dropdown, the company
 // badge, the hosted-backup gate — can be opened and driven with no network and
 // no real account. `e2e/actions-menu.e2e.mjs` runs on it.

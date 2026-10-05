@@ -315,7 +315,7 @@ the menu) and the fix looked like it had never worked. Pinned by
 
 A **dev build only** (`import.meta.env.DEV`, statically false in anything
 shipped) accepts `?mockauth=1`, which hands the SDK its offline fixture world:
-signed in as james@unisim.co.uk in org "UNI·SIM Demo", no network. Useful for
+signed in as demo@example.invalid in org "UNI·SIM Demo", no network. Useful for
 eyeballing the signed-in chrome; `e2e/actions-menu.e2e.mjs` runs on it.
 
 ⚠️ It cannot express a row **changing** — its `profiles` select returns one
