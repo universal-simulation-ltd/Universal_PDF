@@ -104,7 +104,6 @@ export default {
   'export.compressing': 'Compressing…',
   'export.no_images': 'Already as small as it goes — there are no images here to compress.',
   'export.object_stream': 'object-stream re-save', // technical description of the lossless compression
-  'export.download_original': 'Download Original',
   'export.download_compressed': 'Download Compressed',
   'export.preview': 'Preview', // button: open print preview
   'export.need_advanced': 'Need to flatten the pages or lock it with a password?',

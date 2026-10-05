@@ -104,7 +104,6 @@ const tools: Messages['tools'] = {
   'export.compressing': 'Compressione…',
   'export.no_images': 'Già alle dimensioni minime: qui non ci sono immagini da comprimere.',
   'export.object_stream': 'nuovo salvataggio con flussi di oggetti',
-  'export.download_original': 'Scarica originale',
   'export.download_compressed': 'Scarica compresso',
   'export.preview': 'Anteprima',
   'export.need_advanced': 'Devi appiattire le pagine o proteggere il file con una password?',

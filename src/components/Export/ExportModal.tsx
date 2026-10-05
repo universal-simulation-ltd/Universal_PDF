@@ -367,14 +367,12 @@ export default function ExportModal({ open, onClose }: Props) {
                 className="px-4 py-2.5 bg-orange-700 hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
               >
                 <span aria-hidden="true">⬇</span>
-                {/* "Download Original" only means something next to a
-                    "Download Compressed". On its own it reads as though there
-                    were another, better copy being withheld. */}
-                {!showVariantTabs
-                  ? t('tools.export.download')
-                  : effectiveTab === 'original'
-                    ? t('tools.export.download_original')
-                    : t('tools.export.download_compressed')}
+                {/* Never "Download Original": the uncompressed copy still
+                    carries the user's edits, so "original" reads as though
+                    their changes would be thrown away. */}
+                {showVariantTabs && effectiveTab === 'compressed'
+                  ? t('tools.export.download_compressed')
+                  : t('tools.export.download')}
               </button>
               <button
                 onClick={openPrintPreview}

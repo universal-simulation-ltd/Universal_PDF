@@ -104,7 +104,6 @@ const tools: Messages['tools'] = {
   'export.compressing': 'Wird komprimiert…',
   'export.no_images': 'Kleiner geht es nicht – hier gibt es keine Bilder zum Komprimieren.',
   'export.object_stream': 'Neu gespeichert mit Objekt-Streams',
-  'export.download_original': 'Original herunterladen',
   'export.download_compressed': 'Komprimiert herunterladen',
   'export.preview': 'Vorschau',
   'export.need_advanced': 'Seiten zu Bildern reduzieren oder mit einem Passwort schützen?',

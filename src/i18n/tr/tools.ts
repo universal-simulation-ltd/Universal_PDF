@@ -104,7 +104,6 @@ const tools: Messages['tools'] = {
   'export.compressing': 'Sıkıştırılıyor…',
   'export.no_images': 'Zaten olabilecek en küçük boyutta — burada sıkıştırılacak görsel yok.',
   'export.object_stream': 'nesne akışıyla yeniden kaydetme',
-  'export.download_original': 'Orijinali indir',
   'export.download_compressed': 'Sıkıştırılmışı indir',
   'export.preview': 'Önizleme',
   'export.need_advanced': 'Sayfaları düzleştirmeniz veya parolayla kilitlemeniz mi gerekiyor?',
