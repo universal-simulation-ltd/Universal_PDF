@@ -123,6 +123,7 @@ export default {
   'landing_scan_failed': 'Could not scan: {message}',
   'landing_drop_here': 'Drop a PDF here', // inside a small circle; keep short
   'landing_click_to_browse': 'or click to browse — {types}', // {types} is ".pdf, .docx, .odt"
+  'landing_tap_to_browse': 'or tap to choose — {types}', // same as landing_click_to_browse, on touch screens; {types} is ".pdf, .docx, .odt"
   'landing_or': 'or', // separator between two options
   'landing_compressing': 'Compressing…',
   'landing_drop_to_compress': 'Drop to compress',

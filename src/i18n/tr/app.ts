@@ -123,6 +123,7 @@ const app: Messages['app'] = {
   'landing_scan_failed': 'Taranamadı: {message}',
   'landing_drop_here': 'PDF’i buraya bırakın',
   'landing_click_to_browse': 'veya göz atmak için tıklayın — {types}',
+  'landing_tap_to_browse': 'veya göz atmak için dokunun — {types}',
   'landing_or': 'veya',
   'landing_compressing': 'Sıkıştırılıyor…',
   'landing_drop_to_compress': 'Sıkıştırmak için bırakın',

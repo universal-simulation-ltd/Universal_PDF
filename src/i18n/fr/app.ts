@@ -123,6 +123,7 @@ const app: Messages['app'] = {
   'landing_scan_failed': 'Impossible de numériser : {message}',
   'landing_drop_here': 'Déposez un PDF ici',
   'landing_click_to_browse': 'ou cliquez pour parcourir — {types}',
+  'landing_tap_to_browse': 'ou touchez pour parcourir — {types}',
   'landing_or': 'ou',
   'landing_compressing': 'Compression…',
   'landing_drop_to_compress': 'Déposez pour compresser',

@@ -55,8 +55,11 @@ export default {
   'menu_place_box': 'Place signature box',
   'menu_drag_hint': 'Then drag a rectangle where the signature should go.',
   'menu_send_hint': 'Get a signing link, or email the document to someone.',
+  'menu_send_hint_signed_out': 'Get a signing link, or email the document to someone. Needs a free Universal ID, so they know who it’s from.', // menu_send_hint for someone not signed in: sending needs a Universal ID
   'menu_no_signatures': 'No signatures yet',
+  'menu_no_signatures_hint': 'Draw yours once and it’s kept on this device, ready for next time.', // under menu_no_signatures, above the Draw new / Import image buttons
   'menu_no_stamps': 'No saved stamps yet',
+  'menu_no_stamps_hint': 'Start with a preset below, or import an image of your own.', // under menu_no_stamps, above the Preset stamps / Import image buttons
   'menu_delete_named': 'Delete {name}',
   'menu_draw_new': '+ Draw new',
   'menu_import_image': '+ Import image',

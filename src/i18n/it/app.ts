@@ -123,6 +123,7 @@ const app: Messages['app'] = {
   'landing_scan_failed': 'Impossibile scansionare: {message}',
   'landing_drop_here': 'Rilascia un PDF',
   'landing_click_to_browse': 'o fai clic per sfogliare — {types}',
+  'landing_tap_to_browse': 'o tocca per sfogliare — {types}',
   'landing_or': 'oppure',
   'landing_compressing': 'Compressione…',
   'landing_drop_to_compress': 'Rilascia per comprimere',

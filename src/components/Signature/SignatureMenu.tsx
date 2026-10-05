@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useUniversal } from '@unisim/sdk'
 import { useSignatureStore } from '../../stores/signatureStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { usePdfStore } from '../../stores/pdfStore'
@@ -105,6 +106,11 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
   const tool = useAnnotationStore((s) => s.tool)
   const setTool = useAnnotationStore((s) => s.setTool)
   const setSendToSignOpen = usePdfStore((s) => s.setSendToSignOpen)
+  // Send to sign is the one thing on this menu that needs a Universal ID, so
+  // the line under it says so BEFORE the click — signed out, it no longer
+  // reads as just another local tool until the dialog stops you.
+  const { session } = useUniversal()
+  const signedIn = !!session?.user && session.user.is_anonymous !== true
 
   useEffect(() => {
     if (!open) return
@@ -269,7 +275,7 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
               {t('sign.send_to_sign')}
             </button>
             <p className="mt-1.5 text-xs text-slate-400">
-              {t('sign.menu_send_hint')}
+              {signedIn ? t('sign.menu_send_hint') : t('sign.menu_send_hint_signed_out')}
             </p>
           </div>
         </div>
@@ -277,8 +283,15 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
       <>
       <div className="max-h-72 overflow-auto">
         {displayList.length === 0 ? (
-          <div className="px-3 py-6 text-sm text-slate-500 text-center">
-            {tab === 'signatures' ? t('sign.menu_no_signatures') : t('sign.menu_no_stamps')}
+          // Says what goes here and where it is kept, so "None yet" teaches
+          // the one action under it rather than just reporting an empty list.
+          <div className="px-4 py-5 text-sm text-slate-500 text-center">
+            <p className="font-medium text-slate-700">
+              {tab === 'signatures' ? t('sign.menu_no_signatures') : t('sign.menu_no_stamps')}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              {tab === 'signatures' ? t('sign.menu_no_signatures_hint') : t('sign.menu_no_stamps_hint')}
+            </p>
           </div>
         ) : (
           displayList.map((s) => (

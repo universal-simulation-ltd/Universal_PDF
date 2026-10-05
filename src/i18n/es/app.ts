@@ -123,6 +123,7 @@ const app: Messages['app'] = {
   'landing_scan_failed': 'No se ha podido escanear: {message}',
   'landing_drop_here': 'Suelta un PDF',
   'landing_click_to_browse': 'o haz clic para buscar: {types}',
+  'landing_tap_to_browse': 'o toca para buscar: {types}',
   'landing_or': 'o',
   'landing_compressing': 'Comprimiendo…',
   'landing_drop_to_compress': 'Suelta para comprimir',

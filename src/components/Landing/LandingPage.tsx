@@ -20,6 +20,7 @@ import { DefaultAppPill } from '../Onboarding/DefaultAppOffer'
 import { useDefaultPdfApp } from '../../hooks/useDefaultPdfApp'
 import { PreviewPanePill } from '../Onboarding/PreviewPaneOffer'
 import { usePreviewPane } from '../../hooks/usePreviewPane'
+import { useCoarsePointer } from '../../hooks/useCoarsePointer'
 import { CONTAINER } from '../../lib/layout'
 import { useT, type MessageKey } from '../../i18n'
 
@@ -82,6 +83,9 @@ export default function LandingPage() {
   // the top-of-page bar it used to share this with is gone (2026-08-27).
   const defaultApp = useDefaultPdfApp()
   const previewPane = usePreviewPane()
+  // "Click to browse" under a finger: the phone apps and phone browsers open on
+  // this circle, and there is nothing to click there.
+  const touch = useCoarsePointer()
   const compressInputRef = useRef<HTMLInputElement>(null)
   const ocrInputRef = useRef<HTMLInputElement>(null)
   const redactInputRef = useRef<HTMLInputElement>(null)
@@ -431,7 +435,7 @@ export default function LandingPage() {
                         than turned away, so the circle has to say so — nobody
                         drops a .docx on a thing labelled "PDF" to find out. */}
                     <span className="mt-1 text-[11px] text-slate-400">
-                      {t('app.landing_click_to_browse', { types: '.pdf, .docx, .odt' })}
+                      {t(touch ? 'app.landing_tap_to_browse' : 'app.landing_click_to_browse', { types: '.pdf, .docx, .odt' })}
                     </span>
                   </DropRing>
                 </div>
