@@ -1,4 +1,5 @@
 import { dangerousScheme, linkReasons, type LinkReason } from '@unisim/sdk/link-safety'
+import { readPageScroll } from './pageScroll'
 
 // Following a link out of a PDF.
 //
@@ -133,5 +134,10 @@ export function linkLabel(url: string): string {
 export function scrollToPage(pageIndex: number): void {
   document
     .querySelector(`[data-page-index="${pageIndex}"]`)
-    ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    ?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+      // Sideways too when the pages run in a row — see lib/pageScroll.
+      inline: readPageScroll() === 'horizontal' ? 'start' : 'nearest',
+    })
 }

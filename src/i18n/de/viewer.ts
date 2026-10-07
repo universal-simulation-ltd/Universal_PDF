@@ -163,6 +163,11 @@ const viewer: Messages['viewer'] = {
   'placement.tap_image': 'Tippe auf die Seite, um dein Bild zu platzieren',
   'placement.click_image': 'Klicke auf die Seite, um dein Bild zu platzieren',
   'placement.dont_show_again': 'Nicht mehr anzeigen',
+
+  // Tune this app ▸ Page scrolling
+  'scroll.label': 'Blätterrichtung',
+  'scroll.vertical': 'Vertikal',
+  'scroll.horizontal': 'Horizontal',
 }
 
 export default viewer

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { usePdfStore } from '../../stores/pdfStore'
 import { registerViewProvider, takeRestoredView } from '../../lib/viewMemory'
 import { useAnnotationStore } from '../../stores/annotationStore'
@@ -9,6 +9,7 @@ import PdfPage from './PdfPage'
 import { budgetedPageCount, maxZoomForDocument, MAX_RETAINED_PAGES } from '../../lib/renderBudget'
 import { setAnchorPage } from '../../lib/renderQueue'
 import { useT } from '../../i18n'
+import { usePageScroll } from '../../lib/pageScroll'
 
 // "100% zoom" in standard PDF viewers means physical paper size on screen.
 // CSS treats 1 inch as 96 px while a PDF point is 1/72 inch, so to render at
@@ -52,6 +53,18 @@ export default function PdfViewer() {
   const resetSearch = useSearchStore((s) => s.reset)
   const [zoom, setZoom] = useState(1)
   const scale = zoom * BASE_SCALE
+  // Tune this app ▸ Page scrolling: the pages one under another (the default)
+  // or side by side in a row. Everything below that reads the reading axis off
+  // layout — the active band, the wheel, a returning tab's scroll — follows it.
+  const horizontal = usePageScroll() === 'horizontal'
+  const horizontalRef = useRef(horizontal)
+  horizontalRef.current = horizontal
+  // The page the reader is on, as the band last measured it — what a switch of
+  // Page scrolling keeps them on. ⚠️ The LEADING page (the first whose middle
+  // has not scrolled past the start edge), not the band's anchor nearest the
+  // middle of the screen: a row on a wide window shows two or three pages at
+  // once, and the middle one is the next page, not the one being read.
+  const leadingPageRef = useRef(0)
   // The document the fit-on-open zoom below has been worked out for. Pages are
   // not mounted until it matches the open document, so page 1 is rasterized
   // ONCE, at the zoom it will be read at.
@@ -143,28 +156,37 @@ export default function PdfViewer() {
     function update() {
       frame = 0
       const box = el!.getBoundingClientRect()
-      const mid = box.top + box.height / 2
+      // Measured along the way the pages run: down the screen, or across it
+      // when Page scrolling is horizontal.
+      const along = horizontal
+        ? (r: DOMRect) => ({ start: r.left, size: r.width })
+        : (r: DOMRect) => ({ start: r.top, size: r.height })
+      const view = along(box)
+      const mid = view.start + view.size / 2
       // One screen of margin either side: a page enters the band before it can
       // be scrolled into view, so its layers are never seen arriving.
-      const margin = box.height
+      const margin = view.size
       let best = 0
       let bestDist = Infinity
+      let leading = Infinity
       let first = Infinity
       let last = -Infinity
       for (const p of el!.querySelectorAll<HTMLElement>('[data-page-index]')) {
-        const r = p.getBoundingClientRect()
+        const r = along(p.getBoundingClientRect())
         const i = Number(p.dataset.pageIndex)
-        const d = Math.abs(r.top + r.height / 2 - mid)
+        const d = Math.abs(r.start + r.size / 2 - mid)
         if (d < bestDist) {
           bestDist = d
           best = i
         }
-        if (r.bottom > box.top - margin && r.top < box.bottom + margin) {
+        if (r.size && r.start + r.size / 2 >= view.start && i < leading) leading = i
+        if (r.start + r.size > view.start - margin && r.start < view.start + view.size + margin) {
           if (i < first) first = i
           if (i > last) last = i
         }
       }
       setAnchorPage(best)
+      leadingPageRef.current = leading === Infinity ? best : leading
       // Nothing intersected — every page is still zero-height, which is the
       // state a long document is in for its first frames. Fall back to a small
       // band around the anchor rather than to none at all.
@@ -193,7 +215,25 @@ export default function PdfViewer() {
     }
     // ⚠️ `fitted` is a dependency because the pages only exist once it is true:
     // measured before that, the band is read off an empty container.
-  }, [doc, fitted])
+  }, [doc, fitted, horizontal])
+
+  // Switching Page scrolling with a document open keeps the reader on the page
+  // they were on. A layout effect, so the new layout is never painted at the
+  // old scroll offset — which in the other axis points at some other page, or
+  // at nothing. The band effect above re-measures on the same change.
+  const lastLayout = useRef(horizontal)
+  useLayoutEffect(() => {
+    if (lastLayout.current === horizontal) return
+    lastLayout.current = horizontal
+    const el = scrollRef.current
+    const page = el?.querySelector<HTMLElement>(`[data-page-index="${leadingPageRef.current}"]`)
+    if (!el || !page) return
+    // Off the axis the pages no longer run along, back to the start: a scroll
+    // across a vertical document means nothing once it is a row.
+    if (horizontal) el.scrollTop = 0
+    else el.scrollLeft = 0
+    page.scrollIntoView({ block: 'start', inline: horizontal ? 'start' : 'nearest' })
+  }, [horizontal])
 
   // Pages added to an already-zoomed document can push the ceiling below where
   // the zoom already is — come back down rather than sit over budget.
@@ -749,7 +789,28 @@ export default function PdfViewer() {
     }
 
     function onWheel(e: WheelEvent) {
-      if (!el || (!e.ctrlKey && !e.metaKey)) return
+      if (!el) return
+      if (!e.ctrlKey && !e.metaKey) {
+        // Pages in a row: a mouse wheel only turns up and down, so on its own
+        // it would never reach page 2. It scrolls down the page as usual and,
+        // once there is no more room that way, carries on along the row —
+        // down/right, up/left. ⚠️ "No more room", not "no room at all": the
+        // fit on open floors at 75%, so a portrait page is often a little
+        // taller than the window, and a rule that only walked the row when
+        // nothing could scroll vertically left the wheel stuck on page 1.
+        // A trackpad's own sideways swipe (deltaX) is always left alone.
+        if (horizontalRef.current && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+          const roomDown = el.scrollHeight - el.clientHeight - el.scrollTop
+          const atEdge = e.deltaY > 0 ? roomDown <= 1 : el.scrollTop <= 0
+          if (atEdge) {
+            e.preventDefault()
+            // deltaMode 1 is lines (Firefox with a mouse wheel), 2 is pages.
+            const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? el.clientWidth : 1
+            el.scrollLeft += e.deltaY * unit
+          }
+        }
+        return
+      }
       e.preventDefault()
       if (!gesture) {
         // Land a zoom still waiting on layout so this gesture measures itself
@@ -917,7 +978,11 @@ export default function PdfViewer() {
     let tries = 0
     const apply = () => {
       frame = 0
-      const fits = el.scrollHeight - el.clientHeight >= target.top - 1
+      // Both axes: with Page scrolling horizontal it is the WIDTH that grows
+      // as the pages take their sizes.
+      const fits =
+        el.scrollHeight - el.clientHeight >= target.top - 1 &&
+        el.scrollWidth - el.clientWidth >= target.left - 1
       if (fits || ++tries > 60) {
         el.scrollTop = target.top
         el.scrollLeft = target.left
@@ -1119,7 +1184,14 @@ export default function PdfViewer() {
               1 somewhere no scroll position can reach.
               `shrink-0` keeps a tall document at its own height rather than
               letting the flex column compress it. */}
-          <div ref={contentRef} className="flex flex-col items-center gap-6 py-6 px-4 shrink-0 my-auto">
+          {/* Horizontal Page scrolling lays the pages out in a row, centred
+              both ways with the same auto margins: `w-max` keeps the row at
+              its own width so `mx-auto` can centre one that is narrower than
+              the window and resolve to 0 the moment it is wider. */}
+          <div
+            ref={contentRef}
+            className={`flex items-center gap-6 py-6 px-4 shrink-0 my-auto ${horizontal ? 'flex-row w-max mx-auto' : 'flex-col'}`}
+          >
             {fitted && Array.from({ length: numPages }, (_, i) => (
               <PdfPage
                 key={i}

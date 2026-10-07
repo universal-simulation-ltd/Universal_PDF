@@ -64,6 +64,7 @@ import { isNativeShell, setStatusBarOverDarkChrome, subscribeNativeOpenPdf } fro
 import { installExternalLinkHandler } from './lib/externalLinks'
 import { getT, useT } from './i18n'
 import { KNOWLEDGE_BASE } from './knowledge'
+import PageScrollPreference from './components/Viewer/PageScrollPreference'
 
 const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_PDF'
 
@@ -511,6 +512,9 @@ export default function App() {
             // articles, bundled from ./knowledge so they read offline.
             knowledgeBase={KNOWLEDGE_BASE}
             onResetDefaults={() => { clearDismissedPrompts(); void resetPrefs() }}
+            // Tune this app ▸ Page scrolling — the same row ToolbarUserProfile
+            // passes, so it can be set before a document is opened.
+            appPreferences={<PageScrollPreference />}
             // The SDK's "Delete my account" stays ON here (its default in a
             // native shell): this is the menu a phone opens first. It was
             // switched off to stop the row doubling — but the double was in

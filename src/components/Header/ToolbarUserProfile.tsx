@@ -13,6 +13,7 @@ import { ABOUT_APP } from '../../lib/aboutApp'
 import { KNOWLEDGE_BASE } from '../../knowledge'
 import { usePdfStore } from '../../stores/pdfStore'
 import { clearDismissedPrompts } from '../../lib/resetDefaults'
+import PageScrollPreference from '../Viewer/PageScrollPreference'
 
 // Same default the UniversalAppsNavBar uses for the profile "Sign in" item.
 const HUB_LOGIN_HREF = 'https://app.unisim.co.uk/login'
@@ -243,6 +244,9 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
           // SDK's would be a second "Advanced" heading holding just that row.
           knowledgeBase={hasDoc ? undefined : KNOWLEDGE_BASE}
           onResetDefaults={() => { clearDismissedPrompts(); void resetPrefs() }}
+          // Tune this app ▸ Page scrolling: vertical or horizontal pages. The
+          // landing navbar passes the same row.
+          appPreferences={<PageScrollPreference />}
           // The bar this sits in is slate-900, so the pill takes the dark
           // treatment — otherwise it reads as a white chip punched into it.
           pillTheme="dark"

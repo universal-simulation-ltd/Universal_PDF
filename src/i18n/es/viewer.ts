@@ -163,6 +163,11 @@ const viewer: Messages['viewer'] = {
   'placement.tap_image': 'Toca la página para colocar tu imagen',
   'placement.click_image': 'Haz clic en la página para colocar tu imagen',
   'placement.dont_show_again': 'No volver a mostrar',
+
+  // Tune this app ▸ Page scrolling
+  'scroll.label': 'Desplazamiento de páginas',
+  'scroll.vertical': 'Vertical',
+  'scroll.horizontal': 'Horizontal',
 }
 
 export default viewer

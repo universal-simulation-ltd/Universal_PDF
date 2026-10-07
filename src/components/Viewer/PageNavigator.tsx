@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useT } from '../../i18n'
+import { scrollToPage } from '../../lib/links'
 import { usePageThumbnails } from '../../hooks/usePageThumbnails'
 
 // Thumbnails — when they are drawn, how big, and how many are kept — live in
@@ -45,9 +46,8 @@ export default function PageNavigator() {
 
   if (!doc || !open) return null
 
-  function scrollToPage(i: number) {
-    const el = document.querySelector(`[data-page-index="${i}"]`)
-    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  function goToPage(i: number) {
+    scrollToPage(i)
     if (window.matchMedia('(max-width: 767px)').matches) {
       setOpen(false)
     }
@@ -197,7 +197,7 @@ export default function PageNavigator() {
               }
               // The document has not moved yet, so scrolling has to aim at
               // where the page still IS, not at the slot it is being dragged to.
-              onClick={() => scrollToPage(pageIndex)}
+              onClick={() => goToPage(pageIndex)}
               onDelete={() => handleDelete(i)}
               onMoveUp={() => handleMove(i, i - 1)}
               onMoveDown={() => handleMove(i, i + 1)}

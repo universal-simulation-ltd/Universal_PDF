@@ -163,6 +163,11 @@ const viewer: Messages['viewer'] = {
   'placement.tap_image': 'Görselinizi yerleştirmek için sayfaya dokunun',
   'placement.click_image': 'Görselinizi yerleştirmek için sayfaya tıklayın',
   'placement.dont_show_again': 'Bir daha gösterme',
+
+  // Tune this app ▸ Page scrolling
+  'scroll.label': 'Sayfa kaydırma',
+  'scroll.vertical': 'Dikey',
+  'scroll.horizontal': 'Yatay',
 }
 
 export default viewer

@@ -163,4 +163,9 @@ export default {
   'placement.tap_image': 'Tap the page to place your image',
   'placement.click_image': 'Click the page to place your image',
   'placement.dont_show_again': "Don't show again",
+
+  // Tune this app ▸ Page scrolling
+  'scroll.label': 'Page scrolling',
+  'scroll.vertical': 'Vertical',
+  'scroll.horizontal': 'Horizontal',
 }
