@@ -60,11 +60,13 @@ export default function PdfViewer() {
   const horizontalRef = useRef(horizontal)
   horizontalRef.current = horizontal
   // The page the reader is on, as the band last measured it — what a switch of
-  // Page scrolling keeps them on. ⚠️ The LEADING page (the first whose middle
-  // has not scrolled past the start edge), not the band's anchor nearest the
-  // middle of the screen: a row on a wide window shows two or three pages at
-  // once, and the middle one is the next page, not the one being read.
-  const leadingPageRef = useRef(0)
+  // Page scrolling keeps them on. Down the screen that is the LEADING page (the
+  // first whose middle has not scrolled past the top), not the one nearest the
+  // middle: a short page under a tall one is not the page being read. Along a
+  // row it IS the middle one, because the row centres its pages (see the
+  // content's padding below) — the leading page there is the previous page
+  // peeking in at the left edge.
+  const readingPageRef = useRef(0)
   // The document the fit-on-open zoom below has been worked out for. Pages are
   // not mounted until it matches the open document, so page 1 is rasterized
   // ONCE, at the zoom it will be read at.
@@ -186,7 +188,7 @@ export default function PdfViewer() {
         }
       }
       setAnchorPage(best)
-      leadingPageRef.current = leading === Infinity ? best : leading
+      readingPageRef.current = horizontal || leading === Infinity ? best : leading
       // Nothing intersected — every page is still zero-height, which is the
       // state a long document is in for its first frames. Fall back to a small
       // band around the anchor rather than to none at all.
@@ -226,13 +228,13 @@ export default function PdfViewer() {
     if (lastLayout.current === horizontal) return
     lastLayout.current = horizontal
     const el = scrollRef.current
-    const page = el?.querySelector<HTMLElement>(`[data-page-index="${leadingPageRef.current}"]`)
+    const page = el?.querySelector<HTMLElement>(`[data-page-index="${readingPageRef.current}"]`)
     if (!el || !page) return
     // Off the axis the pages no longer run along, back to the start: a scroll
     // across a vertical document means nothing once it is a row.
     if (horizontal) el.scrollTop = 0
     else el.scrollLeft = 0
-    page.scrollIntoView({ block: 'start', inline: horizontal ? 'start' : 'nearest' })
+    page.scrollIntoView({ block: 'start', inline: horizontal ? 'center' : 'nearest' })
   }, [horizontal])
 
   // Pages added to an already-zoomed document can push the ceiling below where
@@ -1187,10 +1189,18 @@ export default function PdfViewer() {
           {/* Horizontal Page scrolling lays the pages out in a row, centred
               both ways with the same auto margins: `w-max` keeps the row at
               its own width so `mx-auto` can centre one that is narrower than
-              the window and resolve to 0 the moment it is wider. */}
+              the window and resolve to 0 the moment it is wider.
+              ⚠️ And padded by half the window less half a page at each end,
+              so page 1 OPENS IN THE MIDDLE of the screen and the last page can
+              be scrolled to the middle too (James, 2026-10-07: "page 1 should
+              start in the center of the screen (not on the left)"). The
+              percentage resolves against the scroll box's width; the page
+              width is page 1's, published as --doc-display-width below, and
+              until that lands the floor is the vertical layout's 16px. */}
           <div
             ref={contentRef}
-            className={`flex items-center gap-6 py-6 px-4 shrink-0 my-auto ${horizontal ? 'flex-row w-max mx-auto' : 'flex-col'}`}
+            className={`flex items-center gap-6 py-6 shrink-0 my-auto ${horizontal ? 'flex-row w-max mx-auto' : 'flex-col px-4'}`}
+            style={horizontal ? { paddingInline: 'max(16px, calc(50% - var(--doc-display-width, 0px) / 2))' } : undefined}
           >
             {fitted && Array.from({ length: numPages }, (_, i) => (
               <PdfPage

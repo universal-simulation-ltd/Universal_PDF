@@ -137,7 +137,8 @@ export function scrollToPage(pageIndex: number): void {
     ?.scrollIntoView({
       behavior: 'smooth',
       block: 'start',
-      // Sideways too when the pages run in a row — see lib/pageScroll.
-      inline: readPageScroll() === 'horizontal' ? 'start' : 'nearest',
+      // Along a row, to the middle of the screen, where the row centres its
+      // pages (page 1 opens there) — see lib/pageScroll.
+      inline: readPageScroll() === 'horizontal' ? 'center' : 'nearest',
     })
 }

@@ -1815,10 +1815,15 @@ side in a row. Added 2026-10-07.
   `PdfViewer.tsx`: the active-page render band, the wheel, a returning tab's
   scroll restore (which waits for width as well as height), and page jumps
   (`scrollToPage` in `lib/links.ts`, used by the navigator and internal links,
-  passes `inline: 'start'`).
-- **The page being read is the leading page**, not the one nearest the middle
-  of the window — a row on a wide window shows several. Switching layouts
-  scrolls that page in from a layout effect so the old offset is never painted.
+  passes `inline: 'center'` along a row).
+- **The row centres its pages.** It is padded by half the window less half a
+  page at each end (`--doc-display-width`), so page 1 opens in the middle of
+  the screen and the last page can be scrolled there too (James, 2026-10-07).
+- **The page being read** is, down the screen, the leading page (the first
+  whose middle has not passed the top); along the row it is the one nearest the
+  middle, because that is where the row puts it — the leading page there is
+  the previous one peeking in at the left. Switching layouts scrolls that page
+  in from a layout effect so the old offset is never painted.
 - **A plain mouse wheel** scrolls down the page and, once there is no more
   room that way, carries on along the row. "Only when nothing can scroll
   vertically" is wrong: the fit-on-open zoom floors at 75%, so a portrait page
@@ -1826,7 +1831,7 @@ side in a row. Added 2026-10-07.
   page 1. A trackpad's sideways swipe is left alone.
 - **Not yet done:** the fit-on-open zoom does not change in horizontal mode, so
   a portrait page at 75% scrolls a little vertically on a ~900px window.
-- Pinned by `npm run test:page-scroll` (15 checks, 5 go red with the viewer
+- Pinned by `npm run test:page-scroll` (16 checks; 5 went red with the viewer
   reverted). Never run on a touch device or in the Electron/Capacitor shells.
 
 ## Undo covers two histories, and only one order works

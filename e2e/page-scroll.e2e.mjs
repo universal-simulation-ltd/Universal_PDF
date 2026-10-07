@@ -119,8 +119,10 @@ l = await layout()
 check(l.pages[1].left > l.pages[0].right - 1 && Math.abs(l.pages[1].top - l.pages[0].top) < 2,
   'horizontal: the pages sit side by side', JSON.stringify(l.pages.slice(0, 2)))
 check(l.scroll.sw > l.scroll.cw, 'the row scrolls sideways', JSON.stringify(l.scroll))
-check(l.pages[0].left - l.scroll.boxLeft >= 0, 'page 1 is reachable at the start of the row',
-  `page 1 left ${l.pages[0].left}, box ${l.scroll.boxLeft}`)
+const mid = (r) => (r.left + r.right) / 2
+const boxMid = () => l.scroll.boxLeft + l.scroll.cw / 2
+check(Math.abs(mid(l.pages[0]) - boxMid()) < 20, 'page 1 opens in the middle of the screen',
+  `page 1 centre ${mid(l.pages[0])}, screen centre ${boxMid()}`)
 
 // A plain mouse wheel walks the row — after first using up any room to
 // scroll down the page (a portrait page at the 75% fit floor is a little
@@ -133,17 +135,21 @@ l = await layout()
 check(l.scroll.left > before + 100, 'a plain wheel walks the row', `scrollLeft ${before} → ${l.scroll.left}`)
 
 // A page jump (the navigator's and an internal link's — one helper) lands
-// the page at the start of the row.
+// the page in the middle of the screen — even the last one.
 await p.evaluate(() => {
   const sc = document.querySelector('[data-page-index]')?.closest('.overflow-auto')
   sc.scrollLeft = 0
 })
-// Page 3, not 4: page 4 of 5 sits past the furthest the row can scroll.
+await p.evaluate(async () => (await import('/src/lib/links.ts')).scrollToPage(4))
+await p.waitForTimeout(1200)
+l = await layout()
+check(Math.abs(mid(l.pages[4]) - boxMid()) < 20, 'jumping to the last page centres it',
+  `page 5 centre ${mid(l.pages[4])}, screen centre ${boxMid()}`)
 await p.evaluate(async () => (await import('/src/lib/links.ts')).scrollToPage(2))
 await p.waitForTimeout(1200)
 l = await layout()
-check(Math.abs(l.pages[2].left - l.scroll.boxLeft) < 40, 'jumping to page 3 brings it to the start of the row',
-  `page 3 left ${l.pages[2].left}, box ${l.scroll.boxLeft}`)
+check(Math.abs(mid(l.pages[2]) - boxMid()) < 20, 'jumping to page 3 centres it',
+  `page 3 centre ${mid(l.pages[2])}, screen centre ${boxMid()}`)
 
 // Switching back keeps the reader on that page.
 await setScroll('vertical')
