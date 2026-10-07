@@ -100,7 +100,6 @@ const tools: Messages['tools'] = {
   'export.download_filled_form': 'Télécharger le formulaire rempli',
   'export.print': 'Imprimer',
   'export.percent_less': '−{pct} %',
-  'export.no_savings': 'aucun gain',
   'export.compressing': 'Compression…',
   'export.no_images': 'Déjà aussi léger que possible — il n’y a aucune image à compresser.',
   'export.object_stream': 'réenregistrement en flux d’objets',

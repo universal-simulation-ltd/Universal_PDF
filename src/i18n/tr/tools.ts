@@ -100,7 +100,6 @@ const tools: Messages['tools'] = {
   'export.download_filled_form': 'Doldurulmuş formu indir',
   'export.print': 'Yazdır',
   'export.percent_less': '−%{pct}',
-  'export.no_savings': 'kazanç yok',
   'export.compressing': 'Sıkıştırılıyor…',
   'export.no_images': 'Zaten olabilecek en küçük boyutta — burada sıkıştırılacak görsel yok.',
   'export.object_stream': 'nesne akışıyla yeniden kaydetme',

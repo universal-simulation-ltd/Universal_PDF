@@ -111,18 +111,24 @@ export default function ExportModal({ open, onClose }: Props) {
   // tab promising "−0%" is just a second button that does nothing.
   const didShrink = saved > 0 && (pct >= 0.5 || saved >= 20 * 1024)
 
-  // Nothing was saved and there are no images to try harder on, so the whole
-  // size question is settled and the tab strip has nothing to offer.
-  const compressionPointless = ready && !didShrink && hasImages === false
-  const showVariantTabs = !compressionPointless
+  // Nothing worth saving, so there is only one file to download and the tab
+  // strip has nothing to offer — hidden, not a greyed-out "no savings" tab
+  // (James, 2026-10-07: "Don't show the compressed tab if there's no
+  // compression"). Why it could not shrink is said under the size instead.
+  const compressionPointless = ready && !didShrink
+  // ⚠️ Only once the answer is in: shown while building, the strip would
+  // appear and then vanish under the cursor whenever there was nothing saved.
+  const showVariantTabs = ready && didShrink
   const effectiveTab: Variant = ready && tab === 'compressed' && !didShrink ? 'original' : tab
 
-  // Why the Compressed tab has nothing to offer. On the lossless pass that is
-  // usually a scan whose bulk is images — which is what flattening is for — so
-  // say so rather than leaving a dead tab with no way forward.
-  const noGainNote = compressed?.fellBackToLossless
-    ? t('tools.compress.kept_lossless')
-    : t('tools.export.try_advanced')
+  // Why there is no smaller copy. With no images, it is as small as it goes;
+  // with images, it is usually a scan whose bulk is pictures — which is what
+  // flattening is for — so say so rather than leave no way forward.
+  const noGainNote = hasImages === false
+    ? t('tools.export.no_images')
+    : compressed?.fellBackToLossless
+      ? t('tools.compress.kept_lossless')
+      : t('tools.export.try_advanced')
 
   // ⚠️ The name is claimed at DOWNLOAD time, not here. `nextExportName`
   // increments a per-document counter, so working it out during render would
@@ -211,15 +217,15 @@ export default function ExportModal({ open, onClose }: Props) {
                 disabled={!annotated}
                 className="px-4 py-2.5 bg-orange-700 hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
               >
-                <span aria-hidden="true">⬇</span>
+                <DownloadGlyph />
                 {t('tools.export.download_filled_form')}
               </button>
               <button
                 onClick={doPrint}
                 disabled={!annotated}
-                className="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-slate-700 flex items-center justify-center gap-1.5"
+                className="px-3.5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-slate-700 flex items-center justify-center gap-2"
               >
-                <span aria-hidden="true">🖨</span>
+                <PrintGlyph />
                 {t('tools.export.print')}
               </button>
             </div>
@@ -257,13 +263,11 @@ export default function ExportModal({ open, onClose }: Props) {
                   role="tab"
                   aria-selected={effectiveTab === 'compressed'}
                   onClick={() => setTab('compressed')}
-                  disabled={ready ? !didShrink : false}
-                  title={ready && !didShrink ? noGainNote : undefined}
                   className={[
-                    'flex-1 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors disabled:cursor-not-allowed',
+                    'flex-1 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
                     effectiveTab === 'compressed'
                       ? 'border-orange-600 text-slate-900 bg-white'
-                      : 'border-transparent text-slate-500 hover:text-slate-700 disabled:text-slate-300 disabled:hover:text-slate-300'
+                      : 'border-transparent text-slate-500 hover:text-slate-700'
                   ].join(' ')}
                 >
                   {t('tools.compress.compressed')}
@@ -271,9 +275,6 @@ export default function ExportModal({ open, onClose }: Props) {
                     <span className="ml-2 text-[11px] font-medium tabular-nums text-emerald-700">
                       {t('tools.export.percent_less', { pct: formatNumber(t, pct, 0) })}
                     </span>
-                  )}
-                  {ready && !didShrink && (
-                    <span className="ml-2 text-[11px] font-normal text-slate-400">{t('tools.export.no_savings')}</span>
                   )}
                 </button>
               </div>
@@ -304,7 +305,7 @@ export default function ExportModal({ open, onClose }: Props) {
                     </div>
                     {compressionPointless && (
                       <div className="mt-1 text-[11px] text-slate-400">
-                        {t('tools.export.no_images')}
+                        {noGainNote}
                       </div>
                     )}
                   </>
@@ -360,13 +361,19 @@ export default function ExportModal({ open, onClose }: Props) {
               })}
             </p>
 
-            <div className="mt-2 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2">
+            <div className="mt-2 grid grid-cols-2 sm:grid-cols-[1fr_auto_auto] gap-2">
+              {/* Download | ⚙ — one split button (James, 2026-10-07). The ⚙ half
+                  is Advanced export (flatten, lock and the rest), which until
+                  then was a sentence of link text under the row. ⚠️ Still a
+                  SIGNPOST, not a second set of controls: it closes this dialog
+                  and opens that one, never both on screen. */}
+              <div className="col-span-2 sm:col-span-1 flex min-w-0">
               <button
                 onClick={() => download(effectiveTab)}
                 disabled={!ready || !redactConfirmed}
-                className="px-4 py-2.5 bg-orange-700 hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
+                className="flex-1 min-w-0 px-4 py-2.5 bg-orange-700 hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-l-lg text-sm font-medium flex items-center justify-center gap-2"
               >
-                <span aria-hidden="true">⬇</span>
+                <DownloadGlyph />
                 {/* Never "Download Original": the uncompressed copy still
                     carries the user's edits, so "original" reads as though
                     their changes would be thrown away. */}
@@ -375,35 +382,33 @@ export default function ExportModal({ open, onClose }: Props) {
                   : t('tools.export.download')}
               </button>
               <button
+                type="button"
+                onClick={openAdvanced}
+                title={t('tools.export.need_advanced')}
+                aria-label={t('tools.advanced.title')}
+                className="px-3 py-2.5 bg-orange-700 hover:bg-orange-800 text-white rounded-r-lg border-l border-white/30 flex items-center justify-center"
+              >
+                <AdvancedGlyph />
+              </button>
+              </div>
+              <button
                 onClick={openPrintPreview}
                 disabled={!ready || !redactConfirmed}
-                className="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-slate-700 flex items-center justify-center gap-1.5"
+                className="px-3.5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-slate-700 flex items-center justify-center gap-2"
               >
-                <span aria-hidden="true">◎</span>
+                <PreviewGlyph />
                 {t('tools.export.preview')}
               </button>
               <button
                 onClick={doPrint}
                 disabled={!ready || !redactConfirmed}
-                className="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-slate-700 flex items-center justify-center gap-1.5"
+                className="px-3.5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-slate-700 flex items-center justify-center gap-2"
               >
-                <span aria-hidden="true">🖨</span>
+                <PrintGlyph />
                 {t('tools.export.print')}
               </button>
             </div>
 
-            {/* ⚠️ A SIGNPOST, not a second set of controls. Flattening and
-                locking are two menus away from here, and somebody who came to
-                the Export dialog looking for them would otherwise have no
-                reason to think the app can do either. It closes this dialog and
-                opens that one — there is never a moment with both on screen. */}
-            <button
-              type="button"
-              onClick={openAdvanced}
-              className="mt-3 text-xs text-slate-500 hover:text-orange-700 underline underline-offset-2"
-            >
-              {t('tools.export.need_advanced')}
-            </button>
 
           </>
         )}
@@ -419,5 +424,74 @@ export default function ExportModal({ open, onClose }: Props) {
         </div>
       </div>
     </div>
+  )
+}
+
+// The action row's icons. One stroke weight and size so Download, Preview and
+// Print read as a set — they were ⬇, ◎ and 🖨 until 2026-10-07: three
+// different fonts, one of them a colour emoji. aria-hidden, so each button's
+// name stays exactly its label (the e2e specs find them by it).
+function Glyph({ children }: { children: React.ReactNode }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={16}
+      height={16}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className="shrink-0"
+    >
+      {children}
+    </svg>
+  )
+}
+
+function DownloadGlyph() {
+  return (
+    <Glyph>
+      <path d="M12 4v11" />
+      <path d="M7 10l5 5 5-5" />
+      <path d="M5 20h14" />
+    </Glyph>
+  )
+}
+
+function PreviewGlyph() {
+  return (
+    <Glyph>
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </Glyph>
+  )
+}
+
+function PrintGlyph() {
+  return (
+    <Glyph>
+      <path d="M6 9V3h12v6" />
+      <rect x="3" y="9" width="18" height="8" rx="2" />
+      <path d="M6 14h12v7H6z" />
+    </Glyph>
+  )
+}
+
+// Advanced export: sliders, the usual "more options" mark.
+function AdvancedGlyph() {
+  return (
+    <Glyph>
+      <path d="M4 6h10" />
+      <path d="M18 6h2" />
+      <circle cx="16" cy="6" r="2" />
+      <path d="M4 12h2" />
+      <path d="M10 12h10" />
+      <circle cx="8" cy="12" r="2" />
+      <path d="M4 18h10" />
+      <path d="M18 18h2" />
+      <circle cx="16" cy="18" r="2" />
+    </Glyph>
   )
 }

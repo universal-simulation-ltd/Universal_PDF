@@ -100,7 +100,6 @@ export default {
   'export.download_filled_form': 'Download filled form',
   'export.print': 'Print',
   'export.percent_less': '−{pct}%', // size reduction, e.g. −12%
-  'export.no_savings': 'no savings',
   'export.compressing': 'Compressing…',
   'export.no_images': 'Already as small as it goes — there are no images here to compress.',
   'export.object_stream': 'object-stream re-save', // technical description of the lossless compression
