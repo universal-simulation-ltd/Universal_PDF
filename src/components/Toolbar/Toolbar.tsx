@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { usePdfStore } from '../../stores/pdfStore'
 import SignatureMenu from '../Signature/SignatureMenu'
+import { SaveDiskIcon } from '../icons/SaveDiskIcon'
 // ⚠️ Lazy: the Export dialog carries the whole export pipeline (export.ts and
 // pdf-lib). It is fetched the first time Export is pressed and stays mounted
 // after, so nothing it holds is lost between openings.
@@ -828,8 +829,13 @@ export function ToolbarDesktopTools() {
 
       {/* Sign — an icon in this row rather than a labelled pill over with
           Export. It places something on the page, which is what every other
-          control in this cluster does; Export ends the document. */}
+          control in this cluster does. */}
       <SignatureMenu />
+
+      {/* Export ends the cluster, as a disk icon on red (James, 2026-10-07:
+          the labelled pill out by the page's right edge "looks a bit out of
+          place"). */}
+      <ExportButton />
 
       {/* No Delete button here. It used to appear in this row whenever
           something was selected, and it is the same command as the bin that
@@ -843,25 +849,27 @@ export function ToolbarDesktopTools() {
   )
 }
 
-// --- DESKTOP ACTIONS (right, inline in header) ----------------------------
-export function ToolbarDesktopActions() {
+// --- DESKTOP EXPORT (last in the tool cluster) ----------------------------
+// ⚠️ RED (`red-600`), not the orange-700 the old pill was: an orange-700 square
+// in this row is what a SELECTED tool looks like, so Export would have read as
+// a tool that was switched on. The name is kept as text for screen readers and
+// for the e2e specs that find the button by "Export".
+function ExportButton() {
   const t = useT()
   const sourceBytes = usePdfStore((s) => s.sourceBytes)
   const [exportOpen, setExportOpen] = useState(false)
 
   return (
     <>
-      <div className="hidden lg:flex items-center gap-2 shrink-0 [&>*]:shrink-0">
-        {/* Sign moved into the tool cluster (it places things on the page);
-            Present moved onto the bottom zoom bar (next to − % +). */}
-        <button
-          onClick={() => setExportOpen(true)}
-          disabled={!sourceBytes}
-          className="px-4 h-9 rounded bg-orange-700 hover:bg-orange-800 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium"
-        >
-          {t('viewer.toolbar.export')}
-        </button>
-      </div>
+      <button
+        onClick={() => setExportOpen(true)}
+        disabled={!sourceBytes}
+        title={t('viewer.toolbar.export')}
+        className="w-9 h-9 rounded flex items-center justify-center bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <SaveDiskIcon className="w-5 h-5" />
+        <span className="sr-only">{t('viewer.toolbar.export')}</span>
+      </button>
       <LazyExportModal open={exportOpen} onClose={() => setExportOpen(false)} />
     </>
   )
@@ -1305,9 +1313,6 @@ export default function Toolbar() {
       <div className="hidden lg:block bg-slate-800 text-white border-b border-slate-700">
         <div className="mx-auto w-full max-w-7xl flex flex-wrap items-center gap-1 px-4 py-2">
           <ToolbarDesktopTools />
-          <div className="ml-auto flex items-center gap-2">
-            <ToolbarDesktopActions />
-          </div>
         </div>
       </div>
       <ToolbarMobile />

@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import {
-  ToolbarDesktopActions,
   ToolbarDesktopTools,
   ToolbarMobile,
   useToolbarKeyboardShortcuts
@@ -67,24 +66,6 @@ import { KNOWLEDGE_BASE } from './knowledge'
 import PageScrollPreference from './components/Viewer/PageScrollPreference'
 
 const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_PDF'
-
-// The document's rendered width, clamped exactly as the viewer clamps it
-// (`PdfViewer` publishes `--doc-display-width` from page 1's viewport), and the
-// empty margin to the right of it — the strip of grey between the page's right
-// edge and the window.
-//
-// ⚠️ Every term here is load-bearing, so do not "simplify" it:
-//   • `100vw` and not `100%` — a percentage inside a grid cell resolves against
-//     the CELL, and this cell is one `1fr` of three.
-//   • `--doc-scrollbar-width` — the page is centred inside the viewer's scroll
-//     box, which is narrower than the window by its scrollbar. The bar carries
-//     the same padding for the same reason.
-//   • `0.75rem` is the row's own `px-3`, which sits between the strip's right
-//     edge and the window, so it comes off. Nothing else does: the strip now
-//     STARTS at the page's edge and holds Export itself, so no gap between
-//     Export and what follows it is in the measurement any more.
-const DOC_WIDTH = 'clamp(600px, var(--doc-display-width, 80rem), 80rem)'
-const DOC_RIGHT_STRIP = `max(0px, calc((100vw - var(--doc-scrollbar-width, 0px) - ${DOC_WIDTH}) / 2 - 0.75rem))`
 
 // A document the OS handed over — the desktop's double-click / "Open with", an
 // installed PWA's launchQueue, the iOS/Android share sheet — goes through the
@@ -573,15 +554,15 @@ export default function App() {
               lines up with the document — that is deliberate, it carries
               document state (page count, name, zoom) rather than app controls. */}
           {/* ⚠️ Three columns with EXPLICIT `col-start-*`, not auto-placement.
-              Both `ToolbarDesktopTools` and `ToolbarDesktopActions` are
-              `hidden lg:flex`, and a `display:none` grid child is not placed at
+              `ToolbarDesktopTools` is `hidden lg:flex`, and a `display:none`
+              grid child is not placed at
               all — so on a phone auto-placement would slide whatever is left
               into column 1 and the layout would silently differ from the one you
               designed. Pinning each cell makes the two breakpoints the same
               structure with different cells filled.
 
               The outer columns are both `1fr`, which is what centres the tools:
-              column 3's content (Sign, Export, Actions, the profile pill and the
+              column 3's content (Actions, the profile pill and the
               changelog icon) sets its width, and the equal `1fr` on column 1
               mirrors that width as empty space. */}
           <div className="w-full grid grid-cols-[1fr_auto_1fr] items-center gap-3 py-2 min-h-[52px] px-3">
@@ -625,43 +606,15 @@ export default function App() {
                 cell they cannot overlap anything, and the width they take is
                 also what sizes the empty column that centres the tools. */}
             <div className="col-start-3 flex items-center gap-2 [&>*]:shrink-0">
-              {/* Export STARTS ON THE DOCUMENT'S RIGHT EDGE — it sits in the
-                  grey strip beside the page rather than inside it (owner,
-                  2026-08-29: a box drawn on the empty bar right of Export,
-                  "just to the right of the alignment with the pdf edge").
-
-                  It ENDED on that edge from 2026-08-25 until then, and before
-                  that it floated in the middle of whatever the centred tools
-                  left over. Same line, other side of it.
-
-                  The anchor is still a sized box rather than any positioning of
-                  Export: this strip is the page's right margin, so its LEFT
-                  edge is the page's right edge at every zoom. Export leads the
-                  strip; `ml-auto` on the profile cluster keeps that pinned to
-                  the window's right where it has always been, and `pl-2` is the
-                  "just to the right" — flush against the edge reads as a
-                  misalignment rather than a decision.
-
-                  ⚠️ `min-w-max` is the collision guard, and it is why this can
-                  be anchored at all — the previous version refused to anchor
-                  because a page as wide as the window would drive Export into
-                  the profile pill. It cannot: the box never gets narrower than
-                  the controls inside it, so once the margin runs out the box
-                  stops shrinking and the `flex-1` spacer gives up its space
-                  instead. Nothing overlaps; Export just stops moving right.
-                  ⚠️ Export is INSIDE the box now, so it is inside that guard —
-                  keep it there.
+              {/* Export used to lead this cell, anchored to the page's right
+                  edge by a measured strip. It is in the tool cluster now (James,
+                  2026-10-07), so the cell is just the profile and changelog,
+                  pinned to the window's right.
 
                   ⚠️ This cell must stay STRETCHED (no `justify-self`) — it
                   spans the whole right-hand `1fr`, which is also what keeps the
                   tool cluster on the window's centre line. */}
-              <div aria-hidden="true" className="flex-1" />
-              <div
-                className="flex min-w-max items-center gap-2 pl-2"
-                style={{ width: DOC_RIGHT_STRIP }}
-              >
-                <ToolbarDesktopActions />
-                <div className="ml-auto flex items-center gap-2 [&>*]:shrink-0">
+              <div className="ml-auto flex items-center gap-2 [&>*]:shrink-0">
                   <ToolbarUserProfile actions={<FileMenu variant="rows" />} />
                   {/* The build this actually is, in the one panel that is
                       reachable with a document open. ⚠️ NOT the version chip in
@@ -673,7 +626,6 @@ export default function App() {
                     productFilter="pdf"
                     appVersion={APP_BUILD_LABEL}
                   />
-                </div>
               </div>
             </div>
           </div>

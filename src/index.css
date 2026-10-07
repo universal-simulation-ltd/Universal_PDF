@@ -16,7 +16,7 @@ body {
    Tailwind's preflight gives `input`/`textarea`/`select` `color: inherit`, and
    `inherit` here means the DOM parent, which is not always the thing the
    control is sitting on. Every dialog in this app is rendered from inside the
-   toolbar — `ToolbarDesktopActions` renders `<ExportModal>`, and the toolbar
+   toolbar — the toolbar's Export button renders `<ExportModal>`, and the toolbar
    lives in a `bg-slate-900 text-white` bar. `position: fixed` moves the panel
    out of the bar visually but NOT out of it in the DOM, so a control that named
    no colour of its own inherited white and was drawn white-on-white. That is
