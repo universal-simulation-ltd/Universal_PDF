@@ -16,12 +16,17 @@
  * read — the page outline passes behind the text, the busy strokes do not.
  *
  * Pure CSS, no rAF clock. PdfIllustration drives a JS clock because it reacts
- * to hover; nothing here reacts to anything, so a keyframe loop costs less and
- * cannot leak a timer.
+ * to hover; nothing here reacts to anything, so keyframes cost less and cannot
+ * leak a timer.
+ *
+ * ⚠️ It draws ONCE and stays drawn (James, 2026-10-08) — the page, its lines,
+ * then the signature. It used to draw, hold, fade and repeat every 9 s for as
+ * long as the page was open, and every frame of that repainted these strokes
+ * on the main thread for nobody.
  */
 
-/** One full pass: draw the page, fill it in, sign it, hold, fade, repeat. */
-const LOOP_MS = 9000
+/** How long one stroke takes to draw — the same pace the old loop had. */
+const DRAW_MS = 2000
 
 // ⚠️ Every animated path carries pathLength={100}, so each dash value below is
 // a PERCENTAGE of that stroke rather than a measured length. Without it every
@@ -31,15 +36,15 @@ const CSS = `
   .dw-page, .dw-fold, .dw-line, .dw-sig {
     stroke-dasharray: 100;
     stroke-dashoffset: 100;
-    animation-duration: ${LOOP_MS}ms;
-    animation-iteration-count: infinite;
+    animation-duration: ${DRAW_MS}ms;
+    animation-iteration-count: 1;
+    animation-fill-mode: both;
     animation-timing-function: ease-in-out;
   }
   @keyframes dw-draw {
-    0%           { stroke-dashoffset: 100; opacity: 0; }
-    4%           { opacity: 1; }
-    22%, 82%     { stroke-dashoffset: 0; opacity: 1; }
-    94%, 100%    { stroke-dashoffset: 0; opacity: 0; }
+    0%   { stroke-dashoffset: 100; opacity: 0; }
+    18%  { opacity: 1; }
+    100% { stroke-dashoffset: 0; opacity: 1; }
   }
   /* Each element gets the same keyframes on a later delay, so the page draws,
      then its lines, then the signature — one gesture, not five at once. */
