@@ -1829,10 +1829,17 @@ side in a row. Added 2026-10-07.
   vertically" is wrong: the fit-on-open zoom floors at 75%, so a portrait page
   is often slightly taller than the window and the wheel would never leave
   page 1. A trackpad's sideways swipe is left alone.
-- **Not yet done:** the fit-on-open zoom does not change in horizontal mode, so
-  a portrait page at 75% scrolls a little vertically on a ~900px window.
-- Pinned by `npm run test:page-scroll` (16 checks; 5 went red with the viewer
-  reverted). Never run on a touch device or in the Electron/Capacitor shells.
+- **Opening in horizontal mode fits the height alone** (James, 2026-10-08,
+  `663e301`): no 75% floor and no width term, capped at 100%, less
+  `HORIZONTAL_SCROLLBAR_ALLOWANCE` (20px) for the row's scrollbar, which only
+  appears after the fit has measured `clientHeight`. So there is no vertical
+  scroll and the first wheel turn goes sideways.
+- **Not yet done:** switching to Horizontal with a document already open keeps
+  its zoom (only opening fits), as does a tab restored from the background.
+- Pinned by `npm run test:page-scroll` (16 checks from 2026-10-07; 5 went red
+  with the viewer reverted. Plus 3 fit-height checks on 2026-10-08; 2 went red
+  against the old fit). Never run on a touch device or in the
+  Electron/Capacitor shells; Chromium at 1440x900 only.
 
 ## Undo covers two histories, and only one order works
 
