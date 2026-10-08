@@ -165,6 +165,22 @@ await p.waitForTimeout(1500)
 await openPdf()
 l = await layout()
 check(l.pages[1].left > l.pages[0].right - 1, 'the choice survives a reload')
+// Opened with the row already chosen, the page fits the window's height
+// (2026-10-08), so there is nothing to scroll up and down…
+check(l.scroll.sh <= l.scroll.ch + 1, 'opened in a row: the page fits the height, no up-and-down scroll',
+  `scrollHeight ${l.scroll.sh} vs clientHeight ${l.scroll.ch}`)
+check(l.pages[0].bottom - l.pages[0].top > l.scroll.ch - 100, '…and fills most of it',
+  `page height ${l.pages[0].bottom - l.pages[0].top}, window ${l.scroll.ch}`)
+// …and the very first wheel turn moves along the row.
+{
+  const start = l.scroll.left
+  await p.mouse.move(720, 450)
+  await p.mouse.wheel(0, 300)
+  await p.waitForTimeout(400)
+  l = await layout()
+  check(l.scroll.left > start + 100 && l.scroll.top === 0, 'the first wheel turn goes sideways, not down',
+    `scrollLeft ${start} → ${l.scroll.left}, scrollTop ${l.scroll.top}`)
+}
 
 await openTune()
 await p.locator('[data-testid="unisim-prefs-reset"] button').first().click()

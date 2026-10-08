@@ -26,6 +26,10 @@ const ZOOM_STEP = 0.1
 // Fit-to-height on open never zooms out past this — below 75% body text gets
 // too small to read, so very tall pages start partially off-screen instead.
 const FIT_HEIGHT_MIN_ZOOM = 0.75
+// With Page scrolling horizontal, the fit on open leaves this much height for
+// the row's sideways scrollbar (a classic Windows one is ~17px; an overlay one
+// takes none, and then the page is just a touch shy of the window).
+const HORIZONTAL_SCROLLBAR_ALLOWANCE = 20
 // Quick presets offered when you click the % label while at 100%.
 const ZOOM_PRESETS = [50, 75, 125, 150]
 // How long the pages wait for the fit-on-open zoom to be worked out before they
@@ -946,7 +950,16 @@ export default function PdfViewer() {
       const { width: pageWidth, height: pageHeight } = page.getViewport({ scale: BASE_SCALE })
       const availableW = el.clientWidth - 32 // px-4 padding × 2
       const availableH = el.clientHeight - 48 // py-6 padding × 2
-      if (availableW > 0 && availableH > 0) {
+      if (horizontalRef.current && availableH > HORIZONTAL_SCROLLBAR_ALLOWANCE) {
+        // Pages in a row: fit the HEIGHT alone, so there is nothing to scroll
+        // up and down and the wheel walks straight along the row (James,
+        // 2026-10-08). No 75% floor (that floor is what left a portrait page a
+        // little taller than the window) and no width cap (the row scrolls
+        // sideways anyway). Less room for the row's own scrollbar, which only
+        // appears once the pages mount.
+        const fit = (availableH - HORIZONTAL_SCROLLBAR_ALLOWANCE) / pageHeight
+        setZoom(Math.max(MIN_ZOOM, Math.min(1, fit)))
+      } else if (availableW > 0 && availableH > 0) {
         const widthFit = Math.max(MIN_ZOOM, Math.min(1, availableW / pageWidth))
         const heightFit = Math.max(FIT_HEIGHT_MIN_ZOOM, Math.min(1, availableH / pageHeight))
         setZoom(Math.min(widthFit, heightFit))
