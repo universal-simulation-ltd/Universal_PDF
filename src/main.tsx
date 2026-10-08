@@ -11,6 +11,7 @@ import SignQueueSync from './components/Signature/SignQueueSync'
 import SignCertificatePage from './components/Signature/SignCertificatePage'
 import { UsageTracker } from '@unisim/sdk'
 import ErrorBoundary from './components/ErrorBoundary'
+import { installPauseAnimationsOnBlur } from './lib/pauseAnimationsOnBlur'
 import { usePdfStore } from './stores/pdfStore'
 import { useAnnotationStore } from './stores/annotationStore'
 import { useSignatureStore } from './stores/signatureStore'
@@ -63,6 +64,10 @@ const params = new URLSearchParams(window.location.search)
 const signToken = params.get('sign')
 const signDocToken = params.get('signdoc')
 const certId = params.get('cert')
+
+// Endless animations finish their loop and rest while the window is not
+// focused — see lib/pauseAnimationsOnBlur.
+installPauseAnimationsOnBlur()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

@@ -3,9 +3,6 @@ import * as pdfjsLib from 'pdfjs-dist'
 // blob-URL worker instead of an ES module worker, which it can't import.
 import PdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?worker'
 
-const workerPort = new PdfjsWorker()
-pdfjsLib.GlobalWorkerOptions.workerPort = workerPort
-
 // ⚠️ ONE pdf.js worker for the life of the app, handed to every document
 // EXPLICITLY (`worker:` below) rather than left to `GlobalWorkerOptions`.
 //
@@ -19,8 +16,19 @@ pdfjsLib.GlobalWorkerOptions.workerPort = workerPort
 // documents — which kept every one of them, bytes and all, alive in the worker
 // until the tab closed). A worker passed in by the caller is never destroyed by
 // a document, so documents can now be destroyed the moment they are done with.
+//
+// ⚠️ STARTED ON FIRST USE, not when this module loads (2026-10-08). The viewer
+// imports this module, so a module-level `new PdfjsWorker()` booted the whole
+// pdf.js worker — 1.3 MB of script and its own JS heap — on the welcome screen,
+// before anyone had opened a PDF. `GlobalWorkerOptions.workerPort` is set at
+// the same moment, for anything in pdf.js that looks there.
+let workerPort: Worker | null = null
 let sharedWorker: InstanceType<typeof pdfjsLib.PDFWorker> | null = null
 function pdfWorker(): InstanceType<typeof pdfjsLib.PDFWorker> {
+  if (!workerPort) {
+    workerPort = new PdfjsWorker()
+    pdfjsLib.GlobalWorkerOptions.workerPort = workerPort
+  }
   // Re-made if anything ever does destroy it — the underlying Web Worker is
   // still running; only pdf.js's handle on it is gone.
   if (!sharedWorker || sharedWorker.destroyed) sharedWorker = pdfjsLib.PDFWorker.fromPort({ port: workerPort })
