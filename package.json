@@ -146,6 +146,19 @@
   "build": {
     "appId": "uk.co.unisim.pdf",
     "productName": "Universal PDF",
+    "electronLanguages": [
+      "en-US",
+      "en-GB",
+      "de",
+      "es",
+      "es-419",
+      "fr",
+      "it",
+      "pt-BR",
+      "pt-PT",
+      "tr"
+    ],
+    "compression": "maximum",
     "directories": {
       "output": "release"
     },
