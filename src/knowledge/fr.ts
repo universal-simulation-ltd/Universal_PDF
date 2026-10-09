@@ -186,6 +186,33 @@ Chaque demande dispose d’une page de certificat. Elle affiche le document, l�
 Les liens de signature expirent au bout de 30 jours. Les fichiers stockés peuvent atteindre 50 Mo, et un fichier envoyé en pièce jointe doit faire moins de 30 Mo.`,
   },
   {
+    id: 'page-scrolling',
+    title: 'Pages les unes sous les autres ou côte à côte',
+    summary: 'Le réglage Défilement des pages : les pages les unes sous les autres, ou alignées en rangée.',
+    group: 'Comment ça marche',
+    body: `Universal PDF affiche normalement les pages d’un document les unes sous les autres, et vous faites défiler vers le bas pour poursuivre la lecture. Si vous préférez parcourir un document de gauche à droite, comme on tourne les pages d’un livre ou on fait défiler des diapositives, vous pouvez aligner les pages côte à côte, en rangée.
+
+## Changer ce réglage
+
+1. Ouvrez le menu en haut à droite, à côté de votre photo de profil (quand un document est ouvert, il s’intitule **Actions**), et choisissez **Régler cette application**.
+2. Sous **Défilement des pages**, choisissez **Vertical** pour des pages les unes sous les autres, ou **Horizontal** pour des pages côte à côte.
+
+Vous pouvez le faire depuis l’écran d’accueil, avant d’ouvrir quoi que ce soit, ou avec un document déjà ouvert. Un document ouvert change aussitôt et reste à la page que vous étiez en train de lire.
+
+## Lire en rangée
+
+- **À l’ouverture d’un document**, la page est ajustée à la hauteur de la fenêtre : elle tient entièrement à l’écran et il n’y a rien à faire défiler vers le haut ou vers le bas. La première page s’affiche au milieu de l’écran.
+- **La molette de la souris** fait avancer la rangée : tournez-la vers le bas pour la page suivante, vers le haut pour revenir en arrière. Si vous avez zoomé au point qu’une page dépasse la hauteur de la fenêtre, la molette fait d’abord défiler cette page jusqu’en bas, puis passe à la suivante.
+- **Un pavé tactile** parcourt la rangée d’un balayage latéral, comme partout ailleurs.
+- **Aller à une page**, depuis la liste **Pages** ou un lien dans le document, amène cette page au milieu de l’écran.
+
+Si vous passez en Horizontal avec un document déjà ouvert, celui-ci garde son zoom actuel. L’ajustement à la hauteur de la fenêtre se fait à l’ouverture d’un document.
+
+## Où ce choix est conservé
+
+Le réglage est mémorisé dans le stockage de votre navigateur, sur cet appareil uniquement : chacun de vos appareils peut donc avoir le sien. Il n’est pas enregistré dans votre compte. **Rétablir les réglages par défaut**, en bas de Régler cette application, le remet sur Vertical.`,
+  },
+  {
     id: 'send-to-sign-security',
     title: 'Envoyer pour signature est-il sûr ?',
     summary: 'Ce qui est chiffré, ce que notre serveur peut voir, et comment fonctionne la piste d’audit.',

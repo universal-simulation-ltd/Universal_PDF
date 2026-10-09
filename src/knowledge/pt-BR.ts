@@ -186,6 +186,33 @@ Toda solicitação tem uma página de certificado. Ela mostra o documento, quem 
 Os links de assinatura expiram depois de 30 dias. Os arquivos guardados podem ter até 50 MB, e um arquivo enviado como anexo de e-mail precisa ter menos de 30 MB.`,
   },
   {
+    id: 'page-scrolling',
+    title: 'Páginas uma embaixo da outra ou lado a lado',
+    summary: 'A configuração Rolagem das páginas: uma página embaixo da outra, ou as páginas em fila.',
+    group: 'Como funciona',
+    body: `O Universal PDF normalmente mostra as páginas de um documento uma embaixo da outra, e você rola para baixo para continuar lendo. Se preferir percorrer um documento de lado, como quem vira as páginas de um livro ou passa os slides de uma apresentação, você pode colocar as páginas lado a lado, em fila.
+
+## Como mudar
+
+1. Abra o menu no canto superior direito, ao lado da sua foto de perfil (com um documento aberto, ele se chama **Ações**), e escolha **Ajustar este app**.
+2. Em **Rolagem das páginas**, escolha **Vertical** para uma página embaixo da outra, ou **Horizontal** para as páginas lado a lado.
+
+Dá para mudar na tela inicial, antes de abrir qualquer coisa, ou com um documento já aberto. Um documento aberto muda na hora e continua na página que você estava lendo.
+
+## Lendo em fila
+
+- **Ao abrir um documento**, a página se ajusta à altura da janela, então ela aparece inteira na tela e não há nada para rolar para cima ou para baixo. A primeira página fica no meio da tela.
+- **A roda do mouse** avança pela fila: gire para baixo para ir à próxima página e para cima para voltar. Se você aumentou o zoom a ponto de a página ficar mais alta que a janela, a roda primeiro rola essa página até o fim e depois passa para a próxima.
+- **O trackpad** percorre a fila com um deslize para o lado, como em qualquer outro lugar.
+- **Ir para uma página**, pela lista **Páginas** ou por um link dentro do documento, leva essa página para o meio da tela.
+
+Se você mudar para Horizontal com um documento já aberto, ele mantém o zoom atual. O ajuste à altura da janela acontece quando um documento é aberto.
+
+## Onde a escolha fica guardada
+
+A configuração fica guardada no armazenamento do seu navegador, só neste aparelho, então cada um dos seus aparelhos pode ter a sua. Ela não é salva na sua conta. **Restaurar padrões**, no fim de Ajustar este app, volta para Vertical.`,
+  },
+  {
     id: 'send-to-sign-security',
     title: 'Quão seguro é o Enviar para assinatura?',
     summary: 'O que é criptografado, o que nosso servidor consegue ver e como funciona a trilha de auditoria.',

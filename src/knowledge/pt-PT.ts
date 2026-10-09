@@ -186,6 +186,33 @@ Cada pedido tem uma página de certificado. Mostra o documento, quem era cada si
 As ligações de assinatura expiram ao fim de 30 dias. Os ficheiros guardados podem ter até 50 MB, e um ficheiro enviado como anexo de email tem de ter menos de 30 MB.`,
   },
   {
+    id: 'page-scrolling',
+    title: 'Páginas umas por baixo das outras ou lado a lado',
+    summary: 'A definição Deslocamento das páginas: uma página por baixo da outra, ou as páginas em fila.',
+    group: 'Como funciona',
+    body: `O Universal PDF mostra normalmente as páginas de um documento umas por baixo das outras, e a leitura continua deslocando para baixo. Para percorrer um documento na horizontal, como quem vira as páginas de um livro ou passa os diapositivos de uma apresentação, as páginas podem ser dispostas lado a lado, em fila.
+
+## Como alterar
+
+1. Abra o menu no canto superior direito, junto à fotografia de perfil (com um documento aberto, chama-se **Ações**), e escolha **Ajustar esta aplicação**.
+2. Em **Deslocamento das páginas**, escolha **Vertical** para ter uma página por baixo da outra, ou **Horizontal** para as ter lado a lado.
+
+A definição pode ser alterada no ecrã inicial, antes de abrir qualquer documento, ou com um documento já aberto. Um documento aberto muda de imediato e mantém-se na página que estava a ser lida.
+
+## Ler em fila
+
+- **Ao abrir um documento**, a página é ajustada à altura da janela: fica inteira no ecrã e não há nada para deslocar para cima ou para baixo. A primeira página aparece no meio do ecrã.
+- **A roda do rato** avança pela fila: rodar para baixo passa à página seguinte e rodar para cima volta atrás. Se o zoom tiver sido aumentado ao ponto de a página ficar mais alta do que a janela, a roda desloca primeiro essa página até ao fim e só depois passa à seguinte.
+- **O touchpad** percorre a fila com um deslize lateral, como em qualquer outro lado.
+- **Ir para uma página**, a partir da lista **Páginas** ou de uma ligação no documento, traz essa página para o meio do ecrã.
+
+Ao mudar para Horizontal com um documento já aberto, este mantém o zoom atual. O ajuste à altura da janela é feito quando um documento é aberto.
+
+## Onde a escolha fica guardada
+
+A definição fica guardada no armazenamento do browser, apenas neste dispositivo, pelo que cada dispositivo pode ter a sua. Não é guardada na conta. **Repor predefinições**, no fundo de Ajustar esta aplicação, volta a pô-la em Vertical.`,
+  },
+  {
     id: 'send-to-sign-security',
     title: 'Qual é a segurança do Enviar para assinatura?',
     summary: 'O que é encriptado, o que o nosso servidor consegue ver e como funciona o registo de auditoria.',

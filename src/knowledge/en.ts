@@ -186,6 +186,33 @@ Every request has a certificate page. It shows the document, who each signer was
 Signing links expire after 30 days. Stored files can be up to 50 MB, and a file emailed as an attachment must be under 30 MB.`,
   },
   {
+    id: 'page-scrolling',
+    title: 'Pages down the screen or side by side',
+    summary: 'The Page scrolling setting: one page under another, or the pages in a row.',
+    group: 'How it works',
+    body: `Universal PDF normally shows a document's pages one under another, and you scroll down to read on. If you would rather move through a document sideways, as you would turn the pages of a book or click through slides, you can lay the pages out side by side in a row instead.
+
+## Changing it
+
+1. Open the menu at the top right, next to your profile picture (while a document is open it reads **Actions**), and choose **Tune this app**.
+2. Under **Page scrolling**, choose **Vertical** for one page under another, or **Horizontal** for pages side by side.
+
+You can change it on the home screen, before you open anything, or with a document already open. An open document changes straight away and stays on the page you were reading.
+
+## Reading in a row
+
+- **Opening a document** fits the page to the height of the window, so the whole page is on screen and there is nothing to scroll up and down. The first page sits in the middle of the screen.
+- **A mouse wheel** moves along the row: turn it down for the next page and up to go back. If you have zoomed in so that a page is taller than the window, the wheel first scrolls down that page, then carries on to the next one.
+- **A trackpad** moves along the row with a sideways swipe, as it does anywhere else.
+- **Going to a page**, from the **Pages** list or from a link inside the document, brings that page to the middle of the screen.
+
+If you switch to Horizontal with a document already open, it keeps its current zoom. The fit to the window's height happens when a document is opened.
+
+## Where the choice is kept
+
+The setting is remembered in your browser's storage on this device only, so each of your devices can have its own. It is not saved to your account. **Reset to defaults**, at the foot of Tune this app, puts it back to Vertical.`,
+  },
+  {
     id: 'send-to-sign-security',
     title: 'How secure is Send to sign?',
     summary: 'What is encrypted, what our server can see, and how the audit trail works.',

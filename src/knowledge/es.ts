@@ -186,6 +186,33 @@ Cada solicitud tiene una página de certificado. Muestra el documento, quién er
 Los enlaces de firma caducan a los 30 días. Los archivos guardados pueden ocupar hasta 50 MB, y un archivo enviado por correo como adjunto debe ocupar menos de 30 MB.`,
   },
   {
+    id: 'page-scrolling',
+    title: 'Páginas una debajo de otra o una al lado de otra',
+    summary: 'El ajuste Desplazamiento de páginas: una página debajo de otra, o las páginas en fila.',
+    group: 'Cómo funciona',
+    body: `Universal PDF suele mostrar las páginas de un documento una debajo de otra, y desplazas hacia abajo para seguir leyendo. Si prefieres recorrer un documento de lado, como cuando pasas las páginas de un libro o las diapositivas de una presentación, puedes colocar las páginas una al lado de otra, en fila.
+
+## Cómo cambiarlo
+
+1. Abre el menú de arriba a la derecha, junto a tu foto de perfil (con un documento abierto se llama **Acciones**), y elige **Ajustar esta app**.
+2. En **Desplazamiento de páginas**, elige **Vertical** para tener una página debajo de otra, u **Horizontal** para tenerlas una al lado de otra.
+
+Puedes cambiarlo en la pantalla de inicio, antes de abrir nada, o con un documento ya abierto. Un documento abierto cambia al instante y se queda en la página que estabas leyendo.
+
+## Leer en fila
+
+- **Al abrir un documento**, la página se ajusta a la altura de la ventana, así que se ve entera y no hay nada que desplazar arriba ni abajo. La primera página aparece en el centro de la pantalla.
+- **La rueda del ratón** avanza por la fila: gírala hacia abajo para ir a la página siguiente y hacia arriba para volver. Si has ampliado tanto que una página es más alta que la ventana, la rueda primero recorre esa página hacia abajo y luego pasa a la siguiente.
+- **Un panel táctil** recorre la fila deslizando de lado, como en cualquier otro sitio.
+- **Ir a una página**, desde la lista **Páginas** o desde un enlace del documento, lleva esa página al centro de la pantalla.
+
+Si cambias a Horizontal con un documento ya abierto, este conserva el zoom que tenía. El ajuste a la altura de la ventana se hace al abrir un documento.
+
+## Dónde se guarda
+
+El ajuste se recuerda en el almacenamiento de tu navegador, solo en este dispositivo, así que cada uno de tus dispositivos puede tener el suyo. No se guarda en tu cuenta. **Restablecer valores predeterminados**, al pie de Ajustar esta app, lo devuelve a Vertical.`,
+  },
+  {
     id: 'send-to-sign-security',
     title: '¿Qué seguridad ofrece Enviar para firmar?',
     summary: 'Qué se cifra, qué puede ver nuestro servidor y cómo funciona el registro de auditoría.',

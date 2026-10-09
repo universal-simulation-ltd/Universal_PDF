@@ -186,6 +186,33 @@ Ogni richiesta ha una pagina del certificato. Mostra il documento, chi è ciascu
 I link per la firma scadono dopo 30 giorni. I file conservati possono arrivare a 50 MB, e un file inviato via email come allegato deve essere inferiore a 30 MB.`,
   },
   {
+    id: 'page-scrolling',
+    title: 'Pagine una sotto l’altra o affiancate',
+    summary: 'L’impostazione Scorrimento delle pagine: una pagina sotto l’altra, o le pagine in fila.',
+    group: 'Come funziona',
+    body: `Universal PDF di solito mostra le pagine di un documento una sotto l’altra, e scorri verso il basso per continuare a leggere. Se preferisci sfogliare un documento in orizzontale, come si girano le pagine di un libro o si scorrono le slide di una presentazione, puoi affiancare le pagine in una fila.
+
+## Come cambiarla
+
+1. Apri il menu in alto a destra, accanto alla tua immagine del profilo (con un documento aperto si chiama **Azioni**), e scegli **Regola questa app**.
+2. In **Scorrimento delle pagine**, scegli **Verticale** per avere una pagina sotto l’altra, oppure **Orizzontale** per averle affiancate.
+
+Puoi cambiarla dalla schermata iniziale, prima di aprire qualsiasi cosa, oppure con un documento già aperto. Un documento aperto cambia subito e resta sulla pagina che stavi leggendo.
+
+## Leggere in fila
+
+- **All’apertura di un documento**, la pagina viene adattata all’altezza della finestra: è tutta sullo schermo e non c’è niente da scorrere in su o in giù. La prima pagina compare al centro dello schermo.
+- **La rotellina del mouse** fa avanzare la fila: girala verso il basso per la pagina successiva e verso l’alto per tornare indietro. Se hai ingrandito una pagina fino a renderla più alta della finestra, la rotellina prima la scorre fino in fondo, poi passa alla successiva.
+- **Il trackpad** scorre la fila con uno scorrimento laterale, come ovunque.
+- **Andare a una pagina**, dall’elenco **Pagine** o da un link nel documento, porta quella pagina al centro dello schermo.
+
+Se passi a Orizzontale con un documento già aperto, il documento mantiene lo zoom attuale. L’adattamento all’altezza della finestra avviene all’apertura di un documento.
+
+## Dove viene conservata la scelta
+
+L’impostazione viene memorizzata nello spazio di archiviazione del browser, solo su questo dispositivo, quindi ciascuno dei tuoi dispositivi può averne una diversa. Non viene salvata nel tuo account. **Ripristina impostazioni predefinite**, in fondo a Regola questa app, la riporta a Verticale.`,
+  },
+  {
     id: 'send-to-sign-security',
     title: 'Quanto è sicuro Invia per la firma?',
     summary: 'Che cosa è crittografato, che cosa può vedere il nostro server e come funziona la traccia di controllo.',

@@ -186,6 +186,33 @@ Her isteğin bir sertifika sayfası vardır. Bu sayfa belgeyi, her imzalayanın 
 İmza bağlantılarının süresi 30 gün sonra dolar. Depolanan dosyalar en fazla 50 MB olabilir ve e-postayla ek olarak gönderilen bir dosya 30 MB’tan küçük olmalıdır.`,
   },
   {
+    id: 'page-scrolling',
+    title: 'Sayfalar alt alta mı, yan yana mı?',
+    summary: 'Sayfa kaydırma ayarı: sayfalar alt alta ya da bir sıra hâlinde yan yana.',
+    group: 'Nasıl çalışır',
+    body: `Universal PDF bir belgenin sayfalarını normalde alt alta gösterir; okumaya devam etmek için aşağı kaydırırsınız. Bir belgede bir kitabın sayfalarını çevirir ya da sunum slaytlarını geçer gibi yatay ilerlemeyi tercih ediyorsanız, sayfaları bunun yerine bir sıra hâlinde yan yana dizebilirsiniz.
+
+## Nasıl değiştirilir
+
+1. Sağ üstte, profil resminizin yanındaki menüyü açın (bir belge açıkken adı **İşlemler**’dir) ve **Bu uygulamayı ayarla**’yı seçin.
+2. **Sayfa kaydırma** altında, sayfaların alt alta durması için **Dikey**’i, yan yana durması için **Yatay**’ı seçin.
+
+Bu ayar, henüz bir şey açmadan ana ekranda ya da açık bir belgedeyken değiştirilebilir. Açık bir belge hemen değişir ve okuduğunuz sayfada kalır.
+
+## Sıra hâlinde okuma
+
+- **Bir belge açıldığında** sayfa pencerenin yüksekliğine sığdırılır; böylece sayfanın tamamı ekranda görünür ve yukarı aşağı kaydırılacak bir şey kalmaz. İlk sayfa ekranın ortasında durur.
+- **Fare tekerleği** sıra boyunca ilerler: sonraki sayfa için aşağı, geri dönmek için yukarı çevirin. Bir sayfayı pencereden daha uzun olacak kadar yakınlaştırdıysanız, tekerlek önce o sayfayı sonuna kadar kaydırır, ardından sonrakine geçer.
+- **Dokunmatik yüzey** her yerde olduğu gibi yana kaydırma hareketiyle sıra boyunca ilerler.
+- **Bir sayfaya gitmek**, ister **Sayfalar** listesinden ister belgedeki bir bağlantıdan olsun, o sayfayı ekranın ortasına getirir.
+
+Bir belge açıkken Yatay’a geçerseniz belge mevcut yakınlaştırma düzeyini korur. Pencerenin yüksekliğine sığdırma, belge açılırken yapılır.
+
+## Seçim nerede saklanır
+
+Ayar yalnızca bu cihazda, tarayıcınızın depolama alanında hatırlanır; bu yüzden her cihazınızın kendi ayarı olabilir. Hesabınıza kaydedilmez. Bu uygulamayı ayarla’nın en altındaki **Varsayılanlara sıfırla**, ayarı yeniden Dikey yapar.`,
+  },
+  {
     id: 'send-to-sign-security',
     title: 'İmzaya gönder ne kadar güvenli?',
     summary: 'Nelerin şifrelendiği, sunucumuzun neleri görebildiği ve denetim kaydının nasıl işlediği.',
