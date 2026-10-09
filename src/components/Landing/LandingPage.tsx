@@ -549,7 +549,7 @@ export default function LandingPage() {
                     : t('app.landing_compress')}
               </button>
 
-              {/* The chevron IS the "Advanced options" label now: a square
+              {/* "More tools" + a chevron, where a full "Advanced options" row used to be: a
                   button on the end of the Compress row, wearing the same border
                   as the pill beside it. The row it replaced was full-width and
                   carried nothing but the word. */}
@@ -565,12 +565,17 @@ export default function LandingPage() {
                 aria-controls="pdf-advanced-options"
                 aria-label={advancedOpen ? t('app.landing_hide_advanced') : t('app.landing_show_advanced')}
                 title={t('app.landing_advanced_title')}
-                className={`shrink-0 w-11 inline-flex items-center justify-center rounded-lg border transition-colors ${
+                className={`shrink-0 inline-flex items-center justify-center gap-1.5 px-3 rounded-lg border text-sm font-medium whitespace-nowrap transition-colors ${
                   advancedOpen
                     ? 'border-orange-400 bg-orange-50/60 text-orange-700'
-                    : 'border-slate-300 text-slate-500 hover:border-orange-400 hover:bg-orange-50/40 hover:text-slate-700'
+                    : 'border-slate-300 text-slate-700 hover:border-orange-400 hover:bg-orange-50/40'
                 }`}
               >
+                {/* A visible word beside the chevron (James, 2026-10-09): a bare
+                    chevron read as decoration, not as "there is more here". The
+                    aria-label above contains the same words, so the accessible
+                    name still matches what is on screen. */}
+                <span>{t('app.landing_more_tools')}</span>
                 {/* An SVG chevron, not the `⌄` character the old summary row
                     used: alone in a button it fell back to a font that draws it
                     as a plain "<". */}

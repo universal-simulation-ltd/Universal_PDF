@@ -128,9 +128,10 @@ export default {
   'landing_compressing': 'Compressing…',
   'landing_drop_to_compress': 'Drop to compress',
   'landing_compress': 'Compress PDF(s)',
-  'landing_hide_advanced': 'Hide advanced options',
-  'landing_show_advanced': 'Show advanced options',
-  'landing_advanced_title': 'Advanced options — merge, convert, OCR, redact, Markdown',
+  'landing_more_tools': 'More tools', // visible label beside the chevron that opens the extra tools on the landing page; keep it short, it shares a phone-width row with Compress
+  'landing_hide_advanced': 'Hide more tools',
+  'landing_show_advanced': 'Show more tools',
+  'landing_advanced_title': 'More tools — merge, convert, OCR, redact, Markdown',
   'landing_merge': 'Merge PDFs — combine several into one',
   'landing_convert': 'Convert — PDF ↔ images (PNG/JPG)',
   'landing_ocr': 'Make searchable (OCR) — read a scan',

@@ -142,7 +142,7 @@ const photo = Buffer.from(
 
 console.log('\nthe tool is under advanced options, and the camera pill is phone-only')
 check('no "Scan a document" pill in a browser', (await page.locator('button:has-text("Scan a document")').count()) === 0)
-await page.click('button[aria-label="Show advanced options"]')
+await page.click('button[aria-label="Show more tools"]')
 const pill = page.locator('button:has-text("Photo to PDF")')
 check('"Photo to PDF" is in the advanced options', (await pill.count()) === 1)
 await pill.click()
