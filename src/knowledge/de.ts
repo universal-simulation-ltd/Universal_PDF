@@ -190,27 +190,27 @@ Links zum Unterschreiben laufen nach 30 Tagen ab. Gespeicherte Dateien dürfen b
     title: 'Seiten untereinander oder nebeneinander',
     summary: 'Die Einstellung Blätterrichtung: Seiten untereinander oder in einer Reihe nebeneinander.',
     group: 'So funktioniert es',
-    body: `Universal PDF zeigt die Seiten eines Dokuments normalerweise untereinander, und du scrollst nach unten, um weiterzulesen. Wenn du ein Dokument lieber seitwärts durchgehst, so wie du in einem Buch blätterst oder dich durch Folien klickst, kannst du die Seiten stattdessen nebeneinander in einer Reihe anordnen.
+    body: `Universal PDF zeigt die Seiten eines Dokuments normalerweise untereinander, und Sie scrollen nach unten, um weiterzulesen. Wenn Sie ein Dokument lieber seitwärts durchgehen, so wie Sie in einem Buch blättern oder sich durch Folien klicken, können Sie die Seiten stattdessen nebeneinander in einer Reihe anordnen.
 
-## So stellst du es um
+## So stellen Sie es um
 
-1. Öffne das Menü oben rechts neben deinem Profilbild (bei geöffnetem Dokument heißt es **Aktionen**) und wähle **Diese App anpassen**.
-2. Wähle unter **Blätterrichtung** **Vertikal** für Seiten untereinander oder **Horizontal** für Seiten nebeneinander.
+1. Öffnen Sie das Menü oben rechts neben Ihrem Profilbild (bei geöffnetem Dokument heißt es **Aktionen**) und wählen Sie **Diese App anpassen**.
+2. Wählen Sie unter **Blätterrichtung** **Vertikal** für Seiten untereinander oder **Horizontal** für Seiten nebeneinander.
 
-Das geht auf dem Startbildschirm, bevor du etwas öffnest, oder bei einem bereits geöffneten Dokument. Ein geöffnetes Dokument stellt sich sofort um und bleibt auf der Seite, die du gerade gelesen hast.
+Das geht auf dem Startbildschirm, bevor Sie etwas öffnen, oder bei einem bereits geöffneten Dokument. Ein geöffnetes Dokument stellt sich sofort um und bleibt auf der Seite, die Sie gerade gelesen haben.
 
 ## Lesen in einer Reihe
 
 - **Beim Öffnen eines Dokuments** wird die Seite an die Höhe des Fensters angepasst. Sie ist also vollständig zu sehen, und es gibt nichts nach oben oder unten zu scrollen. Die erste Seite steht in der Mitte des Bildschirms.
-- **Das Mausrad** bewegt dich entlang der Reihe: nach unten drehen für die nächste Seite, nach oben für zurück. Hast du so weit hineingezoomt, dass eine Seite höher ist als das Fenster, scrollt das Mausrad zuerst diese Seite nach unten und geht dann zur nächsten.
+- **Das Mausrad** bewegt Sie entlang der Reihe: nach unten drehen für die nächste Seite, nach oben für zurück. Haben Sie so weit hineingezoomt, dass eine Seite höher ist als das Fenster, scrollt das Mausrad zuerst diese Seite nach unten und geht dann zur nächsten.
 - **Ein Touchpad** bewegt sich mit einer seitlichen Wischbewegung entlang der Reihe, wie überall sonst auch.
 - **Der Sprung zu einer Seite**, aus der Liste **Seiten** oder über einen Link im Dokument, holt diese Seite in die Mitte des Bildschirms.
 
-Wechselst du bei einem bereits geöffneten Dokument zu Horizontal, behält es seinen aktuellen Zoom. Die Anpassung an die Fensterhöhe passiert beim Öffnen eines Dokuments.
+Wechseln Sie bei einem bereits geöffneten Dokument zu Horizontal, behält es seinen aktuellen Zoom. Die Anpassung an die Fensterhöhe passiert beim Öffnen eines Dokuments.
 
 ## Wo die Einstellung gespeichert wird
 
-Die Einstellung wird im Speicher deines Browsers gespeichert, nur auf diesem Gerät. Jedes deiner Geräte kann also seine eigene haben. In deinem Konto wird sie nicht gespeichert. **Auf Standard zurücksetzen**, unten in Diese App anpassen, stellt sie wieder auf Vertikal.`,
+Die Einstellung wird im Speicher Ihres Browsers gespeichert, nur auf diesem Gerät. Jedes Ihrer Geräte kann also seine eigene haben. In Ihrem Konto wird sie nicht gespeichert. **Auf Standard zurücksetzen**, unten in Diese App anpassen, stellt sie wieder auf Vertikal.`,
   },
   {
     id: 'send-to-sign-security',
