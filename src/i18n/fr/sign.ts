@@ -46,6 +46,8 @@ const sign: Messages['sign'] = {
   'menu_tab_signatures': 'Signatures',
   'menu_tab_stamps': 'Tampons',
   'menu_tab_request': 'Demande',
+  'default_menu_tab': 'Le menu Signer s’ouvre sur',
+  'default_pad_mode': 'Une nouvelle signature s’ouvre sur',
   'menu_request_intro': 'Déposez une zone « Signez ici » sur la page. Toute personne qui ouvre ce PDF dans Universal PDF peut cliquer sur la zone pour la signer.',
   'menu_ask_name': 'Demander le nom',
   'menu_ask_date': 'Demander la date',

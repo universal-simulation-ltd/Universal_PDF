@@ -46,6 +46,8 @@ export default {
   'menu_tab_signatures': 'Signatures',
   'menu_tab_stamps': 'Stamps',
   'menu_tab_request': 'Request', // tab for requesting a signature from someone
+  'default_menu_tab': 'Sign menu opens on', // Tune this app row: the tab the Sign menu shows first (also set by double-tapping a tab),
+  'default_pad_mode': 'New signature opens on', // Tune this app row: Draw or Send to sign, whichever the signature pad shows first,
   'menu_request_intro': 'Drop a “Sign here” box on the page. Anyone opening this PDF in Universal PDF can click the box to sign it.',
   'menu_ask_name': 'Ask for name',
   'menu_ask_date': 'Ask for date',

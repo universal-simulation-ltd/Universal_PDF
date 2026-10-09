@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { Stage, Layer, Line } from 'react-konva'
 import type Konva from 'konva'
-import { UnisimQr, useUniversal } from '@unisim/sdk'
+import { UnisimQr, useDefaultView, useUniversal } from '@unisim/sdk'
 import { useSignatureStore, type SignatureExtras } from '../../stores/signatureStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { inkColorFor, renderInkSignature } from '../../lib/renderInk'
@@ -27,6 +27,7 @@ import {
   type MobileSignPayload
 } from '../../lib/mobileSign'
 import { useT } from '../../i18n'
+import { SIGN_PAD_MODES, SIGN_PAD_VIEW, type SignPadMode } from '../../lib/defaultViews'
 
 const PAD_W = 600
 const PAD_H = 240
@@ -129,16 +130,44 @@ export default function SignaturePad() {
   const [fieldRequiresLive, setFieldRequiresLive] = useState(false)
 
   // ── Sign-on-phone handoff (mirrors Ergo Assess) ───────────────────────────
-  const [mode, setMode] = useState<'draw' | 'phone'>('draw')
+  // Double-tap Draw or Send to sign to have the pad open on it (James,
+  // 2026-09-30); a single tap only switches, as before. Read through a ref by
+  // the open effect below, so changing the default never re-runs it (that
+  // would mint a fresh QR under someone mid-scan).
+  const dv = useDefaultView<SignPadMode>(SIGN_PAD_VIEW, 'draw', { views: SIGN_PAD_MODES })
+  const defaultModeRef = useRef(dv.defaultView)
+  defaultModeRef.current = dv.defaultView
+  const [mode, setMode] = useState<SignPadMode>(dv.defaultView)
+  // ⚠️ The two modes are different heights and the card is centred, so
+  // switching used to move the toggle under the pointer (19px on a desktop,
+  // 46px at 390 wide) and the second tap of a double tap landed off it — the
+  // default could only be set from the mode you were already in. So a switch
+  // pins the card's top where it was for the rest of this opening: the toggle
+  // stays put, and a taller mode scrolls inside the card instead.
+  const cardRef = useRef<HTMLDivElement>(null)
+  const [pinnedTop, setPinnedTop] = useState<number | null>(null)
+  function switchMode(next: SignPadMode) {
+    dv.tap(next)
+    if (next === mode) return
+    const card = cardRef.current
+    const overlay = card?.parentElement
+    if (card && overlay) {
+      const padTop = parseFloat(getComputedStyle(overlay).paddingTop) || 0
+      setPinnedTop(card.getBoundingClientRect().top - overlay.getBoundingClientRect().top - padTop)
+    }
+    setMode(next)
+  }
   const [token, setToken] = useState(randomToken)
   const [pin, setPin] = useState(randomPin)
   const [phoneStatus, setPhoneStatus] = useState<'waiting' | 'received'>('waiting')
 
   // Fresh token + PIN every time the pad opens, so a QR from an earlier
-  // session can't feed a signature into this one.
+  // session can't feed a signature into this one. It opens on the person's
+  // default mode — Draw unless they double-tapped Send to sign.
   useEffect(() => {
     if (!open) return
-    setMode('draw')
+    setMode(defaultModeRef.current)
+    setPinnedTop(null)
     setToken(randomToken())
     setPin(randomPin())
     setPhoneStatus('waiting')
@@ -521,28 +550,55 @@ export default function SignaturePad() {
           `min(100%,100dvh)` rather than a `vh` cap — `vh` is the LARGE
           viewport on iOS, so a `vh`-capped box can still overrun the visible
           area once the browser chrome shows. */}
-      <div className="bg-white rounded-lg shadow-2xl p-5 max-w-full flex max-h-[min(100%,100dvh)] flex-col">
-        <div className="flex shrink-0 items-center justify-between gap-3 mb-3">
-          <h2 className="text-lg font-semibold text-slate-900">
+      <div
+        ref={cardRef}
+        className="bg-white rounded-lg shadow-2xl p-5 max-w-full flex max-h-[min(100%,100dvh)] flex-col"
+        style={pinnedTop === null ? undefined : { alignSelf: 'flex-start', marginTop: pinnedTop, maxHeight: `calc(100% - ${pinnedTop}px)` }}
+      >
+        {/* items-start and a nowrap toggle: the title is shorter in one mode,
+            and at phone width it wraps in the other — centred, that moved the
+            toggle too. */}
+        <div className="flex shrink-0 items-start justify-between gap-3 mb-3">
+          <h2 className="min-w-0 text-lg font-semibold text-slate-900">
             {mode === 'phone' ? t('sign.send_to_sign') : t('sign.pad_title_draw')}
           </h2>
-          <div className="flex items-center gap-2">
-            <div className="flex rounded-lg bg-slate-100 p-0.5 text-xs">
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="flex whitespace-nowrap rounded-lg bg-slate-100 p-0.5 text-xs">
+              {/* The mode the pad opens on is orange: the suite's gradient
+                  while you are on it, an orange ring while not. */}
               <button
                 type="button"
-                onClick={() => setMode('draw')}
+                {...dv.buttonProps('draw', t('sign.pad_mode_draw'))}
+                onClick={() => switchMode('draw')}
                 aria-pressed={mode === 'draw'}
-                className={`rounded-md px-2.5 py-1 transition ${mode === 'draw' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`rounded-md px-2.5 py-1 transition ${
+                  dv.isSet && dv.defaultView === 'draw'
+                    ? mode === 'draw'
+                      ? 'bg-linear-to-br from-[#FE8C01] to-[#E05504] text-white shadow-sm'
+                      : 'text-orange-700 ring-1 ring-inset ring-orange-400/70 hover:bg-orange-50'
+                    : mode === 'draw' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                }`}
               >
                 {t('sign.pad_mode_draw')}
               </button>
               {/* Orange + phone icon so the "send to sign" option is easy
-                  to spot — signing with a mouse on desktop is fiddly. */}
+                  to spot — signing with a mouse on desktop is fiddly. It is
+                  orange already, so as the default it takes the gradient when
+                  on, and a ring (not just orange text) when not. */}
               <button
                 type="button"
-                onClick={() => setMode('phone')}
+                {...dv.buttonProps('phone', t('sign.send_to_sign'))}
+                onClick={() => switchMode('phone')}
                 aria-pressed={mode === 'phone'}
-                className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition ${mode === 'phone' ? 'bg-orange-700 text-white' : 'text-orange-700 hover:bg-orange-700/10 hover:text-orange-800'}`}
+                className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition ${
+                  mode === 'phone'
+                    ? dv.isSet && dv.defaultView === 'phone'
+                      ? 'bg-linear-to-br from-[#FE8C01] to-[#E05504] text-white shadow-sm'
+                      : 'bg-orange-700 text-white'
+                    : dv.isSet && dv.defaultView === 'phone'
+                      ? 'text-orange-700 ring-1 ring-inset ring-orange-400/70 hover:bg-orange-50'
+                      : 'text-orange-700 hover:bg-orange-700/10 hover:text-orange-800'
+                }`}
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <rect x="7" y="2" width="10" height="20" rx="2.5" /><line x1="11" y1="18" x2="13" y2="18" />

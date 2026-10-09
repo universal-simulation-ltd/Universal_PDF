@@ -1,7 +1,7 @@
 {
   "app": "universal-pdf",
-  "appVersion": "1.0.8",
-  "generated": "2026-09-28",
+  "appVersion": "1.0.9",
+  "generated": "2026-10-09",
   "noticesCount": 48,
   "ships": [
     {
@@ -14,6 +14,18 @@
         "Ionic Team"
       ],
       "source": "overlay"
+    },
+    {
+      "name": "@pdf-lib/fontkit",
+      "version": "1.1.1",
+      "licence": "MIT",
+      "repo": "https://github.com/Hopding/fontkit",
+      "homepage": "https://github.com/Hopding/fontkit",
+      "authors": [
+        "Andrew Dillon",
+        "Devon Govett"
+      ],
+      "source": "node_modules"
     },
     {
       "name": "heic-to",
@@ -169,7 +181,7 @@
     {
       "name": "electron",
       "title": "Electron",
-      "version": "33.4.11",
+      "version": "44.5.1",
       "licence": "MIT",
       "repo": "https://github.com/electron/electron",
       "authors": [
@@ -180,7 +192,7 @@
     {
       "name": "electron-builder",
       "title": "electron-builder",
-      "version": "25.1.8",
+      "version": "26.15.3",
       "licence": "MIT",
       "repo": "https://github.com/electron-userland/electron-builder",
       "homepage": "https://github.com/electron-userland/electron-builder",

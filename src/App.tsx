@@ -15,6 +15,7 @@ import ProductLogo from './components/Header/ProductLogo'
 import ToolbarUserProfile from './components/Header/ToolbarUserProfile'
 import FileMenu from './components/Toolbar/FileMenu'
 import HostedStoreDialog from './components/HostedStoreDialog'
+import SignatureDefaultViewRows from './components/Signature/SignatureDefaultViewRows'
 import MobileWelcomeToast from './components/Onboarding/MobileWelcomeToast'
 import UnsavedChangesDialog from './components/Exit/UnsavedChangesDialog'
 import LockedFilePrompt from './components/Lock/LockedFilePrompt'
@@ -493,9 +494,11 @@ export default function App() {
             // articles, bundled from ./knowledge so they read offline.
             knowledgeBase={KNOWLEDGE_BASE}
             onResetDefaults={() => { clearDismissedPrompts(); void resetPrefs() }}
-            // Tune this app ▸ Page scrolling — the same row ToolbarUserProfile
-            // passes, so it can be set before a document is opened.
-            appPreferences={<PageScrollPreference />}
+            // Tune this app ▸ Page scrolling, then the double-tap defaults' rows
+            // (SDK 0.170.0) — the same rows ToolbarUserProfile passes, so they
+            // can be set before a document is opened. Reset to defaults clears
+            // the double-tap defaults via the SDK.
+            appPreferences={<><PageScrollPreference /><SignatureDefaultViewRows /></>}
             // The SDK's "Delete my account" stays ON here (its default in a
             // native shell): this is the menu a phone opens first. It was
             // switched off to stop the row doubling — but the double was in

@@ -5,6 +5,8 @@ import { useSignatureStore } from '../../stores/signatureStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useT } from '../../i18n'
+import { useDefaultView } from '@unisim/sdk'
+import { SIGN_MENU_TABS, SIGN_MENU_VIEW, type SignMenuTab } from '../../lib/defaultViews'
 
 interface SignatureMenuProps {
   // Retained for call-site compatibility; the compact panel always sits above
@@ -14,7 +16,7 @@ interface SignatureMenuProps {
   compact?: boolean
 }
 
-type Tab = 'signatures' | 'stamps' | 'request'
+type Tab = SignMenuTab
 
 const DESKTOP_PANEL_WIDTH = 320 // w-80
 
@@ -80,7 +82,11 @@ function ToggleRow({
 export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
   const t = useT()
   const [open, setOpen] = useState(false)
-  const [tab, setTab] = useState<Tab>('signatures')
+  // Double-tap a tab to have the menu open on it (James, 2026-09-30 — the
+  // Jukebox library's behaviour, suite-wide). A single tap only switches, as
+  // before; Tune this app has the same choice (SignatureDefaultViewRows).
+  const dv = useDefaultView<Tab>(SIGN_MENU_VIEW, 'signatures', { views: SIGN_MENU_TABS })
+  const [tab, setTab] = useState<Tab>(dv.defaultView)
   const ref = useRef<HTMLDivElement>(null)
   // The desktop dropdown is portaled to <body> (see render): the dark toolbar
   // it lives in is `overflow-x-auto`, which per the CSS overflow spec also
@@ -189,41 +195,36 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
   // (desktop). Kept in one place so both paths stay identical.
   const menuBody = (
     <>
-      {/* Tab bar */}
+      {/* Tab bar. The tab the menu opens on is orange: filled while you are
+          on it, outlined while not (Jukebox's look, on this light panel). */}
       <div className="flex border-b border-slate-100">
-        <button
-          onClick={() => setTab('signatures')}
-          aria-pressed={tab === 'signatures'}
-          className={`flex-1 px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
-            tab === 'signatures'
-              ? 'text-orange-700 border-b-2 border-orange-500 -mb-px'
-              : 'text-slate-400 hover:text-slate-600'
-          }`}
-        >
-          {t('sign.menu_tab_signatures')}
-        </button>
-        <button
-          onClick={() => setTab('stamps')}
-          aria-pressed={tab === 'stamps'}
-          className={`flex-1 px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
-            tab === 'stamps'
-              ? 'text-orange-700 border-b-2 border-orange-500 -mb-px'
-              : 'text-slate-400 hover:text-slate-600'
-          }`}
-        >
-          {t('sign.menu_tab_stamps')}
-        </button>
-        <button
-          onClick={() => setTab('request')}
-          aria-pressed={tab === 'request'}
-          className={`flex-1 px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
-            tab === 'request'
-              ? 'text-orange-700 border-b-2 border-orange-500 -mb-px'
-              : 'text-slate-400 hover:text-slate-600'
-          }`}
-        >
-          {t('sign.menu_tab_request')}
-        </button>
+        {SIGN_MENU_TABS.map((v) => {
+          const label =
+            v === 'signatures' ? t('sign.menu_tab_signatures')
+            : v === 'stamps' ? t('sign.menu_tab_stamps')
+            : t('sign.menu_tab_request')
+          const on = tab === v
+          const isDefault = dv.isSet && dv.defaultView === v
+          return (
+            <button
+              key={v}
+              {...dv.buttonProps(v, label)}
+              aria-pressed={on}
+              onClick={() => { dv.tap(v); setTab(v) }}
+              className={`flex-1 px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
+                on
+                  ? isDefault
+                    ? 'bg-linear-to-br from-[#FE8C01] to-[#E05504] text-white border-b-2 border-orange-600 -mb-px'
+                    : 'text-orange-700 border-b-2 border-orange-500 -mb-px'
+                  : isDefault
+                    ? 'text-orange-700 ring-1 ring-inset ring-orange-400/70 hover:bg-orange-50'
+                    : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              {label}
+            </button>
+          )
+        })}
       </div>
 
       {tab === 'request' ? (

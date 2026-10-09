@@ -46,6 +46,8 @@ const sign: Messages['sign'] = {
   'menu_tab_signatures': 'İmzalar',
   'menu_tab_stamps': 'Damgalar',
   'menu_tab_request': 'İstek',
+  'default_menu_tab': 'İmzala menüsünün açılış sekmesi',
+  'default_pad_mode': 'Yeni imzanın açılış modu',
   'menu_request_intro': 'Sayfaya bir “Burayı imzalayın” kutusu bırakın. Bu PDF’i Universal PDF’te açan herkes kutuya tıklayıp imzalayabilir.',
   'menu_ask_name': 'Ad iste',
   'menu_ask_date': 'Tarih iste',

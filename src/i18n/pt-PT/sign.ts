@@ -46,6 +46,8 @@ const sign: Messages['sign'] = {
   'menu_tab_signatures': 'Assinaturas',
   'menu_tab_stamps': 'Carimbos',
   'menu_tab_request': 'Pedido',
+  'default_menu_tab': 'O menu Assinar abre em',
+  'default_pad_mode': 'A nova assinatura abre em',
   'menu_request_intro': 'Coloque uma caixa «Assinar aqui» na página. Qualquer pessoa que abra este PDF no Universal PDF pode clicar na caixa para assinar.',
   'menu_ask_name': 'Pedir nome',
   'menu_ask_date': 'Pedir data',
