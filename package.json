@@ -74,7 +74,7 @@
     "test:scan-geometry": "node --experimental-strip-types scripts/scanGeometry.test.mjs",
     "test:scan-detect": "node --experimental-strip-types scripts/scanDetect.test.mjs",
     "test:photo-scan": "node e2e/photo-scan.e2e.mjs",
-    "test:link-underline": "node --experimental-strip-types scripts/linkUnderline.test.mjs",
+    "test:link-underline": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/linkUnderline.test.mjs",
     "test:user-link": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/userLink.test.mjs",
     "test:link-safety": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/linkSafety.test.mjs",
     "test:link-style": "node e2e/link-style.e2e.mjs",
