@@ -17,6 +17,15 @@
 //     reads as a form field or an alteration of a signed document);
 //   * "None" CLEARS the key rather than writing width 0, so an image that never
 //     had a border and one whose border was removed export identically.
+//
+// And, since it is the other way a placed picture exports wrong without anyone
+// noticing: a turned phone photo (EXIF Orientation 6) must reach the PDF the
+// right way up — see the case at the end.
+//
+// Negative controls (2026-10-09, run): skipping the border bake in export.ts
+// reddens both "exports differently" checks; making `uprightJpeg` hand back
+// the bytes unturned reddens both turned-photo checks; turning it 180° too far
+// reddens the "red half on top" check alone.
 
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -98,10 +107,26 @@ try {
   process.exit(2)
 }
 
-await page.setInputFiles('input[type=file][accept*="pdf"], input[type=file]', {
+// The home screen carries TWO document pickers (the main one, which also takes
+// .docx/.odt, and a PDF-only one); the main one is first. Aimed at by accept
+// rather than by "first input on the page", so a picker added above it later
+// can't quietly swallow the PDF.
+await page.locator('input[type=file][accept*="application/pdf"]').first().setInputFiles({
   name: 'border.pdf', mimeType: 'application/pdf', buffer: pdf,
 })
-await page.waitForSelector('[data-page-index="0"] canvas', { timeout: 30000 })
+try {
+  await page.waitForSelector('[data-page-index="0"] canvas', { timeout: 30000 })
+} catch (e) {
+  // ⚠️ Say WHY rather than a bare timeout. Seen once (2026-10-09, not
+  // reproducible against a fresh `npm run dev`): the PDF was picked and no page
+  // ever rendered — which looks identical whether the app regressed or the
+  // server on :5174 is a stale/other dev server. The screenshot tells them apart.
+  await page.screenshot({ path: 'e2e-image-border-noopen.png' })
+  console.error(`The test PDF never rendered at ${page.url()} — see e2e-image-border-noopen.png.`,
+    'If the screenshot is still the home screen, restart the dev server (npm run dev) and re-run.')
+  await browser.close()
+  process.exit(1)
+}
 await page.waitForTimeout(600)
 
 // ── Place the picture ───────────────────────────────────────────────────────
@@ -257,6 +282,134 @@ check('a bordered image exports differently from a plain one',
 check('a dashed border exports differently from a solid one',
       exported.dashDiffers,
       `solid ${exported.bordered} vs dashed ${exported.dashed}`)
+
+console.log('\na turned phone photo exports the right way up')
+// A portrait phone photo is stored as SIDEWAYS pixels plus an EXIF tag saying
+// "turn me 90°". The editor honours the tag; pdf-lib's embedJpg does not, so
+// before `uprightJpeg` the export drew the raw sideways pixels squeezed into the
+// upright box (2026-10-03). jpegOrientation.test.mjs proves the tag is READ;
+// this proves the export ACTS on it — the half a unit test can't reach, since
+// the redraw needs a real browser's createImageBitmap.
+//
+// The fixture: a real 40×20 JPEG (left half red, right half blue) drawn by the
+// browser, with an APP1 Exif segment carrying Orientation 6 spliced in after
+// SOI — the same segment shape as scripts/jpegOrientation.test.mjs, little-
+// endian as an iPhone writes it. Upright, that photo is 20 wide by 40 tall
+// with the red half on TOP. The control is the same JPEG tagged 1, which must
+// pass through untouched at 40×20.
+const turned = await page.evaluate(async (b64) => {
+  try {
+    const { buildAnnotatedPdfBytes } = await import('/src/lib/export.ts')
+    const bin = atob(b64)
+    const src = new Uint8Array(bin.length)
+    for (let i = 0; i < bin.length; i++) src[i] = bin.charCodeAt(i)
+
+    const canvas = document.createElement('canvas')
+    canvas.width = 40
+    canvas.height = 20
+    const ctx = canvas.getContext('2d')
+    ctx.fillStyle = '#ff0000'; ctx.fillRect(0, 0, 20, 20)
+    ctx.fillStyle = '#0000ff'; ctx.fillRect(20, 0, 20, 20)
+    const raw = new Uint8Array(await (await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.95))).arrayBuffer())
+
+    const u16 = (v) => [v & 0xff, v >> 8]
+    const u32 = (v) => [v & 0xff, (v >> 8) & 0xff, (v >> 16) & 0xff, v >>> 24]
+    const tagged = (orientation) => {
+      const tiff = [0x49, 0x49, ...u16(0x2a), ...u32(8), ...u16(1),
+        ...u16(0x0112), ...u16(3), ...u32(1), ...u16(orientation), 0, 0, ...u32(0)]
+      const body = [0x45, 0x78, 0x69, 0x66, 0, 0, ...tiff]
+      const len = body.length + 2
+      const app1 = [0xff, 0xe1, len >> 8, len & 0xff, ...body]
+      return new Uint8Array([raw[0], raw[1], ...app1, ...raw.slice(2)])
+    }
+    const dataUrl = (bytes) => {
+      let s = ''
+      for (const b of bytes) s += String.fromCharCode(b)
+      return 'data:image/jpeg;base64,' + btoa(s)
+    }
+    const out = async (orientation) => {
+      const bytes = await buildAnnotatedPdfBytes(src.buffer.slice(0), [{
+        id: 'photo-1', pageIndex: 0, type: 'image',
+        x: 50, y: 50, width: 100, height: 200, src: dataUrl(tagged(orientation)),
+      }], 1)
+      let s = ''
+      for (const b of bytes) s += String.fromCharCode(b)
+      return btoa(s)
+    }
+    return { turned: await out(6), upright: await out(1) }
+  } catch (e) {
+    return { error: String(e) }
+  }
+}, srcB64)
+check('the export builder ran on a JPEG', !turned.error, turned.error)
+
+/** Every embedded image in a PDF: its pixel size and, for a DCT image, the JPEG bytes. */
+async function embeddedImages(b64) {
+  const { PDFDocument, PDFName, PDFRawStream } = await import('pdf-lib')
+  const doc = await PDFDocument.load(Buffer.from(b64, 'base64'))
+  const found = []
+  for (const [, obj] of doc.context.enumerateIndirectObjects()) {
+    if (!(obj instanceof PDFRawStream)) continue
+    if (obj.dict.get(PDFName.of('Subtype'))?.toString() !== '/Image') continue
+    found.push({
+      width: obj.dict.get(PDFName.of('Width'))?.asNumber?.() ?? obj.dict.get(PDFName.of('Width'))?.value?.(),
+      height: obj.dict.get(PDFName.of('Height'))?.asNumber?.() ?? obj.dict.get(PDFName.of('Height'))?.value?.(),
+      filter: obj.dict.get(PDFName.of('Filter'))?.toString(),
+      bytes: obj.contents,
+    })
+  }
+  return found
+}
+
+if (!turned.error) {
+  const [t] = await embeddedImages(turned.turned)
+  const [u] = await embeddedImages(turned.upright)
+  check('the turned photo is embedded upright (20×40, portrait)',
+    t?.width === 20 && t?.height === 40,
+    t ? `embedded ${t.width}×${t.height} — still the raw sideways pixels` : 'no image in the export')
+  check('an untagged photo passes through untouched (40×20)',
+    u?.width === 40 && u?.height === 20, u ? `embedded ${u.width}×${u.height}` : 'no image in the export')
+
+  // Size alone would pass a photo turned the WRONG way (Orientation 8 instead of
+  // 6 — same 20×40, upside down). Decode the embedded JPEG in the browser and
+  // look at which colour is on top: Orientation 6 turns the left (red) half to
+  // the top.
+  if (t?.filter === '/DCTDecode') {
+    const tops = await page.evaluate(async (b64) => {
+      const bin = atob(b64)
+      const bytes = new Uint8Array(bin.length)
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+      // A PDF viewer ignores EXIF, so read the pixels the way IT will: with
+      // every APP1 segment cut out first. (⚠️ `imageOrientation: 'none'` is no
+      // help — Chrome now treats it as 'from-image' and turns the photo anyway,
+      // which let a never-turned export pass this check.)
+      const kept = [0xff, 0xd8]
+      let pos = 2
+      while (pos + 4 <= bytes.length && bytes[pos] === 0xff && bytes[pos + 1] !== 0xda) {
+        const end = pos + 2 + ((bytes[pos + 2] << 8) | bytes[pos + 3])
+        if (bytes[pos + 1] !== 0xe1) kept.push(...bytes.slice(pos, end))
+        pos = end
+      }
+      kept.push(...bytes.slice(pos))
+      const bmp = await createImageBitmap(new Blob([new Uint8Array(kept)], { type: 'image/jpeg' }))
+      const c = document.createElement('canvas')
+      c.width = bmp.width; c.height = bmp.height
+      const ctx = c.getContext('2d')
+      ctx.drawImage(bmp, 0, 0)
+      const px = (fx, fy) => [...ctx.getImageData(Math.floor(bmp.width * fx), Math.floor(bmp.height * fy), 1, 1).data.slice(0, 3)]
+      // Both quarters of each half, so a sideways image (red LEFT, blue RIGHT)
+      // can't pass on a sample that happens to sit on the seam.
+      return { top: [px(0.25, 0.25), px(0.75, 0.25)], bottom: [px(0.25, 0.75), px(0.75, 0.75)] }
+    }, Buffer.from(t.bytes).toString('base64'))
+    const reddish = ([r, , b]) => r > 180 && b < 90
+    const bluish = ([r, , b]) => b > 180 && r < 90
+    check('…and turned the right way (red half on top, blue below)',
+      tops.top.every(reddish) && tops.bottom.every(bluish),
+      `top ${tops.top.map((c) => `rgb(${c})`).join(' ')}, bottom ${tops.bottom.map((c) => `rgb(${c})`).join(' ')}`)
+  } else {
+    check('the turned photo is still a JPEG in the export', false, `filter ${t?.filter}`)
+  }
+}
 
 // Leave a real border on screen, so the artefact this drops is worth looking
 // at rather than a picture of the cleared state.
