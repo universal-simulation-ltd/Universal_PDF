@@ -77,6 +77,7 @@ nouns get a capital; German nouns keep theirs).
 | Universal ID | Universal ID (l’Universal ID, m.) | Universal ID (el, m.) | Universal ID (l’, m.) | Universal ID (die, f.) | Universal ID (o, m.) | Universal ID (o, m.) | Universal ID |
 | delete my account | supprimer mon compte | eliminar mi cuenta | elimina il mio account | mein Konto löschen | excluir minha conta | eliminar a minha conta | hesabımı sil |
 | settings | réglages | ajustes | impostazioni | Einstellungen | configurações | definições | ayarlar |
+| tune (the suite’s verb for changing an object’s or the app’s setup — use it where English would otherwise say Edit / Preferences / Settings; keep “edit” for editing text or content, as in “Edit link”) | régler | ajustar | regola | anpassen | ajustar | ajustar | ayarla |
 | language | langue | idioma | lingua | Sprache | idioma | idioma | dil |
 | cancel | annuler | cancelar | annulla | abbrechen | cancelar | cancelar | iptal |
 | done | terminé | listo | fine | fertig | concluído | concluído | bitti |

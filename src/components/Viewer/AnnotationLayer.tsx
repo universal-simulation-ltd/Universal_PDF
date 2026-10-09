@@ -3071,7 +3071,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               </svg>
             </button>
             {placedQr && (
-              // Edit ✏️ — reopens the generator on THIS code, so the link, the
+              // Tune ✏️ — reopens the generator on THIS code, so the link, the
               // style or the branding can be changed after placing it. Only on
               // codes generated in-app: a picture of a QR has no design behind
               // it to bring back up. (Double-tapping the code does the same.)

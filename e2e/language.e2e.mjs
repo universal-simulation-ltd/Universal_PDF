@@ -178,7 +178,9 @@ check(
   'it says Universal PDF is always light',
   (await dialog('app').innerText()).includes(sdk.t('fr', 'prefs.always_light').replace('{app}', 'Universal PDF')),
 )
-const appSelect = dialog('app').locator('select')
+// .first(): the app's own rows (Page scrolling, the double-tap defaults) are
+// selects too, after the SDK's Language row.
+const appSelect = dialog('app').locator('select').first()
 check(
   'Language defaults to "Follow global: Français"',
   (await appSelect.inputValue()) === '' &&
@@ -224,7 +226,7 @@ await closePrefs()
 
 console.log('\n"Follow global" removes the override')
 await openPrefs('de', 'app')
-await dialog('app').locator('select').selectOption('')
+await dialog('app').locator('select').first().selectOption('')
 await page.waitForTimeout(400)
 check('<html lang> is it', (await htmlLang()) === 'it', await htmlLang())
 check('the override is gone, not stored as "it"', (await stored(APP_KEY)) === null, await stored(APP_KEY))

@@ -27,8 +27,8 @@ const annotate: Messages['annotate'] = {
   'selection.done_to_select': 'Terminé — conserver et revenir à Sélectionner',
   'selection.done_deselect': 'Terminé — conserver et désélectionner',
   'selection.confirm_aria': 'Confirmer et désélectionner',
-  'selection.qr_edit_title': 'Modifier ce code QR — lien, style ou identité visuelle',
-  'selection.qr_edit_aria': 'Modifier ce code QR',
+  'selection.qr_edit_title': 'Régler ce code QR — lien, style ou identité visuelle',
+  'selection.qr_edit_aria': 'Régler ce code QR',
 
   // AnnotationLayer — text pill (size, bold / italic / underline / link)
   'text.bold_letter': 'G',

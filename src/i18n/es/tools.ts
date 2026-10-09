@@ -317,7 +317,7 @@ const tools: Messages['tools'] = {
   'qr.draw_failed': 'No se ha podido generar ese código.',
   'qr.no_longer_on_page': 'Ese código ya no está en la página: cierra esto y añade uno nuevo.',
   'qr.save_failed': 'No se ha podido guardar ese código.',
-  'qr.edit_title': 'Editar este código QR',
+  'qr.edit_title': 'Ajustar este código QR',
   'qr.add_title': 'Añadir un código QR',
   'qr.enlarge_label': 'Ampliar el código QR para escanearlo',
   'qr.preview_alt': 'Vista previa del código QR',
