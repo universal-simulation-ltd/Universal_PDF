@@ -317,7 +317,7 @@ const tools: Messages['tools'] = {
   'qr.draw_failed': 'Bu kod çizilemedi.',
   'qr.no_longer_on_page': 'Bu kod artık sayfada değil — bunu kapatıp yeni bir kod ekleyin.',
   'qr.save_failed': 'Bu kod kaydedilemedi.',
-  'qr.edit_title': 'Bu QR kodu ayarla',
+  'qr.edit_title': 'Bu QR koduna ince ayar yap',
   'qr.add_title': 'QR kod ekle',
   'qr.enlarge_label': 'Taramak için QR kodu büyüt',
   'qr.preview_alt': 'QR kod önizlemesi',

@@ -27,8 +27,8 @@ export default {
   'selection.done_to_select': 'Done — keep this and go back to Select', // "Select" is the name of the pointer tool
   'selection.done_deselect': 'Done — keep this and deselect',
   'selection.confirm_aria': 'Confirm and deselect',
-  'selection.qr_edit_title': 'Tune this QR code — link, style or branding',
-  'selection.qr_edit_aria': 'Tune this QR code',
+  'selection.qr_edit_title': 'Fine-tune this QR code — link, style or branding',
+  'selection.qr_edit_aria': 'Fine-tune this QR code',
 
   // AnnotationLayer — text pill (size, bold / italic / underline / link)
   'text.bold_letter': 'B', // one-letter button face for Bold; use your language's usual letter

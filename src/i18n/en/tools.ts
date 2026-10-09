@@ -317,7 +317,7 @@ export default {
   'qr.draw_failed': 'Could not draw that code.',
   'qr.no_longer_on_page': 'That code is no longer on the page — close this and add a new one.',
   'qr.save_failed': 'Could not save that code.',
-  'qr.edit_title': 'Tune this QR code',
+  'qr.edit_title': 'Fine-tune this QR code',
   'qr.add_title': 'Add a QR code',
   'qr.enlarge_label': 'Enlarge QR code for scanning',
   'qr.preview_alt': 'QR code preview',

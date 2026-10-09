@@ -27,8 +27,8 @@ const annotate: Messages['annotate'] = {
   'selection.done_to_select': 'Bitti — bunu koru ve Seç aracına dön',
   'selection.done_deselect': 'Bitti — bunu koru ve seçimi kaldır',
   'selection.confirm_aria': 'Onayla ve seçimi kaldır',
-  'selection.qr_edit_title': 'Bu QR kodu ayarla — bağlantı, stil veya marka',
-  'selection.qr_edit_aria': 'Bu QR kodu ayarla',
+  'selection.qr_edit_title': 'Bu QR koduna ince ayar yap — bağlantı, stil veya marka',
+  'selection.qr_edit_aria': 'Bu QR koduna ince ayar yap',
 
   // AnnotationLayer — text pill (size, bold / italic / underline / link)
   'text.bold_letter': 'K',

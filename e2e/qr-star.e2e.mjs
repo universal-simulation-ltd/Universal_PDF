@@ -285,12 +285,12 @@ await page.waitForTimeout(700)
 await page.mouse.dblclick(at.x, at.y)
 await page.waitForTimeout(900)
 
-check('the QR editor opens', (await page.locator('h2:has-text("Tune this QR code")').count()) === 1)
+check('the QR editor opens', (await page.locator('h2:has-text("Fine-tune this QR code")').count()) === 1)
 // The modal's own heading, not a bare text match: the "What's new" panel
 // carries the changelog entry ABOUT this bug, which says "Signature options"
 // and matched a loose selector.
 check('Signature options does not', (await page.locator('h2:has-text("Signature options")').count()) === 0)
-check('the edit pill is on the selected code', (await page.locator('button[aria-label="Tune this QR code"]').count()) === 1)
+check('the edit pill is on the selected code', (await page.locator('button[aria-label="Fine-tune this QR code"]').count()) === 1)
 
 await browser.close()
 
