@@ -159,6 +159,8 @@ export default {
   'request_signature_in': 'Your signature is in',
   'request_done_completed': "Every party has now signed {doc} — everyone's been notified.",
   'request_done_partial': "Your signature on {doc} is recorded. It now goes to the other party to counter-sign; everyone's notified once it's complete.",
+  'request_kept_until': 'We keep the signed copy and its certificate until {date} (7 years), then delete them. Download your copy to keep it for longer.', // {date} = the date the copy is deleted
+  'request_kept_after': 'Once everyone has signed, the signed copy and its certificate are kept for 7 years, then deleted.',
   'request_download_copy': 'Download your copy',
   'request_view_cert': 'View the certificate',
   'request_loading': 'Loading document…',
@@ -205,6 +207,8 @@ export default {
   'cert_download_pdf': 'Download PDF',
   'cert_iframe_title': 'Signed document',
   'cert_copy_removed': 'The stored copy has been removed by the owner. The verified record below still stands.',
+  'cert_kept_until': 'This signed copy and certificate are kept until {date} (7 years after signing), then deleted.', // {date} = the date the copy is deleted
+  'cert_kept_after': 'Once everyone has signed, the signed copy and this certificate are kept for 7 years, then deleted.',
   'cert_activity_log': 'Activity log',
   'cert_activity_hint': 'Every action recorded server-side against a SHA-256 hash chain.',
   'cert_col_when': 'When',

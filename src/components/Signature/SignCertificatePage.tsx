@@ -88,6 +88,8 @@ export default function SignCertificatePage({ certId }: { certId: string }) {
   const completed = cert.status === 'completed' || cert.status === 'signed'
   const parties = cert.parties ?? []
   const events = cert.events ?? []
+  // Added by platform migration 0262; not in the SDK's SignCertificate type yet.
+  const retainUntil = (cert as SignCertificate & { retain_until?: string | null }).retain_until ?? null
 
   return (
     <main className="min-h-svh bg-slate-100 py-8 px-4">
@@ -137,6 +139,16 @@ export default function SignCertificatePage({ certId }: { certId: string }) {
             <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
               {t('sign.cert_copy_removed')}
             </p>
+          )}
+          {/* Retention (platform 0262): a completed request is deleted 7 years after signing. */}
+          {completed ? (
+            retainUntil && (
+              <p className="mt-2 text-xs text-slate-500">
+                {t('sign.cert_kept_until', { date: new Date(retainUntil).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' }) })}
+              </p>
+            )
+          ) : (
+            <p className="mt-2 text-xs text-slate-500">{t('sign.cert_kept_after')}</p>
           )}
         </div>
 

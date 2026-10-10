@@ -154,6 +154,8 @@ check('one submission went', submits.length === 1, `${submits.length}`)
 check('carrying the hash of the version signed', submits[0]?.baseSha256 === pdfSha, `${submits[0]?.baseSha256} vs ${pdfSha}`)
 check('and a real PDF', Buffer.from(submits[0]?.pdfBase64 ?? '', 'base64').subarray(0, 5).toString() === '%PDF-')
 check('the page lands on "Fully signed"', (await w.page.locator('text=Fully signed').count()) === 1)
+// Retention (platform 0262): a completed copy is kept 7 years, and the page says until when.
+check('and says how long the signed copy is kept', (await w.page.getByText(/certificate until .+ \(7 years\)/).count()) === 1)
 const leftover = await w.page.evaluate(async () => {
   const { listQueued } = await import('/src/lib/signQueue.ts')
   return (await listQueued()).length

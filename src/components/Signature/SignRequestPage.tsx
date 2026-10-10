@@ -18,7 +18,14 @@ import {
   type QueuedSubmission,
 } from '../../lib/signQueue'
 import SignRequestGate from './SignRequestGate'
-import { useT } from '../../i18n'
+import { useT, intlLocale } from '../../i18n'
+
+/** The day a request completed now is deleted (platform 0262: signed_at + 7 years). */
+function sevenYearsFromNow(locale: string): string {
+  const d = new Date()
+  d.setFullYear(d.getFullYear() + 7)
+  return d.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })
+}
 
 /**
  * Recipient side of "Send to sign" (opened via `?signdoc=<token>` from the
@@ -440,6 +447,12 @@ export default function SignRequestPage({ token }: { token: string }) {
           ) : (
             t.rich('sign.request_done_partial', { doc: <strong className="text-slate-200">{docName}</strong> })
           )}
+        </p>
+        {/* Retention (platform 0262): kept 7 years from completion, which is now. */}
+        <p className="max-w-sm text-xs text-slate-500">
+          {outcome.completed
+            ? t('sign.request_kept_until', { date: sevenYearsFromNow(intlLocale(t.lang)) })
+            : t('sign.request_kept_after')}
         </p>
         <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
           <button
