@@ -19,11 +19,11 @@
 #   • frame-src: blob: previews and print, the certificate page's PDF (a
 #     Supabase or R2 signed URL), Google sign-in.
 #   • img-src https:: avatars and QR logos come from anywhere a user points.
-#   • static.cloudflareinsights.com / cloudflareinsights.com: Cloudflare Web
-#     Analytics. It is NOT in the app — Cloudflare injects its beacon into the
-#     HTML in production (found by this policy's first live reports,
-#     2026-10-04) — so the policy allows it rather than silently changing
-#     what the site does. Turning the beacon off is a Cloudflare setting.
+#   • No Cloudflare Web Analytics. Cloudflare's zone-level automatic setup
+#     injects its beacon (static.cloudflareinsights.com) into the live HTML;
+#     the policy allowed it from 2026-10-04 until 2026-10-10, when James had
+#     it dropped. Turn the injection off for this host in Cloudflare (Web
+#     Analytics site rules) — until then the beacon is simply refused here.
 # Checked by e2e/csp.e2e.mjs (the production build with these headers, every
 # flow that loads something) and by the whole e2e suite against the dev server,
 # which serves the same policy (vite.config.ts, cspDev()).
@@ -38,4 +38,4 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https:; font-src 'self' data: blob:; connect-src 'self' data: blob: https://rygfxgalojojppxmhddo.supabase.co wss://rygfxgalojojppxmhddo.supabase.co https://changelog.unisim.co.uk https://cdn.jsdelivr.net/npm/@tesseract.js-data/ https://unisim-hosted-files.inbox-12f.workers.dev https://accounts.google.com/gsi/ https://cloudflareinsights.com; worker-src 'self' blob:; frame-src 'self' blob: https://rygfxgalojojppxmhddo.supabase.co https://unisim-hosted-files.inbox-12f.workers.dev https://accounts.google.com/gsi/; media-src 'self' blob: data:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https:; font-src 'self' data: blob:; connect-src 'self' data: blob: https://rygfxgalojojppxmhddo.supabase.co wss://rygfxgalojojppxmhddo.supabase.co https://changelog.unisim.co.uk https://cdn.jsdelivr.net/npm/@tesseract.js-data/ https://unisim-hosted-files.inbox-12f.workers.dev https://accounts.google.com/gsi/; worker-src 'self' blob:; frame-src 'self' blob: https://rygfxgalojojppxmhddo.supabase.co https://unisim-hosted-files.inbox-12f.workers.dev https://accounts.google.com/gsi/; media-src 'self' blob: data:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'

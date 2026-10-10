@@ -495,9 +495,10 @@ Report-Only, with a `report-uri` that logs to `$CSP_REPORT_LOG`
 (`cspDev()` in `vite.config.ts`). To check a change: `npm run build && npm run
 test:csp` (the production build with these headers, every flow that loads
 something), and run any e2e with `node --import ./e2e/csp-collect.mjs` and
-`CSP_LOG=…` to collect page violations. ⚠️ Cloudflare injects its Web Analytics
-beacon into the live HTML — invisible to the build and the tests; the policy
-allows it. The desktop (Electron, `file://`) and extension builds don't use
+`CSP_LOG=…` to collect page violations. ⚠️ Cloudflare's zone-level Web
+Analytics can inject its beacon into the live HTML — invisible to the build and
+the tests. The policy does NOT allow it (dropped 2026-10-10); keep the injection
+off for opensource.unisim.co.uk in Cloudflare. The desktop (Electron, `file://`) and extension builds don't use
 `_headers`.
 
 ## pdf-lib is not in the start-up bundle
