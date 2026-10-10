@@ -34,18 +34,23 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<!-- Export compliance, answered once here instead of per upload.
-	     `false` says the app uses no encryption that needs an export licence.
+	     `false` says the app uses no encryption that needs export documentation.
 
-	     ⚠️ It is an ATTESTATION, not a setting, and it is James's to change.
-	     It records the answer already given on every Universal PDF upload to
-	     App Store Connect to date; putting it in the bundle only stops ASC
-	     asking again. The one thing that could make it wrong is "Lock PDF"
-	     (`src/lib/pdfEncrypt.ts`), which is real AES done by us rather than
-	     HTTPS done by the OS — password-protecting a document is arguably
-	     data confidentiality rather than one of the exempt categories. If
-	     that reading is taken, the answer becomes `true` and Apple asks for
-	     the compliance paperwork. Delete this key to be asked per upload
-	     again. France is a separate question and is still answered "no". -->
+	     ⚠️ It is an ATTESTATION, not a setting, and it is James's to change
+	     (he confirmed `false` on 2026-10-10). It records the answer already
+	     given on every Universal PDF upload to App Store Connect.
+
+	     WHY FALSE (our rationale, not legal advice): "Lock PDF"
+	     (`src/lib/pdfEncrypt.ts` + `src/lib/pdfCrypto.ts`) uses standard AES-256,
+	     and pdf.js's ciphers only open password-protected PDFs. Both do one
+	     thing: protect the user's OWN documents at rest, with a key from the
+	     user's password. We read that as encryption limited to data protection,
+	     which Apple's export-compliance questions treat as exempt. Under the US
+	     EAR it is mass-market standard cryptography (Cat 5 Pt 2 Note 3 →
+	     5A992/5D992), so no licence and no CCATS. If the app gains encryption
+	     beyond protecting the user's own files, this becomes `true`. The full
+	     reasoning is in docs/README.md → "Export compliance". France is a
+	     separate question (ANSSI; see Docs_UNI_SIM/store-listings/universal-pdf.md). -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<!-- ⚠️ THE APP DOES NOT LAUNCH WITHOUT THIS. iOS terminates an app built

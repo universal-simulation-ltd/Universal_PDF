@@ -1889,6 +1889,51 @@ its trigger carries `aria-expanded` **and** `aria-controls`; with no
 `packages/sdk/README.md` → *"Collapsibles that show what is inside them"* and
 `Docs_UNI_SIM/landmines.md`.
 
+## Export compliance: why `ITSAppUsesNonExemptEncryption` is `false`
+
+`ios/App/App/Info.plist` sets `ITSAppUsesNonExemptEncryption` to `false`
+(James, 2026-10-10: keep it). This section is **our rationale for that
+answer, not legal advice**. It is an attestation James makes to Apple, so only
+James changes it. If the app's use of cryptography changes, the answer has to
+be looked at again.
+
+**What cryptography the app does**
+- **Lock PDF** (`src/lib/pdfEncrypt.ts`, with the cryptography in
+  `src/lib/pdfCrypto.ts`) applies the PDF standard security handler: AES-256,
+  revision 6, through WebCrypto. The password is chosen by the user, and the
+  only thing it protects is the user's own document.
+- **Opening a password-protected PDF.** pdf.js decrypts it with its own
+  AES/RC4 code, but only so the user can read a file they already have the
+  password for.
+- **Everything else** is the operating system's: HTTPS to our own services and
+  sign-in.
+
+**Why we read that as exempt**
+- The encryption is **data-at-rest protection of the user's own files**. It
+  is not a communications channel, a VPN, or a general-purpose encryption
+  tool for other people's data. Its keys come from the user's password, and
+  it uses only standard algorithms: no proprietary cipher.
+- **Apple.** Apple's export-compliance questions treat encryption that is
+  limited to data protection and authentication, or that only uses the
+  operating system, as not needing documentation. We place Lock PDF in the
+  data-protection category.
+- **US EAR.** Where Category 5 Part 2 applies at all, a free, publicly
+  available, mass-market app using standard cryptography falls under the
+  Cryptography Note (Note 3 to Category 5 Part 2). That makes it 5A992 / 5D992
+  mass market, not a licensed 5A002 / 5D002 item. No CCATS is needed, because
+  that is only for proprietary algorithms.
+
+**Where this could change**
+- Some readings would call document password protection "data
+  confidentiality" rather than an exempt category. If that reading is
+  adopted, or the app gains encryption beyond protecting the user's own files
+  (end-to-end messaging, encrypted sync of other people's data, a custom
+  cipher), the answer becomes `true`. Apple then asks for the documentation.
+- **France is a separate question.** The App Store listing launched without
+  the French store pending an ANSSI declaration. The status and the dossier
+  are in `Docs_UNI_SIM/store-listings/universal-pdf.md` under *"Export
+  compliance"*.
+
 ## Deleting your account, and the other App Store requirements
 
 App Review 5.1.1(v): the suite's sign-in creates an account for any email it
