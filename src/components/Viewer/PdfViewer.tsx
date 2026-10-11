@@ -10,6 +10,7 @@ import { budgetedPageCount, maxZoomForDocument, MAX_RETAINED_PAGES } from '../..
 import { setAnchorPage } from '../../lib/renderQueue'
 import { useT } from '../../i18n'
 import { usePageScroll } from '../../lib/pageScroll'
+import type { PDFPageProxy } from '../../lib/pdfjs'
 
 // "100% zoom" in standard PDF viewers means physical paper size on screen.
 // CSS treats 1 inch as 96 px while a PDF point is 1/72 inch, so to render at
@@ -239,6 +240,38 @@ export default function PdfViewer() {
     if (horizontal) el.scrollTop = 0
     else el.scrollLeft = 0
     page.scrollIntoView({ block: 'start', inline: horizontal ? 'center' : 'nearest' })
+    // …and re-fit the zoom the way opening does (2026-10-11): fitted to the
+    // height in a row, so there is nothing to scroll up and down; the usual
+    // fit one under another. Before this only OPENING fitted, so a document
+    // already open stayed at its vertical zoom, taller than the row.
+    // Anchored on the top-middle of the reading page as it now sits, so the
+    // reader stays on that page while the pages take their new size.
+    const openDoc = doc
+    if (!openDoc) return
+    let cancelled = false
+    openDoc.getPage(1).then((first) => {
+      if (cancelled || scrollRef.current !== el) return
+      const fit = fitZoomFor(first, el, horizontal)
+      pendingZoom.current?.finish()
+      if (fit === null || Math.abs(fit - zoomRef.current) < 0.0005) return
+      const target = el.querySelector<HTMLElement>(`[data-page-index="${readingPageRef.current}"]`)
+      let anchor: ZoomAnchor | null = null
+      if (target) {
+        const box = el.getBoundingClientRect()
+        const r = target.getBoundingClientRect()
+        anchor = {
+          pageIndex: Number(target.dataset.pageIndex),
+          fx: 0.5,
+          fy: 0,
+          screenX: r.left + r.width / 2 - box.left,
+          screenY: r.top - box.top,
+        }
+      }
+      commitZoom(Math.min(maxZoomRef.current, fit), anchor, clearContentTransform)
+    }).catch(() => { /* keep the zoom the reader had */ })
+    return () => { cancelled = true }
+    // ⚠️ Only on a switch: `doc` is read as it is at that render, and a new
+    // document is fitted by the open path below instead.
   }, [horizontal])
 
   // Pages added to an already-zoomed document can push the ceiling below where
@@ -916,6 +949,31 @@ export default function PdfViewer() {
     }
   }, [tool])
 
+  // The zoom that fits page 1 into the viewer — what a document opens at, and
+  // what switching Page scrolling re-fits to (2026-10-11). Null when the viewer
+  // has no size to fit into yet.
+  function fitZoomFor(page: PDFPageProxy, el: HTMLDivElement, inRow: boolean): number | null {
+    const { width: pageWidth, height: pageHeight } = page.getViewport({ scale: BASE_SCALE })
+    const availableW = el.clientWidth - 32 // px-4 padding × 2
+    const availableH = el.clientHeight - 48 // py-6 padding × 2
+    if (inRow && availableH > HORIZONTAL_SCROLLBAR_ALLOWANCE) {
+      // Pages in a row: fit the HEIGHT alone, so there is nothing to scroll
+      // up and down and the wheel walks straight along the row (James,
+      // 2026-10-08). No 75% floor (that floor is what left a portrait page a
+      // little taller than the window) and no width cap (the row scrolls
+      // sideways anyway). Less room for the row's own scrollbar, which only
+      // appears once the pages mount.
+      const fit = (availableH - HORIZONTAL_SCROLLBAR_ALLOWANCE) / pageHeight
+      return Math.max(MIN_ZOOM, Math.min(1, fit))
+    }
+    if (availableW > 0 && availableH > 0) {
+      const widthFit = Math.max(MIN_ZOOM, Math.min(1, availableW / pageWidth))
+      const heightFit = Math.max(FIT_HEIGHT_MIN_ZOOM, Math.min(1, availableH / pageHeight))
+      return Math.min(widthFit, heightFit)
+    }
+    return null
+  }
+
   // On initial load, pick a zoom that shows the whole first page:
   // • fit-to-height so a full page is visible without scrolling, floored at
   //   FIT_HEIGHT_MIN_ZOOM (75%) so text never starts unreadably small;
@@ -947,23 +1005,8 @@ export default function PdfViewer() {
     const fallback = setTimeout(() => setFittedDoc(doc), FIT_TIMEOUT_MS)
     doc.getPage(1).then((page) => {
       if (cancelled) return
-      const { width: pageWidth, height: pageHeight } = page.getViewport({ scale: BASE_SCALE })
-      const availableW = el.clientWidth - 32 // px-4 padding × 2
-      const availableH = el.clientHeight - 48 // py-6 padding × 2
-      if (horizontalRef.current && availableH > HORIZONTAL_SCROLLBAR_ALLOWANCE) {
-        // Pages in a row: fit the HEIGHT alone, so there is nothing to scroll
-        // up and down and the wheel walks straight along the row (James,
-        // 2026-10-08). No 75% floor (that floor is what left a portrait page a
-        // little taller than the window) and no width cap (the row scrolls
-        // sideways anyway). Less room for the row's own scrollbar, which only
-        // appears once the pages mount.
-        const fit = (availableH - HORIZONTAL_SCROLLBAR_ALLOWANCE) / pageHeight
-        setZoom(Math.max(MIN_ZOOM, Math.min(1, fit)))
-      } else if (availableW > 0 && availableH > 0) {
-        const widthFit = Math.max(MIN_ZOOM, Math.min(1, availableW / pageWidth))
-        const heightFit = Math.max(FIT_HEIGHT_MIN_ZOOM, Math.min(1, availableH / pageHeight))
-        setZoom(Math.min(widthFit, heightFit))
-      }
+      const fit = fitZoomFor(page, el, horizontalRef.current)
+      if (fit !== null) setZoom(fit)
       setFittedDoc(doc)
     }).catch(() => { if (!cancelled) setFittedDoc(doc) })
     return () => { cancelled = true; clearTimeout(fallback) }

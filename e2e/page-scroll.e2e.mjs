@@ -113,6 +113,7 @@ console.log('\nUniversal PDF — Page scrolling')
 let l = await layout()
 check(l.pages[1].top > l.pages[0].bottom - 1 && Math.abs(l.pages[1].left - l.pages[0].left) < 2,
   'default: the pages run one under another', JSON.stringify(l.pages.slice(0, 2)))
+const openedWidth = l.pages[0].right - l.pages[0].left
 
 await setScroll('horizontal')
 l = await layout()
@@ -123,6 +124,13 @@ const mid = (r) => (r.left + r.right) / 2
 const boxMid = () => l.scroll.boxLeft + l.scroll.cw / 2
 check(Math.abs(mid(l.pages[0]) - boxMid()) < 20, 'page 1 opens in the middle of the screen',
   `page 1 centre ${mid(l.pages[0])}, screen centre ${boxMid()}`)
+// Switching with the document already open re-fits it the way opening in a
+// row does (2026-10-11) — before, only opening fitted, and the page kept its
+// vertical zoom, taller than the window.
+check(l.scroll.sh <= l.scroll.ch + 1, 'switched to a row with a document open: re-fitted to the height',
+  `scrollHeight ${l.scroll.sh} vs clientHeight ${l.scroll.ch}`)
+check(l.pages[0].bottom - l.pages[0].top > l.scroll.ch - 100, '…and the page fills most of it',
+  `page height ${l.pages[0].bottom - l.pages[0].top}, window ${l.scroll.ch}`)
 
 // A plain mouse wheel walks the row — after first using up any room to
 // scroll down the page (a portrait page at the 75% fit floor is a little
@@ -157,6 +165,8 @@ l = await layout()
 check(l.pages[1].top > l.pages[0].bottom - 1, 'vertical again: one under another')
 check(Math.abs(l.pages[2].top - l.scroll.boxTop) < 60, 'switching keeps the reader on page 3',
   `page 3 top ${l.pages[2].top}, box ${l.scroll.boxTop}`)
+check(Math.abs(l.pages[0].right - l.pages[0].left - openedWidth) < 2, '…re-fitted back to the zoom it opened at',
+  `page width ${l.pages[0].right - l.pages[0].left} vs ${openedWidth} on open`)
 
 // It sticks across a reload, and Reset to defaults puts it back.
 await setScroll('horizontal')
