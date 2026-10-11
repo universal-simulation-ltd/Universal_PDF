@@ -33,38 +33,35 @@ it. Nobody else can read it, including us.
 
 ---
 
-## The two ways a PDF *can* leave — both of them buttons you press
+## The one way a PDF *can* leave — a button you press
 
 This is the part a privacy page usually leaves out, and it is the reason this
 one exists.
 
-### 1. "Store with UNI·SIM"
-
-If you are signed in with a Universal ID and you choose to store a document
-online, the app uploads it so you can get it back on another device. It uploads
-the **flattened** PDF — the same bytes the Download button would have given you,
-with your annotations baked in.
-
-- The code: [`src/lib/hostedStore.ts`](src/lib/hostedStore.ts)
-- The dialog that asks you: [`src/components/HostedStoreDialog.tsx`](src/components/HostedStoreDialog.tsx)
-- Deleting it in the app deletes it from storage.
-
-⚠️ **This is ordinary cloud storage, not end-to-end encryption.** It is
-encrypted in transit and at rest, and access is restricted to your own account,
-but we hold the keys — so this is a promise about our conduct, not a
-mathematical guarantee. If that distinction matters for a particular document,
-don't store it; the app works completely without an account.
-
-### 2. "Send to sign"
+### "Send to sign"
 
 Asking someone else to sign a document means sending them the document. The app
 emails it, with the PDF attached, and keeps a copy so the signing link works
-when they open it.
+when they open it. It is free, and it needs a Universal ID.
 
-- The code: [`src/lib/signRequestClient.ts`](src/lib/signRequestClient.ts)
+- The code: [`src/lib/signRequestClient.ts`](src/lib/signRequestClient.ts),
+  and the stored copy in [`src/lib/hostedStore.ts`](src/lib/hostedStore.ts)
 - The dialog that asks you: [`src/components/SendToSignDialog.tsx`](src/components/SendToSignDialog.tsx)
+- Revoking a request deletes the stored copy and any signed copy.
 
-**Signing a PDF yourself is not on this list.** Drawing or typing a signature
+⚠️ **The stored copy is ordinary cloud storage, not end-to-end encryption.**
+It is encrypted in transit and at rest, and access is restricted to your own
+account and the person you sent it to, but we hold the keys — so this is a
+promise about our conduct, not a mathematical guarantee.
+
+**There is no online backup.** The old "Store with UNI·SIM" option was retired
+on 2026-10-03. **Back up** now offers only local options: the copy your browser
+already keeps (see *Recent files* above) and a backup file you download and
+can import again on any device. Neither goes to our servers — see
+[`src/components/HostedStoreDialog.tsx`](src/components/HostedStoreDialog.tsx)
+and [`src/lib/pdfBackup.ts`](src/lib/pdfBackup.ts).
+
+**Signing a PDF yourself doesn't send anything.** Drawing or typing a signature
 and stamping it on a page is done entirely in your browser — that is what the
 app does all day, and nothing goes anywhere.
 
@@ -77,8 +74,9 @@ you will see requests, and a privacy page that pretended otherwise would look
 like a lie.
 
 - **Signing in.** Only if you choose to. A Universal ID gets you the suite's
-  shared account, storage and settings. You can delete it from inside the app:
-  **Delete my account** at the foot of Global Tuning, in the profile menu.
+  shared account and settings, and Send to sign. You can delete it from inside
+  the app: **Delete my account** at the foot of Global Tuning, in the profile
+  menu.
   That deletes it in every UNI·SIM app, not only this one.
 - **"You opened the app".** When you are signed in, the app records one event
   saying the app was opened, so your account's activity page is accurate. It

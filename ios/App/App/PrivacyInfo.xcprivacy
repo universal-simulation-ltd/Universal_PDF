@@ -8,8 +8,9 @@
   nothing (PRIVACY.md). What CAN leave, and only when the user asks for it:
 
   - Signing in with a Universal ID: the email and the account id.
-  - "Store with UNI·SIM" and "Send to sign": the PDF itself, and for Send to
-    sign the signer's email address. Both are buttons the user presses.
+  - "Send to sign": the PDF itself and the signer's email address. It is a
+    button the user presses. (The "Store with UNI·SIM" online backup was
+    retired on 2026-10-03; Back up is local only.)
   - While signed in, one "the app was opened" event per launch, tied to the
     account (the SDK's <UsageTracker />). Nothing about the file. Declared as
     product interaction, for analytics, because that is what it is.
