@@ -190,7 +190,7 @@ Her isteğin bir sertifika sayfası vardır. Bu sayfa belgeyi, her imzalayanın 
     title: 'Sayfalar alt alta mı, yan yana mı?',
     summary: 'Sayfa kaydırma ayarı: sayfalar alt alta ya da bir sıra hâlinde yan yana.',
     group: 'Nasıl çalışır',
-    body: `Universal PDF bir belgenin sayfalarını normalde alt alta gösterir; okumaya devam etmek için aşağı kaydırırsınız. Bir belgede bir kitabın sayfalarını çevirir ya da sunum slaytlarını geçer gibi yatay ilerlemeyi tercih ediyorsanız, sayfaları bunun yerine bir sıra hâlinde yan yana dizebilirsiniz.
+    body: `Universal PDF bilgisayarda bir belgenin sayfalarını alt alta gösterir; okumaya devam etmek için aşağı kaydırırsınız. Telefonda ise sayfaları bir sıra hâlinde yan yana dizer; bir kitabın sayfalarını çevirir gibi yana kaydırarak sayfadan sayfaya geçersiniz. Her iki durumda da diğerini seçebilirsiniz.
 
 ## Nasıl değiştirilir
 
@@ -210,7 +210,7 @@ Bir belge açıkken Yatay’a geçerseniz belge mevcut yakınlaştırma düzeyin
 
 ## Seçim nerede saklanır
 
-Ayar yalnızca bu cihazda, tarayıcınızın depolama alanında hatırlanır; bu yüzden her cihazınızın kendi ayarı olabilir. Hesabınıza kaydedilmez. Bu uygulamayı ayarla’nın en altındaki **Varsayılanlara sıfırla**, ayarı yeniden Dikey yapar.`,
+Ayar yalnızca bu cihazda, tarayıcınızın depolama alanında hatırlanır; bu yüzden her cihazınızın kendi ayarı olabilir. Hesabınıza kaydedilmez. Bu uygulamayı ayarla’nın en altındaki **Varsayılanlara sıfırla**, ayarı cihazın başlangıç değerine döndürür: telefonda Yatay, bilgisayarda Dikey.`,
   },
   {
     id: 'send-to-sign-security',

@@ -662,7 +662,29 @@ export default function PdfViewer() {
       const anchoredX = pinch.scrollLeft + pinch.anchorX - content.offsetLeft
       const anchoredY = pinch.scrollTop + pinch.anchorY - content.offsetTop
       const tx = pinch.anchorX + el.scrollLeft - content.offsetLeft - pinch.ratio * anchoredX
-      const ty = pinch.anchorY + el.scrollTop - content.offsetTop - pinch.ratio * anchoredY
+      let ty = pinch.anchorY + el.scrollTop - content.offsetTop - pinch.ratio * anchoredY
+      // ⚠️ PAGES IN A ROW: KEEP THE ROW WHERE THE COMMIT WILL PUT IT, UP AND
+      // DOWN (2026-10-12). Across the row there is only one page's height of
+      // document, so the anchor can ask for a place no scroll reaches: pinched
+      // smaller than the window, the committed row is centred by its auto
+      // margins; pinched just taller, it can only scroll so far. Held at the
+      // anchor, the row then jumped (59px in pinch-zoom.e2e) the moment the
+      // fingers lifted. So the content's top edge, as the commit will lay it
+      // out, is clamped into what that layout can show — centred when it fits,
+      // inside the scroll range when it doesn't — and the row eases there as
+      // the fingers move. Phones open in a row by default now, so this is the
+      // ordinary pinch on a phone. The padding (py-6) doesn't scale on commit
+      // but does under the transform, hence the two `pad` terms.
+      if (horizontalRef.current) {
+        const pad = 24
+        const viewH = el.clientHeight
+        const committedH = (content.offsetHeight - 2 * pad) * pinch.ratio + 2 * pad
+        const anchoredTop = content.offsetTop - el.scrollTop + ty + pad * pinch.ratio - pad
+        const top = committedH <= viewH
+          ? (viewH - committedH) / 2
+          : Math.min(0, Math.max(viewH - committedH, anchoredTop))
+        ty += top - anchoredTop
+      }
       content.style.transform = `translate(${tx}px, ${ty}px) scale(${pinch.ratio})`
     }
 
@@ -963,7 +985,13 @@ export default function PdfViewer() {
       // little taller than the window) and no width cap (the row scrolls
       // sideways anyway). Less room for the row's own scrollbar, which only
       // appears once the pages mount.
-      const fit = (availableH - HORIZONTAL_SCROLLBAR_ALLOWANCE) / pageHeight
+      // …and no WIDER than the window either (2026-10-12). A phone in
+      // portrait starts in a row now, and fitted to the height alone an A4
+      // page came out ~460px wide on a 390px screen, its right edge cut off.
+      // A page is the unit a swipe moves by, so it must fit whole; on a
+      // computer the height is always the tighter of the two.
+      const heightFit = (availableH - HORIZONTAL_SCROLLBAR_ALLOWANCE) / pageHeight
+      const fit = availableW > 0 ? Math.min(heightFit, availableW / pageWidth) : heightFit
       return Math.max(MIN_ZOOM, Math.min(1, fit))
     }
     if (availableW > 0 && availableH > 0) {

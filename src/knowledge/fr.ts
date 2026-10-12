@@ -190,7 +190,7 @@ Les liens de signature expirent au bout de 30 jours. Les fichiers stockés peuve
     title: 'Pages les unes sous les autres ou côte à côte',
     summary: 'Le réglage Défilement des pages : les pages les unes sous les autres, ou alignées en rangée.',
     group: 'Comment ça marche',
-    body: `Universal PDF affiche normalement les pages d’un document les unes sous les autres, et vous faites défiler vers le bas pour poursuivre la lecture. Si vous préférez parcourir un document de gauche à droite, comme on tourne les pages d’un livre ou on fait défiler des diapositives, vous pouvez aligner les pages côte à côte, en rangée.
+    body: `Sur un ordinateur, Universal PDF affiche les pages d’un document les unes sous les autres, et vous faites défiler vers le bas pour poursuivre la lecture. Sur un téléphone, il les aligne côte à côte, en rangée, et vous passez d’une page à l’autre d’un glissement latéral, comme on tourne les pages d’un livre. Dans les deux cas, vous pouvez choisir l’autre disposition.
 
 ## Changer ce réglage
 
@@ -210,7 +210,7 @@ Si vous passez en Horizontal avec un document déjà ouvert, celui-ci garde son 
 
 ## Où ce choix est conservé
 
-Le réglage est mémorisé dans le stockage de votre navigateur, sur cet appareil uniquement : chacun de vos appareils peut donc avoir le sien. Il n’est pas enregistré dans votre compte. **Rétablir les réglages par défaut**, en bas de Régler cette application, le remet sur Vertical.`,
+Le réglage est mémorisé dans le stockage de votre navigateur, sur cet appareil uniquement : chacun de vos appareils peut donc avoir le sien. Il n’est pas enregistré dans votre compte. **Rétablir les réglages par défaut**, en bas de Régler cette application, le remet sur la valeur de départ de l’appareil : Horizontal sur un téléphone, Vertical sur un ordinateur.`,
   },
   {
     id: 'send-to-sign-security',

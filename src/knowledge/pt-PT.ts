@@ -190,7 +190,7 @@ As ligações de assinatura expiram ao fim de 30 dias. Os ficheiros guardados po
     title: 'Páginas umas por baixo das outras ou lado a lado',
     summary: 'A definição Deslocamento das páginas: uma página por baixo da outra, ou as páginas em fila.',
     group: 'Como funciona',
-    body: `O Universal PDF mostra normalmente as páginas de um documento umas por baixo das outras, e a leitura continua deslocando para baixo. Para percorrer um documento na horizontal, como quem vira as páginas de um livro ou passa os diapositivos de uma apresentação, as páginas podem ser dispostas lado a lado, em fila.
+    body: `Num computador, o Universal PDF mostra as páginas de um documento umas por baixo das outras, e a leitura continua deslocando para baixo. Num telemóvel, dispõe-nas lado a lado, em fila, e passa-se de uma página para a seguinte deslizando para o lado, como quem vira as páginas de um livro. Em qualquer dos casos, pode escolher-se a outra disposição.
 
 ## Como alterar
 
@@ -210,7 +210,7 @@ Ao mudar para Horizontal com um documento já aberto, este mantém o zoom atual.
 
 ## Onde a escolha fica guardada
 
-A definição fica guardada no armazenamento do browser, apenas neste dispositivo, pelo que cada dispositivo pode ter a sua. Não é guardada na conta. **Repor predefinições**, no fundo de Ajustar esta aplicação, volta a pô-la em Vertical.`,
+A definição fica guardada no armazenamento do browser, apenas neste dispositivo, pelo que cada dispositivo pode ter a sua. Não é guardada na conta. **Repor predefinições**, no fundo de Ajustar esta aplicação, volta a pô-la no valor inicial do dispositivo: Horizontal num telemóvel, Vertical num computador.`,
   },
   {
     id: 'send-to-sign-security',

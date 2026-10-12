@@ -190,7 +190,7 @@ I link per la firma scadono dopo 30 giorni. I file conservati possono arrivare a
     title: 'Pagine una sotto l’altra o affiancate',
     summary: 'L’impostazione Scorrimento delle pagine: una pagina sotto l’altra, o le pagine in fila.',
     group: 'Come funziona',
-    body: `Universal PDF di solito mostra le pagine di un documento una sotto l’altra, e scorri verso il basso per continuare a leggere. Se preferisci sfogliare un documento in orizzontale, come si girano le pagine di un libro o si scorrono le slide di una presentazione, puoi affiancare le pagine in una fila.
+    body: `Su un computer, Universal PDF mostra le pagine di un documento una sotto l’altra, e scorri verso il basso per continuare a leggere. Su un telefono le affianca in una fila, e passi da una pagina all’altra scorrendo di lato, come si girano le pagine di un libro. In entrambi i casi puoi scegliere l’altra disposizione.
 
 ## Come cambiarla
 
@@ -210,7 +210,7 @@ Se passi a Orizzontale con un documento già aperto, il documento mantiene lo zo
 
 ## Dove viene conservata la scelta
 
-L’impostazione viene memorizzata nello spazio di archiviazione del browser, solo su questo dispositivo, quindi ciascuno dei tuoi dispositivi può averne una diversa. Non viene salvata nel tuo account. **Ripristina impostazioni predefinite**, in fondo a Regola questa app, la riporta a Verticale.`,
+L’impostazione viene memorizzata nello spazio di archiviazione del browser, solo su questo dispositivo, quindi ciascuno dei tuoi dispositivi può averne una diversa. Non viene salvata nel tuo account. **Ripristina impostazioni predefinite**, in fondo a Regola questa app, la riporta all’impostazione iniziale del dispositivo: Orizzontale su un telefono, Verticale su un computer.`,
   },
   {
     id: 'send-to-sign-security',

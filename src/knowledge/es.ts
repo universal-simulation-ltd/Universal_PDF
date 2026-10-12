@@ -190,7 +190,7 @@ Los enlaces de firma caducan a los 30 días. Los archivos guardados pueden ocupa
     title: 'Páginas una debajo de otra o una al lado de otra',
     summary: 'El ajuste Desplazamiento de páginas: una página debajo de otra, o las páginas en fila.',
     group: 'Cómo funciona',
-    body: `Universal PDF suele mostrar las páginas de un documento una debajo de otra, y usted se desplaza hacia abajo para seguir leyendo. Si prefiere recorrer un documento de lado, como cuando se pasan las páginas de un libro o las diapositivas de una presentación, puede colocar las páginas una al lado de otra, en fila.
+    body: `En un ordenador, Universal PDF muestra las páginas de un documento una debajo de otra, y usted se desplaza hacia abajo para seguir leyendo. En un teléfono las coloca una al lado de otra, en fila, y usted pasa de una página a la siguiente deslizando de lado, como cuando se pasan las páginas de un libro. En ambos casos puede elegir la otra opción.
 
 ## Cómo cambiarlo
 
@@ -210,7 +210,7 @@ Si cambia a Horizontal con un documento ya abierto, este conserva el zoom que te
 
 ## Dónde se guarda
 
-El ajuste se recuerda en el almacenamiento de su navegador, solo en este dispositivo, así que cada uno de sus dispositivos puede tener el suyo. No se guarda en su cuenta. **Restablecer valores predeterminados**, al pie de Ajustar esta app, lo devuelve a Vertical.`,
+El ajuste se recuerda en el almacenamiento de su navegador, solo en este dispositivo, así que cada uno de sus dispositivos puede tener el suyo. No se guarda en su cuenta. **Restablecer valores predeterminados**, al pie de Ajustar esta app, lo devuelve a lo que el dispositivo trae de inicio: Horizontal en un teléfono, Vertical en un ordenador.`,
   },
   {
     id: 'send-to-sign-security',

@@ -115,6 +115,12 @@ const phone = await browser.newContext({
   hasTouch: true
 })
 await phone.addInitScript(() => window.localStorage.setItem('universal:mock_session', 'james'))
+// Pinned to pages one under another: a phone-width window starts with them
+// in a row (2026-10-12), and "a plain swipe still scrolls" is checked as a
+// swipe down the column.
+await phone.addInitScript(() => {
+  try { localStorage.setItem('unisim:default-view:pdf:page-scroll', 'vertical') } catch { /* no storage */ }
+})
 const page = await phone.newPage()
 page.on('pageerror', (e) => failures.push('page error: ' + e.message))
 

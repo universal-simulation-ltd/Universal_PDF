@@ -190,7 +190,7 @@ Signing links expire after 30 days. Stored files can be up to 50 MB, and a file 
     title: 'Pages down the screen or side by side',
     summary: 'The Page scrolling setting: one page under another, or the pages in a row.',
     group: 'How it works',
-    body: `Universal PDF normally shows a document's pages one under another, and you scroll down to read on. If you would rather move through a document sideways, as you would turn the pages of a book or click through slides, you can lay the pages out side by side in a row instead.
+    body: `On a computer, Universal PDF shows a document's pages one under another, and you scroll down to read on. On a phone it lays them out side by side in a row, and you swipe sideways from one page to the next, as you would turn the pages of a book. Either way you can choose the other one.
 
 ## Changing it
 
@@ -210,7 +210,7 @@ If you switch to Horizontal with a document already open, it keeps its current z
 
 ## Where the choice is kept
 
-The setting is remembered in your browser's storage on this device only, so each of your devices can have its own. It is not saved to your account. **Reset to defaults**, at the foot of Tune this app, puts it back to Vertical.`,
+The setting is remembered in your browser's storage on this device only, so each of your devices can have its own. It is not saved to your account. **Reset to defaults**, at the foot of Tune this app, puts it back to what this device starts with: Horizontal on a phone, Vertical on a computer.`,
   },
   {
     id: 'send-to-sign-security',

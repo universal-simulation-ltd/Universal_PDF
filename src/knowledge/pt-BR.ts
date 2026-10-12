@@ -190,7 +190,7 @@ Os links de assinatura expiram depois de 30 dias. Os arquivos guardados podem te
     title: 'Páginas uma embaixo da outra ou lado a lado',
     summary: 'A configuração Rolagem das páginas: uma página embaixo da outra, ou as páginas em fila.',
     group: 'Como funciona',
-    body: `O Universal PDF normalmente mostra as páginas de um documento uma embaixo da outra, e você rola para baixo para continuar lendo. Se preferir percorrer um documento de lado, como quem vira as páginas de um livro ou passa os slides de uma apresentação, você pode colocar as páginas lado a lado, em fila.
+    body: `No computador, o Universal PDF mostra as páginas de um documento uma embaixo da outra, e você rola para baixo para continuar lendo. No celular, ele coloca as páginas lado a lado, em fila, e você desliza para o lado de uma página para a outra, como quem vira as páginas de um livro. Nos dois casos, você pode escolher a outra opção.
 
 ## Como mudar
 
@@ -210,7 +210,7 @@ Se você mudar para Horizontal com um documento já aberto, ele mantém o zoom a
 
 ## Onde a escolha fica guardada
 
-A configuração fica guardada no armazenamento do seu navegador, só neste aparelho, então cada um dos seus aparelhos pode ter a sua. Ela não é salva na sua conta. **Restaurar padrões**, no fim de Ajustar este app, volta para Vertical.`,
+A configuração fica guardada no armazenamento do seu navegador, só neste aparelho, então cada um dos seus aparelhos pode ter a sua. Ela não é salva na sua conta. **Restaurar padrões**, no fim de Ajustar este app, volta para o que o aparelho usa de início: Horizontal no celular, Vertical no computador.`,
   },
   {
     id: 'send-to-sign-security',

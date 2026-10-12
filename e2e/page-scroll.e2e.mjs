@@ -1,5 +1,6 @@
-// Tune this app ▸ Page scrolling — vertical (the default) or horizontal pages
-// (2026-10-07). Drives the real setting through the SDK's dialog and measures
+// Tune this app ▸ Page scrolling — vertical or horizontal pages (2026-10-07).
+// Vertical is the computer default; a phone-width window starts horizontal
+// (2026-10-12), checked at the end. Drives the real setting through the SDK's dialog and measures
 // the layout, the wheel, a page jump, persistence and Reset to defaults.
 //
 //   ./scripts/preview.ps1          # Universal PDF is :5174
@@ -203,6 +204,17 @@ await p.keyboard.press('Escape')
 await p.waitForTimeout(800)
 l = await layout()
 check(l.pages[1].top > l.pages[0].bottom - 1, '…and the pages back one under another')
+
+// A phone-width window with nothing chosen starts with the pages in a row
+// (James, 2026-10-12: "the default scroll to be horizontal on mobile").
+await p.setViewportSize({ width: 390, height: 844 })
+await p.evaluate(() => localStorage.clear())
+await p.reload({ waitUntil: 'domcontentloaded' })
+await p.waitForTimeout(1500)
+await openPdf()
+l = await layout()
+check(l.pages[1].left > l.pages[0].right - 1 && Math.abs(l.pages[1].top - l.pages[0].top) < 2,
+  'phone width, nothing chosen: the pages run side by side', JSON.stringify(l.pages.slice(0, 2)))
 
 check(errors.length === 0, 'no page errors', errors.join(' | ').slice(0, 200))
 await b.close()

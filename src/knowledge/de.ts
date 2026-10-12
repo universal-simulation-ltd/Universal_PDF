@@ -190,7 +190,7 @@ Links zum Unterschreiben laufen nach 30 Tagen ab. Gespeicherte Dateien dürfen b
     title: 'Seiten untereinander oder nebeneinander',
     summary: 'Die Einstellung Blätterrichtung: Seiten untereinander oder in einer Reihe nebeneinander.',
     group: 'So funktioniert es',
-    body: `Universal PDF zeigt die Seiten eines Dokuments normalerweise untereinander, und Sie scrollen nach unten, um weiterzulesen. Wenn Sie ein Dokument lieber seitwärts durchgehen, so wie Sie in einem Buch blättern oder sich durch Folien klicken, können Sie die Seiten stattdessen nebeneinander in einer Reihe anordnen.
+    body: `Auf einem Computer zeigt Universal PDF die Seiten eines Dokuments untereinander, und Sie scrollen nach unten, um weiterzulesen. Auf einem Smartphone stehen sie nebeneinander in einer Reihe, und Sie wischen seitwärts von Seite zu Seite, so wie Sie in einem Buch blättern. In beiden Fällen können Sie die andere Anordnung wählen.
 
 ## So stellen Sie es um
 
@@ -210,7 +210,7 @@ Wechseln Sie bei einem bereits geöffneten Dokument zu Horizontal, behält es se
 
 ## Wo die Einstellung gespeichert wird
 
-Die Einstellung wird im Speicher Ihres Browsers gespeichert, nur auf diesem Gerät. Jedes Ihrer Geräte kann also seine eigene haben. In Ihrem Konto wird sie nicht gespeichert. **Auf Standard zurücksetzen**, unten in Diese App anpassen, stellt sie wieder auf Vertikal.`,
+Die Einstellung wird im Speicher Ihres Browsers gespeichert, nur auf diesem Gerät. Jedes Ihrer Geräte kann also seine eigene haben. In Ihrem Konto wird sie nicht gespeichert. **Auf Standard zurücksetzen**, unten in Diese App anpassen, stellt sie wieder auf den Ausgangswert des Geräts: Horizontal auf einem Smartphone, Vertikal auf einem Computer.`,
   },
   {
     id: 'send-to-sign-security',

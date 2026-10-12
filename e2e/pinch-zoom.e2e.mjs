@@ -119,8 +119,15 @@ const playwright = await loadPlaywright()
 const browser = await playwright.chromium.launch()
 const pdf = await testPdf()
 
-async function openViewer(options) {
+// ⚠️ Pinned to pages one under another unless a case asks for the row. A
+// phone-width window starts with the pages in a row (2026-10-12), and the
+// checks below were written for the column: the anchor holding up and down,
+// the sideways re-centre. The row's own case is at the end of the pinches.
+async function openViewer(options, scroll = 'vertical') {
   const context = await browser.newContext(options)
+  await context.addInitScript((v) => {
+    try { localStorage.setItem('unisim:default-view:pdf:page-scroll', v) } catch { /* no storage */ }
+  }, scroll)
   const page = await context.newPage()
   page.on('pageerror', (e) => failures.push('page error: ' + e.message))
   try {
@@ -269,6 +276,29 @@ console.log('\npinch in, from zoomed, with the midpoint drifting the other way')
     Math.abs(after.left - during.left) < 3 && Math.abs(after.top - during.top) < 3,
     `moved (${(after.left - during.left).toFixed(1)}, ${(after.top - during.top).toFixed(1)}) px on commit`
   )
+  await context.close()
+}
+
+console.log('\npages in a row: pinched smaller than the window, the row lands where the gesture left it')
+{
+  // A phone opens in a row now (2026-10-12). Across the row there is only one
+  // page's height of document, so a pinch that shrinks the page below the
+  // window's height ends with the row centred by its auto margins — and the
+  // gesture has to arrive there, not jump there on release (it jumped 59px).
+  const { context, page, touch } = await openViewer(PHONE, 'horizontal')
+  await pinch(touch, { x: 210, y: 400, spread: 80, endSpread: 200, steps: 12 })
+  await touch('touchEnd', [])
+  await page.waitForTimeout(1500)
+  await pinch(touch, { x: 200, y: 300, spread: 240, endSpread: 100, driftX: -60, driftY: 40 })
+  const during = await readState(page)
+  await touch('touchEnd', [])
+  await page.waitForTimeout(2000)
+  const after = await readState(page)
+  check('in a row, the page shrinks with the fingers', during.width < after.width + 3 && during.transform !== '',
+    `${during.width.toFixed(1)}px wide during, transform "${during.transform}"`)
+  check('in a row, the zoom lands where the pinch left it',
+    Math.abs(after.left - during.left) < 3 && Math.abs(after.top - during.top) < 3,
+    `moved (${(after.left - during.left).toFixed(1)}, ${(after.top - during.top).toFixed(1)}) px on commit`)
   await context.close()
 }
 
