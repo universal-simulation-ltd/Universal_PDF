@@ -93,7 +93,7 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
   // beside it — see lib/resetDefaults.
   const { reset: resetPrefs } = useUserPrefs()
   const { profile, loading: profileLoading, refresh: refreshProfile } = useProfile()
-  // No accounts in the phone, desktop and extension builds (lib/accounts.ts):
+  // No accounts in the phone and extension builds (lib/accounts.ts):
   // the pill keeps the app rows (Actions, Tune this app, About) and drops
   // every account row and the sign-in dialog — the SDK's `noAccount`.
   const { supabase, session, noAccounts } = useUniversal()

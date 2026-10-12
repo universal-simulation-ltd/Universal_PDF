@@ -126,7 +126,7 @@ Se optar por desenhar a assinatura no telemóvel, o desenho passa do telemóvel 
 
 ## O que a app envia mesmo quando o PDF não sai do dispositivo
 
-No site pode iniciar sessão com um Universal ID e, enquanto tiver sessão iniciada, a app regista que foi aberta, para a página de atividade da sua conta. As apps para telemóvel e computador e a extensão do navegador não têm início de sessão. No site, na primeira vez que abre a app em cada dia, soma também um à contagem anónima de aberturas do dia, enviada depois do seu primeiro clique ou da primeira tecla premida. Essa contagem contém apenas o nome da app e o tipo de plataforma («web» no site): nenhum identificador, nenhuma conta e nada sobre o que faz. Uma marca de «já contado hoje» fica no seu dispositivo e nunca é enviada. As apps para telemóvel e computador e a extensão do navegador não a enviam. Nada do que a app envia inclui algo sobre os seus ficheiros. Não há publicidade nem rastreio por terceiros.`,
+No site e na app para computador pode iniciar sessão com um Universal ID e, enquanto tiver sessão iniciada, a app regista que foi aberta, para a página de atividade da sua conta. As apps para telemóvel e a extensão do navegador não têm início de sessão. No site, na primeira vez que abre a app em cada dia, soma também um à contagem anónima de aberturas do dia, enviada depois do seu primeiro clique ou da primeira tecla premida. Essa contagem contém apenas o nome da app e o tipo de plataforma («web» no site): nenhum identificador, nenhuma conta e nada sobre o que faz. Uma marca de «já contado hoje» fica no seu dispositivo e nunca é enviada. As apps para telemóvel e computador e a extensão do navegador não a enviam. Nada do que a app envia inclui algo sobre os seus ficheiros. Não há publicidade nem rastreio por terceiros.`,
   },
   {
     id: 'signing-a-pdf',
@@ -151,7 +151,7 @@ Quando guarda ou partilha o PDF, cada caixa que não assinou passa a ser um verd
 
 Não é uma **assinatura digital** no sentido técnico. Uma assinatura digital usa um certificado, muitas vezes emitido por uma entidade de confiança, para selar o ficheiro criptograficamente, de modo que qualquer alteração posterior possa ser detetada pela app de PDF. O Universal PDF não acrescenta esse tipo de selo a um ficheiro que o próprio utilizador assine.
 
-Isto importa porque a imagem de uma assinatura num PDF não prova, por si só, quem a colocou nem que o documento não foi alterado depois. Se precisar de um registo de quem assinou e quando, use uma **assinatura certificada** no site do Universal PDF, que guarda um registo de atividade no servidor e uma impressão digital de cada versão assinada. Os próximos artigos explicam como.
+Isto importa porque a imagem de uma assinatura num PDF não prova, por si só, quem a colocou nem que o documento não foi alterado depois. Se precisar de um registo de quem assinou e quando, use uma **assinatura certificada** no site do Universal PDF ou na app para computador, que guarda um registo de atividade no servidor e uma impressão digital de cada versão assinada. Os próximos artigos explicam como.
 
 ## Uma nota sobre a lei
 
@@ -160,9 +160,9 @@ Isto não é aconselhamento jurídico. A aceitação de uma assinatura eletróni
   {
     id: 'send-to-sign',
     title: 'Enviar um PDF para assinatura',
-    summary: 'Basta partilhar o ficheiro, ou obtenha uma assinatura certificada no site.',
+    summary: 'Basta partilhar o ficheiro, ou obtenha uma assinatura certificada no site ou na app para computador.',
     group: 'Como funciona',
-    body: `Há duas formas de pedir a outra pessoa que assine um PDF. A forma simples funciona em todo o lado, não exige conta e não carrega nada. A forma certificada, só no site, acrescenta um registo de quem assinou e quando.
+    body: `Há duas formas de pedir a outra pessoa que assine um PDF. A forma simples funciona em todo o lado, não exige conta e não carrega nada. A forma certificada, no site e na app para computador, acrescenta um registo de quem assinou e quando.
 
 ## Enviar para assinatura
 
@@ -172,9 +172,9 @@ Isto não é aconselhamento jurídico. A aceitação de uma assinatura eletróni
 
 Cada caixa que deixou por assinar passa a ser um verdadeiro campo de assinatura. Quem receber o ficheiro pode assiná-lo no Universal PDF, no Adobe Acrobat ou Reader, ou na Pré-visualização ou em Ficheiros da Apple, e devolvê-lo da mesma forma. Não precisa de conta, e nada passa por nós.
 
-## Assinatura certificada (só no site)
+## Assinatura certificada (site e app para computador)
 
-Se precisar de prova de quem assinou e quando, o site do Universal PDF oferece a assinatura certificada. Precisa de um Universal ID gratuito; quem assina não. O seu PDF é guardado online, o signatário recebe uma ligação e ambos recebem um certificado com um registo de atividade. As apps para telemóvel e computador não a oferecem; a app para computador remete para o site.
+Se precisar de prova de quem assinou e quando, o site do Universal PDF e a app para computador oferecem a assinatura certificada. Precisa de um Universal ID gratuito; quem assina não. O seu PDF é guardado online, o signatário recebe uma ligação e ambos recebem um certificado com um registo de atividade. As apps para telemóvel não a oferecem.
 
 1. **Marque onde assinar**, como acima.
 2. **Escolha Enviar para assinatura e depois Assinatura certificada.**
@@ -225,7 +225,7 @@ A definição fica guardada no armazenamento do browser, apenas neste dispositiv
     title: 'Qual é a segurança de uma assinatura certificada?',
     summary: 'O que é encriptado, o que o nosso servidor consegue ver e como funciona o registo de auditoria.',
     group: 'Privacidade e segurança',
-    body: `A assinatura certificada, disponível no site do Universal PDF, é a única funcionalidade em que o seu documento tem de sair do seu dispositivo: é guardado para que o signatário o possa abrir e para que fique um registo. Eis exatamente o que isso implica. Enviar um PDF para assinatura sem ela não carrega nada; o ficheiro só vai para onde o enviar.
+    body: `A assinatura certificada, disponível no site do Universal PDF e na app para computador, é a única funcionalidade em que o seu documento tem de sair do seu dispositivo: é guardado para que o signatário o possa abrir e para que fique um registo. Eis exatamente o que isso implica. Enviar um PDF para assinatura sem ela não carrega nada; o ficheiro só vai para onde o enviar.
 
 ## A encriptação, em termos simples
 

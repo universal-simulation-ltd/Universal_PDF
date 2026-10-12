@@ -331,7 +331,6 @@ const tools: Messages['tools'] = {
   'qr.copy_png': 'Copier le PNG dans le presse-papiers',
   'qr.link_or_text': 'Lien ou texte',
   'qr.style': 'Style',
-  'qr.design_in_universal_qr': 'En concevoir un dans Universal QR ↗',
   'qr.inverted': 'Ces couleurs produisent un code inversé (clair sur foncé). Certains lecteurs le refusent — essayez un préréglage.',
   'qr.low_contrast': 'Contraste faible — {where} ({ratio}:1). Le code peut fonctionner à l’écran mais pas à l’impression — essayez un préréglage.',
   'qr.where_modules': 'modules',

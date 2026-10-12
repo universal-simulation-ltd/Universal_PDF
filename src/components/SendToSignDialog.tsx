@@ -40,10 +40,10 @@ const STATUS_UI: Record<string, { label: MessageKey; tone?: 'good' | 'warn' }> =
 const HUB_LOGIN_URL = 'https://app.unisim.co.uk/login'
 
 // The CERTIFIED route ("Certified signature", called Send to sign until
-// 2026-10-12), offered on the WEBSITE ONLY as the upgrade beside the plain
-// "Send for signature" (SendForSignatureDialog — share the file, no account).
-// App.tsx never mounts this in the phone, desktop or extension builds
-// (lib/accounts.ts). Only the SENDER needs a Universal ID; the signer opens
+// 2026-10-12), offered on the WEBSITE and in the DESKTOP app as the upgrade
+// beside the plain "Send for signature" (SendForSignatureDialog — share the
+// file, no account). App.tsx never mounts this in the phone or extension
+// builds (lib/accounts.ts). Only the SENDER needs a Universal ID; the signer opens
 // the link with none (SignRequestPage / SignRequestGate).
 //
 // Store the current PDF online (free for everyone —

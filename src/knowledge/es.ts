@@ -126,7 +126,7 @@ Si decide dibujar su firma en el móvil, el dibujo viaja del móvil a la aplicac
 
 ## Lo que la aplicación envía aunque su PDF no salga de su dispositivo
 
-En el sitio web puede iniciar sesión con un Universal ID y, mientras la tenga iniciada, la aplicación registra que se ha abierto, para la página de actividad de su cuenta. Las aplicaciones para teléfono y ordenador y la extensión del navegador no tienen inicio de sesión. En el sitio web, la primera vez que abre la aplicación cada día, también suma uno al recuento anónimo de aperturas del día, que se envía tras su primer clic o pulsación de tecla. Ese recuento solo contiene el nombre de la aplicación y el tipo de plataforma («web» en el sitio): ningún identificador, ninguna cuenta y nada sobre lo que hace. Una marca de «ya contado hoy» se queda en su dispositivo y nunca se envía. Las aplicaciones para teléfono y ordenador y la extensión del navegador no lo envían. Nada de lo que envía la aplicación incluye información sobre sus archivos. No hay publicidad ni rastreo de terceros.`,
+En el sitio web y en la aplicación de escritorio puede iniciar sesión con un Universal ID y, mientras la tenga iniciada, la aplicación registra que se ha abierto, para la página de actividad de su cuenta. Las aplicaciones para teléfono y la extensión del navegador no tienen inicio de sesión. En el sitio web, la primera vez que abre la aplicación cada día, también suma uno al recuento anónimo de aperturas del día, que se envía tras su primer clic o pulsación de tecla. Ese recuento solo contiene el nombre de la aplicación y el tipo de plataforma («web» en el sitio): ningún identificador, ninguna cuenta y nada sobre lo que hace. Una marca de «ya contado hoy» se queda en su dispositivo y nunca se envía. Las aplicaciones para teléfono y ordenador y la extensión del navegador no lo envían. Nada de lo que envía la aplicación incluye información sobre sus archivos. No hay publicidad ni rastreo de terceros.`,
   },
   {
     id: 'signing-a-pdf',
@@ -151,7 +151,7 @@ Es lo que suele llamarse una **firma electrónica**: una marca en un documento q
 
 No es una **firma digital** en sentido técnico. Una firma digital usa un certificado, a menudo emitido por una autoridad de confianza, para sellar el archivo criptográficamente, de modo que la aplicación de PDF pueda detectar cualquier cambio posterior. Universal PDF no añade ese tipo de sello a un archivo que firma usted mismo.
 
-Esto importa porque la imagen de una firma en un PDF no demuestra, por sí sola, quién la puso ni que el documento no se haya cambiado después. Si necesita un registro de quién firmó y cuándo, use una **firma certificada** en el sitio web de Universal PDF, que guarda un registro de actividad en el servidor y una huella de cada versión firmada. Los siguientes artículos explican cómo.
+Esto importa porque la imagen de una firma en un PDF no demuestra, por sí sola, quién la puso ni que el documento no se haya cambiado después. Si necesita un registro de quién firmó y cuándo, use una **firma certificada** en el sitio web de Universal PDF o en la aplicación de escritorio, que guarda un registro de actividad en el servidor y una huella de cada versión firmada. Los siguientes artículos explican cómo.
 
 ## Una nota sobre la ley
 
@@ -160,9 +160,9 @@ Esto no es asesoramiento jurídico. Que una firma electrónica sea aceptable dep
   {
     id: 'send-to-sign',
     title: 'Enviar un PDF para firmar',
-    summary: 'Comparta simplemente el archivo u obtenga una firma certificada en el sitio web.',
+    summary: 'Comparta simplemente el archivo u obtenga una firma certificada en el sitio web o en la aplicación de escritorio.',
     group: 'Cómo funciona',
-    body: `Hay dos formas de pedir a otra persona que firme un PDF. La forma sencilla funciona en todas partes, no requiere cuenta y no sube nada. La forma certificada, solo en el sitio web, añade un registro de quién firmó y cuándo.
+    body: `Hay dos formas de pedir a otra persona que firme un PDF. La forma sencilla funciona en todas partes, no requiere cuenta y no sube nada. La forma certificada, en el sitio web y en la aplicación de escritorio, añade un registro de quién firmó y cuándo.
 
 ## Enviar para firmar
 
@@ -172,9 +172,9 @@ Esto no es asesoramiento jurídico. Que una firma electrónica sea aceptable dep
 
 Cada recuadro que deje sin firmar se convierte en un campo de firma real. Quien reciba el archivo puede firmarlo en Universal PDF, en Adobe Acrobat o Reader, o en Vista Previa o Archivos de Apple, y devolvérselo del mismo modo. No necesita una cuenta y nada pasa por nosotros.
 
-## Firma certificada (solo en el sitio web)
+## Firma certificada (sitio web y aplicación de escritorio)
 
-Si necesita una prueba de quién firmó y cuándo, el sitio web de Universal PDF ofrece una firma certificada. Usted necesita un Universal ID gratuito; quien firma, no. Su PDF se guarda en línea, el firmante recibe un enlace y ambos reciben un certificado con un registro de actividad. Las aplicaciones para teléfono y ordenador no la ofrecen; la aplicación de escritorio enlaza con el sitio web.
+Si necesita una prueba de quién firmó y cuándo, el sitio web de Universal PDF y la aplicación de escritorio ofrecen una firma certificada. Usted necesita un Universal ID gratuito; quien firma, no. Su PDF se guarda en línea, el firmante recibe un enlace y ambos reciben un certificado con un registro de actividad. Las aplicaciones para teléfono no la ofrecen.
 
 1. **Indique dónde firmar**, como arriba.
 2. **Elija Enviar para firmar y luego Firma certificada.**
@@ -225,7 +225,7 @@ El ajuste se recuerda en el almacenamiento de su navegador, solo en este disposi
     title: '¿Qué seguridad ofrece una firma certificada?',
     summary: 'Qué se cifra, qué puede ver nuestro servidor y cómo funciona el registro de auditoría.',
     group: 'Privacidad y seguridad',
-    body: `La firma certificada, que se ofrece en el sitio web de Universal PDF, es la única función en la que su documento tiene que salir de su dispositivo: se guarda para que el firmante pueda abrirlo y para que quede un registro. Esto es exactamente lo que implica. Enviar un PDF para firmar sin ella no sube nada; el archivo solo va adonde usted lo envíe.
+    body: `La firma certificada, que se ofrece en el sitio web de Universal PDF y en la aplicación de escritorio, es la única función en la que su documento tiene que salir de su dispositivo: se guarda para que el firmante pueda abrirlo y para que quede un registro. Esto es exactamente lo que implica. Enviar un PDF para firmar sin ella no sube nada; el archivo solo va adonde usted lo envíe.
 
 ## El cifrado, en pocas palabras
 

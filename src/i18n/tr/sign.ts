@@ -23,7 +23,6 @@ const sign: Messages['sign'] = {
   'sfs_certified_title': 'Kanıt mı gerekiyor? Onaylı imza alın',
   'sfs_certified_body': 'Bir kopyasını saklarız, imzalayana e-postayla bir bağlantı göndeririz ve ikinize de 7 yıl saklanan, denetim kaydı içeren bir sertifika veririz. Sizin ücretsiz bir Universal ID’ye ihtiyacınız var; imzalayanın yok.',
   'sfs_certified_button': 'Onaylı imza…',
-  'sfs_certified_web': 'Web’de onaylı imza alın',
   'certified_title': 'Onaylı imza',
   'menu_send_plain_hint': 'PDF’i herkesin imzalayabileceği imza alanlarıyla paylaşın. Yükleme yok, hesap yok.',
   'sending': 'Gönderiliyor…',

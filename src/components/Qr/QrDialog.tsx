@@ -24,7 +24,6 @@ import {
   loadDynamicQrDesigns,
   loadHostedQrDesigns,
   loadSavedQrDesigns,
-  UNIVERSAL_QR_URL,
   type DynamicQrDesign,
   type HostedQrDesign,
   type SavedQrDesign
@@ -657,17 +656,10 @@ export default function QrDialog() {
               </div>
             </div>
 
-            {/* The full studio next door, for anything this simplified dialog
-                can't do. Centred on its own line, just above the branding. */}
-            <a
-              href={UNIVERSAL_QR_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="self-center text-xs text-orange-700 hover:text-orange-800 underline-offset-2 hover:underline"
-            >
-              {t('tools.qr.design_in_universal_qr')}
-            </a>
-
+            {/* No "Design one in Universal QR ↗" link here any more
+                (2026-10-12): the phone apps may not link out to other suite
+                apps (App Store 4.3), and the dialog stands on its own, so it
+                went from every build. */}
             <QrBrandingPanel
               on={branded}
               onToggle={setBranded}
@@ -702,8 +694,8 @@ export default function QrDialog() {
 
         {/* Your Universal QR codes — this browser's saves plus the ones backed
             up to the signed-in account next door in Universal QR. Only for a
-            signed-in user who actually has codes; for everyone else the
-            "Design one" link above the branding panel is the whole story.
+            signed-in user who actually has codes; everyone else sees only the
+            designer above.
             Account chips carry a small cloud mark; an account save whose
             design matches a local one is shown once (the local copy wins —
             it needed no download). Dynamic codes carry a ↻ instead: the code

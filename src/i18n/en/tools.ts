@@ -331,7 +331,6 @@ export default {
   'qr.copy_png': 'Copy PNG to clipboard',
   'qr.link_or_text': 'Link or text',
   'qr.style': 'Style',
-  'qr.design_in_universal_qr': 'Design one in Universal QR ↗',
   'qr.inverted': 'These colours make an inverted code (light on dark). Some scanners refuse those — try a preset.',
   'qr.low_contrast': 'Low contrast on the {where} ({ratio}:1). It may scan on screen and fail in print — try a preset.', // {where} is a qr.where_* word, {ratio} a contrast ratio
   'qr.where_modules': 'modules', // the small squares of the code

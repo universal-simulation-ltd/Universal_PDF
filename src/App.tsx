@@ -794,9 +794,9 @@ export default function App() {
 
       <PageNavigator />
       <SignaturePad />
-      {/* The main signature saved in your Universal ID — the website only.
-          With no accounts (phone, desktop, extension) it reads nothing and
-          only takes away an entry an older, signed-in version left behind. */}
+      {/* The main signature saved in your Universal ID — website and desktop.
+          With no accounts (phone, extension) it reads nothing and only takes
+          away an entry an older, signed-in version left behind. */}
       <MainSignatureSync />
       <SignatureImport />
       <Suspense fallback={null}>
@@ -807,7 +807,7 @@ export default function App() {
       <HostedStoreDialog />
       <Suspense fallback={null}>
         {sendForSignatureMounted && <SendForSignatureDialog />}
-        {/* The certified route needs an account and an upload: website only. */}
+        {/* The certified route needs an account and an upload: website and desktop. */}
         {sendToSignMounted && !accountsOff() && <SendToSignDialog />}
         {qrMounted && <QrDialog />}
       </Suspense>

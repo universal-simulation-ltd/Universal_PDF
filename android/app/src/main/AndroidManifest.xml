@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <application
         android:allowBackup="true"
@@ -82,6 +83,16 @@
                 <data android:mimeType="application/pdf" />
             </intent-filter>
         </activity-alias>
+
+        <!-- No sign-in in the phone app (2026-10-12), so no sign-in callback:
+             @unisim/sdk's manifest merges in an activity that catches
+             uk.co.unisim.pdf://auth-callback at the end of an Apple / Google /
+             Microsoft sign-in. This takes it, and its deep link, back out.
+             The SDK's shared-session provider and its permission stay: they
+             are the suite's session store, not a way in. -->
+        <activity
+            android:name="uk.co.unisim.sdk.OAuthCallbackActivity"
+            tools:node="remove" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

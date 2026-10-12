@@ -198,8 +198,8 @@ export default function QrBrandingPanel({
             </button>
           )}
 
-          {/* "Sign in…" only where there is a sign-in: not in the phone,
-              desktop or extension builds (noAccounts). */}
+          {/* "Sign in…" only where there is a sign-in: not in the phone
+              or extension builds (noAccounts). */}
           {!orgLogo && !orgColor && !noAccounts && (
             <p className="text-xs text-slate-400">
               {t('tools.qr.sign_in_hint', { company: translateNav(t.lang, 'company.label') })}

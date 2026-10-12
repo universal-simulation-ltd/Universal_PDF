@@ -5,7 +5,8 @@
 //
 // What is pinned (James, 2026-10-12: signing needs no account; the plain
 // route — place "Sign here" boxes, share the PDF — is the default everywhere,
-// and the certified route is the website's optional upgrade):
+// and the certified route is the optional upgrade on the website and in the
+// desktop app — the phone apps and the extension have no sign-in):
 //
 //   1. The export writes each unsigned box as a REAL signature field
 //      (AcroForm /FT /Sig, a widget with its own appearance), at the box, on
@@ -23,6 +24,10 @@
 //   5. As the phone app (faked Capacitor shell, phone-sized): no certified
 //      route, no sign-in anywhere, a Share button — and no Supabase auth call
 //      at all, here or in (4)'s shell-free equivalent below.
+//
+// The desktop app (Electron) is the website's case: sign-in and the certified
+// route in the app. A faked `window.desktop` would not be Electron, so that is
+// checked in real Electron, not here.
 //
 // Negative control (2026-10-12, run): with `addSignatureFields(...)` removed
 // from buildAnnotatedPdfBytes, checks 1, 2 and 4's "the downloaded file has a
@@ -410,7 +415,7 @@ for (let i = 0; i < 10 && (await pp.locator('[data-send-for-signature]').count()
   await pp.waitForSelector('[data-send-for-signature]', { timeout: 2000 }).catch(() => {})
 }
 check('the dialog offers Share', (await pp.locator('[data-sfs-share]').count()) === 1)
-check('and no certified route, nor a link to the website', (await pp.locator('[data-sfs-certified], [data-sfs-certified-web]').count()) === 0)
+check('and no certified route, nor a link out', (await pp.locator('[data-sfs-certified], [data-send-for-signature] a[href]').count()) === 0)
 check('the certified dialog cannot be mounted', await pp.evaluate(async () => {
   const { usePdfStore } = await import('/src/stores/pdfStore.ts')
   usePdfStore.getState().setSendForSignatureOpen(false)

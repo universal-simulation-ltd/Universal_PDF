@@ -331,7 +331,6 @@ const tools: Messages['tools'] = {
   'qr.copy_png': 'PNG in die Zwischenablage kopieren',
   'qr.link_or_text': 'Link oder Text',
   'qr.style': 'Stil',
-  'qr.design_in_universal_qr': 'In Universal QR gestalten ↗',
   'qr.inverted': 'Diese Farben ergeben einen invertierten Code (hell auf dunkel). Manche Scanner lesen solche Codes nicht – probiere eine Vorlage.',
   'qr.low_contrast': 'Geringer Kontrast ({where}, {ratio}:1). Auf dem Bildschirm lässt er sich vielleicht scannen, im Druck aber nicht – probiere eine Vorlage.',
   'qr.where_modules': 'Module',

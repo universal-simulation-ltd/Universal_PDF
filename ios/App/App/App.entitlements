@@ -2,20 +2,23 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Lets every Universal Suite app read the same signed-in session from the
-	     Keychain, so signing in on one leaves you signed in on the others. Read
-	     by @unisim/sdk's UnisimSuiteAuth plugin; the team prefix is expanded by
-	     Xcode here and resolved at runtime by the plugin. -->
+	<!-- The shared suite Keychain group. The phone app has had no sign-in since
+	     2026-10-12, but this group STAYS, because the Face ID signature vault
+	     lives in it: SignatureVault.swift sets no kSecAttrAccessGroup, and an
+	     item added without one goes into the FIRST group listed here. Removing
+	     the group would leave every existing vault key unreadable, and with it
+	     the signatures it seals. To drop it, first move the vault into the
+	     app's own group (read from here, rewrite with an explicit group) and
+	     ship that, then remove this.
+	     @unisim/sdk's UnisimSuiteAuth plugin reads the suite session from the
+	     same group; the team prefix is expanded by Xcode here and resolved at
+	     runtime by the plugin.
+	     Sign in with Apple's entitlement (com.apple.developer.applesignin) was
+	     removed on 2026-10-12 with the sign-in; the App ID's capability can go
+	     too, but leaving it on does no harm. -->
 	<key>keychain-access-groups</key>
 	<array>
 		<string>$(AppIdentifierPrefix)co.uk.unisim.suite</string>
-	</array>
-	<!-- Sign in with Apple's native sheet — @unisim/sdk nativeOAuth. The App ID
-	     needs the "Sign in with Apple" capability too, or a DEVICE build fails
-	     to provision (simulator builds do not check). -->
-	<key>com.apple.developer.applesignin</key>
-	<array>
-		<string>Default</string>
 	</array>
 </dict>
 </plist>

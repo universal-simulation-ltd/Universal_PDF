@@ -126,7 +126,7 @@ Son açılan dosyalar, bu cihazdaki tarayıcınızın kendi depolama alanında t
 
 ## PDF’iniz cihazınızdan çıkmasa bile uygulamanın gönderdikleri
 
-Web sitesinde bir Universal ID ile giriş yapabilirsiniz; giriş yapmışken uygulama, hesabınızın etkinlik sayfası için açıldığını kaydeder. Telefon ve bilgisayar uygulamalarında ve tarayıcı uzantısında hiç giriş yoktur. Web sitesinde, uygulamayı her gün ilk açışınızda, ilk tıklamanızdan veya tuşa basmanızdan sonra anonim günlük açılış sayısına bir de ekler. Bu sayım yalnızca uygulamanın adını ve platform türünü (sitede "web") içerir: hiçbir tanımlayıcı, hesap ya da ne yaptığınıza dair bir şey yoktur. "Bugün sayıldı" işareti cihazınızda kalır ve asla gönderilmez. Telefon ve bilgisayar uygulamaları ile tarayıcı uzantısı bunu göndermez. Uygulamanın gönderdiği hiçbir şey dosyalarınızla ilgili bir şey içermez. Reklam ya da üçüncü taraf izleme yoktur.`,
+Web sitesinde ve bilgisayar uygulamasında bir Universal ID ile giriş yapabilirsiniz; giriş yapmışken uygulama, hesabınızın etkinlik sayfası için açıldığını kaydeder. Telefon uygulamalarında ve tarayıcı uzantısında hiç giriş yoktur. Web sitesinde, uygulamayı her gün ilk açışınızda, ilk tıklamanızdan veya tuşa basmanızdan sonra anonim günlük açılış sayısına bir de ekler. Bu sayım yalnızca uygulamanın adını ve platform türünü (sitede "web") içerir: hiçbir tanımlayıcı, hesap ya da ne yaptığınıza dair bir şey yoktur. "Bugün sayıldı" işareti cihazınızda kalır ve asla gönderilmez. Telefon ve bilgisayar uygulamaları ile tarayıcı uzantısı bunu göndermez. Uygulamanın gönderdiği hiçbir şey dosyalarınızla ilgili bir şey içermez. Reklam ya da üçüncü taraf izleme yoktur.`,
   },
   {
     id: 'signing-a-pdf',
@@ -151,7 +151,7 @@ Genellikle **elektronik imza** olarak adlandırılan şeydir: Bir kişinin belge
 
 Teknik anlamda bir **dijital imza** değildir. Dijital imza, dosyayı kriptografik olarak mühürlemek için genellikle güvenilir bir kuruluş tarafından verilen bir sertifika kullanır; böylece sonradan yapılan her değişiklik PDF uygulaması tarafından tespit edilebilir. Universal PDF, kendiniz imzaladığınız bir dosyaya bu tür bir mühür eklemez.
 
-Bu önemlidir, çünkü bir PDF üzerindeki imza görseli tek başına onu kimin koyduğunu veya belgenin o zamandan beri değiştirilmediğini kanıtlamaz. Kimin ne zaman imzaladığına dair bir kayda ihtiyacınız varsa, Universal PDF web sitesindeki **onaylı imzayı** kullanın; sunucu tarafında bir etkinlik kaydı ve imzalanan her sürümün parmak izini tutar. Sonraki makaleler nasıl olduğunu açıklıyor.
+Bu önemlidir, çünkü bir PDF üzerindeki imza görseli tek başına onu kimin koyduğunu veya belgenin o zamandan beri değiştirilmediğini kanıtlamaz. Kimin ne zaman imzaladığına dair bir kayda ihtiyacınız varsa, Universal PDF web sitesindeki veya bilgisayar uygulamasındaki **onaylı imzayı** kullanın; sunucu tarafında bir etkinlik kaydı ve imzalanan her sürümün parmak izini tutar. Sonraki makaleler nasıl olduğunu açıklıyor.
 
 ## Hukuki durum hakkında bir not
 
@@ -160,9 +160,9 @@ Bu bir hukuki tavsiye değildir. Bir elektronik imzanın kabul edilebilir olup o
   {
     id: 'send-to-sign',
     title: 'Bir PDF’i imzaya göndermek',
-    summary: 'Dosyayı paylaşmanız yeterli; ya da web sitesinde onaylı imza alın.',
+    summary: 'Dosyayı paylaşmanız yeterli; ya da web sitesinde veya bilgisayar uygulamasında onaylı imza alın.',
     group: 'Nasıl çalışır',
-    body: `Bir PDF’i başkasına imzalatmanın iki yolu vardır. Basit yol her yerde çalışır, hesap gerektirmez ve hiçbir şey yüklemez. Onaylı yol yalnızca web sitesindedir ve kimin ne zaman imzaladığına dair bir kayıt ekler.
+    body: `Bir PDF’i başkasına imzalatmanın iki yolu vardır. Basit yol her yerde çalışır, hesap gerektirmez ve hiçbir şey yüklemez. Onaylı yol web sitesinde ve bilgisayar uygulamasındadır ve kimin ne zaman imzaladığına dair bir kayıt ekler.
 
 ## İmzaya gönder
 
@@ -172,9 +172,9 @@ Bu bir hukuki tavsiye değildir. Bir elektronik imzanın kabul edilebilir olup o
 
 İmzasız bıraktığınız her kutu gerçek bir imza alanına dönüşür. Dosyayı alan kişi onu Universal PDF’te, Adobe Acrobat veya Reader’da ya da Apple Önizleme veya Dosyalar’da imzalayıp aynı yolla geri gönderebilir. Hesaba ihtiyacı yoktur ve hiçbir şey bizim üzerimizden geçmez.
 
-## Onaylı imza (yalnızca web sitesinde)
+## Onaylı imza (web sitesi ve bilgisayar uygulaması)
 
-Kimin ne zaman imzaladığının kanıtına ihtiyacınız varsa Universal PDF web sitesi onaylı imza sunar. Sizin ücretsiz bir Universal ID’ye ihtiyacınız var; imzalayanın yok. PDF’iniz çevrimiçi saklanır, imzalayana bir bağlantı gider ve ikiniz de etkinlik kaydı içeren bir sertifika alırsınız. Telefon ve bilgisayar uygulamaları bunu sunmaz; bilgisayar uygulaması web sitesine yönlendirir.
+Kimin ne zaman imzaladığının kanıtına ihtiyacınız varsa Universal PDF web sitesi ve bilgisayar uygulaması onaylı imza sunar. Sizin ücretsiz bir Universal ID’ye ihtiyacınız var; imzalayanın yok. PDF’iniz çevrimiçi saklanır, imzalayana bir bağlantı gider ve ikiniz de etkinlik kaydı içeren bir sertifika alırsınız. Telefon uygulamaları bunu sunmaz.
 
 1. **İmzanın yerini işaretleyin**, yukarıdaki gibi.
 2. **İmzaya gönder’i, ardından Onaylı imza’yı seçin.**
@@ -225,7 +225,7 @@ Ayar yalnızca bu cihazda, tarayıcınızın depolama alanında hatırlanır; bu
     title: 'Onaylı imza ne kadar güvenli?',
     summary: 'Nelerin şifrelendiği, sunucumuzun neleri görebildiği ve denetim kaydının nasıl işlediği.',
     group: 'Gizlilik ve güvenlik',
-    body: `Universal PDF web sitesinde sunulan onaylı imza, belgenizin cihazınızdan çıkması gereken tek özelliktir: imzalayanın açabilmesi ve bir kayıt kalması için saklanır. Bunun tam olarak ne anlama geldiği aşağıda. Bir PDF’i onaylı imza olmadan imzaya göndermek hiçbir şey yüklemez; dosya yalnızca sizin gönderdiğiniz yere gider.
+    body: `Universal PDF web sitesinde ve bilgisayar uygulamasında sunulan onaylı imza, belgenizin cihazınızdan çıkması gereken tek özelliktir: imzalayanın açabilmesi ve bir kayıt kalması için saklanır. Bunun tam olarak ne anlama geldiği aşağıda. Bir PDF’i onaylı imza olmadan imzaya göndermek hiçbir şey yüklemez; dosya yalnızca sizin gönderdiğiniz yere gider.
 
 ## Anlaşılır bir dille şifreleme
 

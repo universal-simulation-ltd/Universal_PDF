@@ -12,8 +12,8 @@ import { useT } from '../../i18n'
 // Re-read when the tab comes back into view, which is how a signature saved
 // on the Me page in another tab shows up without a reload.
 //
-// ⚠️ Website only (James, 2026-10-12). The phone, desktop and extension builds
-// have no accounts (`noAccounts`, lib/accounts.ts): there it never queries,
+// ⚠️ Website and desktop only (James, 2026-10-12). The phone and extension
+// builds have no accounts (`noAccounts`, lib/accounts.ts): there it never queries,
 // and it removes the entry an older signed-in version of the app put in the
 // library, so a signature from an account the app no longer knows about is
 // not left on offer.

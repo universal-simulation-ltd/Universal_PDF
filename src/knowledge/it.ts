@@ -126,7 +126,7 @@ Se scegli di disegnare la firma sul telefono, il disegno passa dal telefono all�
 
 ## Che cosa invia l’app anche quando il tuo PDF resta dov’è
 
-Sul sito puoi accedere con un Universal ID e, finché hai effettuato l’accesso, l’app registra che è stata aperta, per la pagina delle attività del tuo account. Le app per telefono e computer e l’estensione del browser non hanno alcun accesso. Sul sito web, la prima volta che apri l’app ogni giorno, aggiunge anche uno al conteggio anonimo delle aperture del giorno, inviato dopo il tuo primo clic o tasto premuto. Quel conteggio contiene solo il nome dell’app e il tipo di piattaforma («web» sul sito): nessun identificativo, nessun account e niente su ciò che fai. Un segno «già contato oggi» resta sul tuo dispositivo e non viene mai inviato. Le app per telefono e computer e l’estensione del browser non lo inviano. Niente di ciò che l’app invia contiene informazioni sui tuoi file. Non ci sono pubblicità né tracciamento di terze parti.`,
+Sul sito e nell’app per computer puoi accedere con un Universal ID e, finché hai effettuato l’accesso, l’app registra che è stata aperta, per la pagina delle attività del tuo account. Le app per telefono e l’estensione del browser non hanno alcun accesso. Sul sito web, la prima volta che apri l’app ogni giorno, aggiunge anche uno al conteggio anonimo delle aperture del giorno, inviato dopo il tuo primo clic o tasto premuto. Quel conteggio contiene solo il nome dell’app e il tipo di piattaforma («web» sul sito): nessun identificativo, nessun account e niente su ciò che fai. Un segno «già contato oggi» resta sul tuo dispositivo e non viene mai inviato. Le app per telefono e computer e l’estensione del browser non lo inviano. Niente di ciò che l’app invia contiene informazioni sui tuoi file. Non ci sono pubblicità né tracciamento di terze parti.`,
   },
   {
     id: 'signing-a-pdf',
@@ -151,7 +151,7 @@ Quando salvi o condividi il PDF, ogni riquadro che non hai firmato diventa un ve
 
 Non è una **firma digitale** in senso tecnico. Una firma digitale usa un certificato, spesso rilasciato da un’autorità fidata, per sigillare il file con la crittografia, in modo che l’app per PDF possa rilevare qualsiasi modifica successiva. Universal PDF non aggiunge questo tipo di sigillo a un file che firmi da solo.
 
-Conta perché l’immagine di una firma su un PDF non dimostra, da sola, chi l’ha messa, né che il documento non sia stato modificato in seguito. Se ti serve una traccia di chi ha firmato e quando, usa una **firma certificata** sul sito di Universal PDF, che conserva un registro delle attività sul server e un’impronta di ogni versione firmata. I prossimi articoli spiegano come.
+Conta perché l’immagine di una firma su un PDF non dimostra, da sola, chi l’ha messa, né che il documento non sia stato modificato in seguito. Se ti serve una traccia di chi ha firmato e quando, usa una **firma certificata** sul sito di Universal PDF o nell’app per computer, che conserva un registro delle attività sul server e un’impronta di ogni versione firmata. I prossimi articoli spiegano come.
 
 ## Una nota sulla legge
 
@@ -160,9 +160,9 @@ Questa non è una consulenza legale. Se una firma elettronica sia accettabile di
   {
     id: 'send-to-sign',
     title: 'Inviare un PDF per la firma',
-    summary: 'Condividi semplicemente il file, oppure ottieni una firma certificata sul sito.',
+    summary: 'Condividi semplicemente il file, oppure ottieni una firma certificata sul sito o nell’app per computer.',
     group: 'Come funziona',
-    body: `Ci sono due modi per chiedere a qualcuno di firmare un PDF. Quello semplice funziona ovunque, non richiede account e non carica nulla. Quello certificato, solo sul sito, aggiunge una traccia di chi ha firmato e quando.
+    body: `Ci sono due modi per chiedere a qualcuno di firmare un PDF. Quello semplice funziona ovunque, non richiede account e non carica nulla. Quello certificato, sul sito e nell’app per computer, aggiunge una traccia di chi ha firmato e quando.
 
 ## Invia per la firma
 
@@ -172,9 +172,9 @@ Questa non è una consulenza legale. Se una firma elettronica sia accettabile di
 
 Ogni riquadro lasciato senza firma diventa un vero campo firma. Chi riceve il file può firmarlo in Universal PDF, in Adobe Acrobat o Reader, o in Anteprima o File di Apple, e rimandartelo allo stesso modo. Non gli serve un account e nulla passa da noi.
 
-## Firma certificata (solo sul sito)
+## Firma certificata (sito e app per computer)
 
-Se ti serve una prova di chi ha firmato e quando, il sito di Universal PDF offre la firma certificata. A te serve un Universal ID gratuito; a chi firma no. Il tuo PDF viene archiviato online, il firmatario riceve un link ed entrambi ricevete un certificato con un registro delle attività. Le app per telefono e computer non la offrono; l’app per computer rimanda al sito.
+Se ti serve una prova di chi ha firmato e quando, il sito di Universal PDF e l’app per computer offrono la firma certificata. A te serve un Universal ID gratuito; a chi firma no. Il tuo PDF viene archiviato online, il firmatario riceve un link ed entrambi ricevete un certificato con un registro delle attività. Le app per telefono non la offrono.
 
 1. **Indica dove firmare**, come sopra.
 2. **Scegli Invia per la firma, poi Firma certificata.**
@@ -225,7 +225,7 @@ L’impostazione viene memorizzata nello spazio di archiviazione del browser, so
     title: 'Quanto è sicura una firma certificata?',
     summary: 'Che cosa è crittografato, che cosa può vedere il nostro server e come funziona la traccia di controllo.',
     group: 'Privacy e sicurezza',
-    body: `La firma certificata, offerta sul sito di Universal PDF, è l’unica funzione per cui il tuo documento deve lasciare il dispositivo: viene archiviato perché il firmatario possa aprirlo e perché ne resti traccia. Ecco esattamente cosa comporta. Inviare un PDF per la firma senza di essa non carica nulla; il file va solo dove lo mandi tu.
+    body: `La firma certificata, offerta sul sito di Universal PDF e nell’app per computer, è l’unica funzione per cui il tuo documento deve lasciare il dispositivo: viene archiviato perché il firmatario possa aprirlo e perché ne resti traccia. Ecco esattamente cosa comporta. Inviare un PDF per la firma senza di essa non carica nulla; il file va solo dove lo mandi tu.
 
 ## La crittografia, in parole semplici
 

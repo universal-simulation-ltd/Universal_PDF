@@ -23,7 +23,6 @@ export default {
   'sfs_certified_title': 'Need proof? Get a certified signature',
   'sfs_certified_body': 'We keep a copy, email the signer a link, and give you both a certificate with an audit trail, kept for 7 years. You need a free Universal ID; the signer doesn’t.',
   'sfs_certified_button': 'Certified signature…',
-  'sfs_certified_web': 'Get a certified signature on the web',
   'certified_title': 'Certified signature',
   'menu_send_plain_hint': 'Share the PDF with signature fields anyone can sign. No upload, no account.',
   'sending': 'Sending…',

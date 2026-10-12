@@ -137,8 +137,9 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
   const setTool = useAnnotationStore((s) => s.setTool)
   const setSendForSignatureOpen = usePdfStore((s) => s.setSendForSignatureOpen)
   const setSendToSignOpen = usePdfStore((s) => s.setSendToSignOpen)
-  // The certified route (upload, emailed link, certificate) is the website's
-  // only; every other build sends for signature with no account at all.
+  // The certified route (upload, emailed link, certificate) is on the website
+  // and in the desktop app; the phone and extension builds send for signature
+  // with no account at all.
   const certified = certifiedSignatureHere()
 
   useEffect(() => {
@@ -297,7 +298,7 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
               each box as a real signature field — no account, no upload
               (SendForSignatureDialog). The certified route (stored copy,
               emailed link, certificate) is the optional upgrade beneath it,
-              on the website only. */}
+              on the website and in the desktop app. */}
           <div className="border-t border-slate-100 pt-3">
             <button
               onClick={() => { setSendForSignatureOpen(true); setOpen(false) }}

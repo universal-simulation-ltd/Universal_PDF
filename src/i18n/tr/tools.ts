@@ -331,7 +331,6 @@ const tools: Messages['tools'] = {
   'qr.copy_png': 'PNG’yi panoya kopyala',
   'qr.link_or_text': 'Bağlantı veya metin',
   'qr.style': 'Stil',
-  'qr.design_in_universal_qr': 'Universal QR’da tasarlayın ↗',
   'qr.inverted': 'Bu renkler ters bir kod oluşturur (koyu üzerine açık). Bazı tarayıcılar bunları okumaz — bir hazır stil deneyin.',
   'qr.low_contrast': 'Düşük kontrast: {where} ({ratio}:1). Ekranda okunup baskıda okunamayabilir — bir hazır stil deneyin.',
   'qr.where_modules': 'modüller',

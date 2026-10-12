@@ -126,7 +126,7 @@ Se você escolher desenhar sua assinatura no celular, o desenho vai do celular p
 
 ## O que o aplicativo envia mesmo quando seu PDF fica onde está
 
-No site, você pode entrar com um Universal ID e, enquanto estiver conectado, o aplicativo registra que foi aberto, para a página de atividade da sua conta. Os aplicativos para celular e computador e a extensão do navegador não têm login. No site, na primeira vez que você abre o aplicativo a cada dia, ele também soma um à contagem anônima de aberturas do dia, enviada depois do seu primeiro clique ou tecla pressionada. Essa contagem contém só o nome do aplicativo e o tipo de plataforma ("web" no site): nenhum identificador, nenhuma conta e nada sobre o que você faz. Uma marca de "já contado hoje" fica no seu dispositivo e nunca é enviada. Os aplicativos para celular e computador e a extensão do navegador não a enviam. Nada do que o aplicativo envia inclui algo sobre os seus arquivos. Não há publicidade nem rastreamento de terceiros.`,
+No site e no aplicativo para computador, você pode entrar com um Universal ID e, enquanto estiver conectado, o aplicativo registra que foi aberto, para a página de atividade da sua conta. Os aplicativos para celular e a extensão do navegador não têm login. No site, na primeira vez que você abre o aplicativo a cada dia, ele também soma um à contagem anônima de aberturas do dia, enviada depois do seu primeiro clique ou tecla pressionada. Essa contagem contém só o nome do aplicativo e o tipo de plataforma ("web" no site): nenhum identificador, nenhuma conta e nada sobre o que você faz. Uma marca de "já contado hoje" fica no seu dispositivo e nunca é enviada. Os aplicativos para celular e computador e a extensão do navegador não a enviam. Nada do que o aplicativo envia inclui algo sobre os seus arquivos. Não há publicidade nem rastreamento de terceiros.`,
   },
   {
     id: 'signing-a-pdf',
@@ -151,7 +151,7 @@ Quando você salva ou compartilha o PDF, cada caixa que você não assinou vira 
 
 Não é uma **assinatura digital** no sentido técnico. Uma assinatura digital usa um certificado, muitas vezes emitido por uma autoridade confiável, para lacrar o arquivo por criptografia, de modo que qualquer alteração posterior possa ser detectada pelo aplicativo de PDF. O Universal PDF não adiciona esse tipo de lacre a um arquivo que você mesmo assina.
 
-Isso importa porque a imagem de uma assinatura num PDF não prova, sozinha, quem a colocou nem que o documento não foi alterado depois. Se você precisa de um registro de quem assinou e quando, use uma **assinatura certificada** no site do Universal PDF, que guarda um registro de atividade no servidor e uma impressão digital de cada versão assinada. Os próximos artigos explicam como.
+Isso importa porque a imagem de uma assinatura num PDF não prova, sozinha, quem a colocou nem que o documento não foi alterado depois. Se você precisa de um registro de quem assinou e quando, use uma **assinatura certificada** no site do Universal PDF ou no aplicativo para computador, que guarda um registro de atividade no servidor e uma impressão digital de cada versão assinada. Os próximos artigos explicam como.
 
 ## Uma observação sobre a lei
 
@@ -160,9 +160,9 @@ Isto não é aconselhamento jurídico. Se uma assinatura eletrônica é aceitáv
   {
     id: 'send-to-sign',
     title: 'Enviar um PDF para assinatura',
-    summary: 'Basta compartilhar o arquivo, ou obtenha uma assinatura certificada no site.',
+    summary: 'Basta compartilhar o arquivo, ou obtenha uma assinatura certificada no site ou no aplicativo para computador.',
     group: 'Como funciona',
-    body: `Há duas formas de pedir que outra pessoa assine um PDF. A forma simples funciona em qualquer lugar, não exige conta e não envia nada para a nuvem. A forma certificada, só no site, acrescenta um registro de quem assinou e quando.
+    body: `Há duas formas de pedir que outra pessoa assine um PDF. A forma simples funciona em qualquer lugar, não exige conta e não envia nada para a nuvem. A forma certificada, no site e no aplicativo para computador, acrescenta um registro de quem assinou e quando.
 
 ## Enviar para assinatura
 
@@ -172,9 +172,9 @@ Isto não é aconselhamento jurídico. Se uma assinatura eletrônica é aceitáv
 
 Cada caixa que você deixou sem assinar vira um campo de assinatura de verdade. Quem receber o arquivo pode assinar no Universal PDF, no Adobe Acrobat ou Reader, ou na Pré-Visualização ou no Arquivos da Apple, e devolver do mesmo jeito. A pessoa não precisa de conta, e nada passa por nós.
 
-## Assinatura certificada (só no site)
+## Assinatura certificada (site e aplicativo para computador)
 
-Se você precisa de prova de quem assinou e quando, o site do Universal PDF oferece a assinatura certificada. Você precisa de um Universal ID gratuito; quem assina, não. Seu PDF fica guardado on-line, o signatário recebe um link e vocês dois recebem um certificado com registro de atividade. Os aplicativos para celular e computador não oferecem essa opção; o aplicativo para computador leva ao site.
+Se você precisa de prova de quem assinou e quando, o site do Universal PDF e o aplicativo para computador oferecem a assinatura certificada. Você precisa de um Universal ID gratuito; quem assina, não. Seu PDF fica guardado on-line, o signatário recebe um link e vocês dois recebem um certificado com registro de atividade. Os aplicativos para celular não oferecem essa opção.
 
 1. **Marque onde assinar**, como acima.
 2. **Escolha Enviar para assinatura e depois Assinatura certificada.**
@@ -225,7 +225,7 @@ A configuração fica guardada no armazenamento do seu navegador, só neste apar
     title: 'Quão segura é uma assinatura certificada?',
     summary: 'O que é criptografado, o que nosso servidor consegue ver e como funciona a trilha de auditoria.',
     group: 'Privacidade e segurança',
-    body: `A assinatura certificada, oferecida no site do Universal PDF, é a única função em que o seu documento precisa sair do seu dispositivo: ele é guardado para que o signatário possa abri-lo e para que fique um registro. Veja exatamente o que isso envolve. Enviar um PDF para assinatura sem ela não envia nada para a nuvem; o arquivo vai só para onde você mandar.
+    body: `A assinatura certificada, oferecida no site do Universal PDF e no aplicativo para computador, é a única função em que o seu documento precisa sair do seu dispositivo: ele é guardado para que o signatário possa abri-lo e para que fique um registro. Veja exatamente o que isso envolve. Enviar um PDF para assinatura sem ela não envia nada para a nuvem; o arquivo vai só para onde você mandar.
 
 ## Criptografia, em palavras simples
 

@@ -23,7 +23,6 @@ const sign: Messages['sign'] = {
   'sfs_certified_title': 'Precisa de prova? Obtenha uma assinatura certificada',
   'sfs_certified_body': 'Guardamos uma cópia, enviamos um link ao signatário por e-mail e damos a vocês dois um certificado com trilha de auditoria, guardado por 7 anos. Você precisa de um Universal ID gratuito; o signatário, não.',
   'sfs_certified_button': 'Assinatura certificada…',
-  'sfs_certified_web': 'Obter uma assinatura certificada na web',
   'certified_title': 'Assinatura certificada',
   'menu_send_plain_hint': 'Compartilhe o PDF com campos de assinatura que qualquer pessoa pode assinar. Sem upload, sem conta.',
   'sending': 'Enviando…',

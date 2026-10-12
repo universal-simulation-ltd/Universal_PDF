@@ -65,11 +65,11 @@ const universalConfig = {
   // so `isDesktop` covers all three; `isNativeShell()` stays as a second guard
   // for the phone shell.
   openCount: !isDesktop && !isNativeShell(),
-  // No sign-in at all in the phone apps, the desktop app or the extension
-  // (James, 2026-10-12): signing and sending for signature need no account
-  // there and upload nothing. `noAccounts` drops every account row and keeps
-  // the app signed out of any suite session the device already holds (SDK
-  // 0.187.0). The website keeps an optional Universal ID for the certified
+  // No sign-in at all in the phone apps or the extension (James, 2026-10-12):
+  // signing and sending for signature need no account there and upload
+  // nothing. `noAccounts` drops every account row and keeps the app signed out
+  // of any suite session the device already holds (SDK 0.187.0). The website
+  // and the desktop app keep an optional Universal ID for the certified
   // signature and the saved main signature. See lib/accounts.ts.
   noAccounts: accountsOff(),
 }

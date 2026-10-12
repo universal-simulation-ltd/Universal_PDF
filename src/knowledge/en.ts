@@ -126,7 +126,7 @@ If you choose to draw your signature on your phone, the drawing travels from you
 
 ## What the app sends even when your PDF stays put
 
-On the website you can sign in with a Universal ID, and while you are signed in, the app records that it was opened, for your account’s activity page. The phone and desktop apps and the browser extension have no sign-in at all. On the website, the first time you open the app each day, it also adds one to an anonymous count of daily opens, sent after your first click or key press. That count holds only the app's name and the kind of platform (on the website, "web"): no identifier, no account and nothing about what you do. A "counted today" mark stays on your device and is never sent. The phone and desktop apps and the browser extension do not send it. Nothing the app sends includes anything about your files. There is no advertising or third-party tracking.`,
+On the website and in the desktop app you can sign in with a Universal ID, and while you are signed in, the app records that it was opened, for your account’s activity page. The phone apps and the browser extension have no sign-in at all. On the website, the first time you open the app each day, it also adds one to an anonymous count of daily opens, sent after your first click or key press. That count holds only the app's name and the kind of platform (on the website, "web"): no identifier, no account and nothing about what you do. A "counted today" mark stays on your device and is never sent. The phone and desktop apps and the browser extension do not send it. Nothing the app sends includes anything about your files. There is no advertising or third-party tracking.`,
   },
   {
     id: 'signing-a-pdf',
@@ -151,7 +151,7 @@ It is what is usually called an **electronic signature**: a mark on a document s
 
 It is not a **digital signature** in the technical sense. A digital signature uses a certificate, often issued by a trusted authority, to seal the file cryptographically, so that any later change can be detected by the PDF app. Universal PDF does not add that kind of seal to a file you sign yourself.
 
-That matters because a picture of a signature on a PDF does not, by itself, prove who put it there, or that the document has not been changed since. If you need a record of who signed and when, use a **certified signature** on the Universal PDF website, which keeps a server-side activity log and a fingerprint of each signed version. The next articles explain how.
+That matters because a picture of a signature on a PDF does not, by itself, prove who put it there, or that the document has not been changed since. If you need a record of who signed and when, use a **certified signature** on the Universal PDF website or in the desktop app, which keeps a server-side activity log and a fingerprint of each signed version. The next articles explain how.
 
 ## A note on the law
 
@@ -160,9 +160,9 @@ This is not legal advice. Whether an electronic signature is acceptable depends 
   {
     id: 'send-to-sign',
     title: 'Sending a PDF for signature',
-    summary: 'Just share the file, or get a certified signature on the website.',
+    summary: 'Just share the file, or get a certified signature on the website or in the desktop app.',
     group: 'How it works',
-    body: `There are two ways to ask someone else to sign a PDF. The plain way works everywhere, needs no account and uploads nothing. The certified way, on the website only, adds a record of who signed and when.
+    body: `There are two ways to ask someone else to sign a PDF. The plain way works everywhere, needs no account and uploads nothing. The certified way, on the website and in the desktop app, adds a record of who signed and when.
 
 ## Send for signature
 
@@ -172,9 +172,9 @@ This is not legal advice. Whether an electronic signature is acceptable depends 
 
 Each box you left unsigned goes in as a real signature field. The person who gets the file can sign it in Universal PDF, in Adobe Acrobat or Reader, or in Apple Preview or Files, and send it back the same way. They don’t need an account, and nothing passes through us.
 
-## Certified signature (website only)
+## Certified signature (website and desktop app)
 
-If you need proof of who signed and when, the Universal PDF website offers a certified signature. You need a free Universal ID; the person signing does not. Your PDF is stored online, the signer gets a link, and both of you get a certificate with an activity log. The phone and desktop apps don’t offer it; the desktop app links to the website instead.
+If you need proof of who signed and when, the Universal PDF website and the desktop app offer a certified signature. You need a free Universal ID; the person signing does not. Your PDF is stored online, the signer gets a link, and both of you get a certificate with an activity log. The phone apps don’t offer it.
 
 1. **Mark where to sign**, as above.
 2. **Choose Send for signature, then Certified signature.**
@@ -225,7 +225,7 @@ The setting is remembered in your browser's storage on this device only, so each
     title: 'How secure is a certified signature?',
     summary: 'What is encrypted, what our server can see, and how the audit trail works.',
     group: 'Privacy and security',
-    body: `A certified signature, offered on the Universal PDF website, is the one feature where your document has to leave your device: it is stored so the signer can open it and so there is a record. Here is exactly what that involves. Sending a PDF for signature without it uploads nothing; the file goes only where you send it.
+    body: `A certified signature, offered on the Universal PDF website and in the desktop app, is the one feature where your document has to leave your device: it is stored so the signer can open it and so there is a record. Here is exactly what that involves. Sending a PDF for signature without it uploads nothing; the file goes only where you send it.
 
 ## Encryption, in plain terms
 

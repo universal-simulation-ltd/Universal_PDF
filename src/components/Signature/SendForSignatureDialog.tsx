@@ -8,7 +8,6 @@ import { nextExportName, previewExportName } from '../../lib/exportName'
 import { markSaved } from '../../lib/unsavedChanges'
 import { isNativeShell } from '../../lib/nativeOpen'
 import { certifiedSignatureHere, isDesktopApp } from '../../lib/accounts'
-import { PUBLIC_APP_URL } from '../../lib/appUrl'
 import { REDACT_CONFIRM_WORD } from '../../lib/redactGate'
 import LockedOriginNote from '../Lock/LockedOriginNote'
 import { useT } from '../../i18n'
@@ -27,8 +26,9 @@ import { useT } from '../../i18n'
  *
  * The certified route (stored copy, emailed link, certificate, 7-year audit
  * trail — SendToSignDialog) is offered beneath it as the optional upgrade, on
- * the website only. The desktop app links to it on the web; the phone apps do
- * not mention it (App Store 4.3).
+ * the website and in the desktop app, where the sender can sign in with a
+ * Universal ID. The phone apps and the extension do not mention it (App Store
+ * 4.3: no link out).
  */
 export default function SendForSignatureDialog() {
   const t = useT()
@@ -195,10 +195,10 @@ export default function SendForSignatureDialog() {
 
           {error && <p className="text-sm text-rose-600">{t('sign.sfs_failed', { error })}</p>}
 
-          {/* The optional upgrade. Website: opens the certified route here.
-              Desktop app: a link that opens the website in the browser.
-              Phone apps: nothing at all — no link out (App Store 4.3). */}
-          {certifiedSignatureHere() ? (
+          {/* The optional upgrade, on the website and in the desktop app:
+              opens the certified route here. Phone apps and the extension:
+              nothing at all — no link out (App Store 4.3). */}
+          {certifiedSignatureHere() && (
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4" data-sfs-certified>
               <p className="text-sm font-semibold text-slate-900">{t('sign.sfs_certified_title')}</p>
               <p className="mt-1 text-xs text-slate-500">{t('sign.sfs_certified_body')}</p>
@@ -210,13 +210,7 @@ export default function SendForSignatureDialog() {
                 {t('sign.sfs_certified_button')}
               </button>
             </div>
-          ) : desktop ? (
-            <p className="text-xs text-slate-500" data-sfs-certified-web>
-              <a href={PUBLIC_APP_URL} target="_blank" rel="noreferrer" className="text-orange-700 underline-offset-2 hover:underline">
-                {t('sign.sfs_certified_web')} ↗
-              </a>
-            </p>
-          ) : null}
+          )}
         </div>
       </div>
     </div>,

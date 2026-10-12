@@ -34,7 +34,7 @@ it. Nobody else can read it, including us.
 
 ---
 
-## The one way a PDF *can* leave — a button you press, on the website
+## The one way a PDF *can* leave — a button you press, on the website or the desktop app
 
 This is the part a privacy page usually leaves out, and it is the reason this
 one exists.
@@ -48,23 +48,23 @@ phone's share sheet, a download, a Save dialog. The person you send it to can
 sign it in Universal PDF, Adobe Acrobat or Reader, or Apple Preview, with no
 account. We never see it.
 
-### "Certified signature" (website only)
+### "Certified signature" (website and desktop app)
 
-If you want proof of who signed and when, the **website** offers a certified
-signature as an optional extra. That one does leave your device: the app emails
+If you want proof of who signed and when, the **website** and the **desktop
+app** offer a certified signature as an optional extra. That one does leave your device: the app emails
 the signer a link (with the PDF attached on an open link) and keeps a copy so
 the link works, and both of you get a certificate with an audit trail. It is
 free, and it needs a Universal ID — for you, the sender, only; the signer
 signs from the link with no account. A completed request and its record are
 kept for 7 years.
 
-**The iPhone, iPad and Android apps, the desktop app and the browser extension
-don't offer it at all** — see `certifiedSignatureHere` in
+**The iPhone, iPad and Android apps and the browser extension don't offer it
+at all** — see `certifiedSignatureHere` in
 [`src/lib/accounts.ts`](src/lib/accounts.ts).
 
 - The code: [`src/lib/signRequestClient.ts`](src/lib/signRequestClient.ts),
   and the stored copy in [`src/lib/hostedStore.ts`](src/lib/hostedStore.ts)
-- The dialog that asks you (website only): [`src/components/SendToSignDialog.tsx`](src/components/SendToSignDialog.tsx)
+- The dialog that asks you (website and desktop app): [`src/components/SendToSignDialog.tsx`](src/components/SendToSignDialog.tsx)
 - Revoking a request deletes the stored copy and any signed copy.
 - About the signer, the audit trail records when they opened and signed, their
   IP address, its country and their browser. The country comes from a
@@ -96,18 +96,17 @@ Being honest about this matters, because if you open your browser's Network tab
 you will see requests, and a privacy page that pretended otherwise would look
 like a lie.
 
-- **Signing in — on the website only, and only if you choose to.** A Universal
-  ID gets you the suite's shared account and settings, the certified
-  signature, and the main signature saved in your account. You can delete it
-  from inside the website: **Delete my account** at the foot of Global Tuning,
+- **Signing in — on the website and in the desktop app, and only if you choose
+  to.** A Universal ID gets you the suite's shared account and settings, the
+  certified signature, and the main signature saved in your account. You can
+  delete it from inside the app: **Delete my account** at the foot of Global Tuning,
   in the profile menu. That deletes it in every UNI·SIM app, not only this one.
-  **The phone apps, the desktop app and the browser extension have no sign-in
-  at all:** they run signed out even if the device is signed in to UNI·SIM
+  **The phone apps and the browser extension have no sign-in at all:** they run signed out even if the device is signed in to UNI·SIM
   elsewhere, and make no account requests. See `noAccounts` in
   [`src/main.tsx`](src/main.tsx) and [`src/lib/accounts.ts`](src/lib/accounts.ts).
-- **"You opened the app".** When you are signed in on the website, the app
-  records one event saying the app was opened, so your account's activity page
-  is accurate. It does not include anything about your file — not its name,
+- **"You opened the app".** When you are signed in (on the website or in the
+  desktop app), the app records one event saying the app was opened, so your
+  account's activity page is accurate. It does not include anything about your file — not its name,
   not its size. With no sign-in, the other builds never send it. See
   `UsageTracker` in `@unisim/sdk`.
 - **An anonymous daily open count.** Once a day, the first time you open the

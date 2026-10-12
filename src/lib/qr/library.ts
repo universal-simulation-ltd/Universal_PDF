@@ -30,8 +30,6 @@ import { renderQrPng } from './render'
  *  in step with that app's `localDesigns.ts` if it ever versions up. */
 const DESIGNS_KEY = 'unisim.qr.designs.v1'
 
-export const UNIVERSAL_QR_URL = 'https://opensource.unisim.co.uk/qr'
-
 export interface SavedQrDesign {
   id: string
   name: string
