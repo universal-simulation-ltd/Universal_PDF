@@ -27,6 +27,21 @@ function AppleIcon() {
   )
 }
 
+// Tux, in the same outline weight as its neighbours: body, belly, eyes, and
+// the beak and big feet filled — the feet are what make it read as a penguin
+// at 20 px (an outline alone looked like a pear).
+function LinuxIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className={ICON} fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 2.6c-2.5 0-3.8 2-3.8 4.5 0 1.5-.5 2.5-1.3 3.7C5.6 12.6 4.7 14.4 4.7 16.4c0 1.3.4 2.4 1 3.2M12 2.6c2.5 0 3.8 2 3.8 4.5 0 1.5.5 2.5 1.3 3.7 1.3 1.8 2.2 3.6 2.2 5.6 0 1.3-.4 2.4-1 3.2M9.6 20.6h4.8" />
+      <ellipse cx="12" cy="15.4" rx="3" ry="4" />
+      <path d="M10.7 6.5h.01M13.3 6.5h.01" />
+      <path d="M10.8 8.6h2.4L12 9.8z" fill="currentColor" />
+      <path d="M3.8 20.4c.2-1 1.2-1.5 2.3-1.2l2.6.8c.9.3.9 1.5 0 1.8l-2.7.6c-1.3.3-2.4-.5-2.2-2zM20.2 20.4c-.2-1-1.2-1.5-2.3-1.2l-2.6.8c-.9.3-.9 1.5 0 1.8l2.7.6c1.3.3 2.4-.5 2.2-2z" fill="currentColor" />
+    </svg>
+  )
+}
+
 function AndroidIcon() {
   return (
     <svg viewBox="0 0 24 24" className={ICON} fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -76,11 +91,16 @@ export default function DownloadRow() {
 
   return (
     <section aria-labelledby="get-the-app" className="mt-8 text-center">
-      {/* The icon BESIDE the heading and the marks from `sm` up: above them
-          it added a row and pushed the landing page past one screen at
-          1440×900. On a phone, above — beside, the heading had no room and
-          wrapped. Decorative — the heading next to it says what it is. */}
-      <div className="inline-flex flex-col sm:flex-row items-center gap-2 sm:gap-3">
+      {/* The heading is for screen readers only (James, 2026-10-12: the line
+          of text under the card "doesn't quite look right"). On screen the
+          app's own icon says what the marks are for — the thing you get — and
+          each mark's tooltip names the file. */}
+      <h2 id="get-the-app" className="sr-only">
+        {t('app.download_heading')}
+      </h2>
+
+      <div className="inline-flex items-center gap-3">
+        {/* Decorative: the heading says what it is. */}
         <img
           src={appIcon}
           alt=""
@@ -88,45 +108,42 @@ export default function DownloadRow() {
           height={48}
           className="h-12 w-12 shrink-0 drop-shadow-[0_4px_10px_rgba(23,58,148,0.22)]"
         />
-        <div>
-          <h2 id="get-the-app" className="flex items-center justify-center gap-1.5 text-[13px] text-slate-400">
-            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M4 20h16" />
-            </svg>
-            {t('app.download_heading')}
-          </h2>
-
-          <ul className="mt-1 flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
-            <li>
-              <a className={ITEM} href={RELEASES} rel="noopener" title={t('app.download_windows_title')} aria-label="Windows">
-                <WindowsIcon />
-              </a>
-            </li>
-            <li>
-              <a className={ITEM} href={RELEASES} rel="noopener" title={t('app.download_macos_title')} aria-label="macOS">
-                <AppleIcon />
-              </a>
-            </li>
-            <li>
-              <a className={ITEM} href={RELEASES} rel="noopener" title={t('app.download_android_title')} aria-label="Android">
-                <AndroidIcon />
-              </a>
-            </li>
-            <li>
-              <button
-                type="button"
-                className={ITEM}
-                aria-label="iPhone"
-                title="iPhone"
-                aria-expanded={showIosHint}
-                aria-controls={iosHintId}
-                onClick={() => setShowIosHint((open) => !open)}
-              >
-                <IPhoneIcon />
-              </button>
-            </li>
-          </ul>
-        </div>
+        <span aria-hidden="true" className="h-8 w-px bg-slate-200" />
+        <ul className="flex flex-wrap items-center justify-center gap-x-1 sm:gap-x-2 gap-y-1">
+          <li>
+            <a className={ITEM} href={RELEASES} rel="noopener" title={t('app.download_windows_title')} aria-label="Windows">
+              <WindowsIcon />
+            </a>
+          </li>
+          <li>
+            <a className={ITEM} href={RELEASES} rel="noopener" title={t('app.download_macos_title')} aria-label="macOS">
+              <AppleIcon />
+            </a>
+          </li>
+          <li>
+            <a className={ITEM} href={RELEASES} rel="noopener" title={t('app.download_linux_title')} aria-label="Linux">
+              <LinuxIcon />
+            </a>
+          </li>
+          <li>
+            <a className={ITEM} href={RELEASES} rel="noopener" title={t('app.download_android_title')} aria-label="Android">
+              <AndroidIcon />
+            </a>
+          </li>
+          <li>
+            <button
+              type="button"
+              className={ITEM}
+              aria-label="iPhone"
+              title="iPhone"
+              aria-expanded={showIosHint}
+              aria-controls={iosHintId}
+              onClick={() => setShowIosHint((open) => !open)}
+            >
+              <IPhoneIcon />
+            </button>
+          </li>
+        </ul>
       </div>
 
       {showIosHint && (

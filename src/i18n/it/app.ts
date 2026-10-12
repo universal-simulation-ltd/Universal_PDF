@@ -157,6 +157,7 @@ const app: Messages['app'] = {
   'download_heading': 'Scaricala per usarla offline: funziona allo stesso modo',
   'download_windows_title': 'Programma di installazione per Windows (.exe), 64 bit',
   'download_macos_title': 'Immagine disco (.dmg): Apple silicon e Intel',
+  'download_linux_title': 'Linux (AppImage o .deb): x64 e Arm',
   'download_android_title': 'Pacchetto Android (.apk)',
   'download_ios_hint': 'Non ancora sull’App Store. In Safari, tocca {share} → {add}: si installa e funziona offline.',
   'download_ios_share': 'Condividi',

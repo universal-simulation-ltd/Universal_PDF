@@ -157,6 +157,7 @@ const app: Messages['app'] = {
   'download_heading': 'Çevrimdışı kullanım için indirin — aynı şekilde çalışır',
   'download_windows_title': 'Windows yükleyicisi (.exe), 64 bit',
   'download_macos_title': 'Disk görüntüsü (.dmg) — Apple silicon ve Intel',
+  'download_linux_title': 'Linux (AppImage veya .deb) — x64 ve Arm',
   'download_android_title': 'Android paketi (.apk)',
   'download_ios_hint': 'Henüz App Store’da değil. Safari’de {share} → {add} öğesine dokunun — yüklenir ve çevrimdışı çalışır.',
   'download_ios_share': 'Paylaş',

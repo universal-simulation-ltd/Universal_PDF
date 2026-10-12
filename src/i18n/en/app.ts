@@ -157,6 +157,7 @@ export default {
   'download_heading': 'Download it for offline use — it works the same',
   'download_windows_title': 'Windows installer (.exe), 64-bit',
   'download_macos_title': 'Disk image (.dmg) — Apple silicon and Intel',
+  'download_linux_title': 'Linux (AppImage or .deb) — x64 and Arm', // tooltip on the Linux download mark
   'download_android_title': 'Android package (.apk)',
   'download_ios_hint': 'Not on the App Store yet. In Safari, tap {share} → {add} — it installs and runs offline.',
   'download_ios_share': 'Share', // Safari's Share button, use the name iOS shows in this language

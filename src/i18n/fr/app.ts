@@ -157,6 +157,7 @@ const app: Messages['app'] = {
   'download_heading': 'Téléchargez-la pour l’utiliser hors ligne — elle fonctionne de la même façon',
   'download_windows_title': 'Programme d’installation Windows (.exe), 64 bits',
   'download_macos_title': 'Image disque (.dmg) — Apple silicon et Intel',
+  'download_linux_title': 'Linux (AppImage ou .deb) — x64 et Arm',
   'download_android_title': 'Paquet Android (.apk)',
   'download_ios_hint': 'Pas encore sur l’App Store. Dans Safari, touchez {share} → {add} — elle s’installe et fonctionne hors ligne.',
   'download_ios_share': 'Partager',

@@ -157,6 +157,7 @@ const app: Messages['app'] = {
   'download_heading': 'Descárgalo para usarlo sin conexión: funciona igual',
   'download_windows_title': 'Instalador de Windows (.exe), 64 bits',
   'download_macos_title': 'Imagen de disco (.dmg): Apple silicon e Intel',
+  'download_linux_title': 'Linux (AppImage o .deb): x64 y Arm',
   'download_android_title': 'Paquete de Android (.apk)',
   'download_ios_hint': 'Aún no está en el App Store. En Safari, toca {share} → {add}; se instala y funciona sin conexión.',
   'download_ios_share': 'Compartir',
