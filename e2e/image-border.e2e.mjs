@@ -155,7 +155,8 @@ if (await pill.count() === 0) {
 }
 
 console.log('\nthe controls are all there')
-for (const label of ['No border', '1px border', '2px border', '4px border', 'Solid', 'Dashed']) {
+// "0" and "123" (James, 2026-10-12): 0 clears, 123 opens a pixel field.
+for (const label of ['No border', 'Pick a border width', 'Solid', 'Dashed']) {
   check(`"${label}"`, await page.locator(`button[aria-label="${label}"]`).count() > 0)
 }
 
@@ -209,7 +210,27 @@ await page.waitForTimeout(300)
 
 console.log('\nsetting a border changes what is drawn')
 const before = await page.locator('[data-page-index="0"] canvas').first().screenshot()
-await page.click('button[aria-label="4px border"]')
+check('no width field before a border is chosen',
+  await page.locator('input[data-border-width]').count() === 0)
+await page.click('button[aria-label="Pick a border width"]')
+await page.waitForTimeout(400)
+const field = page.locator('input[data-border-width]')
+check('123 opens the width field, focused', await field.count() === 1
+  && await field.evaluate((el) => el === document.activeElement))
+check('it starts at 2px', await field.inputValue() === '2', await field.inputValue())
+await field.fill('4')
+await field.press('Enter')
+await page.waitForTimeout(400)
+check('typing 4 sticks', await field.inputValue() === '4', await field.inputValue())
+await page.click('button[aria-label="Thicker border"]')
+await page.waitForTimeout(200)
+check('+ steps to 5', await field.inputValue() === '5', await field.inputValue())
+await field.fill('99')
+await field.press('Enter')
+await page.waitForTimeout(200)
+check('a typed width is capped at 50', await field.inputValue() === '50', await field.inputValue())
+await field.fill('4')
+await field.press('Enter')
 await page.waitForTimeout(400)
 const after = await page.locator('[data-page-index="0"] canvas').first().screenshot()
 check('the canvas changed once a border was applied', !before.equals(after))
@@ -229,6 +250,7 @@ const cleared = await page.locator('[data-page-index="0"] canvas').first().scree
 // for reasons with nothing to do with borders. What matters is that clearing
 // undoes the border, which is exactly "differs from bordered".
 check('clearing changes the canvas back', !cleared.equals(dashed))
+check('…and the width field goes with it', await page.locator('input[data-border-width]').count() === 0)
 
 console.log('\nthe border survives the export — the half that silently does not happen')
 // Straight at the real export builder, with two annotation sets differing ONLY
@@ -413,7 +435,9 @@ if (!turned.error) {
 
 // Leave a real border on screen, so the artefact this drops is worth looking
 // at rather than a picture of the cleared state.
-await page.click('button[aria-label="4px border"]')
+await page.click('button[aria-label="Pick a border width"]')
+await page.locator('input[data-border-width]').fill('4')
+await page.locator('input[data-border-width]').press('Enter')
 await page.click('button[aria-label="Solid"]')
 await page.waitForTimeout(400)
 await page.screenshot({ path: 'e2e-image-border.png' })

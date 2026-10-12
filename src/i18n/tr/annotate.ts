@@ -49,11 +49,16 @@ const annotate: Messages['annotate'] = {
 
   // AnnotationLayer — image pill (border around a placed picture or QR code)
   'image.border': 'Kenarlık',
-  'image.border_none': 'Yok',
   'image.border_none_title': 'Kenarlık yok',
-  'image.border_width': '{width}px kenarlık',
   'image.border_solid': 'Düz',
   'image.border_dashed': 'Kesik',
+  'image.border_custom_title': 'Kenarlık kalınlığını seç',
+  'image.border_width_field': 'Piksel cinsinden kenarlık kalınlığı',
+  'image.border_thinner': 'Daha ince kenarlık',
+  'image.border_thicker': 'Daha kalın kenarlık',
+  'image.qr_background': 'Arka plan',
+  'image.qr_transparent': 'Saydam',
+  'image.qr_transparent_title': 'Saydam arka plan — kodu beyaz karesi olmadan yeniden çizer',
 
   // AnnotationLayer — line pill
   'line.stroke': 'Kalınlık',

@@ -49,11 +49,16 @@ export default {
 
   // AnnotationLayer — image pill (border around a placed picture or QR code)
   'image.border': 'Border',
-  'image.border_none': 'None', // no border; short button label
   'image.border_none_title': 'No border',
-  'image.border_width': '{width}px border',
   'image.border_solid': 'Solid',
   'image.border_dashed': 'Dashed',
+  'image.border_custom_title': 'Pick a border width',
+  'image.border_width_field': 'Border width in pixels',
+  'image.border_thinner': 'Thinner border',
+  'image.border_thicker': 'Thicker border',
+  'image.qr_background': 'Background',
+  'image.qr_transparent': 'Transparent',
+  'image.qr_transparent_title': 'Transparent background — re-draws the code without its white square',
 
   // AnnotationLayer — line pill
   'line.stroke': 'Stroke', // label for the line thickness slider

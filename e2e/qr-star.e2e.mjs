@@ -292,6 +292,55 @@ check('the QR editor opens', (await page.locator('h2:has-text("Fine-tune this QR
 check('Signature options does not', (await page.locator('h2:has-text("Signature options")').count()) === 0)
 check('the edit pill is on the selected code', (await page.locator('button[aria-label="Fine-tune this QR code"]').count()) === 1)
 
+// ── Transparent background from the pill ─────────────────────────────────────
+// James, 2026-10-12: "have option to make bg transparent" on a placed code.
+// The pill re-renders the code from the design it carries, so what is checked
+// is the placed annotation's own picture, read through the app's store.
+console.log('\nthe pill knocks the background out of a placed code, and puts it back')
+
+await page.keyboard.press('Escape')
+await page.waitForTimeout(500)
+if ((await page.locator('h2:has-text("Fine-tune this QR code")').count()) > 0) {
+  await page.locator('button[aria-label="Close"]').first().click().catch(() => {})
+  await page.waitForTimeout(400)
+}
+await page.mouse.click(at.x, at.y)
+await page.waitForTimeout(600)
+
+async function placedQr() {
+  return page.evaluate(async () => {
+    const { useAnnotationStore } = await import('/src/stores/annotationStore.ts')
+    const a = useAnnotationStore.getState().annotations.find((x) => x.type === 'image' && x.qr)
+    if (!a) return null
+    const img = new Image()
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = a.src })
+    const c = document.createElement('canvas')
+    c.width = img.naturalWidth
+    c.height = img.naturalHeight
+    const ctx = c.getContext('2d')
+    ctx.drawImage(img, 0, 0)
+    return { corner: ctx.getImageData(0, 0, 1, 1).data[3], flag: !!a.qr.base.bgTransparent }
+  })
+}
+
+const toggle = page.locator('button[aria-label^="Transparent background"]')
+check('the pill offers Transparent on a QR code', (await toggle.count()) === 1)
+const opaque = await placedQr()
+check('the placed code starts with a ground', opaque?.corner > 200 && opaque?.flag === false, JSON.stringify(opaque))
+await toggle.click()
+await page.waitForTimeout(1500)
+const clear = await placedQr()
+check('Transparent knocks the ground out of the picture', clear?.corner === 0, JSON.stringify(clear))
+check('…and records it on the design, so the editor reopens on it', clear?.flag === true)
+check('the toggle reads as on', (await toggle.getAttribute('aria-pressed')) === 'true')
+await page.locator('button[aria-label="Pick a border width"]').click()
+await page.waitForTimeout(500)
+await page.screenshot({ path: 'e2e-qr-transparent.png' })
+await toggle.click()
+await page.waitForTimeout(1500)
+const back = await placedQr()
+check('a second tap puts the ground back', back?.corner > 200 && back?.flag === false, JSON.stringify(back))
+
 await browser.close()
 
 if (failures.length) {

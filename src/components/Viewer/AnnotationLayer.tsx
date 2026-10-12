@@ -909,6 +909,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   useEffect(() => () => cancelAnimationFrame(strokeFrame.current), [])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
+  // The placed QR whose background is being re-rendered by the image pill's
+  // Transparent toggle, so a second tap can't race the first render.
+  const [qrBgBusyId, setQrBgBusyId] = useState<string | null>(null)
   // A signature-request box that's been selected (first click) and is now
   // "armed" — a second click on it opens the signing pad. The ref is the
   // synchronous source of truth for the click handler; the state drives the
@@ -3271,7 +3274,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         // colour choices go outside the format pill"). The pill sizes to its
         // content now; this number only centres and clamps it, the way the text
         // pill above has always used its own.
-        const CHIP_W = 406
+        // 0 + 123 + the width field, plus — on a QR code — the Background
+        // toggle, which is what pushes it past one row soonest.
+        const CHIP_W = img.qr ? 520 : 420
         const GAP = 10
         // Narrower than the pill needs: it wraps to two rows rather than
         // running off a phone screen, so the flip-above test has to expect the
@@ -3287,12 +3292,53 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         else if (by - CHIP_H - GAP >= 0) top = by - CHIP_H - GAP
         else top = Math.min(Math.max(by + bh + GAP, GAP), Math.max(GAP, height - CHIP_H - GAP))
 
-        // Widths in PAGE units, so a border looks the same at any zoom and
-        // bakes at the size it looked. `scale` divides for the same reason
-        // fontSize does above.
-        const WIDTHS = [1, 2, 4]
+        // Widths are whole PAGE units, typed or stepped in the 123 field
+        // (James, 2026-10-12: "Border: 0, 123 — when clicking 123 allow them
+        // to choose the number of pixels"). They used to be 1/2/4 SCREEN px
+        // divided by the zoom, so the same border read as a different number
+        // — or as none of the three — depending on how far in you were.
+        const DEFAULT_BORDER_W = 2
         const setBorder = (next: ImageBorder | undefined) =>
           update(img.id, { border: next } as Partial<Annotation>)
+        const borderWith = (patch: Partial<ImageBorder>): ImageBorder => ({
+          width: border?.width ?? DEFAULT_BORDER_W,
+          color: border?.color ?? '#000000',
+          style: border?.style ?? 'solid',
+          ...patch,
+        })
+
+        // ⚠️ RE-RENDERED, NOT RECOLOURED. A placed QR's picture is a PNG with
+        // its background baked in, so "transparent" means drawing it again from
+        // the design it carries (`img.qr`) with `bgTransparent` flipped — the
+        // same render the ✏️ editor's Save does. Written back into `qr.base`
+        // too, so reopening the editor shows the code as it now is. The render
+        // modules are imported on demand: they pull in @unisim/qr, which the
+        // page layer otherwise never needs.
+        const qr = img.qr
+        const qrTransparent = !!qr?.base.bgTransparent
+        const toggleQrBackground = async () => {
+          if (!qr || qrBgBusyId) return
+          const next: QrPlacement = { ...qr, base: { ...qr.base, bgTransparent: !qrTransparent } }
+          setQrBgBusyId(img.id)
+          try {
+            const [{ renderQrPng, PLACEMENT_SIZE }, { placementDesign }] = await Promise.all([
+              import('../../lib/qr/render'),
+              import('../../lib/qr/design'),
+            ])
+            const png = await renderQrPng(placementDesign(next), PLACEMENT_SIZE)
+            // Only if it is still the code we started from — undone, deleted
+            // or re-edited in the meantime, the render is answering a question
+            // nobody is asking any more.
+            const now = useAnnotationStore.getState().annotations.find((a) => a.id === img.id)
+            if (now?.type === 'image' && now.qr === qr) {
+              update(img.id, { src: png, qr: next } as Partial<Annotation>)
+            }
+          } catch (err) {
+            console.error('[qr] background re-render failed', err)
+          } finally {
+            setQrBgBusyId(null)
+          }
+        }
 
         const pillBtn = (
           active: boolean,
@@ -3326,40 +3372,39 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             className="min-h-11 rounded-[22px] bg-white shadow-lg border border-slate-300 flex flex-wrap items-center justify-center gap-1 px-2 py-1"
           >
             <span className="text-[11px] font-medium text-slate-500 pl-1 pr-0.5">{t('annotate.image.border')}</span>
-            {/* None is a real choice, not the absence of one — it clears the key
+            {/* 0 is a real choice, not the absence of one — it clears the key
                 entirely rather than writing width 0, so an image that never had
                 a border and one whose border was removed export identically. */}
-            {pillBtn(!border, () => setBorder(undefined), t('annotate.image.border_none'), t('annotate.image.border_none_title'), 'text-xs')}
-            <span className="w-px h-6 bg-slate-200 mx-0.5" />
-            {WIDTHS.map((w) => pillBtn(
-              !!border && Math.abs(border.width * scale - w) < 0.01,
-              () => setBorder({
-                width: w / scale,
-                color: border?.color ?? '#000000',
-                style: border?.style ?? 'solid',
-              }),
-              `${w}`,
-              t('annotate.image.border_width', { width: w }),
+            {pillBtn(!border, () => setBorder(undefined), '0', t('annotate.image.border_none_title'), 'text-xs tabular-nums')}
+            {pillBtn(
+              !!border,
+              () => {
+                if (!border) setBorder(borderWith({}))
+                // Straight into the field, so "123" reads as "type a number".
+                requestAnimationFrame(() => {
+                  document.querySelector<HTMLInputElement>('input[data-border-width]')?.focus()
+                })
+              },
+              '123',
+              t('annotate.image.border_custom_title'),
               'text-xs tabular-nums',
-            ))}
+            )}
+            {border && (
+              <BorderWidthField
+                value={Math.max(1, Math.round(border.width))}
+                onCommit={(n) => setBorder(borderWith({ width: n }))}
+              />
+            )}
             <span className="w-px h-6 bg-slate-200 mx-0.5" />
             {pillBtn(
               border?.style === 'solid',
-              () => setBorder({
-                width: border?.width ?? 2 / scale,
-                color: border?.color ?? '#000000',
-                style: 'solid',
-              }),
+              () => setBorder(borderWith({ style: 'solid' })),
               <span className="block w-5 border-t-2 border-current" />,
               t('annotate.image.border_solid'),
             )}
             {pillBtn(
               border?.style === 'dashed',
-              () => setBorder({
-                width: border?.width ?? 2 / scale,
-                color: border?.color ?? '#000000',
-                style: 'dashed',
-              }),
+              () => setBorder(borderWith({ style: 'dashed' })),
               <span className="block w-5 border-t-2 border-dashed border-current" />,
               t('annotate.image.border_dashed'),
             )}
@@ -3371,12 +3416,35 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 border would otherwise make the next box red too. */}
             <ColorCluster
               color={border?.color ?? '#000000'}
-              setColor={(c) => setBorder({
-                width: border?.width ?? 2 / scale,
-                color: c,
-                style: border?.style ?? 'solid',
-              })}
+              setColor={(c) => setBorder(borderWith({ color: c }))}
             />
+            {/* One unit, so a narrow page wraps the whole section to its own
+                row rather than leaving its label stranded on the first. */}
+            {qr && (
+              <span className="inline-flex items-center gap-1">
+                <span className="w-px h-6 bg-slate-200 mx-0.5" />
+                <span className="text-[11px] font-medium text-slate-500 pl-1 pr-0.5">{t('annotate.image.qr_background')}</span>
+                {pillBtn(
+                  qrTransparent,
+                  () => { void toggleQrBackground() },
+                  <span className={`flex items-center gap-1.5 ${qrBgBusyId === img.id ? 'opacity-50' : ''}`}>
+                    {/* A checkerboard, the usual shorthand for "see-through". */}
+                    <span
+                      aria-hidden="true"
+                      className="block w-3.5 h-3.5 rounded-sm border border-slate-300"
+                      style={{
+                        backgroundColor: '#fff',
+                        backgroundImage: 'conic-gradient(#cbd5e1 25%, transparent 0 50%, #cbd5e1 0 75%, transparent 0)',
+                        backgroundSize: '7px 7px',
+                      }}
+                    />
+                    {t('annotate.image.qr_transparent')}
+                  </span>,
+                  t('annotate.image.qr_transparent_title'),
+                  'text-xs',
+                )}
+              </span>
+            )}
           </div>
         )
       })()}
@@ -4265,6 +4333,77 @@ function FontSizeStepper({
       </span>
       {stepBtn(2, '+', t('annotate.text.size_increase'))}
     </>
+  )
+}
+
+// The image pill's border width: whole page units, typed or stepped by 1.
+// Same draft-in-state shape as FontSizeStepper above, for the same reasons —
+// the pill body is an IIFE with no hooks, and +/− must step from the draft.
+function BorderWidthField({
+  value,
+  onCommit
+}: {
+  value: number
+  onCommit: (n: number) => void
+}) {
+  const t = useT()
+  const MIN = 1
+  const MAX = 50
+  const [draft, setDraft] = useState(String(value))
+  const focusedRef = useRef(false)
+  useEffect(() => {
+    if (!focusedRef.current) setDraft(String(value))
+  }, [value])
+  const clamp = (n: number) => Math.min(MAX, Math.max(MIN, n))
+  const commit = (n: number) => {
+    setDraft(String(n))
+    if (n !== value) onCommit(n)
+  }
+  const commitDraft = () => {
+    const n = parseInt(draft, 10)
+    if (Number.isFinite(n)) commit(clamp(n))
+    else setDraft(String(value))
+  }
+  const step = (delta: number) => {
+    const typed = parseInt(draft, 10)
+    commit(clamp((Number.isFinite(typed) ? typed : value) + delta))
+  }
+  const stepBtn = (delta: number, label: string, aria: string) => (
+    <button
+      type="button"
+      aria-label={aria}
+      title={aria}
+      onMouseDown={(e) => { e.stopPropagation(); e.preventDefault() }}
+      onClick={(e) => { e.stopPropagation(); step(delta) }}
+      className="w-7 h-8 rounded-lg hover:bg-slate-100 text-base font-semibold text-slate-700 leading-none"
+    >
+      {label}
+    </button>
+  )
+  return (
+    <span className="inline-flex items-center">
+      {stepBtn(-1, '−', t('annotate.image.border_thinner'))}
+      <span className="inline-flex items-baseline">
+        <input
+          type="text"
+          inputMode="numeric"
+          data-border-width=""
+          aria-label={t('annotate.image.border_width_field')}
+          value={draft}
+          onMouseDown={(e) => e.stopPropagation()}
+          onFocus={(e) => { focusedRef.current = true; e.currentTarget.select() }}
+          onChange={(e) => setDraft(e.target.value.replace(/[^\d]/g, '').slice(0, 2))}
+          onBlur={() => { focusedRef.current = false; commitDraft() }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { e.preventDefault(); commitDraft(); e.currentTarget.blur() }
+            else if (e.key === 'Escape') { e.preventDefault(); setDraft(String(value)); e.currentTarget.blur() }
+          }}
+          className="w-5 text-xs font-medium text-right tabular-nums text-slate-700 bg-transparent outline-none rounded focus:bg-slate-100"
+        />
+        <span className="text-xs font-medium text-slate-500 pl-0.5">px</span>
+      </span>
+      {stepBtn(1, '+', t('annotate.image.border_thicker'))}
+    </span>
   )
 }
 

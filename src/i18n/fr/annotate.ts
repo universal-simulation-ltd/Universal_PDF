@@ -49,11 +49,16 @@ const annotate: Messages['annotate'] = {
 
   // AnnotationLayer — image pill (border around a placed picture or QR code)
   'image.border': 'Bordure',
-  'image.border_none': 'Aucune',
   'image.border_none_title': 'Sans bordure',
-  'image.border_width': 'Bordure de {width} px',
   'image.border_solid': 'Pleine',
   'image.border_dashed': 'Tirets',
+  'image.border_custom_title': 'Choisir l’épaisseur de la bordure',
+  'image.border_width_field': 'Épaisseur de la bordure en pixels',
+  'image.border_thinner': 'Bordure plus fine',
+  'image.border_thicker': 'Bordure plus épaisse',
+  'image.qr_background': 'Fond',
+  'image.qr_transparent': 'Transparent',
+  'image.qr_transparent_title': 'Fond transparent : redessine le code sans son carré blanc',
 
   // AnnotationLayer — line pill
   'line.stroke': 'Épaisseur',
