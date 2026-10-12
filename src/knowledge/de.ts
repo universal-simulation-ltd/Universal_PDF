@@ -126,20 +126,22 @@ Wenn Sie Ihre Unterschrift auf dem Handy zeichnen, gelangt die Zeichnung als kur
 
 ## Was die App sendet, auch wenn Ihr PDF bleibt, wo es ist
 
-Wenn Sie angemeldet sind, vermerkt die App für die Aktivitätsseite Ihres Kontos, dass sie geöffnet wurde. Auf der Website zählt sie außerdem beim ersten Öffnen jedes Tages eins zur anonymen Tageszählung der Öffnungen hinzu, gesendet nach Ihrem ersten Klick oder Tastendruck. Diese Zählung enthält nur den Namen der App und die Art der Plattform („web“ auf der Website): keine Kennung, kein Konto und nichts darüber, was Sie tun. Eine Markierung „heute schon gezählt“ bleibt auf Ihrem Gerät und wird nie gesendet. Die Telefon- und Desktop-Apps und die Browsererweiterung senden sie nicht. Nichts, was die App sendet, enthält irgendetwas über Ihre Dateien. Es gibt keine Werbung und kein Tracking durch Dritte.`,
+Auf der Website können Sie sich mit einer Universal ID anmelden; solange Sie angemeldet sind, vermerkt die App für die Aktivitätsseite Ihres Kontos, dass sie geöffnet wurde. Die Apps für Handy und Computer und die Browsererweiterung haben gar keine Anmeldung. Auf der Website zählt sie außerdem beim ersten Öffnen jedes Tages eins zur anonymen Tageszählung der Öffnungen hinzu, gesendet nach Ihrem ersten Klick oder Tastendruck. Diese Zählung enthält nur den Namen der App und die Art der Plattform („web“ auf der Website): keine Kennung, kein Konto und nichts darüber, was Sie tun. Eine Markierung „heute schon gezählt“ bleibt auf Ihrem Gerät und wird nie gesendet. Die Telefon- und Desktop-Apps und die Browsererweiterung senden sie nicht. Nichts, was die App sendet, enthält irgendetwas über Ihre Dateien. Es gibt keine Werbung und kein Tracking durch Dritte.`,
   },
   {
     id: 'signing-a-pdf',
     title: 'Ein PDF selbst unterschreiben',
     summary: 'Was eine in der App gesetzte Unterschrift ist und was nicht.',
     group: 'So funktioniert es',
-    body: `Sie können ein PDF unterschreiben, indem Sie Ihre Unterschrift mit Maus, Trackpad oder Finger zeichnen, sie auf Ihrem Handy zeichnen oder ein Bild Ihrer Unterschrift importieren. Unterschriften und Stempel lassen sich zur Wiederverwendung speichern, und Sie können Ihren Namen und das Datum darunter setzen.
+    body: `Sie können ein PDF unterschreiben, indem Sie Ihre Unterschrift mit Maus, Trackpad oder Finger zeichnen, sie auf Ihrem Handy zeichnen oder ein Bild Ihrer Unterschrift importieren. Unterschriften und Stempel lassen sich zur Wiederverwendung speichern, und Sie können Ihren Namen und das Datum darunter setzen. Für nichts davon brauchen Sie ein Konto.
 
 Eine gesetzte Unterschrift ist ein Bild, das auf der Seite platziert wird. Wenn Sie das PDF herunterladen, wird dieses Bild wie jede andere Ergänzung in die Seite übernommen. All das geschieht auf Ihrem Gerät.
 
 ## Unterschriftsfelder
 
-Wenn Sie ein Dokument für jemand anderen vorbereiten, können Sie ein Feld „Hier unterschreiben“ auf die Seite zeichnen. Sie können für ein Feld auch festlegen, dass die Unterschrift von Hand gezeichnet sein muss und kein hochgeladenes Bild sein darf. Eine auf dem Handy gezeichnete Unterschrift gilt ebenfalls als von Hand gezeichnet.
+Wenn Sie ein Dokument für jemand anderen vorbereiten, können Sie ein „Hier unterschreiben“-Feld auf die Seite setzen und dazu Name und Datum anfordern. Sie können auch verlangen, dass ein Feld von Hand unterschrieben wird statt mit einem hochgeladenen Bild. Zeichnen auf dem Handy zählt als Unterschrift von Hand.
+
+Wenn Sie das PDF speichern oder teilen, wird jedes Feld, das Sie nicht unterschrieben haben, zu einem echten Signaturfeld, wie es andere PDF-Apps verstehen. Die Person, an die Sie es schicken, kann es in Universal PDF, Adobe Acrobat oder Reader oder in Apple Vorschau unterschreiben. Öffnet Universal PDF ein PDF mit einem leeren Signaturfeld, von uns oder aus einer anderen App, zeigt es dieses als Feld an, das man zum Unterschreiben antippt. Siehe „Ein PDF zum Unterschreiben senden“.
 
 ## Was diese Art von Unterschrift ist
 
@@ -149,7 +151,7 @@ Sie ist das, was man üblicherweise eine **elektronische Unterschrift** nennt: e
 
 Sie ist keine **digitale Signatur** im technischen Sinn. Eine digitale Signatur versiegelt die Datei kryptografisch mit einem Zertifikat, das oft von einer vertrauenswürdigen Stelle ausgestellt wird, sodass die PDF-App jede spätere Änderung erkennen kann. Universal PDF versieht eine Datei, die Sie selbst unterschreiben, nicht mit einem solchen Siegel.
 
-Das ist wichtig, denn das Bild einer Unterschrift auf einem PDF beweist für sich genommen weder, wer sie dort angebracht hat, noch, dass das Dokument seitdem nicht verändert wurde. Wenn Sie festhalten müssen, wer wann unterschrieben hat, nutzen Sie **Zum Unterschreiben senden**. Dabei werden serverseitig ein Aktivitätsprotokoll und ein Fingerabdruck jeder unterschriebenen Version gespeichert. Die nächsten Artikel erklären, wie das funktioniert.
+Das ist wichtig, weil das Bild einer Unterschrift auf einem PDF für sich allein nicht beweist, wer sie gesetzt hat oder dass das Dokument seitdem nicht verändert wurde. Wenn Sie einen Nachweis brauchen, wer wann unterschrieben hat, nutzen Sie eine **zertifizierte Unterschrift** auf der Website von Universal PDF. Sie führt ein Aktivitätsprotokoll auf dem Server und einen Fingerabdruck jeder unterschriebenen Version. Die nächsten Artikel erklären, wie.
 
 ## Ein Hinweis zur Rechtslage
 
@@ -157,33 +159,39 @@ Dies ist keine Rechtsberatung. Ob eine elektronische Unterschrift ausreicht, hä
   },
   {
     id: 'send-to-sign',
-    title: 'So funktioniert „Zum Unterschreiben senden“',
-    summary: 'Jemand anderen um eine Unterschrift bitten, Schritt für Schritt.',
+    title: 'Ein PDF zum Unterschreiben senden',
+    summary: 'Teilen Sie einfach die Datei oder holen Sie sich auf der Website eine zertifizierte Unterschrift.',
     group: 'So funktioniert es',
-    body: `Mit „Zum Unterschreiben senden“ können Sie eine andere Person bitten, ein PDF online zu unterschreiben, und Sie beide erhalten einen Nachweis darüber, was geschehen ist. Sie müssen mit einer Universal ID angemeldet sein, und Ihre E-Mail-Adresse muss bestätigt sein, weil die Anfrage in Ihrem Namen verschickt wird.
+    body: `Es gibt zwei Wege, jemanden ein PDF unterschreiben zu lassen. Der einfache Weg funktioniert überall, braucht kein Konto und lädt nichts hoch. Der zertifizierte Weg, nur auf der Website, fügt einen Nachweis hinzu, wer wann unterschrieben hat.
 
-## Die Schritte
+## Zum Unterschreiben senden
 
-1. **Markieren, wo unterschrieben wird.** Fügen Sie dem Dokument mindestens ein Feld „Hier unterschreiben“ hinzu, damit die andere Person weiß, wohin ihre Unterschrift gehört.
-2. **Online speichern.** Das fertige PDF, in das alle Ihre Ergänzungen übernommen wurden, wird online unter Ihrer Universal ID gespeichert. Das ist mit einer Universal ID kostenlos.
-3. **Festlegen, wer es öffnen darf.** Entweder „Jede Person mit dem Link“ oder „Nur die Person, an die du es adressierst“. Was diese Wahl ändert, lesen Sie unter „Wie sicher ist Zum Unterschreiben senden?“.
-4. **Absenden.** Kopieren Sie den Link und schicken Sie ihn selbst, oder geben Sie die E-Mail-Adresse der Person ein, und die App verschickt ihn für Sie. Bei einem offenen Link enthält die E-Mail das PDF als Anhang. Bei einem geschützten Link nicht, weil der Anhang den Schutz umgehen würde.
+1. **Markieren Sie, wo unterschrieben wird.** Öffnen Sie **Unterschreiben**, wählen Sie **Anfrage** und setzen Sie ein „Hier unterschreiben“-Feld an jede Stelle, an die eine Unterschrift gehört. Haken Sie vorher **Name anfordern** oder **Datum anfordern** an, wenn Sie das möchten.
+2. **Unterschreiben Sie Ihren Teil, wenn Sie auch unterschreiben.** Tippen Sie Ihr Feld an und unterschreiben Sie es vor dem Senden.
+3. **Senden Sie es.** Wählen Sie **Zum Unterschreiben senden**. Auf dem Handy öffnet sich das Teilen-Menü, sodass Sie das PDF per Nachricht, per E-Mail oder mit jeder App verschicken können. Auf dem Computer wird das PDF gespeichert oder heruntergeladen, und Ihr Browser bietet unter Umständen auch das Teilen an.
 
-## Zwei Unterzeichner, beliebige Reihenfolge
+Jedes Feld, das Sie leer gelassen haben, wird zu einem echten Signaturfeld. Wer die Datei bekommt, kann sie in Universal PDF, in Adobe Acrobat oder Reader oder in Apple Vorschau oder Dateien unterschreiben und auf demselben Weg zurückschicken. Ein Konto ist dafür nicht nötig, und nichts läuft über uns.
 
-Jede Anfrage hat zwei Unterzeichner: Sie und die Person, an die Sie sie gesendet haben. Jeder von Ihnen erhält einen eigenen Link, und Sie können in beliebiger Reihenfolge unterschreiben. Wer als Zweites unterschreibt, arbeitet mit der Kopie, die bereits die erste Unterschrift trägt.
+## Zertifizierte Unterschrift (nur auf der Website)
 
-## Was passiert, wenn jemand unterschreibt
+Wenn Sie einen Nachweis brauchen, wer wann unterschrieben hat, bietet die Website von Universal PDF eine zertifizierte Unterschrift. Sie brauchen dafür eine kostenlose Universal ID, die unterzeichnende Person nicht. Ihr PDF wird online gespeichert, die unterzeichnende Person erhält einen Link, und Sie beide erhalten ein Zertifikat mit Aktivitätsprotokoll. Die Apps für Handy und Computer bieten sie nicht an; die Desktop-App verweist auf die Website.
 
-Die unterzeichnende Person öffnet das Dokument im Browser, unterschreibt und sendet es ab. Die unterschriebene Kopie wird als neue Version gespeichert; frühere Versionen bleiben erhalten und werden nicht überschrieben. Jeder Schritt wird in einem Aktivitätsprotokoll festgehalten. Wenn Sie beide unterschrieben haben, ist die Anfrage abgeschlossen, und Sie beide erhalten eine E-Mail mit einem Link zum Zertifikat.
+1. **Markieren Sie, wo unterschrieben wird**, wie oben.
+2. **Wählen Sie Zum Unterschreiben senden und dann Zertifizierte Unterschrift.**
+3. **Wählen Sie, wer es öffnen kann.** Entweder jeder mit dem Link oder nur die Person, an die Sie es adressieren. Was diese Wahl ändert, steht in „Wie sicher ist eine zertifizierte Unterschrift?“.
+4. **Senden Sie es.** Kopieren Sie den Link und schicken Sie ihn selbst, oder geben Sie die E-Mail-Adresse ein, und wir schicken ihn für Sie. Bei einem offenen Link enthält die E-Mail das PDF als Anhang. Bei einem geschützten Link nicht, weil der Anhang den Schutz umgehen würde.
+
+## Zwei Unterzeichnende, beliebige Reihenfolge
+
+Eine zertifizierte Anfrage hat zwei Unterzeichnende: Sie und die Person, an die Sie sie geschickt haben. Jede Seite erhält einen eigenen Link, und Sie können in beliebiger Reihenfolge unterschreiben. Wer als Zweites unterschreibt, arbeitet an der Kopie, die schon die erste Unterschrift trägt. Wenn beide unterschrieben haben, ist die Anfrage abgeschlossen, und Sie beide erhalten eine E-Mail mit einem Link zum Zertifikat.
 
 ## Das Zertifikat
 
-Jede Anfrage hat eine Zertifikatsseite. Sie zeigt das Dokument, wer die Unterzeichner waren (anhand ihrer E-Mail-Adresse), ob sie jeweils unterschrieben haben, und das Aktivitätsprotokoll: wann das Dokument geöffnet wurde, was hinzugefügt wurde, aus welchem Land die Anfrage kam und einen Fingerabdruck des Dokuments bei jedem Schritt. Solange die gespeicherte Kopie existiert, können Sie dort das endgültige unterschriebene PDF herunterladen.
+Jede zertifizierte Anfrage hat eine Zertifikatsseite. Sie zeigt das Dokument, die E-Mail-Adresse jeder unterzeichnenden Person, ob sie unterschrieben hat, und das Aktivitätsprotokoll: wann das Dokument geöffnet wurde, was hinzugefügt wurde, aus welchem Land die Anfrage kam und einen Fingerabdruck des Dokuments bei jedem Schritt. Dort können Sie das endgültige unterschriebene PDF herunterladen, solange die gespeicherte Kopie existiert. Eine abgeschlossene Anfrage wird 7 Jahre aufbewahrt.
 
 ## Grenzen
 
-Links zum Unterschreiben laufen nach 30 Tagen ab. Gespeicherte Dateien dürfen bis zu 50 MB groß sein, und eine Datei, die als E-Mail-Anhang verschickt wird, muss kleiner als 30 MB sein.`,
+Links zum Unterschreiben laufen nach 30 Tagen ab. Gespeicherte Dateien dürfen bis zu 50 MB groß sein, und eine als Anhang verschickte Datei muss kleiner als 30 MB sein.`,
   },
   {
     id: 'page-scrolling',
@@ -214,10 +222,10 @@ Die Einstellung wird im Speicher Ihres Browsers gespeichert, nur auf diesem Ger�
   },
   {
     id: 'send-to-sign-security',
-    title: 'Wie sicher ist Zum Unterschreiben senden?',
+    title: 'Wie sicher ist eine zertifizierte Unterschrift?',
     summary: 'Was verschlüsselt ist, was unser Server sehen kann und wie das Prüfprotokoll funktioniert.',
     group: 'Datenschutz und Sicherheit',
-    body: `„Zum Unterschreiben senden“ ist die einzige Funktion, bei der Ihr Dokument Ihr Gerät verlassen muss, weil jemand anderes es erhalten soll. Hier steht genau, was das bedeutet.
+    body: `Die zertifizierte Unterschrift auf der Website von Universal PDF ist die einzige Funktion, bei der Ihr Dokument Ihr Gerät verlassen muss: Es wird gespeichert, damit die unterzeichnende Person es öffnen kann und damit ein Nachweis bleibt. Hier steht genau, was das bedeutet. Ein PDF ohne sie zum Unterschreiben zu senden lädt nichts hoch; die Datei geht nur dorthin, wohin Sie sie schicken.
 
 ## Verschlüsselung, einfach erklärt
 

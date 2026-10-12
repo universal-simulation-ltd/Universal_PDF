@@ -1,38 +1,10 @@
 {
-  "_about": "Play Data safety answers. Build the importable CSV with: node Docs_UNI_SIM/store-kit/data-safety.mjs Universal_Apps/Universal_PDF/store-assets/data-safety.json Universal_Apps/Universal_PDF/store-assets/out/play/data-safety.csv. Written 2026-10-10 from Docs_UNI_SIM/store-listings/universal-pdf.md (Data safety, checked against the code 2026-09-14): opening, filling, signing, marking up and converting a PDF happen on the device and collect nothing; sign-in (@unisim/sdk) is optional (password, emailed code, or Apple/Google/Microsoft); Send to sign uploads the PDF and the signer's email. Sending a document to a signer is a transfer the user starts, not sharing. The suite user count (install id) was retired in @unisim/sdk 0.187.0, and the anonymous daily open count that replaced it is OFF in the phone app (src/main.tsx `openCount: !isDesktop && !isNativeShell()`; Play and App Store figures count installs), so the app itself sends no device id. The Android Scan button uses Google's ML Kit document scanner (play-services-mlkit-document-scanner, DocumentScannerPlugin.java); per https://developers.google.com/ml-kit/android-data-disclosure (checked 2026-10-12) every ML Kit Android SDK sends Google device info (make, model, OS), app info (package, version), a per-installation id, performance metrics, API config, event types and error codes 'for diagnostics and usage analytics', HTTPS, not transferred to third parties. Declared as Device or other IDs + Diagnostics, optional (only when the user taps Scan), Analytics; collected, not shared (Google processes it as the SDK provider). The iOS scanner is VisionKit and sends nothing, so the App Store label is unchanged. App interactions stay, optional: one session.opened event per launch while signed in (<UsageTracker />), for Analytics. Re-import this at the next Play release. Mirrors ios/App/App/PrivacyInfo.xcprivacy.",
+  "_about": "Play Data safety answers. Build the importable CSV with: node Docs_UNI_SIM/store-kit/data-safety.mjs Universal_Apps/Universal_PDF/store-assets/data-safety.json Universal_Apps/Universal_PDF/store-assets/out/play/data-safety.csv. Rewritten 2026-10-12 for account-free signing (James): the phone app has NO sign-in (src/main.tsx `noAccounts: accountsOff()`, src/lib/accounts.ts), so no account creation, no email, no user id and no session.opened event (the SDK's <UsageTracker /> needs a signed-in account). It uploads no files: signing and 'Send for signature' happen on the device, each box is written as a real PDF signature field and the file leaves through the system share sheet to wherever the user sends it; the certified-signature route (upload, emailed link, certificate) is website-only and not in the phone app. No usage count: the SDK's anonymous daily open count is off in the shell (`openCount: !isDesktop && !isNativeShell()`), and the old suite user count (install id) was retired in @unisim/sdk 0.187.0. The sign-on-another-phone QR handoff is an ephemeral Realtime broadcast with a PIN, stored nowhere. What remains is Google's: the Android Scan button uses Google's ML Kit document scanner (play-services-mlkit-document-scanner, DocumentScannerPlugin.java); per https://developers.google.com/ml-kit/android-data-disclosure (checked 2026-10-12) every ML Kit Android SDK sends Google device info (make, model, OS), app info (package, version), a per-installation id, performance metrics, API config, event types and error codes 'for diagnostics and usage analytics', HTTPS, not transferred to third parties. Declared as Device or other IDs + Diagnostics, optional (only when the user taps Scan), Analytics; collected, not shared (Google processes it as the SDK provider). The iOS scanner is VisionKit and sends nothing, so the App Store label is 'Data Not Collected'. Re-import this at the next Play release. Mirrors ios/App/App/PrivacyInfo.xcprivacy.",
   "accountCreation": [
-    "PSL_ACM_USER_ID_PASSWORD",
-    "PSL_ACM_USER_ID_OTHER_AUTH",
-    "PSL_ACM_OAUTH"
+    "PSL_ACM_NONE"
   ],
   "deletionUrl": "https://www.unisim.co.uk/privacy#retention",
   "types": {
-    "PSL_EMAIL": {
-      "required": false,
-      "purposes": [
-        "PSL_APP_FUNCTIONALITY",
-        "PSL_ACCOUNT_MANAGEMENT"
-      ]
-    },
-    "PSL_USER_ACCOUNT": {
-      "required": false,
-      "purposes": [
-        "PSL_APP_FUNCTIONALITY",
-        "PSL_ACCOUNT_MANAGEMENT"
-      ]
-    },
-    "PSL_FILES_AND_DOCS": {
-      "required": false,
-      "purposes": [
-        "PSL_APP_FUNCTIONALITY"
-      ]
-    },
-    "PSL_USER_INTERACTION": {
-      "required": false,
-      "purposes": [
-        "PSL_ANALYTICS"
-      ]
-    },
     "PSL_PERFORMANCE_DIAGNOSTICS": {
       "required": false,
       "purposes": [

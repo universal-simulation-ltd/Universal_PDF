@@ -91,6 +91,7 @@ const CLOSED_DIALOGS = {
   presentOpen: false,
   hostedStoreOpen: false,
   sendToSignOpen: false,
+  sendForSignatureOpen: false,
   ocrOpen: false,
   mergeOpen: false,
   convertOpen: false,

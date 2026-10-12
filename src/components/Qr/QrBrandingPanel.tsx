@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import { translateNav, useFileDrop } from '@unisim/sdk'
+import { translateNav, useFileDrop, useUniversal } from '@unisim/sdk'
 import { useT } from '../../i18n'
 
 // The one control that decides whose brand a code carries.
@@ -52,6 +52,7 @@ export default function QrBrandingPanel({
 }: QrBrandingPanelProps) {
   const panelId = useId()
   const t = useT()
+  const { noAccounts } = useUniversal()
   const drop = useFileDrop({
     onFiles: (files) => readLogo(files[0]),
     accept: 'image/*,.svg',
@@ -197,7 +198,9 @@ export default function QrBrandingPanel({
             </button>
           )}
 
-          {!orgLogo && !orgColor && (
+          {/* "Sign in…" only where there is a sign-in: not in the phone,
+              desktop or extension builds (noAccounts). */}
+          {!orgLogo && !orgColor && !noAccounts && (
             <p className="text-xs text-slate-400">
               {t('tools.qr.sign_in_hint', { company: translateNav(t.lang, 'company.label') })}
             </p>

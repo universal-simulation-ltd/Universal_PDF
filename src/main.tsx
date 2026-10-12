@@ -13,6 +13,7 @@ import { UsageTracker } from '@unisim/sdk'
 import ErrorBoundary from './components/ErrorBoundary'
 import { installPauseAnimationsOnBlur } from './lib/pauseAnimationsOnBlur'
 import { isNativeShell } from './lib/nativeOpen'
+import { accountsOff } from './lib/accounts'
 import { usePdfStore } from './stores/pdfStore'
 import { useAnnotationStore } from './stores/annotationStore'
 import { useSignatureStore } from './stores/signatureStore'
@@ -64,7 +65,15 @@ const universalConfig = {
   // so `isDesktop` covers all three; `isNativeShell()` stays as a second guard
   // for the phone shell.
   openCount: !isDesktop && !isNativeShell(),
+  // No sign-in at all in the phone apps, the desktop app or the extension
+  // (James, 2026-10-12): signing and sending for signature need no account
+  // there and upload nothing. `noAccounts` drops every account row and keeps
+  // the app signed out of any suite session the device already holds (SDK
+  // 0.187.0). The website keeps an optional Universal ID for the certified
+  // signature and the saved main signature. See lib/accounts.ts.
+  noAccounts: accountsOff(),
 }
+const noAccounts = universalConfig.noAccounts
 
 // `?sign=<token>` is the phone-side of the sign-on-mobile handoff (opened by
 // scanning the QR in the signature pad) — render just the signing page.
@@ -74,8 +83,10 @@ const universalConfig = {
 // document (preview + download + timestamped provenance log).
 const params = new URLSearchParams(window.location.search)
 const signToken = params.get('sign')
-const signDocToken = params.get('signdoc')
-const certId = params.get('cert')
+// The certified route's pages are the website's. A shell build never gets
+// these links (they are web addresses) and has no server path for them.
+const signDocToken = noAccounts ? null : params.get('signdoc')
+const certId = noAccounts ? null : params.get('cert')
 
 // Endless animations finish their loop and rest while the window is not
 // focused — see lib/pauseAnimationsOnBlur.
@@ -90,7 +101,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           {signToken ? <SignMobilePage token={signToken} />
             : signDocToken ? <SignRequestPage token={signDocToken} />
             : certId ? <SignCertificatePage certId={certId} />
-            : <><App /><SignQueueSync /></>}
+            : <><App />{!noAccounts && <SignQueueSync />}</>}
         </I18nRoot>
       </UniversalProvider>
     </ErrorBoundary>

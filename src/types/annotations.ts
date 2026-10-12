@@ -274,6 +274,17 @@ export type SignatureFieldAnnotation = Base & {
   // they're still click-to-sign. A `.unipdf` backup restores the original
   // editable (unlocked) annotations instead, keeping them movable.
   locked?: boolean
+  // Set for a box read from a real PDF signature field (an AcroForm /FT /Sig
+  // field — what Universal PDF writes on export since 2026-10-12, and what
+  // Acrobat and other apps make). The export removes that field and either
+  // bakes the signature or writes a fresh field in its place, so the original
+  // is never left beside the box.
+  fieldName?: string
+  // Where such a field's look comes from. 'ours': written by Universal PDF,
+  // whose own appearance draws the outline and caption (pdf.js paints it), so
+  // the overlay stays invisible, like a legacy locked box. 'other': another
+  // app's field, usually blank, so the overlay draws the "Sign here" box.
+  fieldLook?: 'ours' | 'other'
   // Populated once signed. `src` is a PNG data URL already composited with the
   // name/date labels; width/height are its logical (unscaled) pixel size, used
   // to preserve aspect when fitting it inside the box.

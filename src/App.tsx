@@ -62,6 +62,7 @@ import { CONTAINER } from './lib/layout'
 import { isConvertibleName } from './lib/officeFiles'
 import DocumentTabs from './components/Tabs/DocumentTabs'
 import { isNativeShell, setStatusBarOverDarkChrome, subscribeNativeOpenPdf } from './lib/nativeOpen'
+import { accountsOff } from './lib/accounts'
 import { installExternalLinkHandler } from './lib/externalLinks'
 import { getT, useT } from './i18n'
 import { KNOWLEDGE_BASE } from './knowledge'
@@ -90,6 +91,7 @@ const StampPicker = lazy(() => import('./components/Signature/StampPicker'))
 const LivePreview = lazy(() => import('./components/Preview/LivePreview'))
 const PresentMode = lazy(() => import('./components/Present/PresentMode'))
 const SendToSignDialog = lazy(() => import('./components/SendToSignDialog'))
+const SendForSignatureDialog = lazy(() => import('./components/Signature/SendForSignatureDialog'))
 const AdvancedExportDialog = lazy(() => import('./components/Export/AdvancedExportDialog'))
 const MetadataDialog = lazy(() => import('./components/Metadata/MetadataDialog'))
 const CompareDialog = lazy(() => import('./components/Compare/CompareDialog'))
@@ -138,6 +140,7 @@ export default function App() {
   const previewMounted = useOpenedOnce(usePdfStore((s) => s.previewOpen))
   const presentMounted = useOpenedOnce(usePdfStore((s) => s.presentOpen))
   const sendToSignMounted = useOpenedOnce(usePdfStore((s) => s.sendToSignOpen))
+  const sendForSignatureMounted = useOpenedOnce(usePdfStore((s) => s.sendForSignatureOpen))
   const qrMounted = useOpenedOnce(usePdfStore((s) => s.qrOpen))
   const setMetadataOpen = usePdfStore((s) => s.setMetadataOpen)
   const compareOpen = usePdfStore((s) => s.compareOpen)
@@ -791,6 +794,9 @@ export default function App() {
 
       <PageNavigator />
       <SignaturePad />
+      {/* The main signature saved in your Universal ID — the website only.
+          With no accounts (phone, desktop, extension) it reads nothing and
+          only takes away an entry an older, signed-in version left behind. */}
       <MainSignatureSync />
       <SignatureImport />
       <Suspense fallback={null}>
@@ -800,7 +806,9 @@ export default function App() {
       </Suspense>
       <HostedStoreDialog />
       <Suspense fallback={null}>
-        {sendToSignMounted && <SendToSignDialog />}
+        {sendForSignatureMounted && <SendForSignatureDialog />}
+        {/* The certified route needs an account and an upload: website only. */}
+        {sendToSignMounted && !accountsOff() && <SendToSignDialog />}
         {qrMounted && <QrDialog />}
       </Suspense>
       <Suspense fallback={null}>

@@ -76,7 +76,7 @@ const annotate: Messages['annotate'] = {
   'selection.delete_many_aria_other': 'Excluir {count} objetos selecionados',
 
   // AnnotationLayer — Send to sign on a selected "Sign here" box
-  'sigfield.send_title': 'Enviar para assinatura — envie este documento por e-mail como uma solicitação de assinatura',
+  'sigfield.send_title': 'Enviar para assinatura — compartilhe este PDF para alguém assinar',
   'sigfield.send_aria': 'Enviar para assinatura',
 
   // AnnotationLayer — Fill / Redact toggles on a box or circle

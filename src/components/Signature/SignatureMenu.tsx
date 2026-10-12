@@ -3,10 +3,10 @@ import { useVaultStore } from '../../lib/signatureVault'
 import { unlockSignatures } from '../../lib/signatureLock'
 import { useShortcutRequest } from '../../stores/shortcutStore'
 import { createPortal } from 'react-dom'
-import { useUniversal } from '@unisim/sdk'
 import { useSignatureStore } from '../../stores/signatureStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { usePdfStore } from '../../stores/pdfStore'
+import { certifiedSignatureHere } from '../../lib/accounts'
 import { useT } from '../../i18n'
 import { ACTIVE_CHIP, ActiveStroke, MobileToolFace } from '../Toolbar/toolLook'
 import { useDefaultView } from '@unisim/sdk'
@@ -135,12 +135,11 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
 
   const tool = useAnnotationStore((s) => s.tool)
   const setTool = useAnnotationStore((s) => s.setTool)
+  const setSendForSignatureOpen = usePdfStore((s) => s.setSendForSignatureOpen)
   const setSendToSignOpen = usePdfStore((s) => s.setSendToSignOpen)
-  // Send to sign is the one thing on this menu that needs a Universal ID, so
-  // the line under it says so BEFORE the click — signed out, it no longer
-  // reads as just another local tool until the dialog stops you.
-  const { session } = useUniversal()
-  const signedIn = !!session?.user && session.user.is_anonymous !== true
+  // The certified route (upload, emailed link, certificate) is the website's
+  // only; every other build sends for signature with no account at all.
+  const certified = certifiedSignatureHere()
 
   useEffect(() => {
     if (!open) return
@@ -293,25 +292,34 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
           <p className="text-xs text-slate-400">
             {t('sign.menu_drag_hint')}
           </p>
-          {/* Hand the document to someone else instead of signing it here:
-              stores it online against a Universal ID and mints a signing link
-              (its own dialog, which gates on there being a box to sign). Lives
-              on this tab because it is the other half of "request a signature"
-              — it used to sit in the Export modal, which was the wrong home. */}
+          {/* Hand the document to someone else to sign. The PLAIN route is
+              the default on every platform: the PDF is shared as a file with
+              each box as a real signature field — no account, no upload
+              (SendForSignatureDialog). The certified route (stored copy,
+              emailed link, certificate) is the optional upgrade beneath it,
+              on the website only. */}
           <div className="border-t border-slate-100 pt-3">
             <button
-              onClick={() => { setSendToSignOpen(true); setOpen(false) }}
+              onClick={() => { setSendForSignatureOpen(true); setOpen(false) }}
               className="w-full px-3 py-2.5 rounded-md border border-orange-300 bg-orange-50 hover:bg-orange-100 text-orange-800 text-sm font-medium flex items-center justify-center gap-2"
             >
               <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M3 10.5c3-4.5 5-4.5 6 0s3 4.5 5-1.5" />
                 <path d="M13 4l3 3-6.5 6.5L6 14l.5-3.5L13 4z" />
               </svg>
-              {t('sign.send_to_sign')}
+              {t('sign.send_for_signature')}
             </button>
             <p className="mt-1.5 text-xs text-slate-400">
-              {signedIn ? t('sign.menu_send_hint') : t('sign.menu_send_hint_signed_out')}
+              {t('sign.menu_send_plain_hint')}
             </p>
+            {certified && (
+              <button
+                onClick={() => { setSendToSignOpen(true); setOpen(false) }}
+                className="mt-2 text-xs font-medium text-orange-700 hover:text-orange-800 underline-offset-2 hover:underline"
+              >
+                {t('sign.sfs_certified_title')}
+              </button>
+            )}
           </div>
         </div>
       ) : (

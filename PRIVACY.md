@@ -25,6 +25,7 @@ of that file, and everything after that happens on your machine:
 | Scanning a page with the camera (phone apps) | your phone, via its own document scanner — Apple's VisionKit on iOS, Google's ML Kit (part of Play services) on Android | [`ios/App/App/DocumentScanner.swift`](ios/App/App/DocumentScanner.swift), [`android/app/src/main/java/uk/co/unisim/pdf/DocumentScannerPlugin.java`](android/app/src/main/java/uk/co/unisim/pdf/DocumentScannerPlugin.java) |
 | Straightening a photo of a page (Photo to PDF) | your browser | [`src/lib/scan.ts`](src/lib/scan.ts) |
 | Saving the finished PDF | your browser's download | [`src/lib/saveDocument.ts`](src/lib/saveDocument.ts) |
+| Sending it for signature: each "Sign here" box becomes a real PDF signature field, and the file goes out through your own share sheet, download or Save dialog | your device | [`src/components/Signature/SendForSignatureDialog.tsx`](src/components/Signature/SendForSignatureDialog.tsx), `addSignatureFields` in [`src/lib/export.ts`](src/lib/export.ts) |
 
 **Recent files stay on your device.** The app remembers what you had open using
 IndexedDB, which is storage inside your own browser — see
@@ -33,20 +34,37 @@ it. Nobody else can read it, including us.
 
 ---
 
-## The one way a PDF *can* leave — a button you press
+## The one way a PDF *can* leave — a button you press, on the website
 
 This is the part a privacy page usually leaves out, and it is the reason this
 one exists.
 
-### "Send to sign"
+### "Send for signature" sends nothing to us
 
-Asking someone else to sign a document means sending them the document. The app
-emails it, with the PDF attached, and keeps a copy so the signing link works
-when they open it. It is free, and it needs a Universal ID.
+Asking someone else to sign starts with **Send for signature**, on every
+platform. It does not upload anything. Each "Sign here" box is written into the
+PDF as a real signature field, and the file goes wherever *you* send it — your
+phone's share sheet, a download, a Save dialog. The person you send it to can
+sign it in Universal PDF, Adobe Acrobat or Reader, or Apple Preview, with no
+account. We never see it.
+
+### "Certified signature" (website only)
+
+If you want proof of who signed and when, the **website** offers a certified
+signature as an optional extra. That one does leave your device: the app emails
+the signer a link (with the PDF attached on an open link) and keeps a copy so
+the link works, and both of you get a certificate with an audit trail. It is
+free, and it needs a Universal ID — for you, the sender, only; the signer
+signs from the link with no account. A completed request and its record are
+kept for 7 years.
+
+**The iPhone, iPad and Android apps, the desktop app and the browser extension
+don't offer it at all** — see `certifiedSignatureHere` in
+[`src/lib/accounts.ts`](src/lib/accounts.ts).
 
 - The code: [`src/lib/signRequestClient.ts`](src/lib/signRequestClient.ts),
   and the stored copy in [`src/lib/hostedStore.ts`](src/lib/hostedStore.ts)
-- The dialog that asks you: [`src/components/SendToSignDialog.tsx`](src/components/SendToSignDialog.tsx)
+- The dialog that asks you (website only): [`src/components/SendToSignDialog.tsx`](src/components/SendToSignDialog.tsx)
 - Revoking a request deletes the stored copy and any signed copy.
 
 ⚠️ **The stored copy is ordinary cloud storage, not end-to-end encryption.**
@@ -73,15 +91,20 @@ Being honest about this matters, because if you open your browser's Network tab
 you will see requests, and a privacy page that pretended otherwise would look
 like a lie.
 
-- **Signing in.** Only if you choose to. A Universal ID gets you the suite's
-  shared account and settings, and Send to sign. You can delete it from inside
-  the app: **Delete my account** at the foot of Global Tuning, in the profile
-  menu.
-  That deletes it in every UNI·SIM app, not only this one.
-- **"You opened the app".** When you are signed in, the app records one event
-  saying the app was opened, so your account's activity page is accurate. It
-  does not include anything about your file — not its name, not its size.
-  See [`src/UsageTracker.tsx`](src/UsageTracker.tsx).
+- **Signing in — on the website only, and only if you choose to.** A Universal
+  ID gets you the suite's shared account and settings, the certified
+  signature, and the main signature saved in your account. You can delete it
+  from inside the website: **Delete my account** at the foot of Global Tuning,
+  in the profile menu. That deletes it in every UNI·SIM app, not only this one.
+  **The phone apps, the desktop app and the browser extension have no sign-in
+  at all:** they run signed out even if the device is signed in to UNI·SIM
+  elsewhere, and make no account requests. See `noAccounts` in
+  [`src/main.tsx`](src/main.tsx) and [`src/lib/accounts.ts`](src/lib/accounts.ts).
+- **"You opened the app".** When you are signed in on the website, the app
+  records one event saying the app was opened, so your account's activity page
+  is accurate. It does not include anything about your file — not its name,
+  not its size. With no sign-in, the other builds never send it. See
+  `UsageTracker` in `@unisim/sdk`.
 - **An anonymous daily open count.** Once a day, the first time you open the
   app (after your first click or key press), it adds one to that day's total
   for this app. It sends the app's name and the kind of platform ("web") and
@@ -95,6 +118,11 @@ like a lie.
   [`src/main.tsx`](src/main.tsx). (This replaced the old "this app is in use"
   signal, a random install ID sent every 45 seconds, which `@unisim/sdk`
   0.187.0 retired: no install ID is sent or kept any more.)
+- **Signing on your phone.** If you choose to draw your signature on your
+  phone (the QR code in the signature pad), the drawing travels from the phone
+  to the app as a short-lived message through our server. It is not stored, and
+  the app accepts it only with the PIN it shows you. No account is involved.
+  See [`src/lib/mobileSign.ts`](src/lib/mobileSign.ts).
 - **Google's scanner diagnostics (Android only, only when you scan).** The
   Scan button on Android uses Google's ML Kit document scanner, which comes
   with Google Play services. Your scanned pages stay on your phone, but Google

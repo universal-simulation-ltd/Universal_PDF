@@ -1,8 +1,9 @@
 import {
   PDFDocument, StandardFonts, LineCapStyle, degrees, PDFName, PDFHexString, PDFString, PDFArray, PDFDict, PDFStream,
   PDFTextField, PDFCheckBox, PDFRadioGroup, PDFDropdown, PDFOptionList,
-  pushGraphicsState, popGraphicsState, concatTransformationMatrix,
-  type PDFFont, type PDFImage, type PDFPage
+  PDFAcroSignature, PDFRef, PDFNumber,
+  pushGraphicsState, popGraphicsState, concatTransformationMatrix, drawRectangle, drawText,
+  type PDFFont, type PDFImage, type PDFPage, type PDFAcroField
 } from 'pdf-lib'
 import type { Annotation, RedactAnnotation, SignatureFieldAnnotation } from '../types/annotations'
 import type { FormFieldValue } from '../stores/formStore'
@@ -18,16 +19,16 @@ import { getT } from '../i18n'
 import { loadFallbackFont } from './fallbackFont'
 import { uprightJpeg } from './jpegOrientation'
 
-// Custom PDF catalog key carrying the unsigned signature-request boxes, so a
-// reopened or shared file's boxes stay interactive (movable / click-to-sign) in
-// Universal PDF. Signed fields are baked into the page (visible in any viewer)
-// and are deliberately NOT embedded — re-editing a finished signature isn't the
-// goal, and embedding would double it against the baked copy.
+// ⚠️ LEGACY. Exports before 2026-10-12 carried the unsigned "Sign here" boxes
+// as JSON under this custom catalog key, with the outline and caption baked
+// into the page — so only Universal PDF could find them. It is still READ, so
+// those files keep their boxes, but no longer written: a box is now a real
+// PDF signature field (see `addSignatureFields`), which Acrobat, Preview and
+// any other reader can sign too.
 const SIG_FIELDS_KEY = 'UPDFSigFields'
 
-// The minimal, scale-independent shape stored per embedded field. Coordinates
-// are PDF points (the annotation store's native space — see EXPORT_SCALE = 1),
-// so they map straight back onto the same page at any zoom on reopen.
+// The legacy key's per-box shape. Coordinates are PDF points (the annotation
+// store's native space — see EXPORT_SCALE = 1).
 type EmbeddedSigField = Pick<
   SignatureFieldAnnotation,
   | 'id'
@@ -40,6 +41,13 @@ type EmbeddedSigField = Pick<
   | 'requireDate'
   | 'requireLive'
 >
+
+// Private key on a signature field Universal PDF wrote: which extra lines the
+// box asks for (/Name /Date /Live; an empty array asks for none). Readers that
+// do not know it ignore it, as the PDF standard requires. Its PRESENCE is also
+// how a reopened field is known to be ours, with its outline and caption
+// already in its own appearance — see `fromField` on the annotation.
+const SIG_REQUIRE_KEY = 'UPDFRequire'
 
 // Rotate (x, y) around (cx, cy) by `rad` radians.
 function rotatePoint(x: number, y: number, cx: number, cy: number, rad: number): [number, number] {
@@ -652,79 +660,49 @@ async function drawAnnotations(
             break
           }
           case 'sigfield': {
-            if (a.signed) {
-              // A signed box that came from a flattened/exported PDF (locked) has
-              // the "Sign here • Name • Date" caption already baked into the page —
-              // paint the box white first so the signature replaces it, not sits
-              // on top of it.
-              if (a.locked) {
-                page.drawRectangle({
-                  x: sx(a.x),
-                  y: toY(a.y + a.height),
-                  width: sw(a.width),
-                  height: sw(a.height),
-                  color: hexToPdfRgb('#ffffff')
-                })
-              }
-              // Bake the signature image, contained inside the box (matches the
-              // on-screen fit). Baseline of the box's bottom edge is a.y + height.
-              const img = await images.embed(a.signed.src)
-              const margin = 0.08
-              const availW = a.width * (1 - margin * 2)
-              const availH = a.height * (1 - margin * 2)
-              const ratio = a.signed.width > 0 && a.signed.height > 0
-                ? a.signed.width / a.signed.height
-                : 1
-              let fw = availW
-              let fh = fw / ratio
-              if (fh > availH) {
-                fh = availH
-                fw = fh * ratio
-              }
-              const fx = a.x + (a.width - fw) / 2
-              const fy = a.y + (a.height - fh) / 2
-              page.drawImage(img, {
-                x: sx(fx),
-                y: toY(fy + fh),
-                width: sw(fw),
-                height: sw(fh)
-              })
-            } else {
-              // Unsigned request box: bake a visible outline + caption so it's
-              // shown in any viewer (Acrobat, browsers, print). It's ALSO embedded
-              // in the catalog below, so Universal PDF re-detects it as a
-              // click-to-sign box — locked in place (non-movable) so it can't drift
-              // off the baked outline.
-              const orange = hexToPdfRgb('#ea580c')
+            // An unsigned box is not drawn into the page at all: it becomes a
+            // real signature field once the pages are final (see
+            // `addSignatureFields`), whose own appearance is the outline and
+            // caption. Only a signed box is baked here.
+            if (!a.signed) break
+            // A signed LEGACY box (from an export before real fields, `locked`
+            // with no field name) has the "Sign here • Name • Date" caption
+            // baked into the page beneath it — paint the box white first so the
+            // signature replaces it rather than sitting on top of it. A box
+            // that came from a signature field needs nothing of the kind: the
+            // field, appearance and all, is removed before this runs.
+            if (a.locked && !a.fieldName) {
               page.drawRectangle({
                 x: sx(a.x),
                 y: toY(a.y + a.height),
                 width: sw(a.width),
                 height: sw(a.height),
-                borderColor: orange,
-                borderWidth: sw(1.5),
-                opacity: 0
-              })
-              const t = getT()
-              const parts: string[] = []
-              if (a.requireName) parts.push(t('lib.sign_here_name'))
-              if (a.requireDate) parts.push(t('lib.sign_here_date'))
-              if (a.requireLive) parts.push(t('lib.sign_here_live'))
-              const { font, text: label } = await fonts.forText([t('lib.sign_here'), ...parts].join(' • '), 'helvetica')
-              const size = sw(Math.min(a.height * 0.28, 18))
-              // Inset from the box's top-left corner. The box is in canvas units
-              // (canvas = pdf * scale); `size` is PDF units, so scale it back up to
-              // canvas space when positioning the baseline.
-              const padCanvas = Math.min(8, a.height * 0.12, a.width * 0.06)
-              const baselineCanvasY = a.y + padCanvas + size * scale * 0.85
-              page.drawText(label, {
-                x: sx(a.x + padCanvas),
-                y: toY(baselineCanvasY),
-                size,
-                font,
-                color: hexToPdfRgb('#c2410c')
+                color: hexToPdfRgb('#ffffff')
               })
             }
+            // Bake the signature image, contained inside the box (matches the
+            // on-screen fit). Baseline of the box's bottom edge is a.y + height.
+            const img = await images.embed(a.signed.src)
+            const margin = 0.08
+            const availW = a.width * (1 - margin * 2)
+            const availH = a.height * (1 - margin * 2)
+            const ratio = a.signed.width > 0 && a.signed.height > 0
+              ? a.signed.width / a.signed.height
+              : 1
+            let fw = availW
+            let fh = fw / ratio
+            if (fh > availH) {
+              fh = availH
+              fw = fh * ratio
+            }
+            const fx = a.x + (a.width - fw) / 2
+            const fy = a.y + (a.height - fh) / 2
+            page.drawImage(img, {
+              x: sx(fx),
+              y: toY(fy + fh),
+              width: sw(fw),
+              height: sw(fh)
+            })
             break
           }
         }
@@ -748,6 +726,210 @@ function redactTouches(r: RedactAnnotation, l: PendingLink): boolean {
   const nx = (Math.min(Math.max(cx, l.x1), l.x2) - cx) / rx
   const ny = (Math.min(Math.max(cy, l.y1), l.y2) - cy) / ry
   return nx * nx + ny * ny < 1
+}
+
+// ── Signature fields ───────────────────────────────────────────────────────
+// An unsigned "Sign here" box leaves as a REAL PDF signature field (an AcroForm
+// field with /FT /Sig, one widget at the box), so whoever receives the file can
+// sign it in whatever they have: Universal PDF, Adobe Acrobat or Reader, Apple
+// Preview. Nothing is uploaded and nobody needs an account — the "Send for
+// signature" route (SendForSignatureDialog) is just this file, shared.
+//
+// The visible outline and "Sign here • Name • Date" caption are the field's own
+// appearance stream, NOT page content: a reader that signs the field replaces
+// that appearance with the signature, so the caption goes with it instead of
+// showing through underneath.
+
+/** The `/T` names of the AcroForm's terminal signature fields, with their widgets. */
+function signatureFields(pdf: PDFDocument): { field: PDFAcroField; name: string; signed: boolean }[] {
+  const form = pdf.catalog.getAcroForm()
+  if (!form) return []
+  const out: { field: PDFAcroField; name: string; signed: boolean }[] = []
+  for (const [field] of form.getAllFields()) {
+    if (!(field instanceof PDFAcroSignature)) continue
+    out.push({
+      field,
+      name: field.getFullyQualifiedName() ?? '',
+      signed: !!field.dict.get(PDFName.of('V'))
+    })
+  }
+  return out
+}
+
+/** Every page that lists `widget` (by reference or by object) in its /Annots. */
+function dropWidgetFromPages(pdf: PDFDocument, widgetDict: PDFDict) {
+  for (const page of pdf.getPages()) {
+    const annots = page.node.lookupMaybe(PDFName.of('Annots'), PDFArray)
+    if (!annots) continue
+    for (let i = annots.size() - 1; i >= 0; i--) {
+      const entry = annots.get(i)
+      const resolved = entry instanceof PDFRef ? pdf.context.lookup(entry) : entry
+      if (resolved === widgetDict) annots.remove(i)
+    }
+  }
+}
+
+/**
+ * Remove the source's signature fields that the editor turned into boxes
+ * (matched by name), widgets and all. Each is either signed in the editor —
+ * and baked into the page — or written back out as a fresh field, so leaving
+ * the original behind would double it. Runs BEFORE the form is filled, whose
+ * flatten would otherwise bake their appearances into the page.
+ */
+function removeSignatureFields(pdf: PDFDocument, names: Set<string>) {
+  if (names.size === 0) return
+  const form = pdf.catalog.getAcroForm()
+  if (!form) return
+  for (const { field, name, signed } of signatureFields(pdf)) {
+    if (signed || !names.has(name)) continue
+    try {
+      if (!(field instanceof PDFAcroSignature)) continue
+      for (const w of field.getWidgets()) dropWidgetFromPages(pdf, w.dict)
+      form.removeField(field)
+    } catch {
+      // A malformed field stays as it was: a duplicate box is a cosmetic
+      // problem, a failed export is not.
+    }
+  }
+}
+
+/** Inverse of a view → user matrix (rotation by a multiple of 90° plus a shift). */
+function invertMatrix(m: Matrix): Matrix {
+  const [a, b, c, d, e, f] = m
+  const det = a * d - b * c || 1
+  return [d / det, -b / det, -c / det, a / det, (c * f - d * e) / det, (b * e - a * f) / det]
+}
+
+/** The "Sign here • Name • Date" caption, in the language the app is in. */
+function sigFieldCaption(a: Pick<SignatureFieldAnnotation, 'requireName' | 'requireDate' | 'requireLive'>): string {
+  const t = getT()
+  const parts: string[] = []
+  if (a.requireName) parts.push(t('lib.sign_here_name'))
+  if (a.requireDate) parts.push(t('lib.sign_here_date'))
+  if (a.requireLive) parts.push(t('lib.sign_here_live'))
+  return [t('lib.sign_here'), ...parts].join(' • ')
+}
+
+/**
+ * Write each unsigned box as a signature field on its page. `scale` is the
+ * annotation space's scale (1 on every export path — see EXPORT_SCALE).
+ */
+async function addSignatureFields(pdf: PDFDocument, boxes: SignatureFieldAnnotation[], scale: number) {
+  if (boxes.length === 0) return
+  const pages = pdf.getPages()
+  const fonts = new ExportFonts(pdf)
+  const acroForm = pdf.catalog.getOrCreateAcroForm()
+  const taken = new Set(signatureFields(pdf).map((f) => f.name))
+  for (const [field] of acroForm.getAllFields()) {
+    const n = field.getFullyQualifiedName()
+    if (n) taken.add(n)
+  }
+  let counter = 1
+  const nextName = (wanted?: string) => {
+    if (wanted && !taken.has(wanted)) {
+      taken.add(wanted)
+      return wanted
+    }
+    while (taken.has(`Signature${counter}`)) counter++
+    const n = `Signature${counter}`
+    taken.add(n)
+    return n
+  }
+  const orange = hexToPdfRgb('#ea580c')
+  const captionColour = hexToPdfRgb('#c2410c')
+
+  for (const a of boxes) {
+    const page = pages[a.pageIndex]
+    if (!page) continue
+    try {
+      const frame = pageFrame(page)
+      const w = a.width / scale
+      const h = a.height / scale
+      // The box in view space (y up), then its corners in the page's user space.
+      const left = a.x / scale
+      const top = frame.height - a.y / scale
+      const corners = [
+        applyMatrix(frame.m, left, top - h),
+        applyMatrix(frame.m, left + w, top - h),
+        applyMatrix(frame.m, left, top),
+        applyMatrix(frame.m, left + w, top)
+      ]
+      const xs = corners.map((p) => p[0])
+      const ys = corners.map((p) => p[1])
+      const rect = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]
+
+      // Appearance, drawn upright in the READER's view of the page: the form's
+      // /Matrix is the page's view → user rotation, so on a /Rotate 90 page it
+      // turns with the page exactly as the page's own content does.
+      const caption = sigFieldCaption(a)
+      const { font, text } = await fonts.forText(caption, 'helvetica')
+      const size = Math.min(h * 0.28, 18)
+      const pad = Math.min(8, h * 0.12, w * 0.06)
+      const ops = [
+        pushGraphicsState(),
+        ...drawRectangle({
+          x: 0.75,
+          y: 0.75,
+          width: Math.max(0, w - 1.5),
+          height: Math.max(0, h - 1.5),
+          borderWidth: 1.5,
+          color: undefined,
+          borderColor: orange,
+          borderDashArray: [4, 3],
+          rotate: degrees(0),
+          xSkew: degrees(0),
+          ySkew: degrees(0)
+        }),
+        popGraphicsState(),
+        pushGraphicsState(),
+        ...drawText(font.encodeText(text), {
+          x: pad,
+          y: h - pad - size * 0.85,
+          size,
+          font: 'F0',
+          color: captionColour,
+          rotate: degrees(0),
+          xSkew: degrees(0),
+          ySkew: degrees(0)
+        }),
+        popGraphicsState()
+      ]
+      const [ma, mb, mc, md] = frame.m
+      const ap = pdf.context.formXObject(ops, {
+        BBox: [0, 0, w, h],
+        Matrix: [ma, mb, mc, md, 0, 0],
+        Resources: { Font: { F0: font.ref } }
+      })
+      const apRef = pdf.context.register(ap)
+
+      const require: string[] = []
+      if (a.requireName) require.push('Name')
+      if (a.requireDate) require.push('Date')
+      if (a.requireLive) require.push('Live')
+
+      const widget = pdf.context.obj({
+        Type: 'Annot',
+        Subtype: 'Widget',
+        FT: 'Sig',
+        T: PDFHexString.fromText(nextName(a.fieldName)),
+        // The tooltip readers show on hover, and what a screen reader announces.
+        TU: PDFHexString.fromText(caption),
+        Rect: rect.map((n) => PDFNumber.of(n)),
+        // Print: a field that vanished on paper would leave nothing to sign by hand.
+        F: 4,
+        P: page.ref,
+        AP: { N: apRef },
+        [SIG_REQUIRE_KEY]: require
+      })
+      const ref = pdf.context.register(widget)
+      const annots = page.node.lookupMaybe(PDFName.of('Annots'), PDFArray)
+      if (annots) annots.push(ref)
+      else page.node.set(PDFName.of('Annots'), pdf.context.obj([ref]))
+      acroForm.addField(ref)
+    } catch {
+      // One box that cannot be written must not cost the whole export.
+    }
+  }
 }
 
 /** Add the collected links to the finished pages — except any a redaction covers. */
@@ -791,6 +973,13 @@ export async function buildAnnotatedPdfBytes(
   // fresh ModDate on every save, which would quietly re-add metadata to a
   // document the user had just scrubbed (see lib/pdfMetadata.ts).
   const sourcePdf = await PDFDocument.load(sourceBytes, { updateMetadata: false })
+
+  // Signature fields the editor shows as boxes are replaced by those boxes —
+  // see removeSignatureFields. Before the form is filled and flattened.
+  removeSignatureFields(
+    sourcePdf,
+    new Set(annotations.flatMap((a) => (a.type === 'sigfield' && a.fieldName ? [a.fieldName] : [])))
+  )
 
   if (formValues && formValues.length > 0) {
     await fillForm(sourcePdf, formValues, new ExportFonts(sourcePdf))
@@ -892,88 +1081,169 @@ export async function buildAnnotatedPdfBytes(
   }
   addLinks(pdf, links, redactsByPage, scale)
 
-  // Embed unsigned signature-request boxes into the document catalog so they
-  // round-trip as interactive fields when the file is reopened / shared. Signed
-  // fields are already baked into the page above and are not embedded.
-  const unsignedFields: EmbeddedSigField[] = annotations
-    .filter((a): a is SignatureFieldAnnotation => a.type === 'sigfield' && !a.signed)
-    .map((a) => ({
-      id: a.id,
-      pageIndex: a.pageIndex,
-      x: a.x,
-      y: a.y,
-      width: a.width,
-      height: a.height,
-      requireName: a.requireName,
-      requireDate: a.requireDate,
-      requireLive: a.requireLive
-    }))
+  // Unsigned boxes leave as real signature fields (see addSignatureFields).
+  // Signed ones were baked into the page above. The legacy catalog copy is
+  // dropped, so a re-saved old file does not carry its boxes twice.
   try {
-    const key = PDFName.of(SIG_FIELDS_KEY)
-    if (unsignedFields.length > 0) {
-      pdf.catalog.set(key, PDFHexString.fromText(JSON.stringify(unsignedFields)))
-    } else {
-      pdf.catalog.delete(key)
-    }
+    pdf.catalog.delete(PDFName.of(SIG_FIELDS_KEY))
   } catch {
-    // Best-effort — a failure here just means the boxes won't round-trip, not
-    // that the export fails.
+    // Nothing to drop.
   }
+  await addSignatureFields(
+    pdf,
+    annotations.filter((a): a is SignatureFieldAnnotation => a.type === 'sigfield' && !a.signed),
+    scale
+  )
 
   return pdf.save()
 }
 
-// Read back the unsigned signature-request boxes embedded by a prior export, so
-// a reopened / shared PDF's boxes become interactive again. Returns [] for any
-// file without them (or that can't be parsed). Coordinates are already in the
-// annotation store's PDF-point space, so the fields drop straight back in.
+// Read back the unsigned "Sign here" boxes a PDF carries, so they open as boxes
+// that can be tapped and signed. Two sources:
+//
+//   • REAL SIGNATURE FIELDS (AcroForm /FT /Sig with no value) — what Universal
+//     PDF writes since 2026-10-12, and what Acrobat and other apps make when
+//     someone prepares a document for signing. Signed fields are left alone.
+//   • The legacy catalog key (SIG_FIELDS_KEY), for files exported before that.
+//
+// Returns [] for a file with neither (or one that can't be parsed).
+// Coordinates come back in the annotation store's space: the reader's view of
+// the page in points, y down from its top-left (EXPORT_SCALE = 1).
 export async function readEmbeddedSigFields(
   bytes: ArrayBuffer
 ): Promise<SignatureFieldAnnotation[]> {
+  let pdf: PDFDocument
   try {
-    const pdf = await PDFDocument.load(bytes, { updateMetadata: false })
-    const raw = pdf.catalog.get(PDFName.of(SIG_FIELDS_KEY)) as unknown
-    const decodable = raw as { decodeText?: () => string } | undefined
-    const text =
-      decodable && typeof decodable.decodeText === 'function'
-        ? decodable.decodeText()
-        : null
-    if (!text) return []
-    const parsed: unknown = JSON.parse(text)
-    if (!Array.isArray(parsed)) return []
-    const out: SignatureFieldAnnotation[] = []
-    for (const v of parsed as Partial<EmbeddedSigField>[]) {
-      if (
-        v &&
-        typeof v.id === 'string' &&
-        typeof v.pageIndex === 'number' &&
-        typeof v.x === 'number' &&
-        typeof v.y === 'number' &&
-        typeof v.width === 'number' &&
-        typeof v.height === 'number'
-      ) {
-        out.push({
-          type: 'sigfield',
-          id: v.id,
-          pageIndex: v.pageIndex,
-          x: v.x,
-          y: v.y,
-          width: v.width,
-          height: v.height,
-          requireName: !!v.requireName,
-          requireDate: !!v.requireDate,
-          requireLive: !!v.requireLive,
-          // The outline is baked into this exported page, so the re-detected box
-          // is locked in place — click-to-sign only. Editing/moving comes from a
-          // `.unipdf` backup, which restores the original unlocked annotation.
-          locked: true
-        })
-      }
-    }
-    return out
+    pdf = await PDFDocument.load(bytes, { updateMetadata: false })
   } catch {
     return []
   }
+  const out: SignatureFieldAnnotation[] = []
+  try {
+    out.push(...readSignatureFields(pdf))
+  } catch {
+    // Best-effort, like the legacy read below.
+  }
+  try {
+    out.push(...readLegacySigFields(pdf))
+  } catch {
+    // Ignore — the file simply has no recoverable legacy boxes.
+  }
+  return out
+}
+
+/** Unsigned AcroForm signature fields, one box per visible widget. */
+function readSignatureFields(pdf: PDFDocument): SignatureFieldAnnotation[] {
+  const pages = pdf.getPages()
+  const out: SignatureFieldAnnotation[] = []
+  for (const { field, name, signed } of signatureFields(pdf)) {
+    if (signed || !name || !(field instanceof PDFAcroSignature)) continue
+    const widgets = field.getWidgets()
+    widgets.forEach((widget, wi) => {
+      // Hidden (bit 2) and NoView (bit 6) widgets are not meant to be seen.
+      const flags = widget.getFlags()
+      if (flags & 2 || flags & 32) return
+      const pageIndex = widgetPageIndex(pdf, pages, widget.P(), widget.dict)
+      if (pageIndex < 0) return
+      const frame = pageFrame(pages[pageIndex])
+      const r = widget.getRectangle()
+      const inv = invertMatrix(frame.m)
+      const pts = [
+        applyMatrix(inv, r.x, r.y),
+        applyMatrix(inv, r.x + r.width, r.y + r.height)
+      ]
+      const vx = Math.min(pts[0][0], pts[1][0])
+      const vTop = Math.max(pts[0][1], pts[1][1])
+      const width = Math.abs(pts[1][0] - pts[0][0])
+      const height = Math.abs(pts[1][1] - pts[0][1])
+      if (width < 2 || height < 2) return // an invisible "field" with no area
+      // Ours carries the require-list; anyone else's asks for a plain signature.
+      const req = widget.dict.lookupMaybe(PDFName.of(SIG_REQUIRE_KEY), PDFArray)
+        ?? field.dict.lookupMaybe(PDFName.of(SIG_REQUIRE_KEY), PDFArray)
+      const asks = new Set(req ? req.asArray().map((n) => (n instanceof PDFName ? n.decodeText() : '')) : [])
+      out.push({
+        type: 'sigfield',
+        id: `sigfield-${name}-${wi}`.replace(/[^\w-]/g, '_'),
+        pageIndex,
+        x: vx,
+        y: frame.height - vTop,
+        width,
+        height,
+        requireName: asks.has('Name'),
+        requireDate: asks.has('Date'),
+        requireLive: asks.has('Live'),
+        // Click-to-sign only, and it stays put: the field's own appearance
+        // (when it has one) is drawn by pdf.js at exactly this spot.
+        locked: true,
+        fieldName: name,
+        // Our own field draws its outline and caption in its appearance, so the
+        // overlay over it stays invisible; another app's is usually blank, so
+        // the overlay draws the "Sign here" box itself.
+        fieldLook: req ? 'ours' : 'other'
+      })
+    })
+  }
+  return out
+}
+
+/** The page a widget sits on: its /P when that is a page, else whichever page lists it. */
+function widgetPageIndex(pdf: PDFDocument, pages: PDFPage[], p: PDFRef | undefined, dict: PDFDict): number {
+  if (p) {
+    const i = pages.findIndex((pg) => pg.ref === p)
+    if (i >= 0) return i
+  }
+  for (let i = 0; i < pages.length; i++) {
+    const annots = pages[i].node.lookupMaybe(PDFName.of('Annots'), PDFArray)
+    if (!annots) continue
+    for (let j = 0; j < annots.size(); j++) {
+      const entry = annots.get(j)
+      if ((entry instanceof PDFRef ? pdf.context.lookup(entry) : entry) === dict) return i
+    }
+  }
+  return -1
+}
+
+/** Boxes from the legacy catalog key (exports before real signature fields). */
+function readLegacySigFields(pdf: PDFDocument): SignatureFieldAnnotation[] {
+  const raw = pdf.catalog.get(PDFName.of(SIG_FIELDS_KEY)) as unknown
+  const decodable = raw as { decodeText?: () => string } | undefined
+  const text =
+    decodable && typeof decodable.decodeText === 'function'
+      ? decodable.decodeText()
+      : null
+  if (!text) return []
+  const parsed: unknown = JSON.parse(text)
+  if (!Array.isArray(parsed)) return []
+  const out: SignatureFieldAnnotation[] = []
+  for (const v of parsed as Partial<EmbeddedSigField>[]) {
+    if (
+      v &&
+      typeof v.id === 'string' &&
+      typeof v.pageIndex === 'number' &&
+      typeof v.x === 'number' &&
+      typeof v.y === 'number' &&
+      typeof v.width === 'number' &&
+      typeof v.height === 'number'
+    ) {
+      out.push({
+        type: 'sigfield',
+        id: v.id,
+        pageIndex: v.pageIndex,
+        x: v.x,
+        y: v.y,
+        width: v.width,
+        height: v.height,
+        requireName: !!v.requireName,
+        requireDate: !!v.requireDate,
+        requireLive: !!v.requireLive,
+        // The outline is baked into this exported page, so the re-detected box
+        // is locked in place — click-to-sign only. Editing/moving comes from a
+        // `.unipdf` backup, which restores the original unlocked annotation.
+        locked: true
+      })
+    }
+  }
+  return out
 }
 
 export { downloadPdfBytes }

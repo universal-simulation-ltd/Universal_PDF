@@ -683,7 +683,10 @@ function SigField({
   // border/caption to avoid doubling up on the baked one. Unlocked boxes are
   // live editing overlays and draw the dashed box + caption themselves.
   const locked = !!a.locked
-  const decorated = !a.signed && !locked
+  // ...except a box read from ANOTHER app's signature field: its appearance is
+  // usually blank, so with nothing drawn here there would be nothing to see
+  // or tap. It draws the dashed box and caption itself, locked or not.
+  const decorated = !a.signed && (!locked || a.fieldLook === 'other')
 
   // The Transformer scales the whole group live while resizing, which would
   // stretch/blur the caption AND the "Click again to sign" hint. Counter-scale
@@ -3638,13 +3641,14 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       })()}
 
       {(() => {
-        // Send-to-sign affordance on a selected "Sign here" box. Placing the
-        // boxes and emailing the document for signing are two halves of one
-        // job, and the dialog refuses to mint a link until at least one box
-        // exists — so the moment a box is on the page is exactly the moment to
-        // offer the next step, rather than sending the user back to
-        // the Sign icon → Request → Send to sign. Sits under the Delete affordance,
-        // where a box/ellipse would carry its Fill toggle.
+        // Send-for-signature affordance on a selected "Sign here" box. Placing
+        // the boxes and handing the document over are two halves of one job,
+        // so the moment a box is on the page is exactly the moment to offer the
+        // next step, rather than sending the user back to the Sign icon →
+        // Request → Send for signature. Opens the PLAIN route (share the file,
+        // no account); the certified one is offered from inside it, on the
+        // web. Sits under the Delete affordance, where a box/ellipse would
+        // carry its Fill toggle.
         if (draggingId || editingId) return null
         const selected = annotations.find((a) => a.id === selectedId)
         if (!selected || selected.type !== 'sigfield') return null
@@ -3656,7 +3660,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             title={t('annotate.sigfield.send_title')}
             aria-label={t('annotate.sigfield.send_aria')}
             onMouseDown={(e) => e.stopPropagation()}
-            onClick={(e) => { e.stopPropagation(); usePdfStore.getState().setSendToSignOpen(true) }}
+            onClick={(e) => { e.stopPropagation(); usePdfStore.getState().setSendForSignatureOpen(true) }}
             style={{
               position: 'absolute',
               left: (bbox.x + bbox.width) * scale + 8,

@@ -93,7 +93,10 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
   // beside it — see lib/resetDefaults.
   const { reset: resetPrefs } = useUserPrefs()
   const { profile, loading: profileLoading, refresh: refreshProfile } = useProfile()
-  const { supabase, session } = useUniversal()
+  // No accounts in the phone, desktop and extension builds (lib/accounts.ts):
+  // the pill keeps the app rows (Actions, Tune this app, About) and drops
+  // every account row and the sign-in dialog — the SDK's `noAccount`.
+  const { supabase, session, noAccounts } = useUniversal()
   const { subscription } = useSubscription()
   const [signInOpen, setSignInOpen] = useState(false)
 
@@ -183,7 +186,9 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
   // flight is the old one. Only "we have never had an answer" gets the dot.
   const firstLoad = userLoading || (profileLoading && !profile)
   const resolvedUser: ComponentProps<typeof UserProfile> =
-    firstLoad
+    noAccounts
+      ? { noAccount: true }
+      : firstLoad
       ? { initials: '·' }
       : !user || isAnonymous
         ? {
@@ -223,7 +228,7 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
         <UserProfile
           {...resolvedUser}
           menuAlign="right"
-          tier={subscription?.tier}
+          tier={noAccounts ? undefined : subscription?.tier}
           actions={actions}
           // No `showDeleteAccount`: "Delete my account…" is the SDK's, at the
           // foot of Global Tuning (SDK 0.159.0). This menu drew its own row
@@ -261,11 +266,13 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
         open={knowledgeBaseOpen}
         onClose={() => setKnowledgeBaseOpen(false)}
       />
-      <SignInDialog
-        open={signInOpen}
-        onClose={() => setSignInOpen(false)}
-        hubLoginHref={HUB_LOGIN_HREF}
-      />
+      {!noAccounts && (
+        <SignInDialog
+          open={signInOpen}
+          onClose={() => setSignInOpen(false)}
+          hubLoginHref={HUB_LOGIN_HREF}
+        />
+      )}
     </>
   )
 }

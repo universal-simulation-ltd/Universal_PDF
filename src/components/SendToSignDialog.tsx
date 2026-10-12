@@ -39,7 +39,14 @@ const STATUS_UI: Record<string, { label: MessageKey; tone?: 'good' | 'warn' }> =
 
 const HUB_LOGIN_URL = 'https://app.unisim.co.uk/login'
 
-// Export → "Send to sign": store the current PDF online (free for everyone —
+// The CERTIFIED route ("Certified signature", called Send to sign until
+// 2026-10-12), offered on the WEBSITE ONLY as the upgrade beside the plain
+// "Send for signature" (SendForSignatureDialog — share the file, no account).
+// App.tsx never mounts this in the phone, desktop or extension builds
+// (lib/accounts.ts). Only the SENDER needs a Universal ID; the signer opens
+// the link with none (SignRequestPage / SignRequestGate).
+//
+// Store the current PDF online (free for everyone —
 // its own uncounted 'pdf_sign' budget, migration 0227), mint a
 // pdf_sign_requests capability link (?signdoc=<id>), and hand it to the
 // recipient — copied, or emailed with the PDF attached via send-sign-request
@@ -345,7 +352,7 @@ export default function SendToSignDialog() {
           viewport on iOS. */}
       <div className="flex w-full max-w-lg max-h-[min(100%,100dvh)] flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
         <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4">
-          <h2 className="text-base font-bold text-slate-900">{t('sign.send_to_sign')}</h2>
+          <h2 className="text-base font-bold text-slate-900">{t('sign.certified_title')}</h2>
           <button onClick={close} aria-label={t('sign.close')} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
             <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" /></svg>
           </button>

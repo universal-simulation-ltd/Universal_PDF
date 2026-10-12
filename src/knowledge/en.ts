@@ -126,20 +126,22 @@ If you choose to draw your signature on your phone, the drawing travels from you
 
 ## What the app sends even when your PDF stays put
 
-If you sign in, the app records that it was opened, for your account's activity page. On the website, the first time you open the app each day, it also adds one to an anonymous count of daily opens, sent after your first click or key press. That count holds only the app's name and the kind of platform (on the website, "web"): no identifier, no account and nothing about what you do. A "counted today" mark stays on your device and is never sent. The phone and desktop apps and the browser extension do not send it. Nothing the app sends includes anything about your files. There is no advertising or third-party tracking.`,
+On the website you can sign in with a Universal ID, and while you are signed in, the app records that it was opened, for your account’s activity page. The phone and desktop apps and the browser extension have no sign-in at all. On the website, the first time you open the app each day, it also adds one to an anonymous count of daily opens, sent after your first click or key press. That count holds only the app's name and the kind of platform (on the website, "web"): no identifier, no account and nothing about what you do. A "counted today" mark stays on your device and is never sent. The phone and desktop apps and the browser extension do not send it. Nothing the app sends includes anything about your files. There is no advertising or third-party tracking.`,
   },
   {
     id: 'signing-a-pdf',
     title: 'Signing a PDF yourself',
     summary: 'What a signature placed in the app is, and what it is not.',
     group: 'How it works',
-    body: `You can sign a PDF by drawing your signature with a mouse, trackpad or finger, by drawing it on your phone, or by importing a picture of your signature. You can save signatures and stamps to reuse, and add your name and the date beneath them.
+    body: `You can sign a PDF by drawing your signature with a mouse, trackpad or finger, by drawing it on your phone, or by importing a picture of your signature. You can save signatures and stamps to reuse, and add your name and the date beneath them. You don’t need an account for any of it.
 
 When you place a signature, it is an image positioned on the page. When you download the PDF, that image is merged into the page like any other addition. All of this happens on your device.
 
 ## Signature boxes
 
-If you are preparing a document for someone else, you can draw a "sign here" box on the page. You can also set a box to require a signature drawn by hand rather than an uploaded image. Drawing on a phone still counts as drawn by hand.
+If you are preparing a document for someone else, you can place a "Sign here" box on the page, and ask for their name and the date with it. You can also set a box to require a signature drawn by hand rather than an uploaded image. Drawing on a phone still counts as drawn by hand.
+
+When you save or share the PDF, each box you have not signed goes in as a real signature field, the kind other PDF apps understand. The person you send it to can sign it in Universal PDF, Adobe Acrobat or Reader, or Apple Preview. When Universal PDF opens a PDF with an empty signature field, from us or from another app, it shows it as a box you can tap to sign. See "Sending a PDF for signature".
 
 ## What this kind of signature is
 
@@ -149,7 +151,7 @@ It is what is usually called an **electronic signature**: a mark on a document s
 
 It is not a **digital signature** in the technical sense. A digital signature uses a certificate, often issued by a trusted authority, to seal the file cryptographically, so that any later change can be detected by the PDF app. Universal PDF does not add that kind of seal to a file you sign yourself.
 
-That matters because a picture of a signature on a PDF does not, by itself, prove who put it there, or that the document has not been changed since. If you need a record of who signed and when, use **Send to sign**, which keeps a server-side activity log and a fingerprint of each signed version. The next articles explain how.
+That matters because a picture of a signature on a PDF does not, by itself, prove who put it there, or that the document has not been changed since. If you need a record of who signed and when, use a **certified signature** on the Universal PDF website, which keeps a server-side activity log and a fingerprint of each signed version. The next articles explain how.
 
 ## A note on the law
 
@@ -157,29 +159,35 @@ This is not legal advice. Whether an electronic signature is acceptable depends 
   },
   {
     id: 'send-to-sign',
-    title: 'How Send to sign works',
-    summary: 'Asking someone else to sign, step by step.',
+    title: 'Sending a PDF for signature',
+    summary: 'Just share the file, or get a certified signature on the website.',
     group: 'How it works',
-    body: `Send to sign lets you ask another person to sign a PDF online, and gives both of you a record of what happened. You need to be signed in with a Universal ID, and your email address must be verified, because the request is sent in your name.
+    body: `There are two ways to ask someone else to sign a PDF. The plain way works everywhere, needs no account and uploads nothing. The certified way, on the website only, adds a record of who signed and when.
 
-## The steps
+## Send for signature
 
-1. **Mark where to sign.** Add at least one "sign here" box to the document, so the other person knows where their signature goes.
-2. **Store it online.** The finished PDF, with anything you have added merged in, is stored online against your Universal ID. It is free with a Universal ID.
-3. **Choose who can open it.** Either anyone with the link, or only the person you address it to. See "How secure is Send to sign?" for what that choice changes.
-4. **Send it.** Copy the link and send it yourself, or enter their email address and the app emails it for you. On an open link the email includes the PDF as an attachment. On a protected link it does not, because the attachment would bypass the protection.
+1. **Mark where to sign.** Open **Sign**, choose **Request**, and place a "Sign here" box wherever a signature should go. Tick **Ask for name** or **Ask for date** first if you want them.
+2. **Sign your own part, if you are signing too.** Tap your box and sign it before you send.
+3. **Send it.** Choose **Send for signature**. On a phone the share sheet opens, so you can send the PDF by message, by email or through any app. On a computer the PDF is saved or downloaded, and your browser may offer to share it as well.
+
+Each box you left unsigned goes in as a real signature field. The person who gets the file can sign it in Universal PDF, in Adobe Acrobat or Reader, or in Apple Preview or Files, and send it back the same way. They don’t need an account, and nothing passes through us.
+
+## Certified signature (website only)
+
+If you need proof of who signed and when, the Universal PDF website offers a certified signature. You need a free Universal ID; the person signing does not. Your PDF is stored online, the signer gets a link, and both of you get a certificate with an activity log. The phone and desktop apps don’t offer it; the desktop app links to the website instead.
+
+1. **Mark where to sign**, as above.
+2. **Choose Send for signature, then Certified signature.**
+3. **Choose who can open it.** Either anyone with the link, or only the person you address it to. See "How secure is a certified signature?" for what that choice changes.
+4. **Send it.** Copy the link and send it yourself, or enter their email address and we email it for you. On an open link the email includes the PDF as an attachment. On a protected link it does not, because the attachment would bypass the protection.
 
 ## Two signers, either order
 
-Each request has two signers: you and the person you sent it to. Each of you gets your own link, and you can sign in either order. Whoever signs second works on the copy that already carries the first signature.
-
-## What happens when someone signs
-
-The signer opens the document in their browser, signs, and submits it. The signed copy is stored as a new version; earlier versions are kept, not overwritten. Each step is recorded in an activity log. When both of you have signed, the request is complete and both of you receive an email with a link to the certificate.
+A certified request has two signers: you and the person you sent it to. Each of you gets your own link, and you can sign in either order. Whoever signs second works on the copy that already carries the first signature. When both of you have signed, the request is complete and both of you receive an email with a link to the certificate.
 
 ## The certificate
 
-Every request has a certificate page. It shows the document, who each signer was by email address, whether each has signed, and the activity log: when the document was opened, what was added, which country the request came from, and a fingerprint of the document at each step. You can download the final signed PDF from it while the stored copy exists.
+Every certified request has a certificate page. It shows the document, who each signer was by email address, whether each has signed, and the activity log: when the document was opened, what was added, which country the request came from, and a fingerprint of the document at each step. You can download the final signed PDF from it while the stored copy exists. A completed request is kept for 7 years.
 
 ## Limits
 
@@ -214,10 +222,10 @@ The setting is remembered in your browser's storage on this device only, so each
   },
   {
     id: 'send-to-sign-security',
-    title: 'How secure is Send to sign?',
+    title: 'How secure is a certified signature?',
     summary: 'What is encrypted, what our server can see, and how the audit trail works.',
     group: 'Privacy and security',
-    body: `Send to sign is the one feature where your document has to leave your device, because someone else needs to receive it. Here is exactly what that involves.
+    body: `A certified signature, offered on the Universal PDF website, is the one feature where your document has to leave your device: it is stored so the signer can open it and so there is a record. Here is exactly what that involves. Sending a PDF for signature without it uploads nothing; the file goes only where you send it.
 
 ## Encryption, in plain terms
 

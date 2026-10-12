@@ -126,20 +126,22 @@ Son açılan dosyalar, bu cihazdaki tarayıcınızın kendi depolama alanında t
 
 ## PDF’iniz cihazınızdan çıkmasa bile uygulamanın gönderdikleri
 
-Giriş yaparsanız uygulama, hesabınızın etkinlik sayfası için açıldığını kaydeder. Web sitesinde, uygulamayı her gün ilk açışınızda, ilk tıklamanızdan veya tuşa basmanızdan sonra anonim günlük açılış sayısına bir de ekler. Bu sayım yalnızca uygulamanın adını ve platform türünü (sitede "web") içerir: hiçbir tanımlayıcı, hesap ya da ne yaptığınıza dair bir şey yoktur. "Bugün sayıldı" işareti cihazınızda kalır ve asla gönderilmez. Telefon ve bilgisayar uygulamaları ile tarayıcı uzantısı bunu göndermez. Uygulamanın gönderdiği hiçbir şey dosyalarınızla ilgili bir şey içermez. Reklam ya da üçüncü taraf izleme yoktur.`,
+Web sitesinde bir Universal ID ile giriş yapabilirsiniz; giriş yapmışken uygulama, hesabınızın etkinlik sayfası için açıldığını kaydeder. Telefon ve bilgisayar uygulamalarında ve tarayıcı uzantısında hiç giriş yoktur. Web sitesinde, uygulamayı her gün ilk açışınızda, ilk tıklamanızdan veya tuşa basmanızdan sonra anonim günlük açılış sayısına bir de ekler. Bu sayım yalnızca uygulamanın adını ve platform türünü (sitede "web") içerir: hiçbir tanımlayıcı, hesap ya da ne yaptığınıza dair bir şey yoktur. "Bugün sayıldı" işareti cihazınızda kalır ve asla gönderilmez. Telefon ve bilgisayar uygulamaları ile tarayıcı uzantısı bunu göndermez. Uygulamanın gönderdiği hiçbir şey dosyalarınızla ilgili bir şey içermez. Reklam ya da üçüncü taraf izleme yoktur.`,
   },
   {
     id: 'signing-a-pdf',
     title: 'Bir PDF’i kendiniz imzalamak',
     summary: 'Uygulamada yerleştirilen bir imzanın ne olduğu ve ne olmadığı.',
     group: 'Nasıl çalışır',
-    body: `Bir PDF’i imzanızı fare, dokunmatik yüzey ya da parmağınızla çizerek, telefonunuzda çizerek ya da imzanızın bir resmini içe aktararak imzalayabilirsiniz. İmzaları ve damgaları yeniden kullanmak üzere kaydedebilir, altlarına adınızı ve tarihi ekleyebilirsiniz.
+    body: `Bir PDF’i imzanızı fare, dokunmatik yüzey ya da parmağınızla çizerek, telefonunuzda çizerek ya da imzanızın bir resmini içe aktararak imzalayabilirsiniz. İmzaları ve damgaları yeniden kullanmak üzere kaydedebilir, altlarına adınızı ve tarihi ekleyebilirsiniz. Bunların hiçbiri için hesap gerekmez.
 
 Bir imza yerleştirdiğinizde bu, sayfada konumlandırılmış bir görseldir. PDF’i indirdiğinizde bu görsel, diğer eklemeler gibi sayfayla birleştirilir. Bunların hepsi cihazınızda gerçekleşir.
 
 ## İmza kutuları
 
-Bir belgeyi başka biri için hazırlıyorsanız sayfaya bir "Burayı imzalayın" kutusu çizebilirsiniz. Bir kutuyu, yüklenmiş bir görsel yerine elle çizilmiş bir imza gerektirecek şekilde de ayarlayabilirsiniz. Telefonda çizmek de elle çizilmiş sayılır.
+Bir belgeyi başkası için hazırlıyorsanız sayfaya bir “Burayı imzalayın” kutusu yerleştirip onunla birlikte kişinin adını ve tarihi isteyebilirsiniz. Bir kutunun yüklenmiş bir görselle değil elle çizilerek imzalanmasını da şart koşabilirsiniz. Telefonda çizmek de elle çizilmiş sayılır.
+
+PDF’i kaydettiğinizde veya paylaştığınızda, imzalamadığınız her kutu, diğer PDF uygulamalarının anladığı türden gerçek bir imza alanına dönüşür. Gönderdiğiniz kişi bunu Universal PDF’te, Adobe Acrobat veya Reader’da ya da Apple Önizleme’de imzalayabilir. Universal PDF, bizden veya başka bir uygulamadan gelen boş bir imza alanı içeren bir PDF açtığında bunu dokunup imzalanacak bir kutu olarak gösterir. Bkz. “Bir PDF’i imzaya göndermek”.
 
 ## Bu tür imza nedir?
 
@@ -149,7 +151,7 @@ Genellikle **elektronik imza** olarak adlandırılan şeydir: Bir kişinin belge
 
 Teknik anlamda bir **dijital imza** değildir. Dijital imza, dosyayı kriptografik olarak mühürlemek için genellikle güvenilir bir kuruluş tarafından verilen bir sertifika kullanır; böylece sonradan yapılan her değişiklik PDF uygulaması tarafından tespit edilebilir. Universal PDF, kendiniz imzaladığınız bir dosyaya bu tür bir mühür eklemez.
 
-Bu önemlidir, çünkü bir PDF üzerindeki imza resmi tek başına onu oraya kimin koyduğunu ya da belgenin o zamandan beri değiştirilmediğini kanıtlamaz. Kimin ne zaman imzaladığına dair bir kayda ihtiyacınız varsa, sunucu tarafında bir etkinlik günlüğü ve imzalanan her sürümün parmak izini tutan **İmzaya gönder** özelliğini kullanın. Sonraki makaleler bunun nasıl çalıştığını açıklıyor.
+Bu önemlidir, çünkü bir PDF üzerindeki imza görseli tek başına onu kimin koyduğunu veya belgenin o zamandan beri değiştirilmediğini kanıtlamaz. Kimin ne zaman imzaladığına dair bir kayda ihtiyacınız varsa, Universal PDF web sitesindeki **onaylı imzayı** kullanın; sunucu tarafında bir etkinlik kaydı ve imzalanan her sürümün parmak izini tutar. Sonraki makaleler nasıl olduğunu açıklıyor.
 
 ## Hukuki durum hakkında bir not
 
@@ -157,33 +159,39 @@ Bu bir hukuki tavsiye değildir. Bir elektronik imzanın kabul edilebilir olup o
   },
   {
     id: 'send-to-sign',
-    title: 'İmzaya gönder nasıl çalışır?',
-    summary: 'Başka birinden adım adım imza istemek.',
+    title: 'Bir PDF’i imzaya göndermek',
+    summary: 'Dosyayı paylaşmanız yeterli; ya da web sitesinde onaylı imza alın.',
     group: 'Nasıl çalışır',
-    body: `İmzaya gönder, başka bir kişiden bir PDF’i çevrimiçi imzalamasını istemenizi sağlar ve ikinize de olup bitenlerin kaydını verir. İstek sizin adınıza gönderildiği için bir Universal ID ile giriş yapmış olmanız ve e-posta adresinizin doğrulanmış olması gerekir.
+    body: `Bir PDF’i başkasına imzalatmanın iki yolu vardır. Basit yol her yerde çalışır, hesap gerektirmez ve hiçbir şey yüklemez. Onaylı yol yalnızca web sitesindedir ve kimin ne zaman imzaladığına dair bir kayıt ekler.
 
-## Adımlar
+## İmzaya gönder
 
-1. **İmzalanacak yeri işaretleyin.** Karşı tarafın imzasının nereye geleceğini bilmesi için belgeye en az bir "Burayı imzalayın" kutusu ekleyin.
-2. **Çevrimiçi depolayın.** Eklediğiniz her şeyin birleştirildiği bitmiş PDF, Universal ID’nize bağlı olarak çevrimiçi depolanır. Universal ID ile ücretsizdir.
-3. **Kimin açabileceğini seçin.** Ya bağlantıya sahip herkes ya da yalnızca alıcı olarak belirttiğiniz kişi. Bu seçimin neyi değiştirdiğini öğrenmek için "İmzaya gönder ne kadar güvenli?" makalesine bakın.
-4. **Gönderin.** Bağlantıyı kopyalayıp kendiniz gönderin ya da kişinin e-posta adresini girin, uygulama sizin yerinize e-postayla göndersin. Açık bir bağlantıda e-posta, PDF’i ek olarak içerir. Korumalı bir bağlantıda ise içermez, çünkü ek korumayı atlatmış olurdu.
+1. **İmzanın yerini işaretleyin.** **İmzala**’yı açın, **İstek**’i seçin ve imzanın gelmesi gereken her yere bir “Burayı imzalayın” kutusu yerleştirin. İsterseniz önce **Ad iste** veya **Tarih iste**’yi işaretleyin.
+2. **Siz de imzalıyorsanız kendi bölümünüzü imzalayın.** Göndermeden önce kendi kutunuza dokunup imzalayın.
+3. **Gönderin.** **İmzaya gönder**’i seçin. Telefonda paylaşım sayfası açılır; PDF’i mesajla, e-postayla veya herhangi bir uygulamayla gönderebilirsiniz. Bilgisayarda PDF kaydedilir veya indirilir ve tarayıcınız paylaşmayı da önerebilir.
+
+İmzasız bıraktığınız her kutu gerçek bir imza alanına dönüşür. Dosyayı alan kişi onu Universal PDF’te, Adobe Acrobat veya Reader’da ya da Apple Önizleme veya Dosyalar’da imzalayıp aynı yolla geri gönderebilir. Hesaba ihtiyacı yoktur ve hiçbir şey bizim üzerimizden geçmez.
+
+## Onaylı imza (yalnızca web sitesinde)
+
+Kimin ne zaman imzaladığının kanıtına ihtiyacınız varsa Universal PDF web sitesi onaylı imza sunar. Sizin ücretsiz bir Universal ID’ye ihtiyacınız var; imzalayanın yok. PDF’iniz çevrimiçi saklanır, imzalayana bir bağlantı gider ve ikiniz de etkinlik kaydı içeren bir sertifika alırsınız. Telefon ve bilgisayar uygulamaları bunu sunmaz; bilgisayar uygulaması web sitesine yönlendirir.
+
+1. **İmzanın yerini işaretleyin**, yukarıdaki gibi.
+2. **İmzaya gönder’i, ardından Onaylı imza’yı seçin.**
+3. **Kimin açabileceğini seçin.** Bağlantıya sahip herkes ya da yalnızca belgeyi gönderdiğiniz kişi. Bu seçimin neyi değiştirdiği için “Onaylı imza ne kadar güvenli?” makalesine bakın.
+4. **Gönderin.** Bağlantıyı kopyalayıp kendiniz gönderin ya da kişinin e-posta adresini girin, biz sizin için gönderelim. Açık bağlantıda e-posta PDF’i ek olarak içerir. Korumalı bağlantıda içermez, çünkü ek korumayı aşmış olurdu.
 
 ## İki imzalayan, herhangi bir sırayla
 
-Her isteğin iki imzalayanı vardır: siz ve isteği gönderdiğiniz kişi. Her birinize ayrı bir bağlantı verilir ve herhangi bir sırayla imzalayabilirsiniz. İkinci imzalayan, ilk imzayı zaten taşıyan kopya üzerinde çalışır.
-
-## Birisi imzaladığında ne olur?
-
-İmzalayan kişi belgeyi tarayıcısında açar, imzalar ve gönderir. İmzalanan kopya yeni bir sürüm olarak depolanır; önceki sürümlerin üzerine yazılmaz, bunlar saklanır. Her adım bir etkinlik günlüğüne kaydedilir. İkiniz de imzaladığınızda istek tamamlanır ve ikiniz de sertifikanın bağlantısını içeren bir e-posta alırsınız.
+Onaylı bir isteğin iki imzalayanı vardır: siz ve gönderdiğiniz kişi. Her birinize ayrı bir bağlantı gider ve herhangi bir sırayla imzalayabilirsiniz. İkinci imzalayan, ilk imzayı zaten taşıyan kopya üzerinde çalışır. İkiniz de imzaladığınızda istek tamamlanır ve ikiniz de sertifikanın bağlantısını içeren bir e-posta alırsınız.
 
 ## Sertifika
 
-Her isteğin bir sertifika sayfası vardır. Bu sayfa belgeyi, her imzalayanın e-posta adresine göre kim olduğunu, her birinin imzalayıp imzalamadığını ve etkinlik günlüğünü gösterir: belgenin ne zaman açıldığı, neyin eklendiği, isteğin hangi ülkeden geldiği ve her adımda belgenin parmak izi. Depolanan kopya var olduğu sürece son imzalı PDF’i bu sayfadan indirebilirsiniz.
+Her onaylı isteğin bir sertifika sayfası vardır. Belgeyi, her imzalayanın e-posta adresini, her birinin imzalayıp imzalamadığını ve etkinlik kaydını gösterir: belgenin ne zaman açıldığı, neyin eklendiği, isteğin hangi ülkeden geldiği ve her adımda belgenin parmak izi. Saklanan kopya durduğu sürece son imzalı PDF’i oradan indirebilirsiniz. Tamamlanan bir istek 7 yıl saklanır.
 
 ## Sınırlar
 
-İmza bağlantılarının süresi 30 gün sonra dolar. Depolanan dosyalar en fazla 50 MB olabilir ve e-postayla ek olarak gönderilen bir dosya 30 MB’tan küçük olmalıdır.`,
+İmzalama bağlantılarının süresi 30 gün sonra dolar. Saklanan dosyalar en fazla 50 MB olabilir ve ek olarak e-postayla gönderilen bir dosya 30 MB’tan küçük olmalıdır.`,
   },
   {
     id: 'page-scrolling',
@@ -214,10 +222,10 @@ Ayar yalnızca bu cihazda, tarayıcınızın depolama alanında hatırlanır; bu
   },
   {
     id: 'send-to-sign-security',
-    title: 'İmzaya gönder ne kadar güvenli?',
+    title: 'Onaylı imza ne kadar güvenli?',
     summary: 'Nelerin şifrelendiği, sunucumuzun neleri görebildiği ve denetim kaydının nasıl işlediği.',
     group: 'Gizlilik ve güvenlik',
-    body: `İmzaya gönder, belgenizin cihazınızdan çıkmak zorunda olduğu tek özelliktir, çünkü onu başka birinin alması gerekir. Bunun tam olarak neleri kapsadığı aşağıda açıklanmıştır.
+    body: `Universal PDF web sitesinde sunulan onaylı imza, belgenizin cihazınızdan çıkması gereken tek özelliktir: imzalayanın açabilmesi ve bir kayıt kalması için saklanır. Bunun tam olarak ne anlama geldiği aşağıda. Bir PDF’i onaylı imza olmadan imzaya göndermek hiçbir şey yüklemez; dosya yalnızca sizin gönderdiğiniz yere gider.
 
 ## Anlaşılır bir dille şifreleme
 

@@ -4,39 +4,39 @@
 <!--
   Apple's privacy manifest, required for App Store submission.
 
-  Opening, reading, marking up and signing a PDF happens on the phone and sends
-  nothing (PRIVACY.md). What CAN leave, and only when the user asks for it:
+  "Data Not Collected" (2026-10-12). The phone app collects nothing:
 
-  - Signing in with a Universal ID: the email and the account id.
-  - "Send to sign": the PDF itself and the signer's email address. It is a
-    button the user presses. (The "Store with UNI·SIM" online backup was
-    retired on 2026-10-03; Back up is local only.)
-  - While signed in, one "the app was opened" event per launch, tied to the
-    account (the SDK's <UsageTracker />). Nothing about the file. Declared as
-    product interaction, for analytics, because that is what it is.
+  - No sign-in. The phone, desktop and extension builds set @unisim/sdk's
+    `noAccounts` (src/main.tsx, src/lib/accounts.ts), so there is no Universal
+    ID, no email, no account id, and the SDK never reads a suite session the
+    device holds (Keychain). No "the app was opened" event either: the SDK's
+    <UsageTracker /> sends one only for a signed-in account.
+  - No uploads. Signing and "Send for signature" happen on the phone: each
+    "Sign here" box becomes a real PDF signature field and the file leaves
+    through the system share sheet, to wherever the user sends it, never to
+    us. The certified-signature route (stored copy, emailed link, certificate)
+    is the website's only and is not in the phone app at all.
+  - No usage count. The SDK's anonymous daily open count is off in the shell
+    (`openCount: !isDesktop && !isNativeShell()`), and the suite user count it
+    replaced (an install id) was retired in @unisim/sdk 0.187.0.
+  - Signing on another phone (the QR handoff) relays the drawing as an
+    ephemeral Realtime broadcast with a PIN: nothing is stored and nothing
+    identifies the user, so it is not "collected" in Apple's sense.
+  - The iOS Scan button is Apple's VisionKit (DocumentScanner.swift), which
+    sends nothing. (The Android scanner's ML Kit diagnostics are declared in
+    Play's Data safety answers, store-assets/data-safety.json; they do not
+    apply here.)
 
-  No usage count from the phone app: the suite user count (a random install
-  id every 45 s) was retired in @unisim/sdk 0.187.0, and its replacement, the
-  anonymous daily open count (product + kind of platform, no identifier), is
-  off in the iOS/Android shell (src/main.tsx `openCount: !isDesktop &&
-  !isNativeShell()`), because the App Store and Play figures already count
-  installs. So no Device ID is collected. Only the website sends the open
-  count (the desktop app and the browser extension don't either), and the
-  website is not covered by this manifest.
-
-  The iOS Scan button is Apple's VisionKit (DocumentScanner.swift), which
-  sends nothing, so the ML Kit diagnostics declared in Play's Data safety
-  answers (store-assets/data-safety.json) do not apply here.
-
-  All of it goes to our own servers. Nothing is used for tracking, and there
-  are no third-party analytics or advertising SDKs.
+  Nothing is used for tracking, and there are no third-party analytics or
+  advertising SDKs.
 
   Required-reason APIs: @capacitor/filesystem reads file creation and
   modification dates (its `stat`), only on files in the app's own container,
   and it ships no manifest of its own. Capacitor's core frameworks carry their
   own manifests for what they use, so they are not repeated here.
 
-  Keep this in step with the App Store Connect privacy answers and PRIVACY.md.
+  Keep this in step with the App Store Connect privacy answers ("Data Not
+  Collected") and PRIVACY.md.
 -->
 <dict>
 	<key>NSPrivacyTracking</key>
@@ -56,59 +56,6 @@
 		</dict>
 	</array>
 	<key>NSPrivacyCollectedDataTypes</key>
-	<array>
-		<dict>
-			<!-- The sign-in email, and a signer's email for Send to sign. -->
-			<key>NSPrivacyCollectedDataType</key>
-			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
-			<key>NSPrivacyCollectedDataTypeLinked</key>
-			<true/>
-			<key>NSPrivacyCollectedDataTypeTracking</key>
-			<false/>
-			<key>NSPrivacyCollectedDataTypePurposes</key>
-			<array>
-				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
-			</array>
-		</dict>
-		<dict>
-			<key>NSPrivacyCollectedDataType</key>
-			<string>NSPrivacyCollectedDataTypeUserID</string>
-			<key>NSPrivacyCollectedDataTypeLinked</key>
-			<true/>
-			<key>NSPrivacyCollectedDataTypeTracking</key>
-			<false/>
-			<key>NSPrivacyCollectedDataTypePurposes</key>
-			<array>
-				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
-			</array>
-		</dict>
-		<dict>
-			<!-- A PDF the user chooses to store online or send to sign. -->
-			<key>NSPrivacyCollectedDataType</key>
-			<string>NSPrivacyCollectedDataTypeOtherUserContent</string>
-			<key>NSPrivacyCollectedDataTypeLinked</key>
-			<true/>
-			<key>NSPrivacyCollectedDataTypeTracking</key>
-			<false/>
-			<key>NSPrivacyCollectedDataTypePurposes</key>
-			<array>
-				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
-			</array>
-		</dict>
-		<dict>
-			<!-- One "session.opened" event per launch, only while signed in
-			     (<UsageTracker />). Goes when the phone app drops sign-in. -->
-			<key>NSPrivacyCollectedDataType</key>
-			<string>NSPrivacyCollectedDataTypeProductInteraction</string>
-			<key>NSPrivacyCollectedDataTypeLinked</key>
-			<true/>
-			<key>NSPrivacyCollectedDataTypeTracking</key>
-			<false/>
-			<key>NSPrivacyCollectedDataTypePurposes</key>
-			<array>
-				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
-			</array>
-		</dict>
-	</array>
+	<array/>
 </dict>
 </plist>

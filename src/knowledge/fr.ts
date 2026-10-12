@@ -126,20 +126,22 @@ Si vous choisissez de dessiner votre signature sur votre téléphone, le dessin 
 
 ## Ce que l’application envoie, même quand votre PDF ne bouge pas
 
-Si vous êtes connecté, l’application enregistre qu’elle a été ouverte, pour la page d’activité de votre compte. Sur le site web, la première fois que vous ouvrez l’application chaque jour, elle ajoute aussi un au décompte anonyme des ouvertures du jour, envoyé après votre premier clic ou votre première frappe au clavier. Ce décompte ne contient que le nom de l’application et le type de plateforme (« web » sur le site) : aucun identifiant, aucun compte et rien sur ce que vous faites. Une marque « déjà compté aujourd’hui » reste sur votre appareil et n’est jamais envoyée. Les applications pour téléphone et pour ordinateur et l’extension de navigateur ne l’envoient pas. Rien de ce que l’application envoie ne contient quoi que ce soit sur vos fichiers. Il n’y a ni publicité ni pistage par des tiers.`,
+Sur le site web, vous pouvez vous connecter avec un Universal ID ; tant que vous êtes connecté, l’application enregistre qu’elle a été ouverte, pour la page d’activité de votre compte. Les applications pour téléphone et ordinateur et l’extension de navigateur n’ont aucune connexion. Sur le site web, la première fois que vous ouvrez l’application chaque jour, elle ajoute aussi un au décompte anonyme des ouvertures du jour, envoyé après votre premier clic ou votre première frappe au clavier. Ce décompte ne contient que le nom de l’application et le type de plateforme (« web » sur le site) : aucun identifiant, aucun compte et rien sur ce que vous faites. Une marque « déjà compté aujourd’hui » reste sur votre appareil et n’est jamais envoyée. Les applications pour téléphone et pour ordinateur et l’extension de navigateur ne l’envoient pas. Rien de ce que l’application envoie ne contient quoi que ce soit sur vos fichiers. Il n’y a ni publicité ni pistage par des tiers.`,
   },
   {
     id: 'signing-a-pdf',
     title: 'Signer un PDF vous-même',
     summary: 'Ce qu’est une signature apposée dans l’application, et ce qu’elle n’est pas.',
     group: 'Comment ça marche',
-    body: `Vous pouvez signer un PDF en dessinant votre signature avec une souris, un pavé tactile ou le doigt, en la dessinant sur votre téléphone, ou en important une image de votre signature. Vous pouvez enregistrer des signatures et des tampons pour les réutiliser, et ajouter votre nom et la date en dessous.
+    body: `Vous pouvez signer un PDF en dessinant votre signature avec une souris, un pavé tactile ou le doigt, en la dessinant sur votre téléphone, ou en important une image de votre signature. Vous pouvez enregistrer des signatures et des tampons pour les réutiliser, et ajouter votre nom et la date en dessous. Rien de tout cela ne demande de compte.
 
 Lorsque vous placez une signature, il s’agit d’une image positionnée sur la page. Lorsque vous téléchargez le PDF, cette image est intégrée à la page comme n’importe quel autre ajout. Tout cela se passe sur votre appareil.
 
-## Les cadres de signature
+## Zones de signature
 
-Si vous préparez un document pour quelqu’un d’autre, vous pouvez dessiner un cadre « Signez ici » sur la page. Vous pouvez aussi exiger, pour un cadre, une signature dessinée à la main plutôt qu’une image importée. Une signature dessinée sur un téléphone compte bien comme dessinée à la main.
+Si vous préparez un document pour quelqu’un d’autre, vous pouvez placer une zone « Signez ici » sur la page et demander avec elle son nom et la date. Vous pouvez aussi exiger qu’une zone soit signée à la main plutôt qu’avec une image importée. Dessiner sur un téléphone compte comme une signature à la main.
+
+Quand vous enregistrez ou partagez le PDF, chaque zone que vous n’avez pas signée devient un vrai champ de signature, du type que les autres applications PDF comprennent. La personne à qui vous l’envoyez peut le signer dans Universal PDF, Adobe Acrobat ou Reader, ou Aperçu d’Apple. Quand Universal PDF ouvre un PDF qui contient un champ de signature vide, venant de nous ou d’une autre application, il l’affiche comme une zone à toucher pour signer. Voir « Envoyer un PDF pour signature ».
 
 ## Ce qu’est ce type de signature
 
@@ -149,7 +151,7 @@ C’est ce qu’on appelle habituellement une **signature électronique** : une
 
 Ce n’est pas une **signature numérique** au sens technique. Une signature numérique utilise un certificat, souvent délivré par une autorité de confiance, pour sceller le fichier par un procédé cryptographique, de sorte que toute modification ultérieure puisse être détectée par l’application PDF. Universal PDF n’ajoute pas ce type de sceau à un fichier que vous signez vous-même.
 
-C’est important, car l’image d’une signature sur un PDF ne prouve pas, à elle seule, qui l’a apposée, ni que le document n’a pas été modifié depuis. Si vous avez besoin d’une trace de qui a signé et quand, utilisez **Envoyer pour signature**, qui tient un journal d’activité côté serveur et conserve une empreinte de chaque version signée. Les articles suivants expliquent comment.
+C’est important, car l’image d’une signature sur un PDF ne prouve pas, à elle seule, qui l’a apposée, ni que le document n’a pas été modifié depuis. Si vous avez besoin d’une trace de qui a signé et quand, utilisez une **signature certifiée** sur le site web d’Universal PDF : elle conserve un journal d’activité sur le serveur et une empreinte de chaque version signée. Les articles suivants expliquent comment.
 
 ## Un mot sur le droit
 
@@ -157,29 +159,35 @@ Ceci ne constitue pas un conseil juridique. L’acceptabilité d’une signature
   },
   {
     id: 'send-to-sign',
-    title: 'Comment fonctionne Envoyer pour signature',
-    summary: 'Demander à quelqu’un d’autre de signer, étape par étape.',
+    title: 'Envoyer un PDF pour signature',
+    summary: 'Partagez simplement le fichier, ou obtenez une signature certifiée sur le site web.',
     group: 'Comment ça marche',
-    body: `Envoyer pour signature vous permet de demander à une autre personne de signer un PDF en ligne, et vous donne à tous les deux une trace de ce qui s’est passé. Vous devez être connecté avec un Universal ID, et votre adresse e-mail doit être vérifiée, car la demande est envoyée en votre nom.
+    body: `Il y a deux façons de demander à quelqu’un de signer un PDF. La façon simple fonctionne partout, ne demande aucun compte et n’envoie rien en ligne. La façon certifiée, sur le site web uniquement, ajoute une trace de qui a signé et quand.
 
-## Les étapes
+## Envoyer pour signature
 
-1. **Indiquez où signer.** Ajoutez au moins un cadre « Signez ici » au document, pour que l’autre personne sache où apposer sa signature.
-2. **Stockez-le en ligne.** Le PDF terminé, avec tous vos ajouts intégrés, est stocké en ligne et associé à votre Universal ID. C’est gratuit avec un Universal ID.
-3. **Choisissez qui peut l’ouvrir.** Soit « Toute personne disposant du lien », soit « Uniquement la personne à qui vous l’adressez ». Consultez « Envoyer pour signature est-il sûr ? » pour savoir ce que ce choix change.
-4. **Envoyez-le.** Copiez le lien et envoyez-le vous-même, ou saisissez l’adresse e-mail de la personne et l’application le lui envoie par e-mail. Avec un lien ouvert, l’e-mail contient le PDF en pièce jointe. Avec un lien protégé, ce n’est pas le cas, car la pièce jointe contournerait la protection.
+1. **Indiquez où signer.** Ouvrez **Signer**, choisissez **Demande** et placez une zone « Signez ici » à chaque endroit où une signature est attendue. Cochez d’abord **Demander le nom** ou **Demander la date** si vous les voulez.
+2. **Signez votre partie, si vous signez aussi.** Touchez votre zone et signez-la avant d’envoyer.
+3. **Envoyez.** Choisissez **Envoyer pour signature**. Sur un téléphone, la feuille de partage s’ouvre : vous pouvez envoyer le PDF par message, par e-mail ou par n’importe quelle application. Sur un ordinateur, le PDF est enregistré ou téléchargé, et votre navigateur peut aussi proposer de le partager.
+
+Chaque zone laissée vide devient un vrai champ de signature. La personne qui reçoit le fichier peut le signer dans Universal PDF, dans Adobe Acrobat ou Reader, ou dans Aperçu ou Fichiers d’Apple, puis vous le renvoyer de la même façon. Elle n’a pas besoin de compte, et rien ne passe par nous.
+
+## Signature certifiée (site web uniquement)
+
+Si vous avez besoin d’une preuve de qui a signé et quand, le site web d’Universal PDF propose une signature certifiée. Il vous faut un Universal ID gratuit ; la personne qui signe, non. Votre PDF est stocké en ligne, le signataire reçoit un lien, et vous recevez tous deux un certificat avec un journal d’activité. Les applications pour téléphone et ordinateur ne la proposent pas ; l’application pour ordinateur renvoie vers le site web.
+
+1. **Indiquez où signer**, comme ci-dessus.
+2. **Choisissez Envoyer pour signature, puis Signature certifiée.**
+3. **Choisissez qui peut l’ouvrir.** Soit toute personne disposant du lien, soit uniquement la personne à qui vous l’adressez. Voir « Une signature certifiée est-elle sûre ? » pour ce que ce choix change.
+4. **Envoyez.** Copiez le lien et envoyez-le vous-même, ou saisissez son adresse e-mail et nous l’envoyons pour vous. Avec un lien ouvert, l’e-mail contient le PDF en pièce jointe. Avec un lien protégé, non, car la pièce jointe contournerait la protection.
 
 ## Deux signataires, dans n’importe quel ordre
 
-Chaque demande comporte deux signataires : vous et la personne à qui vous l’avez envoyée. Chacun reçoit son propre lien, et vous pouvez signer dans n’importe quel ordre. Celui qui signe en second travaille sur la copie qui porte déjà la première signature.
-
-## Ce qui se passe quand quelqu’un signe
-
-Le signataire ouvre le document dans son navigateur, le signe et le renvoie. La copie signée est stockée comme nouvelle version ; les versions précédentes sont conservées, pas écrasées. Chaque étape est consignée dans un journal d’activité. Lorsque vous avez signé tous les deux, la demande est terminée et chacun de vous reçoit un e-mail contenant un lien vers le certificat.
+Une demande certifiée compte deux signataires : vous et la personne à qui vous l’avez envoyée. Chacun reçoit son propre lien, et vous pouvez signer dans n’importe quel ordre. Celui qui signe en second travaille sur la copie qui porte déjà la première signature. Quand vous avez signé tous les deux, la demande est terminée et vous recevez chacun un e-mail avec un lien vers le certificat.
 
 ## Le certificat
 
-Chaque demande dispose d’une page de certificat. Elle affiche le document, l’identité de chaque signataire par son adresse e-mail, si chacun a signé, et le journal d’activité : quand le document a été ouvert, ce qui a été ajouté, de quel pays provenait la demande, et une empreinte du document à chaque étape. Vous pouvez y télécharger le PDF signé final tant que la copie stockée existe.
+Chaque demande certifiée a une page de certificat. Elle montre le document, l’adresse e-mail de chaque signataire, si chacun a signé, et le journal d’activité : quand le document a été ouvert, ce qui a été ajouté, de quel pays venait la demande, et une empreinte du document à chaque étape. Vous pouvez y télécharger le PDF signé final tant que la copie stockée existe. Une demande terminée est conservée 7 ans.
 
 ## Limites
 
@@ -214,10 +222,10 @@ Le réglage est mémorisé dans le stockage de votre navigateur, sur cet apparei
   },
   {
     id: 'send-to-sign-security',
-    title: 'Envoyer pour signature est-il sûr ?',
+    title: 'Une signature certifiée est-elle sûre ?',
     summary: 'Ce qui est chiffré, ce que notre serveur peut voir, et comment fonctionne la piste d’audit.',
     group: 'Confidentialité et sécurité',
-    body: `Envoyer pour signature est la seule fonctionnalité pour laquelle votre document doit quitter votre appareil, puisque quelqu’un d’autre doit le recevoir. Voici exactement ce que cela implique.
+    body: `La signature certifiée, proposée sur le site web d’Universal PDF, est la seule fonction pour laquelle votre document doit quitter votre appareil : il est stocké pour que le signataire puisse l’ouvrir et pour qu’il en reste une trace. Voici exactement ce que cela implique. Envoyer un PDF pour signature sans elle n’envoie rien en ligne ; le fichier ne va que là où vous l’envoyez.
 
 ## Le chiffrement, en termes simples
 

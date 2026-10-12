@@ -126,20 +126,22 @@ Se você escolher desenhar sua assinatura no celular, o desenho vai do celular p
 
 ## O que o aplicativo envia mesmo quando seu PDF fica onde está
 
-Se você entrar na sua conta, o aplicativo registra que foi aberto, para a página de atividade da sua conta. No site, na primeira vez que você abre o aplicativo a cada dia, ele também soma um à contagem anônima de aberturas do dia, enviada depois do seu primeiro clique ou tecla pressionada. Essa contagem contém só o nome do aplicativo e o tipo de plataforma ("web" no site): nenhum identificador, nenhuma conta e nada sobre o que você faz. Uma marca de "já contado hoje" fica no seu dispositivo e nunca é enviada. Os aplicativos para celular e computador e a extensão do navegador não a enviam. Nada do que o aplicativo envia inclui algo sobre os seus arquivos. Não há publicidade nem rastreamento de terceiros.`,
+No site, você pode entrar com um Universal ID e, enquanto estiver conectado, o aplicativo registra que foi aberto, para a página de atividade da sua conta. Os aplicativos para celular e computador e a extensão do navegador não têm login. No site, na primeira vez que você abre o aplicativo a cada dia, ele também soma um à contagem anônima de aberturas do dia, enviada depois do seu primeiro clique ou tecla pressionada. Essa contagem contém só o nome do aplicativo e o tipo de plataforma ("web" no site): nenhum identificador, nenhuma conta e nada sobre o que você faz. Uma marca de "já contado hoje" fica no seu dispositivo e nunca é enviada. Os aplicativos para celular e computador e a extensão do navegador não a enviam. Nada do que o aplicativo envia inclui algo sobre os seus arquivos. Não há publicidade nem rastreamento de terceiros.`,
   },
   {
     id: 'signing-a-pdf',
     title: 'Assinar um PDF você mesmo',
     summary: 'O que é uma assinatura colocada no aplicativo, e o que ela não é.',
     group: 'Como funciona',
-    body: `Você pode assinar um PDF desenhando sua assinatura com o mouse, o trackpad ou o dedo, desenhando no celular ou importando uma imagem da sua assinatura. Você pode salvar assinaturas e carimbos para usar de novo, e adicionar seu nome e a data embaixo deles.
+    body: `Você pode assinar um PDF desenhando sua assinatura com o mouse, o trackpad ou o dedo, desenhando no celular ou importando uma imagem da sua assinatura. Você pode salvar assinaturas e carimbos para usar de novo, e adicionar seu nome e a data embaixo deles. Nada disso exige conta.
 
 Quando você coloca uma assinatura, ela é uma imagem posicionada na página. Quando você baixa o PDF, essa imagem é incorporada à página como qualquer outra adição. Tudo isso acontece no seu aparelho.
 
 ## Caixas de assinatura
 
-Se você estiver preparando um documento para outra pessoa, pode desenhar uma caixa "Assine aqui" na página. Também pode exigir que a caixa receba uma assinatura desenhada à mão, e não uma imagem enviada. Desenhar no celular também conta como desenhar à mão.
+Se você está preparando um documento para outra pessoa, pode colocar uma caixa “Assine aqui” na página e pedir junto o nome e a data. Também pode exigir que uma caixa seja assinada à mão, e não com uma imagem enviada. Desenhar no celular conta como assinatura à mão.
+
+Quando você salva ou compartilha o PDF, cada caixa que você não assinou vira um campo de assinatura de verdade, do tipo que outros aplicativos de PDF entendem. Quem receber pode assinar no Universal PDF, no Adobe Acrobat ou Reader, ou na Pré-Visualização da Apple. Quando o Universal PDF abre um PDF com um campo de assinatura vazio, nosso ou de outro aplicativo, ele mostra uma caixa para tocar e assinar. Veja “Enviar um PDF para assinatura”.
 
 ## O que é esse tipo de assinatura
 
@@ -149,7 +151,7 @@ Se você estiver preparando um documento para outra pessoa, pode desenhar uma ca
 
 Não é uma **assinatura digital** no sentido técnico. Uma assinatura digital usa um certificado, muitas vezes emitido por uma autoridade confiável, para lacrar o arquivo por criptografia, de modo que qualquer alteração posterior possa ser detectada pelo aplicativo de PDF. O Universal PDF não adiciona esse tipo de lacre a um arquivo que você mesmo assina.
 
-Isso importa porque a imagem de uma assinatura em um PDF não prova, sozinha, quem a colocou ali, nem que o documento não foi alterado depois. Se você precisa de um registro de quem assinou e quando, use **Enviar para assinatura**, que mantém um registro de atividades no servidor e uma impressão digital de cada versão assinada. Os próximos artigos explicam como.
+Isso importa porque a imagem de uma assinatura num PDF não prova, sozinha, quem a colocou nem que o documento não foi alterado depois. Se você precisa de um registro de quem assinou e quando, use uma **assinatura certificada** no site do Universal PDF, que guarda um registro de atividade no servidor e uma impressão digital de cada versão assinada. Os próximos artigos explicam como.
 
 ## Uma observação sobre a lei
 
@@ -157,33 +159,39 @@ Isto não é aconselhamento jurídico. Se uma assinatura eletrônica é aceitáv
   },
   {
     id: 'send-to-sign',
-    title: 'Como funciona o Enviar para assinatura',
-    summary: 'Como pedir que outra pessoa assine, passo a passo.',
+    title: 'Enviar um PDF para assinatura',
+    summary: 'Basta compartilhar o arquivo, ou obtenha uma assinatura certificada no site.',
     group: 'Como funciona',
-    body: `O Enviar para assinatura permite pedir que outra pessoa assine um PDF on-line e dá a vocês dois um registro do que aconteceu. Você precisa ter entrado com um Universal ID, e seu endereço de e-mail precisa estar verificado, porque a solicitação é enviada em seu nome.
+    body: `Há duas formas de pedir que outra pessoa assine um PDF. A forma simples funciona em qualquer lugar, não exige conta e não envia nada para a nuvem. A forma certificada, só no site, acrescenta um registro de quem assinou e quando.
 
-## Os passos
+## Enviar para assinatura
 
-1. **Marque onde assinar.** Adicione pelo menos uma caixa "Assine aqui" ao documento, para que a outra pessoa saiba onde vai a assinatura dela.
-2. **Guarde on-line.** O PDF finalizado, com tudo o que você adicionou já incorporado, é guardado on-line, vinculado ao seu Universal ID. É gratuito com um Universal ID.
-3. **Escolha quem pode abrir.** Ou qualquer pessoa com o link, ou só a pessoa a quem você endereçar. Veja "Quão seguro é o Enviar para assinatura?" para saber o que essa escolha muda.
-4. **Envie.** Copie o link e envie você mesmo, ou digite o e-mail da pessoa e o aplicativo envia por você. Em um link aberto, o e-mail inclui o PDF como anexo. Em um link protegido, não inclui, porque o anexo driblaria a proteção.
+1. **Marque onde assinar.** Abra **Assinar**, escolha **Solicitar** e coloque uma caixa “Assine aqui” onde cada assinatura deve ficar. Marque antes **Pedir nome** ou **Pedir data** se quiser.
+2. **Assine a sua parte, se você também assina.** Toque na sua caixa e assine antes de enviar.
+3. **Envie.** Escolha **Enviar para assinatura**. No celular, a folha de compartilhamento abre, e você pode mandar o PDF por mensagem, por e-mail ou por qualquer aplicativo. No computador, o PDF é salvo ou baixado, e o navegador também pode oferecer o compartilhamento.
+
+Cada caixa que você deixou sem assinar vira um campo de assinatura de verdade. Quem receber o arquivo pode assinar no Universal PDF, no Adobe Acrobat ou Reader, ou na Pré-Visualização ou no Arquivos da Apple, e devolver do mesmo jeito. A pessoa não precisa de conta, e nada passa por nós.
+
+## Assinatura certificada (só no site)
+
+Se você precisa de prova de quem assinou e quando, o site do Universal PDF oferece a assinatura certificada. Você precisa de um Universal ID gratuito; quem assina, não. Seu PDF fica guardado on-line, o signatário recebe um link e vocês dois recebem um certificado com registro de atividade. Os aplicativos para celular e computador não oferecem essa opção; o aplicativo para computador leva ao site.
+
+1. **Marque onde assinar**, como acima.
+2. **Escolha Enviar para assinatura e depois Assinatura certificada.**
+3. **Escolha quem pode abrir.** Qualquer pessoa com o link, ou só a pessoa a quem você endereçar. Veja “Quão segura é uma assinatura certificada?” para saber o que essa escolha muda.
+4. **Envie.** Copie o link e envie você mesmo, ou digite o e-mail da pessoa e nós enviamos. Com um link aberto, o e-mail leva o PDF anexado. Com um link protegido, não, porque o anexo driblaria a proteção.
 
 ## Dois signatários, em qualquer ordem
 
-Cada solicitação tem dois signatários: você e a pessoa para quem você enviou. Cada um recebe o próprio link, e vocês podem assinar em qualquer ordem. Quem assinar por último trabalha na cópia que já tem a primeira assinatura.
-
-## O que acontece quando alguém assina
-
-O signatário abre o documento no navegador, assina e envia. A cópia assinada é guardada como uma nova versão; as versões anteriores são mantidas, não substituídas. Cada etapa fica registrada em um registro de atividades. Quando vocês dois tiverem assinado, a solicitação está concluída e os dois recebem um e-mail com um link para o certificado.
+Uma solicitação certificada tem dois signatários: você e a pessoa a quem enviou. Cada um recebe o próprio link, e vocês podem assinar em qualquer ordem. Quem assina por último trabalha na cópia que já tem a primeira assinatura. Quando os dois assinam, a solicitação fica completa e ambos recebem um e-mail com um link para o certificado.
 
 ## O certificado
 
-Toda solicitação tem uma página de certificado. Ela mostra o documento, quem foi cada signatário pelo endereço de e-mail, se cada um já assinou e o registro de atividades: quando o documento foi aberto, o que foi adicionado, de que país veio a solicitação e uma impressão digital do documento em cada etapa. Você pode baixar o PDF assinado final por essa página enquanto a cópia guardada existir.
+Toda solicitação certificada tem uma página de certificado. Ela mostra o documento, o e-mail de cada signatário, se cada um assinou e o registro de atividade: quando o documento foi aberto, o que foi adicionado, de que país veio a solicitação e uma impressão digital do documento em cada etapa. Você pode baixar ali o PDF assinado final enquanto a cópia guardada existir. Uma solicitação concluída é mantida por 7 anos.
 
 ## Limites
 
-Os links de assinatura expiram depois de 30 dias. Os arquivos guardados podem ter até 50 MB, e um arquivo enviado como anexo de e-mail precisa ter menos de 30 MB.`,
+Os links de assinatura expiram depois de 30 dias. Os arquivos guardados podem ter até 50 MB, e um arquivo enviado como anexo precisa ter menos de 30 MB.`,
   },
   {
     id: 'page-scrolling',
@@ -214,10 +222,10 @@ A configuração fica guardada no armazenamento do seu navegador, só neste apar
   },
   {
     id: 'send-to-sign-security',
-    title: 'Quão seguro é o Enviar para assinatura?',
+    title: 'Quão segura é uma assinatura certificada?',
     summary: 'O que é criptografado, o que nosso servidor consegue ver e como funciona a trilha de auditoria.',
     group: 'Privacidade e segurança',
-    body: `O Enviar para assinatura é o único recurso em que seu documento precisa sair do seu aparelho, porque outra pessoa precisa recebê-lo. Veja exatamente o que isso envolve.
+    body: `A assinatura certificada, oferecida no site do Universal PDF, é a única função em que o seu documento precisa sair do seu dispositivo: ele é guardado para que o signatário possa abri-lo e para que fique um registro. Veja exatamente o que isso envolve. Enviar um PDF para assinatura sem ela não envia nada para a nuvem; o arquivo vai só para onde você mandar.
 
 ## Criptografia, em palavras simples
 

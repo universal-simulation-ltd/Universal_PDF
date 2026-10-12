@@ -77,6 +77,12 @@ function toField(ann: WidgetData, box: { cx: number; cy: number; cw: number; ch:
     ...box
   }
   switch (ann.fieldType) {
+    // ⚠️ A signature field is not typed into. It opens as a tap-to-sign box
+    // in the annotation layer instead (export.ts `readEmbeddedSigFields`), and
+    // used to fall through to `default` here — an empty text input laid over
+    // the box, which swallowed the tap meant for it.
+    case 'Sig':
+      return null
     case 'Btn':
       if (ann.pushButton) return null // a button runs a script; there is nothing to fill
       if (ann.checkBox) {

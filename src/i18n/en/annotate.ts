@@ -76,8 +76,8 @@ export default {
   'selection.delete_many_aria_other': 'Delete {count} selected objects',
 
   // AnnotationLayer — Send to sign on a selected "Sign here" box
-  'sigfield.send_title': 'Send to sign — email this document as a signature request',
-  'sigfield.send_aria': 'Send to sign',
+  'sigfield.send_title': 'Send for signature — share this PDF so someone can sign it',
+  'sigfield.send_aria': 'Send for signature',
 
   // AnnotationLayer — Fill / Redact toggles on a box or circle
   'shape.fill_clear': 'Clear fill',

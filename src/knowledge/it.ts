@@ -126,20 +126,22 @@ Se scegli di disegnare la firma sul telefono, il disegno passa dal telefono all�
 
 ## Che cosa invia l’app anche quando il tuo PDF resta dov’è
 
-Se accedi, l’app registra che è stata aperta, per la pagina delle attività del tuo account. Sul sito web, la prima volta che apri l’app ogni giorno, aggiunge anche uno al conteggio anonimo delle aperture del giorno, inviato dopo il tuo primo clic o tasto premuto. Quel conteggio contiene solo il nome dell’app e il tipo di piattaforma («web» sul sito): nessun identificativo, nessun account e niente su ciò che fai. Un segno «già contato oggi» resta sul tuo dispositivo e non viene mai inviato. Le app per telefono e computer e l’estensione del browser non lo inviano. Niente di ciò che l’app invia contiene informazioni sui tuoi file. Non ci sono pubblicità né tracciamento di terze parti.`,
+Sul sito puoi accedere con un Universal ID e, finché hai effettuato l’accesso, l’app registra che è stata aperta, per la pagina delle attività del tuo account. Le app per telefono e computer e l’estensione del browser non hanno alcun accesso. Sul sito web, la prima volta che apri l’app ogni giorno, aggiunge anche uno al conteggio anonimo delle aperture del giorno, inviato dopo il tuo primo clic o tasto premuto. Quel conteggio contiene solo il nome dell’app e il tipo di piattaforma («web» sul sito): nessun identificativo, nessun account e niente su ciò che fai. Un segno «già contato oggi» resta sul tuo dispositivo e non viene mai inviato. Le app per telefono e computer e l’estensione del browser non lo inviano. Niente di ciò che l’app invia contiene informazioni sui tuoi file. Non ci sono pubblicità né tracciamento di terze parti.`,
   },
   {
     id: 'signing-a-pdf',
     title: 'Firmare un PDF da solo',
     summary: 'Che cos’è una firma inserita nell’app, e che cosa non è.',
     group: 'Come funziona',
-    body: `Puoi firmare un PDF disegnando la tua firma con il mouse, il trackpad o un dito, disegnandola sul telefono oppure importando un’immagine della tua firma. Puoi salvare firme e timbri per riutilizzarli, e aggiungere sotto il tuo nome e la data.
+    body: `Puoi firmare un PDF disegnando la tua firma con il mouse, il trackpad o un dito, disegnandola sul telefono oppure importando un’immagine della tua firma. Puoi salvare firme e timbri per riutilizzarli, e aggiungere sotto il tuo nome e la data. Per nulla di tutto questo serve un account.
 
 Quando inserisci una firma, si tratta di un’immagine posizionata sulla pagina. Quando scarichi il PDF, quell’immagine viene unita alla pagina come qualsiasi altra aggiunta. Tutto questo avviene sul tuo dispositivo.
 
-## Riquadri per la firma
+## Riquadri firma
 
-Se stai preparando un documento per qualcun altro, puoi disegnare sulla pagina un riquadro «Firma qui». Puoi anche impostare un riquadro in modo che richieda una firma disegnata a mano invece di un’immagine caricata. Disegnare sul telefono conta comunque come firma a mano.
+Se prepari un documento per qualcun altro, puoi inserire un riquadro «Firma qui» nella pagina e chiedere insieme il nome e la data. Puoi anche richiedere che un riquadro sia firmato a mano invece che con un’immagine caricata. Disegnare sul telefono conta come firma a mano.
+
+Quando salvi o condividi il PDF, ogni riquadro che non hai firmato diventa un vero campo firma, del tipo che le altre app PDF capiscono. Chi lo riceve può firmarlo in Universal PDF, Adobe Acrobat o Reader, o Anteprima di Apple. Quando Universal PDF apre un PDF con un campo firma vuoto, nostro o di un’altra app, lo mostra come un riquadro da toccare per firmare. Vedi «Inviare un PDF per la firma».
 
 ## Che cos’è questo tipo di firma
 
@@ -149,7 +151,7 @@ Se stai preparando un documento per qualcun altro, puoi disegnare sulla pagina u
 
 Non è una **firma digitale** in senso tecnico. Una firma digitale usa un certificato, spesso rilasciato da un’autorità fidata, per sigillare il file con la crittografia, in modo che l’app per PDF possa rilevare qualsiasi modifica successiva. Universal PDF non aggiunge questo tipo di sigillo a un file che firmi da solo.
 
-Questo conta perché l’immagine di una firma su un PDF, da sola, non dimostra chi l’ha messa lì, né che il documento non sia stato modificato da allora. Se ti serve una prova di chi ha firmato e quando, usa **Invia per la firma**, che conserva sul server un registro delle attività e un’impronta di ogni versione firmata. I prossimi articoli spiegano come.
+Conta perché l’immagine di una firma su un PDF non dimostra, da sola, chi l’ha messa, né che il documento non sia stato modificato in seguito. Se ti serve una traccia di chi ha firmato e quando, usa una **firma certificata** sul sito di Universal PDF, che conserva un registro delle attività sul server e un’impronta di ogni versione firmata. I prossimi articoli spiegano come.
 
 ## Una nota sulla legge
 
@@ -157,33 +159,39 @@ Questa non è una consulenza legale. Se una firma elettronica sia accettabile di
   },
   {
     id: 'send-to-sign',
-    title: 'Come funziona Invia per la firma',
-    summary: 'Chiedere a qualcun altro di firmare, passo dopo passo.',
+    title: 'Inviare un PDF per la firma',
+    summary: 'Condividi semplicemente il file, oppure ottieni una firma certificata sul sito.',
     group: 'Come funziona',
-    body: `Invia per la firma ti permette di chiedere a un’altra persona di firmare un PDF online, e dà a entrambi una traccia di quello che è successo. Devi aver effettuato l’accesso con un Universal ID, e il tuo indirizzo email deve essere verificato, perché la richiesta viene inviata a tuo nome.
+    body: `Ci sono due modi per chiedere a qualcuno di firmare un PDF. Quello semplice funziona ovunque, non richiede account e non carica nulla. Quello certificato, solo sul sito, aggiunge una traccia di chi ha firmato e quando.
 
-## I passaggi
+## Invia per la firma
 
-1. **Indica dove firmare.** Aggiungi al documento almeno un riquadro «Firma qui», così l’altra persona sa dove va la sua firma.
-2. **Conservalo online.** Il PDF finito, con tutto ciò che hai aggiunto già unito, viene conservato online collegato al tuo Universal ID. È gratuito con un Universal ID.
-3. **Scegli chi può aprirlo.** «Chiunque abbia il link» oppure «Solo la persona a cui lo invii». Leggi «Quanto è sicuro Invia per la firma?» per sapere che cosa cambia con questa scelta.
-4. **Invialo.** Copia il link e invialo tu, oppure inserisci l’indirizzo email del destinatario e l’app lo invia per te. Con un link aperto l’email include il PDF come allegato. Con un link protetto no, perché l’allegato aggirerebbe la protezione.
+1. **Indica dove firmare.** Apri **Firma**, scegli **Richiesta** e inserisci un riquadro «Firma qui» dove deve andare ogni firma. Spunta prima **Chiedi il nome** o **Chiedi la data** se ti servono.
+2. **Firma la tua parte, se firmi anche tu.** Tocca il tuo riquadro e firmalo prima di inviare.
+3. **Invia.** Scegli **Invia per la firma**. Sul telefono si apre il foglio di condivisione, così puoi inviare il PDF con un messaggio, via email o con qualsiasi app. Sul computer il PDF viene salvato o scaricato, e il browser può anche proporti di condividerlo.
+
+Ogni riquadro lasciato senza firma diventa un vero campo firma. Chi riceve il file può firmarlo in Universal PDF, in Adobe Acrobat o Reader, o in Anteprima o File di Apple, e rimandartelo allo stesso modo. Non gli serve un account e nulla passa da noi.
+
+## Firma certificata (solo sul sito)
+
+Se ti serve una prova di chi ha firmato e quando, il sito di Universal PDF offre la firma certificata. A te serve un Universal ID gratuito; a chi firma no. Il tuo PDF viene archiviato online, il firmatario riceve un link ed entrambi ricevete un certificato con un registro delle attività. Le app per telefono e computer non la offrono; l’app per computer rimanda al sito.
+
+1. **Indica dove firmare**, come sopra.
+2. **Scegli Invia per la firma, poi Firma certificata.**
+3. **Scegli chi può aprirlo.** Chiunque abbia il link, oppure solo la persona a cui lo indirizzi. Vedi «Quanto è sicura una firma certificata?» per cosa cambia questa scelta.
+4. **Invia.** Copia il link e invialo tu, oppure inserisci il suo indirizzo email e lo inviamo noi. Con un link aperto, l’email contiene il PDF come allegato. Con un link protetto no, perché l’allegato aggirerebbe la protezione.
 
 ## Due firmatari, in qualsiasi ordine
 
-Ogni richiesta ha due firmatari: tu e la persona a cui l’hai inviata. Ciascuno di voi riceve il proprio link, e potete firmare in qualsiasi ordine. Chi firma per secondo lavora sulla copia che contiene già la prima firma.
-
-## Che cosa succede quando qualcuno firma
-
-Il firmatario apre il documento nel browser, firma e lo invia. La copia firmata viene conservata come nuova versione; le versioni precedenti restano, non vengono sovrascritte. Ogni passaggio viene annotato in un registro delle attività. Quando avete firmato entrambi, la richiesta è completa e ricevete entrambi un’email con un link al certificato.
+Una richiesta certificata ha due firmatari: tu e la persona a cui l’hai inviata. Ognuno riceve il proprio link e potete firmare in qualsiasi ordine. Chi firma per secondo lavora sulla copia che porta già la prima firma. Quando avete firmato entrambi, la richiesta è completa e ricevete tutti e due un’email con un link al certificato.
 
 ## Il certificato
 
-Ogni richiesta ha una pagina del certificato. Mostra il documento, chi è ciascun firmatario in base all’indirizzo email, se ciascuno ha firmato, e il registro delle attività: quando il documento è stato aperto, che cosa è stato aggiunto, da quale paese è arrivata la richiesta e un’impronta del documento a ogni passaggio. Da lì puoi scaricare il PDF firmato definitivo finché la copia conservata esiste.
+Ogni richiesta certificata ha una pagina di certificato. Mostra il documento, l’indirizzo email di ogni firmatario, se ognuno ha firmato e il registro delle attività: quando il documento è stato aperto, cosa è stato aggiunto, da quale paese è arrivata la richiesta e un’impronta del documento a ogni passaggio. Da lì puoi scaricare il PDF firmato finale finché esiste la copia archiviata. Una richiesta completata viene conservata per 7 anni.
 
 ## Limiti
 
-I link per la firma scadono dopo 30 giorni. I file conservati possono arrivare a 50 MB, e un file inviato via email come allegato deve essere inferiore a 30 MB.`,
+I link per la firma scadono dopo 30 giorni. I file archiviati possono arrivare a 50 MB, e un file inviato come allegato deve essere sotto i 30 MB.`,
   },
   {
     id: 'page-scrolling',
@@ -214,10 +222,10 @@ L’impostazione viene memorizzata nello spazio di archiviazione del browser, so
   },
   {
     id: 'send-to-sign-security',
-    title: 'Quanto è sicuro Invia per la firma?',
+    title: 'Quanto è sicura una firma certificata?',
     summary: 'Che cosa è crittografato, che cosa può vedere il nostro server e come funziona la traccia di controllo.',
     group: 'Privacy e sicurezza',
-    body: `Invia per la firma è l’unica funzione in cui il documento deve lasciare il tuo dispositivo, perché qualcun altro deve riceverlo. Ecco esattamente che cosa comporta.
+    body: `La firma certificata, offerta sul sito di Universal PDF, è l’unica funzione per cui il tuo documento deve lasciare il dispositivo: viene archiviato perché il firmatario possa aprirlo e perché ne resti traccia. Ecco esattamente cosa comporta. Inviare un PDF per la firma senza di essa non carica nulla; il file va solo dove lo mandi tu.
 
 ## La crittografia, in parole semplici
 

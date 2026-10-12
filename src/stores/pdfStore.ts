@@ -111,6 +111,8 @@ interface PdfState {
   presentOpen: boolean
   hostedStoreOpen: boolean
   sendToSignOpen: boolean
+  /** The plain "Send for signature" dialog: share the PDF with real signature fields, no upload. */
+  sendForSignatureOpen: boolean
   ocrOpen: boolean
   // True while two fingers are down on the viewer for a pinch-zoom. The
   // annotation layer watches this so a pinch is only ever a zoom: any drag /
@@ -185,6 +187,7 @@ interface PdfState {
   setPresentOpen: (open: boolean) => void
   setHostedStoreOpen: (open: boolean) => void
   setSendToSignOpen: (open: boolean) => void
+  setSendForSignatureOpen: (open: boolean) => void
   setOcrOpen: (open: boolean) => void
   setPinching: (pinching: boolean) => void
   setMergeOpen: (open: boolean) => void
@@ -299,6 +302,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   presentOpen: false,
   hostedStoreOpen: false,
   sendToSignOpen: false,
+  sendForSignatureOpen: false,
   ocrOpen: false,
   pinching: false,
   mergeOpen: false,
@@ -323,6 +327,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   setPresentOpen: (presentOpen) => set({ presentOpen }),
   setHostedStoreOpen: (hostedStoreOpen) => set({ hostedStoreOpen }),
   setSendToSignOpen: (sendToSignOpen) => set({ sendToSignOpen }),
+  setSendForSignatureOpen: (sendForSignatureOpen) => set({ sendForSignatureOpen }),
   setOcrOpen: (ocrOpen) => set({ ocrOpen }),
   setPinching: (pinching) => set({ pinching }),
   setMergeOpen: (mergeOpen) => set({ mergeOpen }),

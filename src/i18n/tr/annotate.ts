@@ -76,7 +76,7 @@ const annotate: Messages['annotate'] = {
   'selection.delete_many_aria_other': '{count} seçili nesneyi sil',
 
   // AnnotationLayer — Send to sign on a selected "Sign here" box
-  'sigfield.send_title': 'İmzaya gönder — bu belgeyi imza isteği olarak e-postayla gönderin',
+  'sigfield.send_title': 'İmzaya gönder — birinin imzalaması için bu PDF’i paylaşın',
   'sigfield.send_aria': 'İmzaya gönder',
 
   // AnnotationLayer — Fill / Redact toggles on a box or circle
