@@ -53,17 +53,17 @@ const universalConfig = {
   product: 'pdf' as const,
   cookieDomain: !isDesktop && import.meta.env.PROD ? '.unisim.co.uk' : undefined,
   mockAuth,
-  // The suite user count (the SDK's presence beat: a random install id every
-  // 45 s) runs on the website only. The phone apps don't send it (James,
-  // 2026-10-12: "do we even need the device ids now? As we pull data direct
-  // from the stores"): the App Store and Play figures already count installs,
-  // and without the install id the App Store privacy label loses "Device ID".
-  // The desktop app and the browser extension don't send it either: both are
-  // installed copies with no reason to report a permanent id. Every one of
-  // those builds is Vite mode 'desktop' (build:desktop, build:mobile and
-  // build:extension), so `isDesktop` covers all three; `isNativeShell()` stays
-  // as a second guard for the phone shell.
-  presence: !isDesktop && !isNativeShell(),
+  // No `presence` option: the suite user count it controlled is retired (SDK
+  // 0.187.0 sends no beat whatever it says). What replaced it is the SDK's
+  // anonymous daily open count (product + kind of device, no identifier), on
+  // by default. It stays on the website only: the phone apps send nothing
+  // (James, 2026-10-12: the App Store and Play figures already count
+  // installs, and the store labels say the phone app collects nothing), and
+  // nor do the desktop app or the browser extension. Every one of those builds
+  // is Vite mode 'desktop' (build:desktop, build:mobile and build:extension),
+  // so `isDesktop` covers all three; `isNativeShell()` stays as a second guard
+  // for the phone shell.
+  openCount: !isDesktop && !isNativeShell(),
 }
 
 // `?sign=<token>` is the phone-side of the sign-on-mobile handoff (opened by
