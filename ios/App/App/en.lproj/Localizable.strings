@@ -1,0 +1,9 @@
+/* Shortcuts, Siri and Spotlight (ios/App/App/AppActions.swift). */
+"Scan to PDF" = "Scan to PDF";
+"Make a PDF Smaller" = "Make a PDF Smaller";
+"Sign a PDF" = "Sign a PDF";
+"Scan paper with the camera and turn it into a PDF." = "Scan paper with the camera and turn it into a PDF.";
+"Opens a PDF ready to save a smaller copy." = "Opens a PDF ready to save a smaller copy.";
+"Opens a PDF ready to sign." = "Opens a PDF ready to sign.";
+"Make Smaller" = "Make Smaller";
+"PDF" = "PDF";

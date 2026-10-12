@@ -1,5 +1,5 @@
 {
-  "_about": "Play Data safety answers. Build the importable CSV with: node Docs_UNI_SIM/store-kit/data-safety.mjs Universal_Apps/Universal_PDF/store-assets/data-safety.json Universal_Apps/Universal_PDF/store-assets/out/play/data-safety.csv. Written 2026-10-10 from Docs_UNI_SIM/store-listings/universal-pdf.md (Data safety, checked against the code 2026-09-14): opening, filling, signing, marking up and converting a PDF happen on the device and collect nothing; sign-in (@unisim/sdk) is optional (password, emailed code, or Apple/Google/Microsoft); Send to sign uploads the PDF and the signer's email. Sending a document to a signer is a transfer the user starts, not sharing. The suite user count (@unisim/sdk presence.js) sends a random install id the app makes itself and the platform when the app opens and every 45 s in use, signed in or not, plus the account id once signed in: App interactions + Device or other IDs, required, Analytics (as Ergo Assess and Universal QR; brought in line 2026-10-10). Mirrors ios/App/App/PrivacyInfo.xcprivacy.",
+  "_about": "Play Data safety answers. Build the importable CSV with: node Docs_UNI_SIM/store-kit/data-safety.mjs Universal_Apps/Universal_PDF/store-assets/data-safety.json Universal_Apps/Universal_PDF/store-assets/out/play/data-safety.csv. Written 2026-10-10 from Docs_UNI_SIM/store-listings/universal-pdf.md (Data safety, checked against the code 2026-09-14): opening, filling, signing, marking up and converting a PDF happen on the device and collect nothing; sign-in (@unisim/sdk) is optional (password, emailed code, or Apple/Google/Microsoft); Send to sign uploads the PDF and the signer's email. Sending a document to a signer is a transfer the user starts, not sharing. The suite user count (@unisim/sdk presence.js) is OFF in the phone app since 2026-10-12 (src/main.tsx `presence: !isNativeShell()`; Play and App Store figures count installs), so no Device or other IDs. App interactions stay, optional: one session.opened event per launch while signed in (<UsageTracker />), for Analytics. Re-import this at the next Play release. Mirrors ios/App/App/PrivacyInfo.xcprivacy.",
   "accountCreation": [
     "PSL_ACM_USER_ID_PASSWORD",
     "PSL_ACM_USER_ID_OTHER_AUTH",
@@ -28,13 +28,7 @@
       ]
     },
     "PSL_USER_INTERACTION": {
-      "required": true,
-      "purposes": [
-        "PSL_ANALYTICS"
-      ]
-    },
-    "PSL_DEVICE_ID": {
-      "required": true,
+      "required": false,
       "purposes": [
         "PSL_ANALYTICS"
       ]

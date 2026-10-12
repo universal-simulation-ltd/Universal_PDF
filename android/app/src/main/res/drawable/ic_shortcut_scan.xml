@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Scan to PDF" launcher shortcut: a viewfinder round a page, cobalt on white. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp" android:height="48dp"
+    android:viewportWidth="48" android:viewportHeight="48">
+    <path android:fillColor="#FFFFFF" android:pathData="M24,0a24,24 0,1 1,0 48a24,24 0,1 1,0 -48z" />
+    <path android:strokeColor="#2353C9" android:strokeWidth="2.6" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M14,19V15a1,1 0,0 1,1 -1h4M29,14h4a1,1 0,0 1,1 1v4M34,29v4a1,1 0,0 1,-1 1h-4M19,34h-4a1,1 0,0 1,-1 -1v-4" />
+    <path android:fillColor="#2353C9" android:pathData="M19,19h10v10h-10z" />
+</vector>

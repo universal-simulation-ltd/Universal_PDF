@@ -79,6 +79,9 @@ dependencies {
     // its model are delivered by Google Play services on first use, so this
     // adds only a thin client to the APK.
     implementation "com.google.android.gms:play-services-mlkit-document-scanner:16.0.0-beta1"
+    // "Lock saved signatures" (SignatureVaultPlugin.java): the system fingerprint /
+    // face / screen-lock prompt guarding the key the signatures are encrypted with.
+    implementation "androidx.biometric:biometric:1.1.0"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

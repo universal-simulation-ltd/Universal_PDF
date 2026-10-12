@@ -32,11 +32,17 @@ interface DocumentScannerPlugin {
   cleanup(options: { pages: string[] }): Promise<void>
 }
 
-let plugin: Promise<DocumentScannerPlugin> | null = null
-function getPlugin(): Promise<DocumentScannerPlugin> {
-  plugin ??= import('@capacitor/core').then(({ registerPlugin }) =>
-    registerPlugin<DocumentScannerPlugin>('DocumentScanner'),
-  )
+// ⚠️ NEVER RESOLVE A PROMISE WITH A CAPACITOR PLUGIN. The object
+// `registerPlugin` returns is a Proxy that answers EVERY property with a call
+// into native code — `then` included — so a promise resolved with it treats
+// it as a thenable, calls `plugin.then()`, and fails with "X.then() is not
+// implemented". It is held in a plain `{ p }` box instead (2026-10-12: this
+// is what kept the Android app's Scan button hidden since it was added).
+let plugin: Promise<{ p: DocumentScannerPlugin }> | null = null
+function getPlugin(): Promise<{ p: DocumentScannerPlugin }> {
+  plugin ??= import('@capacitor/core').then(({ registerPlugin }) => ({
+    p: registerPlugin<DocumentScannerPlugin>('DocumentScanner'),
+  }))
   return plugin
 }
 
@@ -49,7 +55,7 @@ function getPlugin(): Promise<DocumentScannerPlugin> {
 export async function isDocumentScanAvailable(): Promise<boolean> {
   if (!isNativeShell()) return false
   try {
-    const { available } = await (await getPlugin()).isAvailable()
+    const { available } = await (await getPlugin()).p.isAvailable()
     return available === true
   } catch {
     return false
@@ -61,7 +67,7 @@ export async function isDocumentScanAvailable(): Promise<boolean> {
  * user backed out without keeping a page.
  */
 export async function scanWithCamera(): Promise<Uint8Array[] | null> {
-  const p = await getPlugin()
+  const { p } = await getPlugin()
   const result = await p.scan()
   if (result.cancelled || result.pages.length === 0) return null
   const { Capacitor } = await import('@capacitor/core')

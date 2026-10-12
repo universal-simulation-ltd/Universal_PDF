@@ -1,0 +1,9 @@
+/* Shortcuts, Siri and Spotlight (ios/App/App/AppActions.swift). */
+"Scan to PDF" = "PDF olarak tara";
+"Make a PDF Smaller" = "PDF’yi küçült";
+"Sign a PDF" = "PDF imzala";
+"Scan paper with the camera and turn it into a PDF." = "Kâğıdı kamerayla tarayıp PDF’ye dönüştürün.";
+"Opens a PDF ready to save a smaller copy." = "Daha küçük bir kopyasını kaydetmek için bir PDF açar.";
+"Opens a PDF ready to sign." = "İmzalamak için bir PDF açar.";
+"Make Smaller" = "Küçült";
+"PDF" = "PDF";

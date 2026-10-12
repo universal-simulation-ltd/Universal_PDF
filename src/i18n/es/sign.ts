@@ -298,6 +298,17 @@ const sign: Messages['sign'] = {
 
   // saved stamp names (SignatureMenu, StampPicker)
   'stamp_named': 'Sello {name}',
+
+  'vault_row': 'Bloquear las firmas guardadas',
+  'vault_note': 'Pedir {method} antes de mostrarlas',
+  'vault_face_id': 'Face ID',
+  'vault_touch_id': 'Touch ID',
+  'vault_biometric': 'su huella o el bloqueo de pantalla',
+  'vault_passcode': 'su código',
+  'vault_unlock': 'Desbloquear las firmas guardadas',
+  'vault_locked': 'Sus firmas guardadas están bloqueadas.',
+  'vault_reason_lock': 'Bloquear sus firmas guardadas',
+  'vault_reason_unlock': 'Desbloquear sus firmas guardadas',
 }
 
 export default sign

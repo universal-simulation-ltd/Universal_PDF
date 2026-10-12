@@ -298,6 +298,17 @@ const sign: Messages['sign'] = {
 
   // saved stamp names (SignatureMenu, StampPicker)
   'stamp_named': 'Stempel {name}',
+
+  'vault_row': 'Gespeicherte Unterschriften sperren',
+  'vault_note': 'Vor dem Anzeigen nach {method} fragen',
+  'vault_face_id': 'Face ID',
+  'vault_touch_id': 'Touch ID',
+  'vault_biometric': 'Fingerabdruck oder Displaysperre',
+  'vault_passcode': 'Code',
+  'vault_unlock': 'Gespeicherte Unterschriften entsperren',
+  'vault_locked': 'Ihre gespeicherten Unterschriften sind gesperrt.',
+  'vault_reason_lock': 'Ihre gespeicherten Unterschriften sperren',
+  'vault_reason_unlock': 'Ihre gespeicherten Unterschriften entsperren',
 }
 
 export default sign

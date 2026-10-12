@@ -12,6 +12,8 @@ import VisionKit
 class MainViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(DocumentScannerPlugin())
+        bridge?.registerPluginInstance(AppActionsPlugin())
+        bridge?.registerPluginInstance(SignatureVaultPlugin())
     }
 }
 

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="share_sign">Universal PDF ile imzala</string>
+    <string name="share_compress">Universal PDF ile küçült</string>
+    <string name="shortcut_scan">PDF olarak tara</string>
+    <string name="shortcut_scan_short">Tara</string>
+</resources>

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="share_sign">Firma con Universal PDF</string>
+    <string name="share_compress">Riduci con Universal PDF</string>
+    <string name="shortcut_scan">Scansiona in PDF</string>
+    <string name="shortcut_scan_short">Scansiona</string>
+</resources>

@@ -298,6 +298,17 @@ const sign: Messages['sign'] = {
 
   // saved stamp names (SignatureMenu, StampPicker)
   'stamp_named': 'Tampon {name}',
+
+  'vault_row': 'Verrouiller les signatures enregistrées',
+  'vault_note': 'Demander {method} avant de les afficher',
+  'vault_face_id': 'Face ID',
+  'vault_touch_id': 'Touch ID',
+  'vault_biometric': 'votre empreinte ou le verrouillage de l’écran',
+  'vault_passcode': 'votre code',
+  'vault_unlock': 'Déverrouiller les signatures enregistrées',
+  'vault_locked': 'Vos signatures enregistrées sont verrouillées.',
+  'vault_reason_lock': 'Verrouiller vos signatures enregistrées',
+  'vault_reason_unlock': 'Déverrouiller vos signatures enregistrées',
 }
 
 export default sign

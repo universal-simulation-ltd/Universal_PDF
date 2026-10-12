@@ -298,6 +298,17 @@ const sign: Messages['sign'] = {
 
   // saved stamp names (SignatureMenu, StampPicker)
   'stamp_named': '{name} damgası',
+
+  'vault_row': 'Kayıtlı imzaları kilitle',
+  'vault_note': 'Göstermeden önce {method} iste',
+  'vault_face_id': 'Face ID',
+  'vault_touch_id': 'Touch ID',
+  'vault_biometric': 'parmak izi veya ekran kilidi',
+  'vault_passcode': 'şifre',
+  'vault_unlock': 'Kayıtlı imzaların kilidini aç',
+  'vault_locked': 'Kayıtlı imzalarınız kilitli.',
+  'vault_reason_lock': 'Kayıtlı imzalarınızı kilitleyin',
+  'vault_reason_unlock': 'Kayıtlı imzalarınızın kilidini açın',
 }
 
 export default sign

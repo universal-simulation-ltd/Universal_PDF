@@ -298,4 +298,16 @@ export default {
 
   // saved stamp names (SignatureMenu, StampPicker)
   'stamp_named': '{name} Stamp', // {name} is the stamp's own word, e.g. APPROVED
+
+  // Lock saved signatures (phone app: SignatureVaultRow, SignatureMenu; lib/signatureVault.ts)
+  'vault_row': 'Lock saved signatures',
+  'vault_note': 'Ask for {method} before they show',
+  'vault_face_id': 'Face ID',
+  'vault_touch_id': 'Touch ID',
+  'vault_biometric': 'your fingerprint or screen lock',
+  'vault_passcode': 'your passcode',
+  'vault_unlock': 'Unlock saved signatures',
+  'vault_locked': 'Your saved signatures are locked.',
+  'vault_reason_lock': 'Lock your saved signatures',
+  'vault_reason_unlock': 'Unlock your saved signatures',
 }

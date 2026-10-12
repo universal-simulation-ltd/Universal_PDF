@@ -298,6 +298,17 @@ const sign: Messages['sign'] = {
 
   // saved stamp names (SignatureMenu, StampPicker)
   'stamp_named': 'Carimbo {name}',
+
+  'vault_row': 'Bloquear assinaturas guardadas',
+  'vault_note': 'Pedir {method} antes de as mostrar',
+  'vault_face_id': 'Face ID',
+  'vault_touch_id': 'Touch ID',
+  'vault_biometric': 'a impressão digital ou o bloqueio de ecrã',
+  'vault_passcode': 'o código',
+  'vault_unlock': 'Desbloquear assinaturas guardadas',
+  'vault_locked': 'As assinaturas guardadas estão bloqueadas.',
+  'vault_reason_lock': 'Bloquear as assinaturas guardadas',
+  'vault_reason_unlock': 'Desbloquear as assinaturas guardadas',
 }
 
 export default sign

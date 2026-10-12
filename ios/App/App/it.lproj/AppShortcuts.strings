@@ -1,0 +1,5 @@
+/* App Shortcuts phrases (ios/App/App/AppActions.swift). Each must keep ${applicationName}. */
+"Scan to PDF with ${applicationName}" = "Scansiona in PDF con ${applicationName}";
+"Scan a document with ${applicationName}" = "Scansiona un documento con ${applicationName}";
+"Make a PDF smaller with ${applicationName}" = "Riduci un PDF con ${applicationName}";
+"Sign a PDF with ${applicationName}" = "Firma un PDF con ${applicationName}";

@@ -40,6 +40,21 @@ function strokeSmooth(ctx: CanvasRenderingContext2D, pts: { x: number; y: number
   ctx.stroke()
 }
 
+/**
+ * Line-width factor for a stylus pressure (0–1). A light touch draws a thin
+ * line and a firm one a thicker line, centred on today's width at the
+ * pressure an Apple Pencil reports for an ordinary signature (~0.5).
+ */
+export function pressureWidth(p: number): number {
+  return 0.45 + 1.1 * Math.max(0, Math.min(1, p))
+}
+
+/** The pressure at point `i` of a stroke, or null for a finger/mouse stroke. */
+function pressureAt(ps: number[] | undefined, i: number): number | null {
+  if (!ps || ps.length === 0) return null
+  return ps[Math.min(i, ps.length - 1)]
+}
+
 // Render the captured pen strokes. With `realistic` on, lays down deep-blue ink
 // with a faint bleed, a shaky-hand wobble, per-segment width variation (thinner
 // when moving fast) and a couple of speckles — subtle cues that read as a real
@@ -48,7 +63,10 @@ function strokeSmooth(ctx: CanvasRenderingContext2D, pts: { x: number; y: number
 export function renderInkSignature(
   lines: number[][],
   color: string,
-  realistic: boolean
+  realistic: boolean,
+  // Apple Pencil pressure per point (SignatureData.pressures); a stroke with
+  // none renders exactly as before.
+  pressures?: number[][]
 ): { dataUrl: string; width: number; height: number } | null {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
   for (const ln of lines) {
@@ -83,7 +101,9 @@ export function renderInkSignature(
   const JITTER = realistic ? 0.6 : 0
   const BASE_W = 2.4
 
-  for (const ln of lines) {
+  for (let li = 0; li < lines.length; li++) {
+    const ln = lines[li]
+    const ps = pressures?.[li]
     const pts: { x: number; y: number }[] = []
     for (let i = 0; i < ln.length; i += 2) {
       pts.push({
@@ -97,6 +117,21 @@ export function renderInkSignature(
       ctx.beginPath()
       ctx.arc(pts[0].x, pts[0].y, BASE_W * 0.6, 0, Math.PI * 2)
       ctx.fill()
+      continue
+    }
+
+    // Clean mode drawn with a pen: the same plain line, its width following the
+    // pressure segment by segment.
+    if (!realistic && pressureAt(ps, 0) !== null) {
+      ctx.globalAlpha = 1
+      for (let i = 1; i < pts.length; i++) {
+        const p = ((pressureAt(ps, i - 1) ?? 0.5) + (pressureAt(ps, i) ?? 0.5)) / 2
+        ctx.lineWidth = 2.5 * pressureWidth(p)
+        ctx.beginPath()
+        ctx.moveTo(pts[i - 1].x, pts[i - 1].y)
+        ctx.lineTo(pts[i].x, pts[i].y)
+        ctx.stroke()
+      }
       continue
     }
 
@@ -125,6 +160,8 @@ export function renderInkSignature(
       const d = Math.hypot(b.x - a.x, b.y - a.y)
       let segW = BASE_W * (1 - Math.min(0.45, d / 45))
       segW *= 0.85 + rnd() * 0.3
+      const pa = pressureAt(ps, i - 1), pb = pressureAt(ps, i)
+      if (pa !== null && pb !== null) segW *= pressureWidth((pa + pb) / 2)
       ctx.globalAlpha = 0.82 + rnd() * 0.18
       ctx.lineWidth = Math.max(0.8, segW)
       ctx.beginPath()

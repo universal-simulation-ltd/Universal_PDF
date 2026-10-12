@@ -3,3 +3,5 @@
    reports English on a phone set to anything else, and the App Store lists the
    app as English only. */
 "CFBundleDisplayName" = "Universal PDF";
+/* "Lock saved signatures with Face ID" (SignatureVault.swift). */
+"NSFaceIDUsageDescription" = "Utilize o Face ID para desbloquear as assinaturas guardadas no Universal PDF. Ficam neste dispositivo.";

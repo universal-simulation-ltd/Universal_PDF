@@ -298,6 +298,17 @@ const sign: Messages['sign'] = {
 
   // saved stamp names (SignatureMenu, StampPicker)
   'stamp_named': 'Timbro {name}',
+
+  'vault_row': 'Blocca le firme salvate',
+  'vault_note': 'Chiedi {method} prima di mostrarle',
+  'vault_face_id': 'Face ID',
+  'vault_touch_id': 'Touch ID',
+  'vault_biometric': 'l’impronta o il blocco schermo',
+  'vault_passcode': 'il codice',
+  'vault_unlock': 'Sblocca le firme salvate',
+  'vault_locked': 'Le tue firme salvate sono bloccate.',
+  'vault_reason_lock': 'Blocca le tue firme salvate',
+  'vault_reason_unlock': 'Sblocca le tue firme salvate',
 }
 
 export default sign

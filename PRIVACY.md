@@ -87,7 +87,9 @@ like a lie.
   can say how many people use it and how many are using it now. That message
   holds the app's name and a random ID made on this device, and your account
   if you are signed in: nothing about what you are working on. See `presence.ts`
-  in `@unisim/sdk`.
+  in `@unisim/sdk`. **The iPhone, iPad and Android apps don't send this**: the
+  App Store and Google Play already count how many people have the app, so
+  only the website and the desktop app do.
 - **The changelog and update notice**, which is just fetching a list of
   releases.
 

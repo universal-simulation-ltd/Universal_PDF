@@ -1,4 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useVaultStore } from '../../lib/signatureVault'
+import { unlockSignatures } from '../../lib/signatureLock'
+import { useShortcutRequest } from '../../stores/shortcutStore'
 import { createPortal } from 'react-dom'
 import { useUniversal } from '@unisim/sdk'
 import { useSignatureStore } from '../../stores/signatureStore'
@@ -83,6 +86,26 @@ function ToggleRow({
 export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
   const t = useT()
   const [open, setOpen] = useState(false)
+  // "Sign a PDF" from Shortcuts / the share sheet (lib/appActions.ts).
+  useShortcutRequest('sign', compact, () => setOpen(true))
+  // "Lock saved signatures" (phone app): opening the menu while locked asks for
+  // Face ID / a fingerprint once; the panel offers Unlock if that was cancelled.
+  const vaultLocked = useVaultStore((s) => s.locked)
+  const vaultAsked = useRef(false)
+  const unlockVault = () => {
+    void unlockSignatures(t('sign.vault_reason_unlock')).catch(() => { /* cancelled: stays locked */ })
+  }
+  useEffect(() => {
+    if (!open) {
+      vaultAsked.current = false
+      return
+    }
+    if (vaultLocked && !vaultAsked.current) {
+      vaultAsked.current = true
+      unlockVault()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, vaultLocked])
   // Double-tap a tab to have the menu open on it (James, 2026-09-30 — the
   // Jukebox library's behaviour, suite-wide). A single tap only switches, as
   // before; Tune this app has the same choice (SignatureDefaultViewRows).
@@ -228,7 +251,17 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
         })}
       </div>
 
-      {tab === 'request' ? (
+      {vaultLocked && tab !== 'request' ? (
+        <div className="px-4 py-5 text-center space-y-3">
+          <p className="text-sm text-slate-600">{t('sign.vault_locked')}</p>
+          <button
+            onClick={unlockVault}
+            className="w-full px-3 py-2.5 rounded-md bg-[#2353c9] hover:bg-[#173a94] text-white text-sm font-medium"
+          >
+            {t('sign.vault_unlock')}
+          </button>
+        </div>
+      ) : tab === 'request' ? (
         <div className="p-4 space-y-3">
           <p className="text-sm text-slate-600">
             {t('sign.menu_request_intro')}

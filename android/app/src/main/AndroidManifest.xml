@@ -22,6 +22,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Long-press the app icon: "Scan to PDF" (res/xml/shortcuts.xml). -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+
             <!-- Puts Universal PDF in the "Open with" chooser for PDFs. Android
                  has no API for an app to make itself the default; the user's own
                  "Always" in that chooser is what does it.
@@ -32,10 +37,10 @@
                  An intent-filter matches on scheme AND mimeType, so a filter
                  naming only one scheme silently misses the other.
 
-                 ⚠️ ACTION_SEND (the "Share" sheet) is deliberately NOT claimed.
-                 It delivers the document as EXTRA_STREAM rather than as intent
-                 data, which Capacitor's appUrlOpen does not surface — the app
-                 would appear in the share sheet and then open empty. -->
+                 ACTION_SEND (the "Share" sheet) is not claimed HERE: it delivers
+                 the document as EXTRA_STREAM, which Capacitor's appUrlOpen does
+                 not surface. The share sheet entries are the two aliases below,
+                 which MainActivity.queueAction reads itself. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -51,6 +56,32 @@
             </intent-filter>
 
         </activity>
+
+        <!-- Share-sheet actions (2026-10-12): two entries in Android's share
+             sheet for a PDF, each opening MainActivity. The alias's name tells
+             MainActivity.queueAction which action was picked. -->
+        <activity-alias
+            android:name=".ShareSign"
+            android:targetActivity=".MainActivity"
+            android:label="@string/share_sign"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/pdf" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".ShareCompress"
+            android:targetActivity=".MainActivity"
+            android:label="@string/share_compress"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/pdf" />
+            </intent-filter>
+        </activity-alias>
 
         <provider
             android:name="androidx.core.content.FileProvider"

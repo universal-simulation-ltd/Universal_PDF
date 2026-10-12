@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="share_sign">Mit Universal PDF unterschreiben</string>
+    <string name="share_compress">Mit Universal PDF verkleinern</string>
+    <string name="shortcut_scan">In PDF scannen</string>
+    <string name="shortcut_scan_short">Scannen</string>
+</resources>

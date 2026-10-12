@@ -12,6 +12,7 @@ import SignCertificatePage from './components/Signature/SignCertificatePage'
 import { UsageTracker } from '@unisim/sdk'
 import ErrorBoundary from './components/ErrorBoundary'
 import { installPauseAnimationsOnBlur } from './lib/pauseAnimationsOnBlur'
+import { isNativeShell } from './lib/nativeOpen'
 import { usePdfStore } from './stores/pdfStore'
 import { useAnnotationStore } from './stores/annotationStore'
 import { useSignatureStore } from './stores/signatureStore'
@@ -52,6 +53,13 @@ const universalConfig = {
   product: 'pdf' as const,
   cookieDomain: !isDesktop && import.meta.env.PROD ? '.unisim.co.uk' : undefined,
   mockAuth,
+  // No suite user count from the phone apps (James, 2026-10-12: "do we even
+  // need the device ids now? As we pull data direct from the stores"). The
+  // App Store and Play figures already count phone installs, the phone app
+  // shows no user-count line, and without the install id the App Store
+  // privacy label loses "Device ID". The website and the desktop app still
+  // beat (they have no store to read from).
+  presence: !isNativeShell(),
 }
 
 // `?sign=<token>` is the phone-side of the sign-on-mobile handoff (opened by

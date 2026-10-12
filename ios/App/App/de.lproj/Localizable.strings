@@ -1,0 +1,9 @@
+/* Shortcuts, Siri and Spotlight (ios/App/App/AppActions.swift). */
+"Scan to PDF" = "In PDF scannen";
+"Make a PDF Smaller" = "PDF verkleinern";
+"Sign a PDF" = "PDF unterschreiben";
+"Scan paper with the camera and turn it into a PDF." = "Scannen Sie Papier mit der Kamera und machen Sie daraus ein PDF.";
+"Opens a PDF ready to save a smaller copy." = "Öffnet ein PDF, um eine kleinere Kopie zu sichern.";
+"Opens a PDF ready to sign." = "Öffnet ein PDF zum Unterschreiben.";
+"Make Smaller" = "Verkleinern";
+"PDF" = "PDF";

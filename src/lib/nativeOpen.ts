@@ -74,6 +74,16 @@ async function readUrl(url: string): Promise<OpenedFile | null> {
 }
 
 /**
+ * Reads a `file://` path or `content://` URI the OS (or a shortcut) handed
+ * over, as a PDF File. Null when there is nothing readable there.
+ */
+export async function readNativeFile(url: string): Promise<File | null> {
+  if (!looksOpenable(url)) return null
+  const opened = await readUrl(url)
+  return opened ? new File([opened.bytes], opened.name, { type: 'application/pdf' }) : null
+}
+
+/**
  * Subscribes to PDFs opened through the OS on iOS/Android.
  *
  * `onFile` fires for the launch document and for any opened while the app is

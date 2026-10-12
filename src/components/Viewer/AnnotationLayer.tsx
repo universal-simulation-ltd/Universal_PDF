@@ -773,6 +773,12 @@ function SigField({
   )
 }
 
+
+// Set the first time a stylus (pointerType "pen": Apple Pencil, an Android
+// stylus) touches any page, for the rest of the session. From then on a finger
+// or palm can't draw with the pen or highlighter (see onPointerDown).
+let penSeen = false
+
 export default function AnnotationLayer({ pageIndex, width, height, scale }: Props) {
   const t = useT()
   const tool = useAnnotationStore((s) => s.tool)
@@ -1188,6 +1194,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   }, [tool])
 
   function onPointerDown(e: Konva.KonvaEventObject<PointerEvent>) {
+    if (e.evt.pointerType === 'pen') penSeen = true
     activePointerIds.current.add(e.evt.pointerId)
     if (activePointerIds.current.size > 1 || pinching) {
       // Multi-touch (pinch-to-zoom) — abort any in-progress drawing stroke
@@ -1295,6 +1302,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     }
     const pos = getPos(e)
     if (tool === 'draw' || tool === 'highlight') {
+      // Palm rejection: once an Apple Pencil (or any stylus) has drawn, a
+      // hand resting on the glass no longer leaves marks.
+      if (penSeen && e.evt.pointerType === 'touch') return
       drawingRef.current = true
       setLine([pos.x, pos.y])
     } else if (tool === 'rect' || tool === 'ellipse' || tool === 'redact' || tool === 'line' || tool === 'sigfield') {
@@ -4145,7 +4155,7 @@ function SignatureOptionsModal({
   const toggleRealistic = (v: boolean) => {
     if (!strokes) return
     const color = inkColorFor(v)
-    const ink = renderInkSignature(strokes, color, v)
+    const ink = renderInkSignature(strokes, color, v, dataRef.current.pressures)
     if (!ink) return
     setRealistic(v)
     onApply({

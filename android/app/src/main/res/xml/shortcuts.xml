@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Long-press the app icon (2026-10-12). MainActivity.queueAction turns the
+     intent into a "scan" action for the web layer (src/lib/appActions.ts). -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="scan"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_scan"
+        android:shortcutShortLabel="@string/shortcut_scan_short"
+        android:shortcutLongLabel="@string/shortcut_scan">
+        <intent
+            android:action="uk.co.unisim.pdf.action.SCAN"
+            android:targetPackage="uk.co.unisim.pdf"
+            android:targetClass="uk.co.unisim.pdf.MainActivity" />
+    </shortcut>
+</shortcuts>

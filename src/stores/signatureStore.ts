@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist } from 'zustand/middleware'
+import { signatureStorage } from '../lib/signatureVault'
 import type { SignatureData } from '../types/annotations'
 
 // Name/date the user chose to place as SEPARATE text (next to the signature)
@@ -185,6 +186,9 @@ export const useSignatureStore = create<SignatureState>()(
     }),
     {
       name: 'universal-pdf-signatures',
+      // Plain localStorage, unless the phone app's "Lock saved signatures" is
+      // on: then sealed with a Face ID / fingerprint key (lib/signatureVault.ts).
+      storage: createJSONStorage(() => signatureStorage),
       partialize: (s) => ({ signatures: s.signatures, activeId: s.activeId, dismissedMainCert: s.dismissedMainCert })
     }
   )

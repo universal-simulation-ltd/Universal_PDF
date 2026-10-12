@@ -26,6 +26,7 @@ import { useUndo } from '../../hooks/useUndo'
 import type { Annotation, Tool } from '../../types/annotations'
 import { useT, type MessageKey } from '../../i18n'
 import { ACTIVE_CHIP, ActiveStroke, MobileToolFace, ToolNotch } from './toolLook'
+import { useShortcutRequest } from '../../stores/shortcutStore'
 
 // The always-visible core fonts; the rest (FONT_DEFS) are revealed by the "+"
 // more-fonts button in the text options.
@@ -867,6 +868,8 @@ function ExportButton() {
   const t = useT()
   const sourceBytes = usePdfStore((s) => s.sourceBytes)
   const [exportOpen, setExportOpen] = useState(false)
+  // "Make a PDF smaller" from Shortcuts / the share sheet (lib/appActions.ts).
+  useShortcutRequest('export', false, () => setExportOpen(true))
 
   return (
     <>
@@ -911,6 +914,8 @@ export function ToolbarMobile() {
 
   const [openPanel, setOpenPanel] = useState<Panel>(null)
   const [exportOpen, setExportOpen] = useState(false)
+  // "Make a PDF smaller" from Shortcuts / the share sheet (lib/appActions.ts).
+  useShortcutRequest('export', true, () => setExportOpen(true))
   // Reveals the extra built-in fonts (Georgia, Verdana, …) in the text panel.
   const [moreFonts, setMoreFonts] = useState(false)
 

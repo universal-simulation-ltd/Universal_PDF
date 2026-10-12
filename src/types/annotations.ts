@@ -196,6 +196,10 @@ export type SignatureData = SignatureLabelOptions & {
   // strokes. Keeping them lets `ink` be re-rendered after placement, which is
   // what makes the "realistic" toggle re-editable rather than baked in forever.
   strokes?: number[][]
+  // Apple Pencil / stylus pressure for each point of `strokes` (0–1), one
+  // array per stroke, empty for a stroke drawn with a finger or mouse. Absent
+  // on signatures drawn before 2026-10-12 and on anything not drawn with a pen.
+  pressures?: number[][]
   // Whether `ink` was rendered with the realistic pen treatment. Only
   // meaningful alongside `strokes` — without them the look can't be changed.
   realistic?: boolean

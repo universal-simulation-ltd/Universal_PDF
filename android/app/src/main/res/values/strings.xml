@@ -1,7 +1,12 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Universal PDF</string>
-    <string name="title_activity_main">Universal PDF</string>
-    <string name="package_name">uk.co.unisim.pdf</string>
-    <string name="custom_url_scheme">uk.co.unisim.pdf</string>
+    <string name="app_name" translatable="false">Universal PDF</string>
+    <string name="title_activity_main" translatable="false">Universal PDF</string>
+    <string name="package_name" translatable="false">uk.co.unisim.pdf</string>
+    <string name="custom_url_scheme" translatable="false">uk.co.unisim.pdf</string>
+    <!-- Share sheet and launcher shortcuts (MainActivity.queueAction). -->
+    <string name="share_sign">Sign with Universal PDF</string>
+    <string name="share_compress">Make smaller with Universal PDF</string>
+    <string name="shortcut_scan">Scan to PDF</string>
+    <string name="shortcut_scan_short">Scan</string>
 </resources>

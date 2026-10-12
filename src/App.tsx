@@ -16,6 +16,7 @@ import ToolbarUserProfile from './components/Header/ToolbarUserProfile'
 import FileMenu from './components/Toolbar/FileMenu'
 import HostedStoreDialog from './components/HostedStoreDialog'
 import SignatureDefaultViewRows from './components/Signature/SignatureDefaultViewRows'
+import SignatureVaultRow from './components/Signature/SignatureVaultRow'
 import MobileWelcomeToast from './components/Onboarding/MobileWelcomeToast'
 import UnsavedChangesDialog from './components/Exit/UnsavedChangesDialog'
 import LockedFilePrompt from './components/Lock/LockedFilePrompt'
@@ -97,6 +98,8 @@ const CompareDialog = lazy(() => import('./components/Compare/CompareDialog'))
 const OcrModal = lazy(() => import('./components/Ocr/OcrModal'))
 const MergeDialog = lazy(() => import('./components/Convert/MergeDialog'))
 const ConvertDialog = lazy(() => import('./components/Convert/ConvertDialog'))
+// Phone app only: Shortcuts / share-sheet actions (lib/appActions.ts).
+const ShortcutRunner = lazy(() => import('./components/Shortcuts/ShortcutRunner'))
 const QrDialog = lazy(() => import('./components/Qr/QrDialog'))
 
 /** True from the first time `open` is, for good. */
@@ -271,6 +274,24 @@ export default function App() {
   // belongs to an `@unisim/sdk` dialog or to a PDF's own link annotations. See
   // `lib/externalLinks.ts` for why leaving the app at all is the bug.
   useEffect(() => installExternalLinkHandler(), [])
+
+  // Phone app: "Lock saved signatures" locks again whenever the app leaves the
+  // screen (lib/signatureLock.ts).
+  useEffect(() => {
+    if (window.desktop || !isNativeShell()) return
+    let off: (() => void) | null = null
+    let cancelled = false
+    void import('./lib/signatureLock').then(({ installSignatureAutoLock }) =>
+      installSignatureAutoLock().then((u) => {
+        if (cancelled) u()
+        else off = u
+      })
+    )
+    return () => {
+      cancelled = true
+      off?.()
+    }
+  }, [])
 
   // iOS / Android — a PDF opened through the share sheet or the chooser. Same
   // shape as the two paths above: a file turns up, or word that none is coming.
@@ -467,6 +488,11 @@ export default function App() {
         className="shrink-0 bg-slate-900"
         style={{ height: 'env(safe-area-inset-top)' }}
       />
+      {!window.desktop && isNativeShell() && (
+        <Suspense fallback={null}>
+          <ShortcutRunner />
+        </Suspense>
+      )}
       {showLanding && (
         // ⚠️ `relative z-50` is load-bearing, and it is what spares this app the
         // z-index trap the rest of the suite hit on 2026-08-30. The SDK's
@@ -498,7 +524,7 @@ export default function App() {
             // (SDK 0.170.0) — the same rows ToolbarUserProfile passes, so they
             // can be set before a document is opened. Reset to defaults clears
             // the double-tap defaults via the SDK.
-            appPreferences={<><PageScrollPreference /><SignatureDefaultViewRows /></>}
+            appPreferences={<><PageScrollPreference /><SignatureDefaultViewRows /><SignatureVaultRow /></>}
             // The SDK's "Delete my account" stays ON here (its default in a
             // native shell): this is the menu a phone opens first. It was
             // switched off to stop the row doubling — but the double was in

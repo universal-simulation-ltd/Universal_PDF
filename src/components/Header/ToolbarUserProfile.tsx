@@ -15,6 +15,7 @@ import { usePdfStore } from '../../stores/pdfStore'
 import { clearDismissedPrompts } from '../../lib/resetDefaults'
 import PageScrollPreference from '../Viewer/PageScrollPreference'
 import SignatureDefaultViewRows from '../Signature/SignatureDefaultViewRows'
+import SignatureVaultRow from '../Signature/SignatureVaultRow'
 
 // Same default the UniversalAppsNavBar uses for the profile "Sign in" item.
 const HUB_LOGIN_HREF = 'https://app.unisim.co.uk/login'
@@ -249,7 +250,7 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
           // the double-tap defaults' rows (SDK 0.170.0). The landing navbar
           // passes the same rows; Reset to defaults clears the double-tap
           // defaults via the SDK.
-          appPreferences={<><PageScrollPreference /><SignatureDefaultViewRows /></>}
+          appPreferences={<><PageScrollPreference /><SignatureDefaultViewRows /><SignatureVaultRow /></>}
           // The bar this sits in is slate-900, so the pill takes the dark
           // treatment — otherwise it reads as a white chip punched into it.
           pillTheme="dark"

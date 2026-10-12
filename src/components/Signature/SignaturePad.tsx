@@ -1,10 +1,10 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { Stage, Layer, Line } from 'react-konva'
+import { Stage, Layer, Line, Shape } from 'react-konva'
 import type Konva from 'konva'
 import { UnisimQr, useDefaultView, useUniversal } from '@unisim/sdk'
 import { useSignatureStore, type SignatureExtras } from '../../stores/signatureStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
-import { inkColorFor, renderInkSignature } from '../../lib/renderInk'
+import { inkColorFor, pressureWidth, renderInkSignature } from '../../lib/renderInk'
 import {
   composeSignatureWithLabels,
   detailLines,
@@ -100,7 +100,13 @@ export default function SignaturePad() {
   const containerRef = useRef<HTMLDivElement>(null)
   const [padW, setPadW] = useState(PAD_W)
   const [lines, setLines] = useState<number[][]>([])
+  // Apple Pencil pressure per point, parallel to `lines`: an empty array for a
+  // stroke drawn with a finger or mouse (2026-10-12).
+  const [pressures, setPressures] = useState<number[][]>([])
   const drawingRef = useRef(false)
+  // Palm rejection: once a pen has touched the pad, a finger or the side of a
+  // hand resting on the glass no longer draws.
+  const penSeenRef = useRef(false)
   // What the signature is called in the library list — never part of the
   // signature itself. The name that bakes under the ink is `nameLine` below.
   const [title, setTitle] = useState('')
@@ -332,14 +338,21 @@ export default function SignaturePad() {
     return e.target.getStage()!.getPointerPosition()!
   }
 
+  const isPen = (e: Konva.KonvaEventObject<PointerEvent>) => e.evt.pointerType === 'pen'
+  const isPalm = (e: Konva.KonvaEventObject<PointerEvent>) =>
+    penSeenRef.current && e.evt.pointerType === 'touch'
+
   function onPointerDown(e: Konva.KonvaEventObject<PointerEvent>) {
+    if (isPen(e)) penSeenRef.current = true
+    else if (isPalm(e)) return
     drawingRef.current = true
     const p = pos(e)
     setLines((prev) => [...prev, [p.x, p.y]])
+    setPressures((prev) => [...prev, isPen(e) ? [e.evt.pressure || 0.5] : []])
   }
 
   function onPointerMove(e: Konva.KonvaEventObject<PointerEvent>) {
-    if (!drawingRef.current) return
+    if (!drawingRef.current || isPalm(e)) return
     const p = pos(e)
     setLines((prev) => {
       const out = prev.slice(0, -1)
@@ -347,6 +360,14 @@ export default function SignaturePad() {
       out.push([...last, p.x, p.y])
       return out
     })
+    if (isPen(e)) {
+      const pressure = e.evt.pressure || 0.5
+      setPressures((prev) => {
+        const out = prev.slice(0, -1)
+        out.push([...(prev[prev.length - 1] ?? []), pressure])
+        return out
+      })
+    }
   }
 
   function onPointerUp() {
@@ -355,10 +376,12 @@ export default function SignaturePad() {
 
   function clear() {
     setLines([])
+    setPressures([])
   }
 
   function resetForm() {
     setLines([])
+    setPressures([])
     setTitle('')
     setIncludeDetails(false)
     setIncludeDate(false)
@@ -395,7 +418,8 @@ export default function SignaturePad() {
     fieldId: string,
     sig: { dataUrl: string; width: number; height: number },
     trimmedName: string,
-    strokes?: number[][]
+    strokes?: number[][],
+    strokePressures?: number[][]
   ) {
     const ann = useAnnotationStore.getState().annotations.find((a) => a.id === fieldId)
     if (!ann || ann.type !== 'sigfield') {
@@ -443,6 +467,7 @@ export default function SignaturePad() {
       labelScale: DEFAULT_LABEL_SCALE,
       color: inkColor,
       strokes: strokes && strokes.length > 0 ? strokes : undefined,
+      pressures: strokePressures?.some((ps) => ps.length > 0) ? strokePressures : undefined,
       realistic
     }
     useAnnotationStore.getState().update(fieldId, { signed: { src, width: w, height: h, data } })
@@ -453,14 +478,14 @@ export default function SignaturePad() {
 
   async function save() {
     if (lines.length === 0) return
-    const ink = renderInkSignature(lines, inkColor, realistic)
+    const ink = renderInkSignature(lines, inkColor, realistic, pressures)
     if (!ink) return
 
     // If the pad was opened by clicking a signature-request box, fill that box
     // instead of adding a reusable library signature.
     const fieldId = useSignatureStore.getState().signingFieldId
     if (fieldId) {
-      await fillField(fieldId, ink, effectiveName, lines)
+      await fillField(fieldId, ink, effectiveName, lines, pressures)
       return
     }
 
@@ -531,6 +556,7 @@ export default function SignaturePad() {
       // Keep the pen path so realism stays a toggle after placement, not a
       // decision frozen at draw time.
       strokes: lines,
+      pressures: pressures.some((ps) => ps.length > 0) ? pressures : undefined,
       realistic
     }
 
@@ -723,17 +749,41 @@ export default function SignaturePad() {
             style={{ touchAction: 'none', cursor: 'crosshair' }}
           >
             <Layer>
-              {lines.map((points, i) => (
-                <Line
-                  key={i}
-                  points={points}
-                  stroke={inkColor}
-                  strokeWidth={2.5}
-                  lineCap="round"
-                  lineJoin="round"
-                  tension={0.4}
-                />
-              ))}
+              {lines.map((points, i) =>
+                pressures[i]?.length ? (
+                  // Drawn with a pen: the width follows the pressure, segment by
+                  // segment, as renderInkSignature will bake it.
+                  <Shape
+                    key={i}
+                    listening={false}
+                    sceneFunc={(ctx) => {
+                      const ps = pressures[i]
+                      ctx.lineCap = 'round'
+                      ctx.lineJoin = 'round'
+                      ctx.strokeStyle = inkColor
+                      for (let k = 2; k < points.length; k += 2) {
+                        const a = ps[Math.min(k / 2 - 1, ps.length - 1)]
+                        const b = ps[Math.min(k / 2, ps.length - 1)]
+                        ctx.lineWidth = 2.5 * pressureWidth((a + b) / 2)
+                        ctx.beginPath()
+                        ctx.moveTo(points[k - 2], points[k - 1])
+                        ctx.lineTo(points[k], points[k + 1])
+                        ctx.stroke()
+                      }
+                    }}
+                  />
+                ) : (
+                  <Line
+                    key={i}
+                    points={points}
+                    stroke={inkColor}
+                    strokeWidth={2.5}
+                    lineCap="round"
+                    lineJoin="round"
+                    tension={0.4}
+                  />
+                )
+              )}
             </Layer>
           </Stage>
         </div>
