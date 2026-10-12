@@ -147,6 +147,8 @@ const app: Messages['app'] = {
   'landing_free_export': 'PDF’i ücretsiz dışa aktarın',
   'landing_free_title': 'Tamamen ücretsiz, gizli hiçbir şey yok',
   'landing_free_open': 'Neler ücretsiz ve neleri asla yapmayız',
+  'landing_privacy_head': 'Diğer şirketler verilerinizi yükler ve toplar.',
+  'landing_privacy_body': 'Biz değil! Siz aksini seçmedikçe her şey çevrimdışı kalır.',
   'landing_drop_hint': 'Yalnızca PDF dosyaları — bu sayfanın herhangi bir yerine bırakabilirsiniz',
 
   // PdfIllustration

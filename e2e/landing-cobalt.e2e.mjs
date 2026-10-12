@@ -88,6 +88,23 @@ check('and the full stop is outside it', await page.evaluate(() => {
   return !!em && !em.textContent.includes('.') && h1.textContent.trim().endsWith('.')
 }))
 
+// ── The privacy line ────────────────────────────────────────────────────────
+console.log('\nthe privacy line, always there')
+check('it says what James wrote', await page.locator('text=Other companies upload and scrape your data.').isVisible())
+check('with the caveat that keeps it true',
+  await page.locator('text=Everything stays offline unless you decide otherwise.').isVisible())
+// It replaced the SDK's closable note on this page: closing that one hid it in
+// every Universal app, and left the "?" with nothing in front of it.
+{
+  const p2 = await ctx.newPage()
+  await p2.addInitScript(() => localStorage.setItem('universal:privacy_note_dismissed', '1'))
+  await p2.goto(BASE)
+  await p2.waitForSelector('text=Try with example PDF')
+  check('still there for someone who closed the suite note',
+    await p2.locator('text=Other companies upload and scrape your data.').isVisible())
+  await p2.close()
+}
+
 // ── The "?" popover ─────────────────────────────────────────────────────────
 console.log('\nthe "?" at the end of the privacy note')
 const help = page.locator('button[aria-haspopup="dialog"][aria-label^="What"]')

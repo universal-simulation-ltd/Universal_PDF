@@ -35,34 +35,6 @@ body {
   overscroll-behavior: none;
 }
 
-/* The landing page's privacy note (the SDK's PrivacyNote) with the round "?"
-   laid over its right end — see LandingPage.tsx. The note is inline-styled
-   inside node_modules, so this reaches in by structure: its root is the element
-   carrying `lang`, then the shield, the text, and the dismiss X.
-   ⚠️ No `transform` on `.pdf-privacy-help`: it would become the containing
-   block for the phone's `position: fixed` bottom sheet inside it, and the
-   sheet would open inside a 30px box. */
-.pdf-privacy > [lang] > svg:first-child {
-  color: var(--color-cobalt) !important;
-}
-.pdf-privacy > [lang] > div {
-  padding-right: 40px;
-}
-.pdf-privacy-help {
-  position: absolute;
-  top: calc(50% - 15px);
-  right: 38px;
-}
-/* Dismissed: the note renders nothing, and the "?" sits on its own under the
-   card, at the right. */
-.pdf-privacy:not(:has(> [lang])) .pdf-privacy-help {
-  position: relative;
-  top: auto;
-  right: auto;
-  width: fit-content;
-  margin-left: auto;
-}
-
 /* ---------- Form controls do not inherit a colour meant for something else ---
 
    Tailwind's preflight gives `input`/`textarea`/`select` `color: inherit`, and

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { DropAnywhere, DropRing, PrivacyNote, useFileDrop } from '@unisim/sdk'
+import { DropAnywhere, DropRing, useFileDrop } from '@unisim/sdk'
 import { openFiles as openFilesInTabs } from '../../stores/tabStore'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
@@ -729,25 +729,35 @@ export default function LandingPage() {
 
             </div>
 
-            {/* Under the card, outside the box: a statement the page makes
-                about the panel above it rather than one more row of the
-                panel's own furniture. It sits in the always-visible column,
-                so unlike the illustration side it needs no breakpoint twin. */}
-            {/* The "?" at its right end opens what the card's tick list
-                used to say (FreeListPopover). The note is the SDK's, so the "?"
-                is laid over it rather than inside it: `.pdf-privacy` in
-                index.css turns the shield cobalt and keeps the text clear of
-                the "?". If the note has been dismissed (suite-wide, with its X)
-                the "?" stays, on its own under the card — the list is not
-                part of what was dismissed. */}
-            <div className="pdf-privacy relative mt-4">
-              <PrivacyNote
-                repo="https://github.com/universal-simulation-ltd/Universal_PDF"
-                proof="https://github.com/universal-simulation-ltd/Universal_PDF/blob/main/PRIVACY.md"
-                subject="Your PDF"
-                except="backup and send-to-sign"
-              />
-              <FreeListPopover className="pdf-privacy-help" />
+            {/* Under the card, outside the box: the page's privacy promise,
+                in James's words (2026-10-12), with the "?" at its end that
+                opens what the card's tick list used to say (FreeListPopover).
+
+                Our own line rather than the SDK's <PrivacyNote>: that one can
+                be closed, and closing it hides it in EVERY Universal app — so
+                for anyone who had, the "?" sat on its own with nothing before
+                it. This one always shows. "Unless you decide otherwise" is what
+                keeps it true: backup and send-to-sign do send a file, and only
+                when you choose to. */}
+            <div className="mt-4 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-100 py-3 pl-3.5 pr-3">
+              <svg
+                viewBox="0 0 24 24"
+                className="h-5 w-5 shrink-0 self-start mt-px text-cobalt"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 3 5 6v5.5c0 4.3 2.9 8.2 7 9.5 4.1-1.3 7-5.2 7-9.5V6z" />
+                <path d="m9.2 11.8 2 2 3.6-3.9" />
+              </svg>
+              <p className="flex-1 min-w-0 text-[13px] leading-snug text-slate-600">
+                <span className="font-semibold text-slate-900">{t('app.landing_privacy_head')}</span>{' '}
+                {t('app.landing_privacy_body')}
+              </p>
+              <FreeListPopover className="shrink-0" />
             </div>
 
           </div>

@@ -147,6 +147,8 @@ export default {
   'landing_free_export': 'Export PDF for free',
   'landing_free_title': 'All free, nothing hidden', // heading of the small popup listing what is free and what the app never does
   'landing_free_open': "What's free, and what we never do", // label of the round ? button at the end of the privacy note
+  'landing_privacy_head': 'Other companies upload and scrape your data.', // first, bold sentence of the privacy line under the landing card
+  'landing_privacy_body': 'Not us! Everything stays offline unless you decide otherwise.', // follows landing_privacy_head; "unless you decide otherwise" covers backup and send-to-sign, keep that caveat
   'landing_drop_hint': 'PDF files only — anywhere on this page will do',
 
   // PdfIllustration

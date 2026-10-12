@@ -147,6 +147,8 @@ const app: Messages['app'] = {
   'landing_free_export': 'PDF kostenlos exportieren',
   'landing_free_title': 'Alles kostenlos, nichts versteckt',
   'landing_free_open': 'Was kostenlos ist und was wir nie tun',
+  'landing_privacy_head': 'Andere Unternehmen laden Ihre Daten hoch und werten sie aus.',
+  'landing_privacy_body': 'Wir nicht! Alles bleibt offline, außer Sie entscheiden sich anders.',
   'landing_drop_hint': 'Nur PDF-Dateien – einfach irgendwo auf dieser Seite ablegen',
 
   // PdfIllustration
