@@ -1,5 +1,9 @@
 import { useId, useState } from 'react'
 import { useT } from '../../i18n'
+// The app's own icon, the cobalt page with the orange highlighter: the thing
+// you get when you download (James, 2026-10-12). Drawn by
+// scripts/app-icon.mjs with the rest, so it can't drift from the real one.
+import appIcon from '../../assets/app-icon.png'
 
 const RELEASES = 'https://github.com/universal-simulation-ltd/Universal_PDF/releases/latest'
 
@@ -72,43 +76,58 @@ export default function DownloadRow() {
 
   return (
     <section aria-labelledby="get-the-app" className="mt-8 text-center">
-      <h2 id="get-the-app" className="flex items-center justify-center gap-1.5 text-[13px] text-slate-400">
-        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M4 20h16" />
-        </svg>
-        {t('app.download_heading')}
-      </h2>
+      {/* The icon BESIDE the heading and the marks from `sm` up: above them
+          it added a row and pushed the landing page past one screen at
+          1440×900. On a phone, above — beside, the heading had no room and
+          wrapped. Decorative — the heading next to it says what it is. */}
+      <div className="inline-flex flex-col sm:flex-row items-center gap-2 sm:gap-3">
+        <img
+          src={appIcon}
+          alt=""
+          width={48}
+          height={48}
+          className="h-12 w-12 shrink-0 drop-shadow-[0_4px_10px_rgba(23,58,148,0.22)]"
+        />
+        <div>
+          <h2 id="get-the-app" className="flex items-center justify-center gap-1.5 text-[13px] text-slate-400">
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M4 20h16" />
+            </svg>
+            {t('app.download_heading')}
+          </h2>
 
-      <ul className="mt-1 flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
-        <li>
-          <a className={ITEM} href={RELEASES} rel="noopener" title={t('app.download_windows_title')} aria-label="Windows">
-            <WindowsIcon />
-          </a>
-        </li>
-        <li>
-          <a className={ITEM} href={RELEASES} rel="noopener" title={t('app.download_macos_title')} aria-label="macOS">
-            <AppleIcon />
-          </a>
-        </li>
-        <li>
-          <a className={ITEM} href={RELEASES} rel="noopener" title={t('app.download_android_title')} aria-label="Android">
-            <AndroidIcon />
-          </a>
-        </li>
-        <li>
-          <button
-            type="button"
-            className={ITEM}
-            aria-label="iPhone"
-            title="iPhone"
-            aria-expanded={showIosHint}
-            aria-controls={iosHintId}
-            onClick={() => setShowIosHint((open) => !open)}
-          >
-            <IPhoneIcon />
-          </button>
-        </li>
-      </ul>
+          <ul className="mt-1 flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+            <li>
+              <a className={ITEM} href={RELEASES} rel="noopener" title={t('app.download_windows_title')} aria-label="Windows">
+                <WindowsIcon />
+              </a>
+            </li>
+            <li>
+              <a className={ITEM} href={RELEASES} rel="noopener" title={t('app.download_macos_title')} aria-label="macOS">
+                <AppleIcon />
+              </a>
+            </li>
+            <li>
+              <a className={ITEM} href={RELEASES} rel="noopener" title={t('app.download_android_title')} aria-label="Android">
+                <AndroidIcon />
+              </a>
+            </li>
+            <li>
+              <button
+                type="button"
+                className={ITEM}
+                aria-label="iPhone"
+                title="iPhone"
+                aria-expanded={showIosHint}
+                aria-controls={iosHintId}
+                onClick={() => setShowIosHint((open) => !open)}
+              >
+                <IPhoneIcon />
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
 
       {showIosHint && (
         <p id={iosHintId} className="mx-auto mt-1 max-w-sm text-[13px] text-slate-500">

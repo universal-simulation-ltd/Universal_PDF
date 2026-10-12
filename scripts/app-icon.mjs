@@ -27,6 +27,9 @@
 //            sits the same size as other dock icons), and the .pdf file icon
 //            build/document-icon.ico + .icns (a page with this icon as its
 //            badge)
+//   Web      src/assets/app-icon.png (144, rounded): the icon over the
+//            landing page's "Download it for offline use" row, so the
+//            download shows what you'll get (James, 2026-10-12)
 //
 // ⚠️ No lettering. "PDF" on the old tile was unreadable at 40 px; the folded
 // corner already says document. Keep every stroke ≥ ~40/1024.
@@ -205,6 +208,10 @@ put('build/app-icon.png', await png(1024, svg(), { radius: '22.4%' }))
 put('build/app-icon-mac.png', await png(1024, svg(), {
   inset: 824 / 1024, radius: '22.4%', shadow: '0 10px 18px rgb(0 0 0 / .28)',
 }))
+
+// ── Web ─────────────────────────────────────────────────────────────────────
+// Shown at 48 px over the landing page's download row; 144 covers 3× screens.
+put('src/assets/app-icon.png', await png(144, svg(), { radius: '22.4%' }))
 
 // The .pdf file icon, in both containers electron-builder wants (it finds the
 // .icns by swapping the extension of `fileAssociations[0].icon`).
