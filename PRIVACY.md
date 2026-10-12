@@ -87,9 +87,19 @@ like a lie.
   can say how many people use it and how many are using it now. That message
   holds the app's name and a random ID made on this device, and your account
   if you are signed in: nothing about what you are working on. See `presence.ts`
-  in `@unisim/sdk`. **The iPhone, iPad and Android apps don't send this**: the
-  App Store and Google Play already count how many people have the app, so
-  only the website and the desktop app do.
+  in `@unisim/sdk`. **Only the website sends this.** The iPhone, iPad and
+  Android apps don't (the App Store and Google Play already count how many
+  people have the app), and neither do the desktop app or the browser
+  extension. See `presence` in [`src/main.tsx`](src/main.tsx).
+- **Google's scanner diagnostics (Android only, only when you scan).** The
+  Scan button on Android uses Google's ML Kit document scanner, which comes
+  with Google Play services. Your scanned pages stay on your phone, but Google
+  says its ML Kit libraries send Google some diagnostics when they are used:
+  the phone's make, model and Android version, the app's name and version,
+  how long the scan took, error codes, and a random per-installation ID. It
+  goes to Google, not to us, encrypted, and Google says it does not pass it
+  on. See [Google's ML Kit data disclosure](https://developers.google.com/ml-kit/android-data-disclosure).
+  The iPhone and iPad scanner is Apple's VisionKit and sends nothing.
 - **The changelog and update notice**, which is just fetching a list of
   releases.
 

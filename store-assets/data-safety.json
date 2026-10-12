@@ -1,5 +1,5 @@
 {
-  "_about": "Play Data safety answers. Build the importable CSV with: node Docs_UNI_SIM/store-kit/data-safety.mjs Universal_Apps/Universal_PDF/store-assets/data-safety.json Universal_Apps/Universal_PDF/store-assets/out/play/data-safety.csv. Written 2026-10-10 from Docs_UNI_SIM/store-listings/universal-pdf.md (Data safety, checked against the code 2026-09-14): opening, filling, signing, marking up and converting a PDF happen on the device and collect nothing; sign-in (@unisim/sdk) is optional (password, emailed code, or Apple/Google/Microsoft); Send to sign uploads the PDF and the signer's email. Sending a document to a signer is a transfer the user starts, not sharing. The suite user count (@unisim/sdk presence.js) is OFF in the phone app since 2026-10-12 (src/main.tsx `presence: !isNativeShell()`; Play and App Store figures count installs), so no Device or other IDs. App interactions stay, optional: one session.opened event per launch while signed in (<UsageTracker />), for Analytics. Re-import this at the next Play release. Mirrors ios/App/App/PrivacyInfo.xcprivacy.",
+  "_about": "Play Data safety answers. Build the importable CSV with: node Docs_UNI_SIM/store-kit/data-safety.mjs Universal_Apps/Universal_PDF/store-assets/data-safety.json Universal_Apps/Universal_PDF/store-assets/out/play/data-safety.csv. Written 2026-10-10 from Docs_UNI_SIM/store-listings/universal-pdf.md (Data safety, checked against the code 2026-09-14): opening, filling, signing, marking up and converting a PDF happen on the device and collect nothing; sign-in (@unisim/sdk) is optional (password, emailed code, or Apple/Google/Microsoft); Send to sign uploads the PDF and the signer's email. Sending a document to a signer is a transfer the user starts, not sharing. The suite user count (@unisim/sdk presence.js) is OFF in the phone app since 2026-10-12 (src/main.tsx `presence: !isDesktop && !isNativeShell()`; Play and App Store figures count installs), so the app itself sends no device id. The Android Scan button uses Google's ML Kit document scanner (play-services-mlkit-document-scanner, DocumentScannerPlugin.java); per https://developers.google.com/ml-kit/android-data-disclosure (checked 2026-10-12) every ML Kit Android SDK sends Google device info (make, model, OS), app info (package, version), a per-installation id, performance metrics, API config, event types and error codes 'for diagnostics and usage analytics', HTTPS, not transferred to third parties. Declared as Device or other IDs + Diagnostics, optional (only when the user taps Scan), Analytics; collected, not shared (Google processes it as the SDK provider). The iOS scanner is VisionKit and sends nothing, so the App Store label is unchanged. App interactions stay, optional: one session.opened event per launch while signed in (<UsageTracker />), for Analytics. Re-import this at the next Play release. Mirrors ios/App/App/PrivacyInfo.xcprivacy.",
   "accountCreation": [
     "PSL_ACM_USER_ID_PASSWORD",
     "PSL_ACM_USER_ID_OTHER_AUTH",
@@ -28,6 +28,18 @@
       ]
     },
     "PSL_USER_INTERACTION": {
+      "required": false,
+      "purposes": [
+        "PSL_ANALYTICS"
+      ]
+    },
+    "PSL_PERFORMANCE_DIAGNOSTICS": {
+      "required": false,
+      "purposes": [
+        "PSL_ANALYTICS"
+      ]
+    },
+    "PSL_DEVICE_ID": {
       "required": false,
       "purposes": [
         "PSL_ANALYTICS"
