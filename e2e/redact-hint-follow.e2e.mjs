@@ -83,6 +83,13 @@ const playwright = await loadPlaywright()
 const browser = await playwright.chromium.launch()
 const pdf = await testPdf()
 const context = await browser.newContext({ viewport: { width: 1400, height: 900 } })
+// Pages one under another, as this spec was written for. Side by side is the
+// default since 2026-10-12, and a row fits the page to the window's HEIGHT, so
+// the page is shorter and the points this spec measures at fall off its foot
+// (checked: the same spec passes side by side in a 1700px-tall window).
+await context.addInitScript(() => {
+  try { localStorage.setItem('unisim:default-view:pdf:page-scroll', 'vertical') } catch { /* no storage */ }
+})
 const page = await context.newPage()
 page.on('pageerror', (e) => failures.push('page error: ' + e.message))
 

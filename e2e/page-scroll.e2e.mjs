@@ -1,6 +1,7 @@
 // Tune this app ▸ Page scrolling — vertical or horizontal pages (2026-10-07).
-// Vertical is the computer default; a phone-width window starts horizontal
-// (2026-10-12), checked at the end. Drives the real setting through the SDK's dialog and measures
+// Horizontal is the default everywhere since 2026-10-12 (a phone-width window
+// first, checked at the end; then computers too). Drives the real setting
+// through the SDK's dialog and measures
 // the layout, the wheel, a page jump, persistence and Reset to defaults.
 //
 //   ./scripts/preview.ps1          # Universal PDF is :5174
@@ -111,9 +112,19 @@ await openPdf()
 
 console.log('\nUniversal PDF — Page scrolling')
 
+// Side by side is the default on a computer too (James, 2026-10-12: "on web /
+// desktop the default should be horizontal scroll on multiple pages too").
 let l = await layout()
+check(l.pages[1].left > l.pages[0].right - 1 && Math.abs(l.pages[1].top - l.pages[0].top) < 2,
+  'default on a computer: the pages run side by side', JSON.stringify(l.pages.slice(0, 2)))
+check(l.scroll.sh <= l.scroll.ch + 1, '…opened fitting the height, nothing to scroll up and down',
+  `scrollHeight ${l.scroll.sh} vs clientHeight ${l.scroll.ch}`)
+
+// Vertical, for the measurements below: the zoom a column fits at.
+await setScroll('vertical')
+l = await layout()
 check(l.pages[1].top > l.pages[0].bottom - 1 && Math.abs(l.pages[1].left - l.pages[0].left) < 2,
-  'default: the pages run one under another', JSON.stringify(l.pages.slice(0, 2)))
+  'vertical: the pages run one under another', JSON.stringify(l.pages.slice(0, 2)))
 const openedWidth = l.pages[0].right - l.pages[0].left
 
 await setScroll('horizontal')
@@ -166,16 +177,22 @@ l = await layout()
 check(l.pages[1].top > l.pages[0].bottom - 1, 'vertical again: one under another')
 check(Math.abs(l.pages[2].top - l.scroll.boxTop) < 60, 'switching keeps the reader on page 3',
   `page 3 top ${l.pages[2].top}, box ${l.scroll.boxTop}`)
-check(Math.abs(l.pages[0].right - l.pages[0].left - openedWidth) < 2, '…re-fitted back to the zoom it opened at',
+check(Math.abs(l.pages[0].right - l.pages[0].left - openedWidth) < 2, '…re-fitted back to the zoom a column fits at',
   `page width ${l.pages[0].right - l.pages[0].left} vs ${openedWidth} on open`)
 
-// It sticks across a reload, and Reset to defaults puts it back.
+// It sticks across a reload (a choice that differs from the default), and
+// Reset to defaults puts it back.
+await setScroll('vertical')
+await p.reload({ waitUntil: 'domcontentloaded' })
+await p.waitForTimeout(1500)
+await openPdf()
+l = await layout()
+check(l.pages[1].top > l.pages[0].bottom - 1, 'the choice (vertical) survives a reload')
 await setScroll('horizontal')
 await p.reload({ waitUntil: 'domcontentloaded' })
 await p.waitForTimeout(1500)
 await openPdf()
 l = await layout()
-check(l.pages[1].left > l.pages[0].right - 1, 'the choice survives a reload')
 // Opened with the row already chosen, the page fits the window's height
 // (2026-10-08), so there is nothing to scroll up and down…
 check(l.scroll.sh <= l.scroll.ch + 1, 'opened in a row: the page fits the height, no up-and-down scroll',
@@ -198,12 +215,12 @@ await p.locator('[data-testid="unisim-prefs-reset"] button').first().click()
 await p.waitForTimeout(300)
 await p.locator('[data-testid="unisim-prefs-reset"] button').first().click()
 await p.waitForTimeout(500)
-check((await p.locator('select[aria-label="Page scrolling"]').first().inputValue()) === 'vertical',
-  'Reset to defaults puts the row back to Vertical')
+check((await p.locator('select[aria-label="Page scrolling"]').first().inputValue()) === 'horizontal',
+  'Reset to defaults puts the row back to Horizontal, the default')
 await p.keyboard.press('Escape')
 await p.waitForTimeout(800)
 l = await layout()
-check(l.pages[1].top > l.pages[0].bottom - 1, '…and the pages back one under another')
+check(l.pages[1].left > l.pages[0].right - 1, '…and the pages back side by side')
 
 // A phone-width window with nothing chosen starts with the pages in a row
 // (James, 2026-10-12: "the default scroll to be horizontal on mobile").

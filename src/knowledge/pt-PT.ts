@@ -190,7 +190,7 @@ As ligações de assinatura expiram ao fim de 30 dias. Os ficheiros guardados po
     title: 'Páginas umas por baixo das outras ou lado a lado',
     summary: 'A definição Deslocamento das páginas: uma página por baixo da outra, ou as páginas em fila.',
     group: 'Como funciona',
-    body: `Num computador, o Universal PDF mostra as páginas de um documento umas por baixo das outras, e a leitura continua deslocando para baixo. Num telemóvel, dispõe-nas lado a lado, em fila, e passa-se de uma página para a seguinte deslizando para o lado, como quem vira as páginas de um livro. Em qualquer dos casos, pode escolher-se a outra disposição.
+    body: `O Universal PDF dispõe as páginas de um documento lado a lado, em fila, tanto num computador como num telemóvel, e passa-se de uma página para a seguinte para o lado, como quem vira as páginas de um livro: deslizando num telemóvel, ou com a roda do rato ou o touchpad num computador. Se preferir deslocar para baixo, pode colocá-las umas por baixo das outras.
 
 ## Como alterar
 

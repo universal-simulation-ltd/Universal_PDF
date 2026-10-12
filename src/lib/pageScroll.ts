@@ -1,11 +1,11 @@
 import { readDefaultView, useDefaultView } from '@unisim/sdk'
-import { isNativeShell } from './nativeOpen'
 
 // Which way the open document's pages run: one under another or side by side in
-// a row. Set in Tune this app ▸ Page scrolling. The default depends on the
-// device (James, 2026-10-12: "the default scroll to be horizontal on mobile"):
-// side by side on a phone and in the phone app, a page a swipe like a book;
-// one under another on a computer.
+// a row. Set in Tune this app ▸ Page scrolling. Side by side by default on
+// every device — first on phones (James, 2026-10-12: "the default scroll to be
+// horizontal on mobile"), then on the web and the desktop app too, later the
+// same day ("on web / desktop the default should be horizontal scroll on
+// multiple pages too").
 //
 // ⚠️ STORED THROUGH THE SDK'S DEFAULT-VIEW ROW, not a store of our own. That is
 // what makes Reset to defaults forget it without any wiring here, and what lets
@@ -17,16 +17,12 @@ export const PAGE_SCROLL_ID = 'page-scroll'
 export const PAGE_SCROLLS = ['vertical', 'horizontal'] as const
 
 /**
- * What a device starts on until its owner picks one: horizontal in the phone
- * app and on a phone-width screen (the app's own `md` breakpoint, where the
- * page strip and the Pages drawer switch to their phone forms), vertical
- * everywhere else. Read when asked, not kept: a window dragged narrower picks
- * up the phone default on the next render that asks.
+ * What a device starts on until its owner picks one: horizontal, everywhere.
+ * Kept as a function (not a constant) so the default can go back to depending
+ * on the device without touching its callers.
  */
 export function pageScrollDefault(): PageScroll {
-  if (typeof window === 'undefined') return 'vertical'
-  if (isNativeShell()) return 'horizontal'
-  return window.matchMedia?.('(max-width: 767px)').matches ? 'horizontal' : 'vertical'
+  return 'horizontal'
 }
 
 /** The live setting, for a component. */

@@ -190,7 +190,7 @@ Os links de assinatura expiram depois de 30 dias. Os arquivos guardados podem te
     title: 'Páginas uma embaixo da outra ou lado a lado',
     summary: 'A configuração Rolagem das páginas: uma página embaixo da outra, ou as páginas em fila.',
     group: 'Como funciona',
-    body: `No computador, o Universal PDF mostra as páginas de um documento uma embaixo da outra, e você rola para baixo para continuar lendo. No celular, ele coloca as páginas lado a lado, em fila, e você desliza para o lado de uma página para a outra, como quem vira as páginas de um livro. Nos dois casos, você pode escolher a outra opção.
+    body: `O Universal PDF coloca as páginas de um documento lado a lado, em fila, tanto no computador quanto no celular, e você passa de uma página para a outra de lado, como quem vira as páginas de um livro: deslizando no celular, ou com a roda do mouse ou o touchpad no computador. Se preferir rolar para baixo, você pode colocá-las uma embaixo da outra.
 
 ## Como mudar
 

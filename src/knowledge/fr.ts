@@ -190,7 +190,7 @@ Les liens de signature expirent au bout de 30 jours. Les fichiers stockés peuve
     title: 'Pages les unes sous les autres ou côte à côte',
     summary: 'Le réglage Défilement des pages : les pages les unes sous les autres, ou alignées en rangée.',
     group: 'Comment ça marche',
-    body: `Sur un ordinateur, Universal PDF affiche les pages d’un document les unes sous les autres, et vous faites défiler vers le bas pour poursuivre la lecture. Sur un téléphone, il les aligne côte à côte, en rangée, et vous passez d’une page à l’autre d’un glissement latéral, comme on tourne les pages d’un livre. Dans les deux cas, vous pouvez choisir l’autre disposition.
+    body: `Universal PDF aligne les pages d’un document côte à côte, en rangée, sur un ordinateur comme sur un téléphone, et vous passez d’une page à l’autre latéralement, comme on tourne les pages d’un livre : d’un glissement sur un téléphone, ou avec la molette ou le pavé tactile sur un ordinateur. Si vous préférez les faire défiler vers le bas, vous pouvez les placer les unes sous les autres.
 
 ## Changer ce réglage
 

@@ -190,7 +190,7 @@ I link per la firma scadono dopo 30 giorni. I file conservati possono arrivare a
     title: 'Pagine una sotto l’altra o affiancate',
     summary: 'L’impostazione Scorrimento delle pagine: una pagina sotto l’altra, o le pagine in fila.',
     group: 'Come funziona',
-    body: `Su un computer, Universal PDF mostra le pagine di un documento una sotto l’altra, e scorri verso il basso per continuare a leggere. Su un telefono le affianca in una fila, e passi da una pagina all’altra scorrendo di lato, come si girano le pagine di un libro. In entrambi i casi puoi scegliere l’altra disposizione.
+    body: `Universal PDF affianca le pagine di un documento in una fila, sia su un computer sia su un telefono, e passi da una pagina all’altra di lato, come si girano le pagine di un libro: scorrendo su un telefono, o con la rotellina o il touchpad su un computer. Se preferisci scorrere verso il basso, puoi metterle una sotto l’altra.
 
 ## Come cambiarla
 

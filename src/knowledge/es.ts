@@ -190,7 +190,7 @@ Los enlaces de firma caducan a los 30 días. Los archivos guardados pueden ocupa
     title: 'Páginas una debajo de otra o una al lado de otra',
     summary: 'El ajuste Desplazamiento de páginas: una página debajo de otra, o las páginas en fila.',
     group: 'Cómo funciona',
-    body: `En un ordenador, Universal PDF muestra las páginas de un documento una debajo de otra, y usted se desplaza hacia abajo para seguir leyendo. En un teléfono las coloca una al lado de otra, en fila, y usted pasa de una página a la siguiente deslizando de lado, como cuando se pasan las páginas de un libro. En ambos casos puede elegir la otra opción.
+    body: `Universal PDF coloca las páginas de un documento una al lado de otra, en fila, tanto en un ordenador como en un teléfono, y usted pasa de una página a la siguiente de lado, como cuando se pasan las páginas de un libro: deslizando en un teléfono, o con la rueda del ratón o el panel táctil en un ordenador. Si prefiere desplazarse hacia abajo, puede ponerlas una debajo de otra.
 
 ## Cómo cambiarlo
 

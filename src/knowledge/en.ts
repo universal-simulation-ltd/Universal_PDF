@@ -190,7 +190,7 @@ Signing links expire after 30 days. Stored files can be up to 50 MB, and a file 
     title: 'Pages down the screen or side by side',
     summary: 'The Page scrolling setting: one page under another, or the pages in a row.',
     group: 'How it works',
-    body: `On a computer, Universal PDF shows a document's pages one under another, and you scroll down to read on. On a phone it lays them out side by side in a row, and you swipe sideways from one page to the next, as you would turn the pages of a book. Either way you can choose the other one.
+    body: `Universal PDF lays a document's pages out side by side in a row, on a computer and on a phone alike, and you move from one page to the next sideways, as you would turn the pages of a book: swipe on a phone, or scroll with the mouse wheel or trackpad on a computer. If you would rather scroll down through them, you can put them one under another instead.
 
 ## Changing it
 

@@ -190,7 +190,7 @@ Her isteğin bir sertifika sayfası vardır. Bu sayfa belgeyi, her imzalayanın 
     title: 'Sayfalar alt alta mı, yan yana mı?',
     summary: 'Sayfa kaydırma ayarı: sayfalar alt alta ya da bir sıra hâlinde yan yana.',
     group: 'Nasıl çalışır',
-    body: `Universal PDF bilgisayarda bir belgenin sayfalarını alt alta gösterir; okumaya devam etmek için aşağı kaydırırsınız. Telefonda ise sayfaları bir sıra hâlinde yan yana dizer; bir kitabın sayfalarını çevirir gibi yana kaydırarak sayfadan sayfaya geçersiniz. Her iki durumda da diğerini seçebilirsiniz.
+    body: `Universal PDF, bir belgenin sayfalarını bilgisayarda da telefonda da bir sıra hâlinde yan yana dizer; bir kitabın sayfalarını çevirir gibi sayfadan sayfaya yana geçersiniz: telefonda kaydırarak, bilgisayarda fare tekerleği veya dokunmatik yüzeyle. Aşağı kaydırmayı tercih ederseniz sayfaları alt alta da dizebilirsiniz.
 
 ## Nasıl değiştirilir
 
