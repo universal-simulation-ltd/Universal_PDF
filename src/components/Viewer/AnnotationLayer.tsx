@@ -7,6 +7,7 @@ import {
   Line,
   Rect,
   Ellipse,
+  Shape,
   Text,
   Group,
   Image as KonvaImage,
@@ -215,18 +216,29 @@ const MARQUEE_HOLD_MS = 350
 //
 // The wording itself is `annotate.redact.hint`, passed in as `text` so the
 // outside-the-box width is measured on the language actually on screen.
+//
+// An elliptical redaction measures "room inside" on the rectangle inscribed in
+// its ellipse, so the caption never pokes out past the curve.
 function redactHintGeom(
   box: { x: number; y: number; width: number; height: number },
   pale: boolean,
-  text: string
+  text: string,
+  ellipse = false
 ) {
-  if (box.width >= 118 && box.height >= 14) {
+  const k = ellipse ? Math.SQRT1_2 : 1
+  const inner = {
+    x: box.x + (box.width * (1 - k)) / 2,
+    y: box.y + (box.height * (1 - k)) / 2,
+    width: box.width * k,
+    height: box.height * k
+  }
+  if (inner.width >= 118 && inner.height >= 14) {
     return {
-      x: box.x + 4,
-      y: box.y,
-      width: Math.max(0, box.width - 8),
-      height: box.height,
-      fontSize: Math.min(11, box.height * 0.5),
+      x: inner.x + 4,
+      y: inner.y,
+      width: Math.max(0, inner.width - 8),
+      height: inner.height,
+      fontSize: Math.min(11, inner.height * 0.5),
       fill: pale ? '#475569' : '#ffffff',
       align: 'center' as const,
       verticalAlign: 'middle' as const
@@ -249,6 +261,20 @@ function redactHintGeom(
     align: 'left' as const,
     verticalAlign: 'top' as const
   }
+}
+
+// An ellipse filling its top-left-anchored box. An elliptical redaction is
+// drawn with this rather than a Konva Ellipse so it keeps the redaction box's
+// model — positioned by its corner, sized by width()/height() — and every drag,
+// resize and caption path written for the rectangle works on it unchanged.
+// Konva hit-tests the same path, so only the ellipse itself is grabbable.
+function ellipseInBox(ctx: Konva.Context, shape: Konva.Shape) {
+  const rx = shape.width() / 2
+  const ry = shape.height() / 2
+  ctx.beginPath()
+  ctx.ellipse(rx, ry, rx, ry, 0, 0, Math.PI * 2)
+  ctx.closePath()
+  ctx.fillStrokeShape(shape)
 }
 
 function fitPlacement(
@@ -1774,7 +1800,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   ) {
     const node = redactHintRefs.current.get(id)
     if (!node) return
-    const g = redactHintGeom(box, pale, t('annotate.redact.hint'))
+    const a = annotations.find((x) => x.id === id)
+    const ellipse = a?.type === 'redact' && a.shape === 'ellipse'
+    const g = redactHintGeom(box, pale, t('annotate.redact.hint'), ellipse)
     node.position({ x: g.x, y: g.y })
     node.width(g.width)
     node.height(g.height)
@@ -2112,7 +2140,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       return
     }
     const moved = toPage(e.target)
-    update(a.id, { ...nodeMovePatch(a, e.target), ...moved })
+    // Cast: spreading two Partial<Annotation> unions makes TS cross every
+    // member with every other, and it gives up once the union is this wide.
+    update(a.id, { ...nodeMovePatch(a, e.target), ...moved } as Partial<Annotation>)
   }
 
   // Resize / rotate patch for one node, resetting Konva's transient scale so
@@ -2575,26 +2605,29 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 // A sibling rather than a Group wrapping both: `common` carries
                 // the Transformer ref, and the resize handler reads width() /
                 // height() off that node — a Group reports neither.
-                const hint = redactHintGeom(a, pale, t('annotate.redact.hint'))
+                const hint = redactHintGeom(a, pale, t('annotate.redact.hint'), a.shape === 'ellipse')
+                const block = {
+                  ...common,
+                  x: a.x,
+                  y: a.y,
+                  width: a.width,
+                  height: a.height,
+                  // A resize scales this node live and only commits the new
+                  // size on transformend, so the caption needs dragging
+                  // along frame by frame here too — same as onShapeDragMove.
+                  onTransform: (e: Konva.KonvaEventObject<Event>) => syncRedactHint(a.id, e.target),
+                  fill: hex,
+                  // A pale redaction blanks a white page, so without a hint it
+                  // would be invisible in the editor — outline it (the border is
+                  // editor-only; export bakes a clean fill).
+                  stroke: pale ? '#94a3b8' : undefined,
+                  strokeWidth: pale ? 1 : 0
+                }
                 return (
                   <Fragment key={a.id}>
-                    <Rect
-                      {...common}
-                      x={a.x}
-                      y={a.y}
-                      width={a.width}
-                      height={a.height}
-                      // A resize scales this Rect live and only commits the new
-                      // size on transformend, so the caption needs dragging
-                      // along frame by frame here too — same as onShapeDragMove.
-                      onTransform={(e) => syncRedactHint(a.id, e.target)}
-                      fill={hex}
-                      // A pale redaction blanks a white page, so without a hint it
-                      // would be invisible in the editor — outline it (the border is
-                      // editor-only; export bakes a clean fill).
-                      stroke={pale ? '#94a3b8' : undefined}
-                      strokeWidth={pale ? 1 : 0}
-                    />
+                    {a.shape === 'ellipse'
+                      ? <Shape {...block} sceneFunc={ellipseInBox} />
+                      : <Rect {...block} />}
                     <Text
                       ref={redactHintRefSetter(a.id)}
                       listening={false}
@@ -3709,7 +3742,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 x: selected.x,
                 y: selected.y,
                 width: selected.width,
-                height: selected.height
+                height: selected.height,
+                // A circle redacts its inside, the area a Fill would paint —
+                // not the square around it (James, 2026-10-12).
+                ...(selected.type === 'ellipse' ? { shape: 'ellipse' as const } : {})
               })
               setSelected(id)
             }}
@@ -3755,7 +3791,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               add({
                 id,
                 pageIndex: selected.pageIndex,
-                type: 'rect',
+                // An elliptical redaction goes back to the circle it came from.
+                type: selected.shape === 'ellipse' ? 'ellipse' : 'rect',
                 x: selected.x,
                 y: selected.y,
                 width: selected.width,

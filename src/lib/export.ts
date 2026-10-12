@@ -735,6 +735,21 @@ async function drawAnnotations(
   }
 }
 
+/** True when a redaction overlaps the link's box — for an ellipse, the ellipse itself. */
+function redactTouches(r: RedactAnnotation, l: PendingLink): boolean {
+  if (!(l.x1 < r.x + r.width && l.x2 > r.x && l.y1 < r.y + r.height && l.y2 > r.y)) return false
+  if (r.shape !== 'ellipse') return true
+  // The point of the link's box nearest the ellipse's centre, in units of the
+  // radii: inside the unit circle means the link reaches into the ellipse.
+  const rx = r.width / 2
+  const ry = r.height / 2
+  const cx = r.x + rx
+  const cy = r.y + ry
+  const nx = (Math.min(Math.max(cx, l.x1), l.x2) - cx) / rx
+  const ny = (Math.min(Math.max(cy, l.y1), l.y2) - cy) / ry
+  return nx * nx + ny * ny < 1
+}
+
 /** Add the collected links to the finished pages — except any a redaction covers. */
 function addLinks(pdf: PDFDocument, links: PendingLink[], redactsByPage: Map<number, RedactAnnotation[]>, scale: number) {
   const pages = pdf.getPages()
@@ -743,9 +758,7 @@ function addLinks(pdf: PDFDocument, links: PendingLink[], redactsByPage: Map<num
     if (!page) continue
     // A link under a redaction box would leave its address in the file and a
     // live hot spot over the black — both things the box is there to remove.
-    const covered = (redactsByPage.get(l.pageIndex) ?? []).some(
-      (r) => l.x1 < r.x + r.width && l.x2 > r.x && l.y1 < r.y + r.height && l.y2 > r.y
-    )
+    const covered = (redactsByPage.get(l.pageIndex) ?? []).some((r) => redactTouches(r, l))
     if (covered) continue
     const frame = pageFrame(page)
     const [ax, ay] = applyMatrix(frame.m, l.x1 / scale, frame.height - l.y1 / scale)
@@ -841,7 +854,20 @@ export async function buildAnnotatedPdfBytes(
             // counterpart here.
             for (const r of redacts) {
               ctx.fillStyle = redactFillHex(r.fill)
-              ctx.fillRect((r.x / scale) * k, (r.y / scale) * k, (r.width / scale) * k, (r.height / scale) * k)
+              const x = (r.x / scale) * k
+              const y = (r.y / scale) * k
+              const w = (r.width / scale) * k
+              const h = (r.height / scale) * k
+              if (r.shape === 'ellipse') {
+                // Only the inside of the circle, as on screen. The whole page
+                // is rasterised regardless, so nothing outside it survives as
+                // text either — it just stays visible.
+                ctx.beginPath()
+                ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2)
+                ctx.fill()
+              } else {
+                ctx.fillRect(x, y, w, h)
+              }
             }
           })
           // ⚠️ Sized to the page AS SEEN — rotation and crop already applied

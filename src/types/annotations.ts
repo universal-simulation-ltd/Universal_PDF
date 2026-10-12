@@ -126,6 +126,10 @@ export type RedactAnnotation = Base & {
   // `'black'` / `'white'` here, and an old `.unipdf` backup still carries them.
   // Read this through `redactFillHex()` rather than testing it yourself.
   fill?: string
+  // 'ellipse' when the redaction came from an ellipse/circle (its Redact
+  // button): only the ellipse inscribed in the box is redacted, the same area
+  // a Fill would cover (James, 2026-10-12). Undefined = the whole box.
+  shape?: 'ellipse'
 }
 
 export type MarkAnnotation = Base & {
