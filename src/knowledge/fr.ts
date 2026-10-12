@@ -126,7 +126,7 @@ Si vous choisissez de dessiner votre signature sur votre téléphone, le dessin 
 
 ## Ce que l’application envoie, même quand votre PDF ne bouge pas
 
-Si vous êtes connecté, l’application enregistre qu’elle a été ouverte, pour la page d’activité de votre compte. Tant qu’elle est affichée à l’écran, elle envoie aussi environ toutes les 45 secondes un petit message « en cours d’utilisation », qui contient le nom de l’application et un identifiant aléatoire propre à cet appareil. Aucun de ces envois ne contient quoi que ce soit sur vos fichiers. Il n’y a ni publicité ni pistage par des tiers.`,
+Si vous êtes connecté, l’application enregistre qu’elle a été ouverte, pour la page d’activité de votre compte. Sur le site web, la première fois que vous ouvrez l’application chaque jour, elle ajoute aussi un au décompte anonyme des ouvertures du jour, envoyé après votre premier clic ou votre première frappe au clavier. Ce décompte ne contient que le nom de l’application et le type de plateforme (« web » sur le site) : aucun identifiant, aucun compte et rien sur ce que vous faites. Une marque « déjà compté aujourd’hui » reste sur votre appareil et n’est jamais envoyée. Les applications pour téléphone et pour ordinateur et l’extension de navigateur ne l’envoient pas. Rien de ce que l’application envoie ne contient quoi que ce soit sur vos fichiers. Il n’y a ni publicité ni pistage par des tiers.`,
   },
   {
     id: 'signing-a-pdf',

@@ -126,7 +126,7 @@ If you choose to draw your signature on your phone, the drawing travels from you
 
 ## What the app sends even when your PDF stays put
 
-If you sign in, the app records that it was opened, for your account's activity page. While it is on screen it also sends a small "in use" message about every 45 seconds, holding the app's name and a random identifier for this device. Neither includes anything about your files. There is no advertising or third-party tracking.`,
+If you sign in, the app records that it was opened, for your account's activity page. On the website, the first time you open the app each day, it also adds one to an anonymous count of daily opens, sent after your first click or key press. That count holds only the app's name and the kind of platform (on the website, "web"): no identifier, no account and nothing about what you do. A "counted today" mark stays on your device and is never sent. The phone and desktop apps and the browser extension do not send it. Nothing the app sends includes anything about your files. There is no advertising or third-party tracking.`,
   },
   {
     id: 'signing-a-pdf',

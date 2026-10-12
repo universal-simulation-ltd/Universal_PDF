@@ -126,7 +126,7 @@ Son açılan dosyalar, bu cihazdaki tarayıcınızın kendi depolama alanında t
 
 ## PDF’iniz cihazınızdan çıkmasa bile uygulamanın gönderdikleri
 
-Giriş yaparsanız uygulama, hesabınızın etkinlik sayfası için açıldığını kaydeder. Ekranda açık olduğu sürece yaklaşık 45 saniyede bir, uygulamanın adını ve bu cihaz için rastgele bir tanımlayıcıyı içeren küçük bir "kullanımda" mesajı da gönderir. Bunların hiçbiri dosyalarınızla ilgili herhangi bir şey içermez. Reklam ya da üçüncü taraf izleme yoktur.`,
+Giriş yaparsanız uygulama, hesabınızın etkinlik sayfası için açıldığını kaydeder. Web sitesinde, uygulamayı her gün ilk açışınızda, ilk tıklamanızdan veya tuşa basmanızdan sonra anonim günlük açılış sayısına bir de ekler. Bu sayım yalnızca uygulamanın adını ve platform türünü (sitede "web") içerir: hiçbir tanımlayıcı, hesap ya da ne yaptığınıza dair bir şey yoktur. "Bugün sayıldı" işareti cihazınızda kalır ve asla gönderilmez. Telefon ve bilgisayar uygulamaları ile tarayıcı uzantısı bunu göndermez. Uygulamanın gönderdiği hiçbir şey dosyalarınızla ilgili bir şey içermez. Reklam ya da üçüncü taraf izleme yoktur.`,
   },
   {
     id: 'signing-a-pdf',

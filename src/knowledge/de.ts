@@ -126,7 +126,7 @@ Wenn Sie Ihre Unterschrift auf dem Handy zeichnen, gelangt die Zeichnung als kur
 
 ## Was die App sendet, auch wenn Ihr PDF bleibt, wo es ist
 
-Wenn Sie angemeldet sind, vermerkt die App für die Aktivitätsseite Ihres Kontos, dass sie geöffnet wurde. Solange sie auf dem Bildschirm ist, sendet sie außerdem etwa alle 45 Sekunden eine kleine „In Benutzung“-Nachricht mit dem Namen der App und einer zufälligen Kennung für dieses Gerät. Keine der beiden enthält irgendetwas über Ihre Dateien. Es gibt keine Werbung und kein Tracking durch Dritte.`,
+Wenn Sie angemeldet sind, vermerkt die App für die Aktivitätsseite Ihres Kontos, dass sie geöffnet wurde. Auf der Website zählt sie außerdem beim ersten Öffnen jedes Tages eins zur anonymen Tageszählung der Öffnungen hinzu, gesendet nach Ihrem ersten Klick oder Tastendruck. Diese Zählung enthält nur den Namen der App und die Art der Plattform („web“ auf der Website): keine Kennung, kein Konto und nichts darüber, was Sie tun. Eine Markierung „heute schon gezählt“ bleibt auf Ihrem Gerät und wird nie gesendet. Die Telefon- und Desktop-Apps und die Browsererweiterung senden sie nicht. Nichts, was die App sendet, enthält irgendetwas über Ihre Dateien. Es gibt keine Werbung und kein Tracking durch Dritte.`,
   },
   {
     id: 'signing-a-pdf',

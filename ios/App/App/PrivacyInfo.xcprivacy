@@ -15,12 +15,14 @@
     account (the SDK's <UsageTracker />). Nothing about the file. Declared as
     product interaction, for analytics, because that is what it is.
 
-  No suite user count from the phone app (2026-10-12): the SDK's presence
-  heartbeat (the random install id, every 45 s) is switched off in the
-  iOS/Android shell (src/main.tsx `presence: !isDesktop && !isNativeShell()`), because the
-  App Store and Play figures already count installs. So no Device ID is
-  collected. Only the website sends it (the desktop app and the browser
-  extension don't either), and the website is not covered by this manifest.
+  No usage count from the phone app: the suite user count (a random install
+  id every 45 s) was retired in @unisim/sdk 0.187.0, and its replacement, the
+  anonymous daily open count (product + kind of platform, no identifier), is
+  off in the iOS/Android shell (src/main.tsx `openCount: !isDesktop &&
+  !isNativeShell()`), because the App Store and Play figures already count
+  installs. So no Device ID is collected. Only the website sends the open
+  count (the desktop app and the browser extension don't either), and the
+  website is not covered by this manifest.
 
   The iOS Scan button is Apple's VisionKit (DocumentScanner.swift), which
   sends nothing, so the ML Kit diagnostics declared in Play's Data safety

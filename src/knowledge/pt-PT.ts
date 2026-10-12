@@ -126,7 +126,7 @@ Se optar por desenhar a assinatura no telemóvel, o desenho passa do telemóvel 
 
 ## O que a app envia mesmo quando o PDF não sai do dispositivo
 
-Com sessão iniciada, a app regista que foi aberta, para a página de atividade da sua conta. Enquanto está no ecrã, envia também uma pequena mensagem de «em utilização» cerca de 45 em 45 segundos, com o nome da app e um identificador aleatório deste dispositivo. Nenhuma das duas inclui nada sobre os seus ficheiros. Não há publicidade nem rastreio por terceiros.`,
+Com sessão iniciada, a app regista que foi aberta, para a página de atividade da sua conta. No site, na primeira vez que abre a app em cada dia, soma também um à contagem anónima de aberturas do dia, enviada depois do seu primeiro clique ou da primeira tecla premida. Essa contagem contém apenas o nome da app e o tipo de plataforma («web» no site): nenhum identificador, nenhuma conta e nada sobre o que faz. Uma marca de «já contado hoje» fica no seu dispositivo e nunca é enviada. As apps para telemóvel e computador e a extensão do navegador não a enviam. Nada do que a app envia inclui algo sobre os seus ficheiros. Não há publicidade nem rastreio por terceiros.`,
   },
   {
     id: 'signing-a-pdf',

@@ -126,7 +126,7 @@ Si decide dibujar su firma en el móvil, el dibujo viaja del móvil a la aplicac
 
 ## Lo que la aplicación envía aunque su PDF no salga de su dispositivo
 
-Si inicia sesión, la aplicación registra que se ha abierto, para la página de actividad de su cuenta. Mientras está en pantalla, también envía un pequeño mensaje de «en uso» cada 45 segundos, aproximadamente, con el nombre de la aplicación y un identificador aleatorio de este dispositivo. Ninguno de los dos incluye nada sobre sus archivos. No hay publicidad ni rastreo de terceros.`,
+Si inicia sesión, la aplicación registra que se ha abierto, para la página de actividad de su cuenta. En el sitio web, la primera vez que abre la aplicación cada día, también suma uno al recuento anónimo de aperturas del día, que se envía tras su primer clic o pulsación de tecla. Ese recuento solo contiene el nombre de la aplicación y el tipo de plataforma («web» en el sitio): ningún identificador, ninguna cuenta y nada sobre lo que hace. Una marca de «ya contado hoy» se queda en su dispositivo y nunca se envía. Las aplicaciones para teléfono y ordenador y la extensión del navegador no lo envían. Nada de lo que envía la aplicación incluye información sobre sus archivos. No hay publicidad ni rastreo de terceros.`,
   },
   {
     id: 'signing-a-pdf',

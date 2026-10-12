@@ -126,7 +126,7 @@ Se você escolher desenhar sua assinatura no celular, o desenho vai do celular p
 
 ## O que o aplicativo envia mesmo quando seu PDF fica onde está
 
-Se você entrar na sua conta, o aplicativo registra que foi aberto, para a página de atividade da sua conta. Enquanto está na tela, ele também envia uma pequena mensagem de "em uso" mais ou menos a cada 45 segundos, com o nome do aplicativo e um identificador aleatório deste aparelho. Nenhuma das duas inclui nada sobre os seus arquivos. Não há publicidade nem rastreamento de terceiros.`,
+Se você entrar na sua conta, o aplicativo registra que foi aberto, para a página de atividade da sua conta. No site, na primeira vez que você abre o aplicativo a cada dia, ele também soma um à contagem anônima de aberturas do dia, enviada depois do seu primeiro clique ou tecla pressionada. Essa contagem contém só o nome do aplicativo e o tipo de plataforma ("web" no site): nenhum identificador, nenhuma conta e nada sobre o que você faz. Uma marca de "já contado hoje" fica no seu dispositivo e nunca é enviada. Os aplicativos para celular e computador e a extensão do navegador não a enviam. Nada do que o aplicativo envia inclui algo sobre os seus arquivos. Não há publicidade nem rastreamento de terceiros.`,
   },
   {
     id: 'signing-a-pdf',

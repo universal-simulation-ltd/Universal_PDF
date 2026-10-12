@@ -126,7 +126,7 @@ Se scegli di disegnare la firma sul telefono, il disegno passa dal telefono all�
 
 ## Che cosa invia l’app anche quando il tuo PDF resta dov’è
 
-Se accedi, l’app registra che è stata aperta, per la pagina delle attività del tuo account. Mentre è sullo schermo invia anche un piccolo messaggio «in uso» circa ogni 45 secondi, con il nome dell’app e un identificativo casuale di questo dispositivo. Nessuno dei due contiene informazioni sui tuoi file. Non ci sono pubblicità né tracciamento di terze parti.`,
+Se accedi, l’app registra che è stata aperta, per la pagina delle attività del tuo account. Sul sito web, la prima volta che apri l’app ogni giorno, aggiunge anche uno al conteggio anonimo delle aperture del giorno, inviato dopo il tuo primo clic o tasto premuto. Quel conteggio contiene solo il nome dell’app e il tipo di piattaforma («web» sul sito): nessun identificativo, nessun account e niente su ciò che fai. Un segno «già contato oggi» resta sul tuo dispositivo e non viene mai inviato. Le app per telefono e computer e l’estensione del browser non lo inviano. Niente di ciò che l’app invia contiene informazioni sui tuoi file. Non ci sono pubblicità né tracciamento di terze parti.`,
   },
   {
     id: 'signing-a-pdf',
