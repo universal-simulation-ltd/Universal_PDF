@@ -22,7 +22,8 @@ import { PreviewPanePill } from '../Onboarding/PreviewPaneOffer'
 import { usePreviewPane } from '../../hooks/usePreviewPane'
 import { useCoarsePointer } from '../../hooks/useCoarsePointer'
 import { CONTAINER } from '../../lib/layout'
-import { useT, type MessageKey } from '../../i18n'
+import FreeListPopover from './FreeListPopover'
+import { useT } from '../../i18n'
 
 // ⚠️ Every tool below carries pdf-lib, and the landing page is the first thing
 // anybody sees — so each is its own chunk, fetched when the tool is used
@@ -41,41 +42,6 @@ const compressPdf: typeof import('../../lib/export').compressPdf = async (...arg
 // barely shrinks, so people expect the "Compress PDF(s)" default to actually
 // make the file smaller. Stronger/lighter are still one tap away in the modal.
 const DEFAULT_COMPRESS_QUALITY: CompressQuality = 'balanced'
-
-// The third column of the closing grid. These are not features, they are the
-// answer to "what does it cost me when it isn't money", so each one names the
-// thing it is refusing — a struck-through cloud, eye and megaphone — rather than
-// wearing the tick its neighbours do. Lucide's `cloud-off` / `eye-off` /
-// `megaphone-off` outlines, drawn inline: a lone symbol CHARACTER falls back to
-// whatever font happens to carry it (see the chevron on the compress row).
-const PROMISES: { claim: MessageKey; paths: string[] }[] = [
-  {
-    claim: 'app.landing_no_uploads',
-    paths: [
-      'M5.78 5.78A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.3-.19',
-      'M21.53 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7 7 0 0 0 10 5.07',
-      'M2 2l20 20'
-    ]
-  },
-  {
-    claim: 'app.landing_no_scraping',
-    paths: [
-      'M9.88 9.88a3 3 0 1 0 4.24 4.24',
-      'M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68',
-      'M6.61 6.61A13.53 13.53 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61',
-      'M2 2l20 20'
-    ]
-  },
-  {
-    claim: 'app.landing_no_ads',
-    paths: [
-      'M9.26 9.26 3 11v3l14.14 3.14',
-      'M21 15.34V6l-7.31 2.03',
-      'M11.6 16.8a3 3 0 1 1-5.8-1.6',
-      'M2 2l20 20'
-    ]
-  }
-]
 
 export default function LandingPage() {
   const t = useT()
@@ -105,12 +71,16 @@ export default function LandingPage() {
     results: CompressResult[]
   } | null>(null)
   const [dragOverCompress, setDragOverCompress] = useState(false)
-  // The extra tools, behind the chevron that sits on the end of the Compress
-  // row. They used to be a `<details>` with its own "Advanced options" summary
-  // line, which cost a full-width row of the card to say nothing (James,
-  // 2026-08-29) — the chevron carries the same meaning in the space already
-  // taken by the row above it.
+  // The extra tools, behind "More tools ▾" on the end of the example row.
+  // Compress is the first of them since 2026-10-12 (the cobalt pass, from
+  // James's canvas): the card used to carry it as a full-width pill of its own
+  // under an "or", and the board keeps the card to the drop circle and one row.
   const [advancedOpen, setAdvancedOpen] = useState(false)
+  // The recent-files list, opened from the slot the example button takes until
+  // there is history. State rather than a `<details>`: the slot now shares a
+  // row with More tools, and a `<details>` there would unfold the list inside
+  // the half-width slot instead of under the row.
+  const [recentsOpen, setRecentsOpen] = useState(false)
   const [transformOpen, setTransformOpen] = useState(false)
   const [mergeOpen, setMergeOpen] = useState(false)
   const [convertMode, setConvertMode] = useState<ConvertMode | null>(null)
@@ -328,15 +298,19 @@ export default function LandingPage() {
     'w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors'
   const PILL_IDLE =
     'border-slate-300 hover:border-orange-400 hover:bg-orange-50/40 text-slate-700'
+  // The one coloured button on the card: Universal PDF's cobalt, outlined on a
+  // pale-blue fill (the canvas, 2026-10-12). Kept to this one so the page does
+  // not turn blue — the drop circle beside it stays UNI·SIM orange.
+  const PILL_COBALT =
+    'min-h-[46px] w-full inline-flex items-center justify-center gap-2 px-2.5 sm:px-4 rounded-xl border-[1.5px] border-cobalt bg-cobalt-tint text-cobalt-deep text-sm sm:text-[15px] font-bold transition-colors hover:bg-[#e2e9fb] focus:outline-none focus-visible:ring-2 focus-visible:ring-cobalt focus-visible:ring-offset-2'
 
   const exampleButton = (
     <button
       type="button"
       onClick={openExample}
       disabled={opening}
-      className={`${PILL} ${PILL_IDLE} disabled:opacity-60 disabled:cursor-wait`}
+      className={`${PILL_COBALT} disabled:opacity-60 disabled:cursor-wait`}
     >
-      <span aria-hidden="true">👁</span>
       {opening ? t('app.landing_opening_example') : t('app.landing_try_example')}
     </button>
   )
@@ -374,9 +348,21 @@ export default function LandingPage() {
                 work." wrapped to two lines on every phone width, and the app's
                 name is already in the navbar directly above it — so the word
                 was costing a whole line to repeat something on screen. */}
+            {/* "just work" under the orange highlighter, in the same ink as
+                the rest — the app icon's mark, drawn on the headline. It was
+                orange text until 2026-10-12. The full stop is outside the
+                span, so it sits outside the stroke. */}
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-slate-900">
               {t.rich('app.landing_headline', {
-                em: <span className="text-orange-600">{t('app.landing_headline_em')}</span>
+                em: (
+                  <span className="relative z-0 whitespace-nowrap">
+                    {t('app.landing_headline_em')}
+                    <span
+                      aria-hidden="true"
+                      className="pdf-highlighter -z-10 left-[-0.14em] right-[0.02em] bottom-[0.09em] h-[44%] rounded-[0.1em_0.28em_0.14em_0.07em] -rotate-[1.4deg]"
+                    />
+                  </span>
+                )
               })}
             </h1>
             <p className="mt-3 text-slate-600 max-w-md">
@@ -442,30 +428,84 @@ export default function LandingPage() {
                 <input {...drop.inputProps} className="hidden" />
               </div>
 
-              {/* This slot is the same pill either way — it says "Recent files"
-                  and opens the list once you have some, and "Try with example
-                  PDF" until then. A first-time visitor has nothing to be recent,
-                  so offering an empty list would be a dead end; someone with
-                  history rarely wants the sample again, so it moves inside. */}
-              {hasRecents ? (
-                <details className="group mt-5">
-                  <summary className={`${PILL} ${PILL_IDLE} cursor-pointer select-none list-none`}>
-                    <span aria-hidden="true">🕘</span>
-                    {t('app.recent_files')}
-                    <span
-                      className="text-base text-slate-400 transition-transform group-open:rotate-180"
-                      aria-hidden="true"
+              {/* Two buttons on one row: the example (or, once there is
+                  history, Recent files) and More tools. The example slot is
+                  the same place either way — a first-time visitor has nothing
+                  to be recent, and someone with history rarely wants the sample
+                  again, so it moves inside the list. */}
+              <div className="mt-5 flex items-stretch gap-2.5">
+                <div className="flex-1 min-w-0">
+                  {hasRecents ? (
+                    <button
+                      type="button"
+                      onClick={() => setRecentsOpen((o) => !o)}
+                      aria-expanded={recentsOpen}
+                      aria-controls="pdf-recent-files"
+                      className={PILL_COBALT}
                     >
-                      ⌄
-                    </span>
-                  </summary>
-                  <div className="mt-3">
-                    <RecentFilesList className="" />
-                    <div className="mt-3">{exampleButton}</div>
-                  </div>
-                </details>
-              ) : (
-                <div className="mt-5">{exampleButton}</div>
+                      {t('app.recent_files')}
+                      <svg
+                        viewBox="0 0 24 24"
+                        className={`w-4 h-4 transition-transform ${recentsOpen ? 'rotate-180' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M6 9l6 6 6-6" />
+                      </svg>
+                    </button>
+                  ) : (
+                    exampleButton
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  // No scroll of our own: `aria-expanded` + `aria-controls` below
+                  // are what the SDK's reveal-on-expand keys on, and it brings the
+                  // options into view itself. A local `scrollIntoView` here scrolled
+                  // twice, and its `block: 'end'` pushed this button off the top of
+                  // a phone.
+                  onClick={() => setAdvancedOpen(o => !o)}
+                  aria-expanded={advancedOpen}
+                  aria-controls="pdf-advanced-options"
+                  aria-label={advancedOpen ? t('app.landing_hide_advanced') : t('app.landing_show_advanced')}
+                  title={t('app.landing_advanced_title')}
+                  className={`shrink-0 min-h-[46px] inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 rounded-xl border bg-white text-sm sm:text-[15px] font-semibold text-slate-800 whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cobalt focus-visible:ring-offset-2 ${
+                    advancedOpen ? 'border-slate-400 bg-slate-50' : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50'
+                  }`}
+                >
+                  {/* A visible word beside the chevron (James, 2026-10-09): a bare
+                      chevron read as decoration, not as "there is more here". The
+                      aria-label above contains the same words, so the accessible
+                      name still matches what is on screen. */}
+                  <span>{t('app.landing_more_tools')}</span>
+                  {/* An SVG chevron, not the `⌄` character the old summary row
+                      used: alone in a button it fell back to a font that draws it
+                      as a plain "<". */}
+                  <svg
+                    viewBox="0 0 24 24"
+                    className={`w-3.5 h-3.5 transition-transform ${advancedOpen ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
+              </div>
+
+              {hasRecents && recentsOpen && (
+                <div id="pdf-recent-files" className="mt-3">
+                  <RecentFilesList className="" />
+                  <div className="mt-3">{exampleButton}</div>
+                </div>
               )}
 
               {/* Phone apps only (see `canScan`). Up here rather than in the
@@ -483,116 +523,6 @@ export default function LandingPage() {
                 </button>
               )}
 
-              <div className="mt-4 flex items-center gap-3 text-xs text-slate-500">
-                <span className="h-px flex-1 bg-slate-200" aria-hidden="true" />
-                <span>{t('app.landing_or')}</span>
-                <span className="h-px flex-1 bg-slate-200" aria-hidden="true" />
-              </div>
-
-              {/* Compress. `data-unisim-dropzone` says out loud what this
-                  already is: a drop target with its own meaning, sitting on a
-                  page whose circle is page-wide. It is how the hook recognises
-                  a drop another target has claimed.
-
-                  It is belt-and-braces TODAY — measured, not assumed: strip the
-                  marker at runtime and a file dropped here still compresses,
-                  because `onDrop` below stops the event and React's synthetic
-                  stopPropagation reaches the native event before it gets past
-                  the root container to the hook's `window` listener. The marker
-                  is what keeps that true if the stopPropagation is ever tidied
-                  away as redundant — which, on its own, it would then not be. */}
-              {/* Compress + the chevron that opens everything else, on one
-                  row. */}
-              <div className="mt-3 flex items-stretch gap-2">
-              <button
-                type="button"
-                data-unisim-dropzone=""
-                onClick={() => compressInputRef.current?.click()}
-                disabled={compressing}
-                onDragEnter={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  setDragOverCompress(true)
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  if (!dragOverCompress) setDragOverCompress(true)
-                }}
-                onDragLeave={(e) => {
-                  e.stopPropagation()
-                  setDragOverCompress(false)
-                }}
-                onDrop={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  setDragOverCompress(false)
-                  const files = e.dataTransfer.files
-                  if (files && files.length > 0) runCompress(files)
-                }}
-                className={[
-                  PILL,
-                  'flex-1 min-w-0 disabled:opacity-60 disabled:cursor-wait',
-                  // Dashed + amber while a file is over it — the one bit of the
-                  // old card worth keeping, because this pill is a drop target
-                  // as well as a button and nothing else in the box is.
-                  dragOverCompress
-                    ? 'border-amber-500 border-dashed bg-amber-50 text-amber-900'
-                    : PILL_IDLE
-                ].join(' ')}
-              >
-                <span aria-hidden="true">⬇</span>
-                {compressing
-                  ? compressProgress || t('app.landing_compressing')
-                  : dragOverCompress
-                    ? t('app.landing_drop_to_compress')
-                    : t('app.landing_compress')}
-              </button>
-
-              {/* "More tools" + a chevron, where a full "Advanced options" row used to be: a
-                  button on the end of the Compress row, wearing the same border
-                  as the pill beside it. The row it replaced was full-width and
-                  carried nothing but the word. */}
-              <button
-                type="button"
-                // No scroll of our own: `aria-expanded` + `aria-controls` below
-                // are what the SDK's reveal-on-expand keys on, and it brings the
-                // options into view itself. A local `scrollIntoView` here scrolled
-                // twice, and its `block: 'end'` pushed this button off the top of
-                // a phone.
-                onClick={() => setAdvancedOpen(o => !o)}
-                aria-expanded={advancedOpen}
-                aria-controls="pdf-advanced-options"
-                aria-label={advancedOpen ? t('app.landing_hide_advanced') : t('app.landing_show_advanced')}
-                title={t('app.landing_advanced_title')}
-                className={`shrink-0 inline-flex items-center justify-center gap-1.5 px-3 rounded-lg border text-sm font-medium whitespace-nowrap transition-colors ${
-                  advancedOpen
-                    ? 'border-orange-400 bg-orange-50/60 text-orange-700'
-                    : 'border-slate-300 text-slate-700 hover:border-orange-400 hover:bg-orange-50/40'
-                }`}
-              >
-                {/* A visible word beside the chevron (James, 2026-10-09): a bare
-                    chevron read as decoration, not as "there is more here". The
-                    aria-label above contains the same words, so the accessible
-                    name still matches what is on screen. */}
-                <span>{t('app.landing_more_tools')}</span>
-                {/* An SVG chevron, not the `⌄` character the old summary row
-                    used: alone in a button it fell back to a font that draws it
-                    as a plain "<". */}
-                <svg
-                  viewBox="0 0 24 24"
-                  className={`w-4 h-4 transition-transform ${advancedOpen ? 'rotate-180' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M6 9l6 6 6-6" />
-                </svg>
-              </button>
-              </div>
               <input
                 ref={compressInputRef}
                 type="file"
@@ -605,7 +535,70 @@ export default function LandingPage() {
               {advancedOpen && (
               <div id="pdf-advanced-options">
 
-                {/* The four tools wear the same pill as the two above, so
+                {/* Compress, first of the tools (it was its own pill under
+                    the example until 2026-10-12). Pick one file for the single
+                    result, several for the batch — the file picker is
+                    `multiple`, and `runCompress` branches on the count.
+
+                    `data-unisim-dropzone` says out loud what this already is: a
+                    drop target with its own meaning, sitting on a page whose
+                    circle is page-wide. It is how the hook recognises a drop
+                    another target has claimed.
+
+                    It is belt-and-braces TODAY — measured, not assumed: strip
+                    the marker at runtime and a file dropped here still
+                    compresses, because `onDrop` below stops the event and
+                    React's synthetic stopPropagation reaches the native event
+                    before it gets past the root container to the hook's
+                    `window` listener. The marker is what keeps that true if
+                    the stopPropagation is ever tidied away as redundant —
+                    which, on its own, it would then not be. */}
+                <button
+                  type="button"
+                  data-unisim-dropzone=""
+                  onClick={() => compressInputRef.current?.click()}
+                  disabled={compressing}
+                  onDragEnter={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setDragOverCompress(true)
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    if (!dragOverCompress) setDragOverCompress(true)
+                  }}
+                  onDragLeave={(e) => {
+                    e.stopPropagation()
+                    setDragOverCompress(false)
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setDragOverCompress(false)
+                    const files = e.dataTransfer.files
+                    if (files && files.length > 0) runCompress(files)
+                  }}
+                  className={[
+                    PILL,
+                    'mt-3 disabled:opacity-60 disabled:cursor-wait',
+                    // Dashed + amber while a file is over it: this pill is a
+                    // drop target as well as a button and nothing else in the
+                    // list is.
+                    dragOverCompress
+                      ? 'border-amber-500 border-dashed bg-amber-50 text-amber-900'
+                      : PILL_IDLE
+                  ].join(' ')}
+                >
+                  <span aria-hidden="true">⬇</span>
+                  {compressing
+                    ? compressProgress || t('app.landing_compressing')
+                    : dragOverCompress
+                      ? t('app.landing_drop_to_compress')
+                      : t('app.landing_compress')}
+                </button>
+
+                {/* The other tools wear the same pill as the two above, so
                     expanding this doesn't drop a stack of chunky cards into a
                     box of slim buttons. Each label carries its old subtitle
                     after an em dash — "what it is — what it does" — which is
@@ -734,77 +727,28 @@ export default function LandingPage() {
                 )
               })()}
 
-              {/* What you get, in the tick grid Universal Images closes its
-                  card with. The first two columns end "for free" deliberately
-                  and repetitively: these are the things people arrive expecting
-                  to hit a paywall or a watermark on, and one "all free" heading
-                  over a list does not answer the question the way the word next
-                  to each item does.
-
-                  The third column answers the OTHER question — what it costs
-                  you when it isn't money — so each line names the thing it
-                  refuses (see `PROMISES`) instead of wearing a tick. A tick
-                  beside "No advertising" would read as one more feature in the
-                  pile.
-
-                  ⚠️ `grid-flow-col` + `grid-rows-3` fills DOWN each column, so
-                  the DOM order below IS the column order. Row-flow would deal
-                  the shields out across the rows and there would be no third
-                  column at all.
-
-                  Three columns only from `sm`. Measured on a 390px phone: every
-                  one of the nine wrapped onto a second line, which is a block of
-                  eighteen. Below that it falls back to two columns and plain
-                  row-flow, where they all fit on one line each.
-
-                  Phones (below `sm`) show only the first two of each — Sign +
-                  Convert, then No forced uploads + No data scraping — as two
-                  tidy rows (James, 2026-09-30); the rest are `hidden sm:flex`. */}
-              <ul className="mt-5 grid grid-cols-2 sm:grid-cols-3 sm:grid-rows-3 sm:grid-flow-col gap-x-1 gap-y-2 text-xs text-slate-600">
-                {([
-                  'app.landing_free_sign',
-                  'app.landing_free_convert',
-                  'app.landing_free_redact',
-                  'app.landing_free_compress',
-                  'app.landing_free_qr',
-                  'app.landing_free_export'
-                ] as const).map((claim, i) => (
-                  <li key={claim} className={`${i < 2 ? 'flex' : 'hidden sm:flex'} items-center gap-2 pl-2 sm:pl-4`}>
-                    <span className="text-orange-700" aria-hidden="true">✓</span>
-                    {t(claim)}
-                  </li>
-                ))}
-                {PROMISES.map(({ claim, paths }, i) => (
-                  <li key={claim} className={`${i < 2 ? 'flex' : 'hidden sm:flex'} items-center gap-2 pl-2 sm:pl-4`}>
-                    <svg
-                      viewBox="0 0 24 24"
-                      className="w-3.5 h-3.5 shrink-0 text-orange-700"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      {paths.map((d) => <path key={d} d={d} />)}
-                    </svg>
-                    {t(claim)}
-                  </li>
-                ))}
-              </ul>
             </div>
 
             {/* Under the card, outside the box: a statement the page makes
                 about the panel above it rather than one more row of the
                 panel's own furniture. It sits in the always-visible column,
                 so unlike the illustration side it needs no breakpoint twin. */}
-            <PrivacyNote
-              className="mt-4"
-              repo="https://github.com/universal-simulation-ltd/Universal_PDF"
-              proof="https://github.com/universal-simulation-ltd/Universal_PDF/blob/main/PRIVACY.md"
-              subject="Your PDF"
-              except="backup and send-to-sign"
-            />
+            {/* The "?" at its right end opens what the card's tick list
+                used to say (FreeListPopover). The note is the SDK's, so the "?"
+                is laid over it rather than inside it: `.pdf-privacy` in
+                index.css turns the shield cobalt and keeps the text clear of
+                the "?". If the note has been dismissed (suite-wide, with its X)
+                the "?" stays, on its own under the card — the list is not
+                part of what was dismissed. */}
+            <div className="pdf-privacy relative mt-4">
+              <PrivacyNote
+                repo="https://github.com/universal-simulation-ltd/Universal_PDF"
+                proof="https://github.com/universal-simulation-ltd/Universal_PDF/blob/main/PRIVACY.md"
+                subject="Your PDF"
+                except="backup and send-to-sign"
+              />
+              <FreeListPopover className="pdf-privacy-help" />
+            </div>
 
           </div>
 

@@ -124,14 +124,13 @@ const app: Messages['app'] = {
   'landing_drop_here': 'PDF’i buraya bırakın',
   'landing_click_to_browse': 'veya göz atmak için tıklayın — {types}',
   'landing_tap_to_browse': 'veya göz atmak için dokunun — {types}',
-  'landing_or': 'veya',
   'landing_compressing': 'Sıkıştırılıyor…',
   'landing_drop_to_compress': 'Sıkıştırmak için bırakın',
-  'landing_compress': 'PDF sıkıştır',
+  'landing_compress': 'PDF sıkıştır — bir veya birkaç dosyayı küçültün',
   'landing_more_tools': 'Diğer araçlar',
   'landing_hide_advanced': 'Diğer araçları gizle',
   'landing_show_advanced': 'Diğer araçları göster',
-  'landing_advanced_title': 'Diğer araçlar — birleştir, dönüştür, OCR, karart, Markdown',
+  'landing_advanced_title': 'Diğer araçlar — sıkıştır, birleştir, dönüştür, OCR, karart, Markdown',
   'landing_merge': 'PDF birleştir — birkaç dosyayı tek dosyada toplayın',
   'landing_convert': 'Dönüştür — PDF ↔ görseller (PNG/JPG)',
   'landing_ocr': 'Aranabilir hale getir (OCR) — taranmış belgeyi okuyun',
@@ -146,10 +145,12 @@ const app: Messages['app'] = {
   'landing_free_compress': 'PDF’i ücretsiz sıkıştırın',
   'landing_free_qr': 'Ücretsiz QR kod ekleyin',
   'landing_free_export': 'PDF’i ücretsiz dışa aktarın',
+  'landing_free_title': 'Tamamen ücretsiz, gizli hiçbir şey yok',
+  'landing_free_open': 'Neler ücretsiz ve neleri asla yapmayız',
   'landing_drop_hint': 'Yalnızca PDF dosyaları — bu sayfanın herhangi bir yerine bırakabilirsiniz',
 
   // PdfIllustration
-  'illustration_approved': 'ONAYLANDI',
+  'illustration_signed': 'imzalandı!',
   'illustration_signature': 'İmza',
 
   // DownloadRow

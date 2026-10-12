@@ -181,7 +181,7 @@ await page.waitForTimeout(500)
 check(
   'the Text tool is on',
   ((await page.locator('button[title^="Add text"]:visible').getAttribute('class')) ?? '').includes(
-    'bg-orange-700',
+    'bg-cobalt',
   ),
 )
 check('and puts up no banner', (await anyBanner.count()) === 0, await bannerText())
@@ -216,7 +216,7 @@ await page.waitForTimeout(400)
 check('the banner goes', (await anyBanner.count()) === 0)
 const armedAfterCancel = await page.evaluate(() => {
   const img = document.querySelector('button[title="Upload and place an image"]')
-  return img ? (img.className || '').includes('bg-orange-700') : null
+  return img ? (img.className || '').includes('bg-cobalt') : null
 })
 check('the picture tool is no longer lit', armedAfterCancel === false, `class check gave ${armedAfterCancel}`)
 // A click on the page after cancelling must place nothing.

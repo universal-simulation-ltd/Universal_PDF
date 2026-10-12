@@ -1,5 +1,12 @@
 import { useRef } from 'react'
 import { useIllustrationClock } from '@unisim/sdk'
+// "signed!" is handwritten. Caveat (OFL), self-hosted from the bundle so the
+// CSP's `font-src 'self'` covers it and the desktop build has it offline. Only
+// the Latin weights we draw with; the browser fetches a file only when a
+// glyph from its range is on screen, and the illustration is desktop-width
+// only, so a phone never downloads it at all.
+import '@fontsource/caveat/latin-700.css'
+import '@fontsource/caveat/latin-ext-700.css'
 import { useT } from '../../i18n'
 
 /** One sweep of the loop, frame 0 → frame 10, in ms. It runs straight back down. */
@@ -35,8 +42,12 @@ const SIGNATURE_D_LOCAL =
 
 /**
  * The landing illustration: a document that writes itself, charts itself, is
- * signed by a pen that flies in for the job, gets ticked and stamped APPROVED,
+ * signed by a pen that flies in for the job, gets a handwritten "signed!",
  * then unwinds and does it again.
+ *
+ * In Universal PDF's own colours since 2026-10-12: a cobalt header, a blue
+ * chart with one orange bar, one line under the orange highlighter, and the
+ * signature in deep-cobalt ink. Orange is the accent, not the ground.
  *
  * ONE CLOCK, NOT NINE ANIMATIONS
  * ------------------------------
@@ -72,12 +83,8 @@ export default function PdfIllustration() {
             <stop offset="100%" stopColor="#f8fafc" />
           </linearGradient>
           <linearGradient id="img-grad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#fed7aa" />
-            <stop offset="100%" stopColor="#fb923c" />
-          </linearGradient>
-          <linearGradient id="bar-grad" x1="0" y1="1" x2="0" y2="0">
-            <stop offset="0%" stopColor="#ea580c" />
-            <stop offset="100%" stopColor="#fb923c" />
+            <stop offset="0%" stopColor="#e9eefc" />
+            <stop offset="100%" stopColor="#d6e0f8" />
           </linearGradient>
           <filter id="page-shadow" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="14" stdDeviation="18" floodColor="#0f172a" floodOpacity="0.18" />
@@ -86,13 +93,13 @@ export default function PdfIllustration() {
             <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#0f172a" floodOpacity="0.15" />
           </filter>
           <radialGradient id="halo-grad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#fb923c" stopOpacity="0.75" />
-            <stop offset="45%" stopColor="#fb923c" stopOpacity="0.5" />
-            <stop offset="100%" stopColor="#fb923c" stopOpacity="0" />
+            <stop offset="0%" stopColor="#9db6f2" stopOpacity="0.55" />
+            <stop offset="45%" stopColor="#9db6f2" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#9db6f2" stopOpacity="0" />
           </radialGradient>
         </defs>
 
-        {/* The warm ground the page sits on, growing with it. It fills the box:
+        {/* The pale blue ground the page sits on, growing with it. It fills the box:
             the page covers everything from x 60 to 440, so a halo any smaller
             than this only ever shows under the drop shadow, which is exactly
             where it cannot be seen. */}
@@ -108,11 +115,11 @@ export default function PdfIllustration() {
           <rect x="60" y="40" width="380" height="520" rx="16" fill="url(#page-grad)" stroke="#e2e8f0" strokeWidth="1" filter="url(#page-shadow)" />
 
           {/* Header band */}
-          <rect x="60" y="40" width="380" height="56" rx="16" fill="#0f172a" />
-          <rect x="60" y="80" width="380" height="16" fill="#0f172a" />
-          <circle cx="92" cy="68" r="12" fill="#fb923c" />
-          <rect x="116" y="60" width="120" height="8" rx="3" fill="#fdba74" opacity="0.9" />
-          <rect x="116" y="74" width="80" height="6" rx="3" fill="#fb923c" opacity="0.7" />
+          <rect x="60" y="40" width="380" height="56" rx="16" fill="#2353c9" />
+          <rect x="60" y="80" width="380" height="16" fill="#2353c9" />
+          <circle cx="92" cy="68" r="12" fill="#fe8c01" />
+          <rect x="116" y="60" width="120" height="8" rx="3" fill="#9db6f2" />
+          <rect x="116" y="74" width="80" height="6" rx="3" fill="#7f9ce6" />
 
           {/* Title */}
           <rect className="pdf-line line-1" x="84" y="120" width="220" height="14" rx="4" fill="#0f172a" />
@@ -121,7 +128,15 @@ export default function PdfIllustration() {
           {/* Text block */}
           <g className="pdf-text">
             <rect className="pdf-line line-3" x="84" y="178" width="332" height="6" rx="3" fill="#e2e8f0" />
-            <rect className="pdf-line line-4" x="84" y="194" width="316" height="6" rx="3" fill="#e2e8f0" />
+            {/* The one line under the highlighter — the app icon's mark, on
+                the page. The stroke is a `pdf-line` too, so it is written in
+                with its line rather than sitting there waiting for it; the
+                tilt is on a wrapper because the CSS owns the rect's own
+                `transform`. */}
+            <g transform="rotate(-1 242 197)">
+              <rect className="pdf-line line-4" x="78" y="187" width="328" height="20" rx="6" fill="rgba(249,115,22,0.6)" />
+            </g>
+            <rect className="pdf-line line-4" x="84" y="194" width="316" height="6" rx="3" fill="#94a3b8" />
             <rect className="pdf-line line-5" x="84" y="210" width="290" height="6" rx="3" fill="#e2e8f0" />
             <rect className="pdf-line line-6" x="84" y="226" width="260" height="6" rx="3" fill="#e2e8f0" />
           </g>
@@ -130,16 +145,17 @@ export default function PdfIllustration() {
           <g className="pdf-image" filter="url(#soft-shadow)">
             <rect x="84" y="256" width="332" height="150" rx="10" fill="url(#img-grad)" />
             <circle cx="138" cy="296" r="20" fill="#ffffff" opacity="0.7" />
-            <path d="M84 376 L160 332 L210 360 L280 308 L340 348 L416 320 L416 406 L84 406 Z" fill="#ffffff" opacity="0.35" />
-            <path d="M84 376 L160 332 L210 360 L280 308 L340 348 L416 320" stroke="#ffffff" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M84 376 L160 332 L210 360 L280 308 L340 348 L416 320 L416 406 L84 406 Z" fill="#2353c9" opacity="0.08" />
+            <path d="M84 376 L160 332 L210 360 L280 308 L340 348 L416 320" stroke="#2353c9" strokeWidth="3.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
 
-            {/* Mini bars, drawn part way through the sweep */}
+            {/* Mini bars, drawn part way through the sweep. Blue, with one
+                orange — the one the reader's eye is meant to land on. */}
             <g className="pdf-bars">
-              <rect className="bar b1" x="106" y="380" width="14" height="18" rx="2" fill="url(#bar-grad)" />
-              <rect className="bar b2" x="146" y="370" width="14" height="28" rx="2" fill="url(#bar-grad)" />
-              <rect className="bar b3" x="186" y="360" width="14" height="38" rx="2" fill="url(#bar-grad)" />
-              <rect className="bar b4" x="226" y="350" width="14" height="48" rx="2" fill="url(#bar-grad)" />
-              <rect className="bar b5" x="266" y="340" width="14" height="58" rx="2" fill="url(#bar-grad)" />
+              <rect className="bar b1" x="106" y="380" width="14" height="18" rx="2" fill="#7f9ce6" />
+              <rect className="bar b2" x="146" y="370" width="14" height="28" rx="2" fill="#7f9ce6" />
+              <rect className="bar b3" x="186" y="360" width="14" height="38" rx="2" fill="#7f9ce6" />
+              <rect className="bar b4" x="226" y="350" width="14" height="48" rx="2" fill="#fe8c01" />
+              <rect className="bar b5" x="266" y="340" width="14" height="58" rx="2" fill="#7f9ce6" />
             </g>
           </g>
 
@@ -158,8 +174,8 @@ export default function PdfIllustration() {
             d={SIGNATURE_D}
             pathLength={100}
             fill="none"
-            stroke="#ea580c"
-            strokeWidth="2.5"
+            stroke="#173a94"
+            strokeWidth="3"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
@@ -168,8 +184,8 @@ export default function PdfIllustration() {
               pinned to the ink's leading edge by the same dash arithmetic. */}
           <g className="pdf-nib-in">
             <g className="pdf-nib-out">
-              <path className="pdf-nib-glow" d={SIGNATURE_D} pathLength={100} fill="none" stroke="#fb923c" strokeOpacity="0.35" strokeWidth="16" strokeLinecap="round" />
-              <path className="pdf-nib" d={SIGNATURE_D} pathLength={100} fill="none" stroke="#f97316" strokeWidth="7" strokeLinecap="round" />
+              <path className="pdf-nib-glow" d={SIGNATURE_D} pathLength={100} fill="none" stroke="#7f9ce6" strokeOpacity="0.35" strokeWidth="16" strokeLinecap="round" />
+              <path className="pdf-nib" d={SIGNATURE_D} pathLength={100} fill="none" stroke="#2353c9" strokeWidth="7" strokeLinecap="round" />
             </g>
           </g>
 
@@ -196,8 +212,8 @@ export default function PdfIllustration() {
                         along a diagonal. */}
                     <path d="M0 0 L-4.5 -15 L4.5 -15 Z" fill="#1e293b" />
                     <rect x="-5.5" y="-21" width="11" height="6" fill="#cbd5e1" />
-                    <rect x="-6" y="-56" width="12" height="35" rx="2.5" fill="#ea580c" />
-                    <rect x="-6" y="-56" width="4.5" height="35" rx="2" fill="#fb923c" opacity="0.6" />
+                    <rect x="-6" y="-56" width="12" height="35" rx="2.5" fill="#2353c9" />
+                    <rect x="-6" y="-56" width="4.5" height="35" rx="2" fill="#7f9ce6" opacity="0.6" />
                     <rect x="-4.5" y="-64" width="9" height="9" rx="3" fill="#1e293b" />
                   </g>
                 </g>
@@ -205,34 +221,19 @@ export default function PdfIllustration() {
             </g>
           </g>
 
-          {/* APPROVED, slammed across the middle of the page — the last beat of
-              the sweep and the only thing that overlaps the document's own
-              content, which is what a real stamp does. */}
-          <g className="pdf-stamp">
-            <rect x="112" y="292" width="276" height="80" rx="10" fill="none" stroke="#059669" strokeWidth="5" />
-            <rect x="122" y="302" width="256" height="60" rx="6" fill="none" stroke="#059669" strokeWidth="1.5" opacity="0.6" />
-            <text
-              x="250"
-              y="345"
-              textAnchor="middle"
-              fontSize="38"
-              fontWeight="800"
-              letterSpacing="4"
-              fill="#059669"
-              fontFamily="ui-sans-serif, system-ui"
-            >
-              {t('app.illustration_approved')}
-            </text>
-          </g>
-
-          {/* Tick stamp, and the ring it throws off as it lands */}
-          <g className="pdf-tick-ring" style={{ transformOrigin: '380px 510px' }}>
-            <circle cx="380" cy="510" r="22" fill="none" stroke="#10b981" strokeWidth="3" />
-          </g>
-          <g className="pdf-tick" style={{ transformOrigin: '380px 510px' }}>
-            <circle cx="380" cy="510" r="22" fill="#ecfdf5" stroke="#10b981" strokeWidth="2" />
-            <path d="M370 510 L378 518 L392 502" stroke="#10b981" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          </g>
+          {/* "signed!", in handwriting, the last beat of the sweep. Orange
+              text (#c2410c, the suite's readable orange), beside the ink. */}
+          <text
+            className="pdf-signed"
+            x="270"
+            y="512"
+            fontSize="30"
+            fontWeight="700"
+            fill="#c2410c"
+            fontFamily="Caveat, 'Segoe Print', 'Bradley Hand', cursive"
+          >
+            {t('app.illustration_signed')}
+          </text>
         </g>
 
         {/* Floating emoji-style reactions */}

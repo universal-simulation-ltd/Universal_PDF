@@ -120,7 +120,7 @@ check('the card went', await hint().count() === 0)
 // silently disarm people.
 check('the placement is still armed (the image tool is still active)',
       (await page.locator('button[title^="Select / move"]').first().getAttribute('class') ?? '')
-        .includes('bg-orange-700') === false)
+        .includes('bg-cobalt') === false)
 
 await openDoc()
 await armPlacement()

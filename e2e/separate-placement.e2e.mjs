@@ -170,7 +170,7 @@ await page.waitForTimeout(800)
 // "Select / move — tap again or long-press for options", not the bare label.
 const selectActive = async () =>
   ((await page.locator('button[title^="Select / move"]').first().getAttribute('class')) ?? '').includes(
-    'bg-orange-700'
+    'bg-cobalt'
   )
 
 const pageBox = await page.locator('[data-page-index="0"] canvas').first().boundingBox()

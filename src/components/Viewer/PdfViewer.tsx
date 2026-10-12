@@ -1173,10 +1173,12 @@ export default function PdfViewer() {
               <button
                 onClick={togglePageNav}
                 title={t('viewer.bar.show_pages')}
-                className={`flex items-center gap-1.5 px-2.5 h-8 rounded text-sm font-medium transition-colors ${
+                // Universal PDF's cobalt (2026-10-12): outlined on pale blue,
+                // solid while the panel is open.
+                className={`flex items-center gap-1.5 px-2.5 h-8 rounded-lg border-[1.5px] border-cobalt text-sm font-bold transition-colors ${
                   pageNavOpen
-                    ? 'bg-orange-700 text-white hover:bg-orange-800'
-                    : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50'
+                    ? 'bg-cobalt text-white hover:bg-cobalt-deep'
+                    : 'bg-cobalt-tint text-cobalt-deep hover:bg-[#e2e9fb]'
                 }`}
               >
                 <span aria-hidden="true">☰</span>

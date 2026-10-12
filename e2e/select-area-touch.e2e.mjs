@@ -168,9 +168,11 @@ const setScrollTop = (top) =>
   }, top)
 
 // The bottom bar's first cell names the live Select-group tool: Select / Area /
-// Text / Hand. That IS the tool indicator on a phone.
+// Text / Hand. That IS the tool indicator on a phone. The label is the button's
+// own second span; the first is the icon's chip, which holds a span of its own
+// for the highlighter stroke while the tool is picked.
 const barTool = () =>
-  page.evaluate(() => document.querySelector('nav > div span:nth-of-type(2)')?.textContent ?? '')
+  page.evaluate(() => document.querySelector('nav > div > button > span:nth-of-type(2)')?.textContent ?? '')
 
 // touch-action on the page's Konva Stage — the property the whole bug was.
 const stageTouchAction = () =>
@@ -200,7 +202,7 @@ await tap(markB.x, markB.y)
 check('two ticks are on the page to be caught', (await page.evaluate(() => {
   // Nothing exposes the annotation list, but placing a tick switches the tool
   // back to Select — two placements, and the bar has to read "Select".
-  return document.querySelector('nav > div span:nth-of-type(2)')?.textContent
+  return document.querySelector('nav > div > button > span:nth-of-type(2)')?.textContent
 })) === 'Select', await barTool())
 
 // ── 1. A plain swipe still moves the document ───────────────────────────────

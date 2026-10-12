@@ -5,6 +5,7 @@ import { useSignatureStore } from '../../stores/signatureStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useT } from '../../i18n'
+import { ACTIVE_CHIP, ActiveStroke, MobileToolFace } from '../Toolbar/toolLook'
 import { useDefaultView } from '@unisim/sdk'
 import { SIGN_MENU_TABS, SIGN_MENU_VIEW, type SignMenuTab } from '../../lib/defaultViews'
 
@@ -374,15 +375,18 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
           onClick={() => setOpen((o) => !o)}
           aria-haspopup="true"
           aria-expanded={open}
-          className={`flex flex-col items-center justify-center w-full h-full gap-0.5 rounded transition-colors ${
-            armed ? 'text-orange-400' : 'text-slate-200'
+          className={`flex flex-col items-center justify-center w-full h-full rounded transition-colors ${
+            armed ? 'text-white' : 'text-slate-200'
           }`}
         >
-          <span className="text-xl leading-none" aria-hidden="true">✍</span>
-          <span className="text-[10px] font-medium leading-tight tracking-tight max-w-full truncate px-0.5">{t('sign.menu_sign_short')}</span>
+          <MobileToolFace
+            icon={<span className="text-xl leading-none" aria-hidden="true">✍</span>}
+            label={t('sign.menu_sign_short')}
+            active={armed}
+          />
         </button>
       ) : (
-        // Same 36px square, same hover and same armed orange as the image and
+        // Same 36px square, same hover and same armed cobalt chip as the image and
         // QR buttons either side of it — this one lives IN the tool cluster now,
         // not over in the actions group with Export.
         <button
@@ -391,11 +395,12 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
           aria-label={t('sign.menu_sign')}
           aria-haspopup="true"
           aria-expanded={open}
-          className={`w-9 h-9 rounded flex items-center justify-center transition-colors ${
-            armed ? 'bg-orange-700 hover:bg-orange-800' : 'hover:bg-slate-700'
+          className={`relative w-9 h-9 rounded-[10px] flex items-center justify-center transition-colors ${
+            armed ? ACTIVE_CHIP : 'hover:bg-slate-700'
           }`}
         >
           <SignIcon active={armed} className="w-5 h-5" />
+          {armed && <ActiveStroke />}
         </button>
       )}
 

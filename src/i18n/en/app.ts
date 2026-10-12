@@ -124,14 +124,13 @@ export default {
   'landing_drop_here': 'Drop a PDF here', // inside a small circle; keep short
   'landing_click_to_browse': 'or click to browse — {types}', // {types} is ".pdf, .docx, .odt"
   'landing_tap_to_browse': 'or tap to choose — {types}', // same as landing_click_to_browse, on touch screens; {types} is ".pdf, .docx, .odt"
-  'landing_or': 'or', // separator between two options
   'landing_compressing': 'Compressing…',
   'landing_drop_to_compress': 'Drop to compress',
-  'landing_compress': 'Compress PDF(s)',
-  'landing_more_tools': 'More tools', // visible label beside the chevron that opens the extra tools on the landing page; keep it short, it shares a phone-width row with Compress
+  'landing_compress': 'Compress PDF(s) — make one or several smaller', // first item under More tools; picking several files compresses them as a batch
+  'landing_more_tools': 'More tools', // visible label beside the chevron that opens the extra tools on the landing page; keep it short, it shares a phone-width row with Try with example PDF
   'landing_hide_advanced': 'Hide more tools',
   'landing_show_advanced': 'Show more tools',
-  'landing_advanced_title': 'More tools — merge, convert, OCR, redact, Markdown',
+  'landing_advanced_title': 'More tools — compress, merge, convert, OCR, redact, Markdown',
   'landing_merge': 'Merge PDFs — combine several into one',
   'landing_convert': 'Convert — PDF ↔ images (PNG/JPG)',
   'landing_ocr': 'Make searchable (OCR) — read a scan',
@@ -146,10 +145,12 @@ export default {
   'landing_free_compress': 'Compress PDF for free',
   'landing_free_qr': 'Add QR codes for free',
   'landing_free_export': 'Export PDF for free',
+  'landing_free_title': 'All free, nothing hidden', // heading of the small popup listing what is free and what the app never does
+  'landing_free_open': "What's free, and what we never do", // label of the round ? button at the end of the privacy note
   'landing_drop_hint': 'PDF files only — anywhere on this page will do',
 
   // PdfIllustration
-  'illustration_approved': 'APPROVED', // big stamp word across a decorative drawing; capitals, max ~9 letters to fit the stamp box
+  'illustration_signed': 'signed!', // handwritten word beside a signature in a decorative drawing; lower case, short, with an exclamation mark
   'illustration_signature': 'Signature', // tiny caption under a signature line in a decorative drawing
 
   // DownloadRow

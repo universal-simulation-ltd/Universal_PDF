@@ -1,5 +1,29 @@
 @import "tailwindcss";
 
+/* Universal PDF's own colours, from its app icon (a cobalt page with an orange
+   highlighter), 2026-10-12. Used sparingly on purpose — the active tool, the
+   example button, the "?" — so the app reads as a sibling of the phone app
+   without turning blue all over. The suite chrome, the drop circle, the
+   favicon and the PDF tile stay UNI·SIM orange. `bg-cobalt`, `text-cobalt-deep`
+   and so on. */
+@theme {
+  --color-cobalt: #2353c9;
+  --color-cobalt-deep: #173a94;
+  --color-cobalt-tint: #eef2fc;
+  --color-highlighter: rgba(249, 115, 22, 0.75);
+}
+
+/* The highlighter stroke: a rounded, slightly tilted bar behind the lower part
+   of a word (the landing headline) or under the active tool. The element it
+   sits in needs `position: relative`; behind text, give the stroke `-z-10`
+   and its parent `z-0`, so it lands behind the text and not behind the page.
+   No z-index here: an unlayered rule would beat that utility. */
+.pdf-highlighter {
+  position: absolute;
+  background: var(--color-highlighter);
+  pointer-events: none;
+}
+
 html, body, #root {
   height: 100%;
   margin: 0;
@@ -9,6 +33,34 @@ body {
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
+}
+
+/* The landing page's privacy note (the SDK's PrivacyNote) with the round "?"
+   laid over its right end — see LandingPage.tsx. The note is inline-styled
+   inside node_modules, so this reaches in by structure: its root is the element
+   carrying `lang`, then the shield, the text, and the dismiss X.
+   ⚠️ No `transform` on `.pdf-privacy-help`: it would become the containing
+   block for the phone's `position: fixed` bottom sheet inside it, and the
+   sheet would open inside a 30px box. */
+.pdf-privacy > [lang] > svg:first-child {
+  color: var(--color-cobalt) !important;
+}
+.pdf-privacy > [lang] > div {
+  padding-right: 40px;
+}
+.pdf-privacy-help {
+  position: absolute;
+  top: calc(50% - 15px);
+  right: 38px;
+}
+/* Dismissed: the note renders nothing, and the "?" sits on its own under the
+   card, at the right. */
+.pdf-privacy:not(:has(> [lang])) .pdf-privacy-help {
+  position: relative;
+  top: auto;
+  right: auto;
+  width: fit-content;
+  margin-left: auto;
 }
 
 /* ---------- Form controls do not inherit a colour meant for something else ---
@@ -258,41 +310,22 @@ body {
 .pdf-illu .pdf-reactions .r2 { --from: 0.63; }
 .pdf-illu .pdf-reactions .r3 { --from: 0.70; }
 
-/* The tick stamps last, and the sweep holds on it before turning back. It goes
-   past full size and settles, like something pressed onto the page. */
-.pdf-illu .pdf-tick {
-  transform: scale(calc(var(--e) * (1 + 0.28 * var(--pop))));
+/* "signed!" lands last, in handwriting, the moment the pen leaves — and the
+   sweep holds on it before turning back. It goes past full size and settles,
+   like something written with a flourish. It replaced a green tick stamp and an
+   APPROVED stamp (2026-10-12): the board for the cobalt look has neither, and
+   green is not one of its colours.
+
+   ⚠️ `transform-box: fill-box` for the same reason as `.pdf-line`: without it
+   the origin is the corner of the 500 × 600 canvas and the word would fly in
+   from the top left while it grew. */
+.pdf-illu .pdf-signed {
+  transform-box: fill-box;
+  transform-origin: left center;
+  transform: rotate(-4deg) scale(calc(var(--e) * (1 + 0.28 * var(--pop))));
   opacity: var(--e);
-  --from: 0.78;
-  --span: 0.12;
-}
-
-/* APPROVED lands last, and lands HARD: it arrives at 2.4× and decelerates onto
-   the page, which is the whole difference between a stamp and a fade-in. The
-   sweep's own easing slows to a crawl near 1, so it holds there before the loop
-   turns back. */
-.pdf-illu .pdf-stamp {
-  transform-origin: 250px 332px;
-  transform: rotate(-13deg) scale(calc(1 + 1.4 * (1 - var(--e))));
-  opacity: calc(0.92 * var(--e));
-  --from: 0.86;
-  --span: 0.12;
-}
-
-/* The impact: one ring thrown off the stamp, expanding and fading. It starts a
-   beat after the tick so it reads as a consequence of the landing, and it is
-   fully gone by the end of the sweep — frame 1 is the state reduced motion
-   sees, and a ripple frozen mid-flight is not a state. */
-.pdf-illu .pdf-tick-ring {
-  transform: scale(calc(1 + 1.1 * var(--e)));
-  /* ⚠️ `1 - --e` would be WRONG here, and looked right in the diff: outside a
-     window `--e` is 0, so a fade-out written that way is fully opaque for the
-     whole sweep BEFORE its window — a green ring parked on the page from frame
-     0. `--pop` is 0 at both ends, which is what "only exists while it happens"
-     actually means. */
-  opacity: calc(0.85 * var(--pop));
-  --from: 0.82;
-  --span: 0.12;
+  --from: 0.80;
+  --span: 0.14;
 }
 
 /* Reduced motion is handled in PdfIllustration.tsx, which parks `--t` at 1 and

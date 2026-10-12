@@ -124,14 +124,13 @@ const app: Messages['app'] = {
   'landing_drop_here': 'Largue um PDF aqui',
   'landing_click_to_browse': 'ou clique para procurar — {types}',
   'landing_tap_to_browse': 'ou toque para procurar — {types}',
-  'landing_or': 'ou',
   'landing_compressing': 'A comprimir…',
   'landing_drop_to_compress': 'Largar para comprimir',
-  'landing_compress': 'Comprimir PDF',
+  'landing_compress': 'Comprimir PDF — reduzir um ou vários',
   'landing_more_tools': 'Mais ferramentas',
   'landing_hide_advanced': 'Ocultar mais ferramentas',
   'landing_show_advanced': 'Mostrar mais ferramentas',
-  'landing_advanced_title': 'Mais ferramentas — juntar, converter, OCR, rasurar, Markdown',
+  'landing_advanced_title': 'Mais ferramentas — comprimir, juntar, converter, OCR, rasurar, Markdown',
   'landing_merge': 'Juntar PDF — combinar vários num só',
   'landing_convert': 'Converter — PDF ↔ imagens (PNG/JPG)',
   'landing_ocr': 'Tornar pesquisável (OCR) — ler uma digitalização',
@@ -146,10 +145,12 @@ const app: Messages['app'] = {
   'landing_free_compress': 'Comprimir PDF gratuitamente',
   'landing_free_qr': 'Adicionar códigos QR gratuitamente',
   'landing_free_export': 'Exportar PDF gratuitamente',
+  'landing_free_title': 'Tudo gratuito, nada escondido',
+  'landing_free_open': 'O que é gratuito e o que nunca fazemos',
   'landing_drop_hint': 'Só ficheiros PDF — em qualquer ponto desta página',
 
   // PdfIllustration
-  'illustration_approved': 'APROVADO',
+  'illustration_signed': 'assinado!',
   'illustration_signature': 'Assinatura',
 
   // DownloadRow
