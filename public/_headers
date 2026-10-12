@@ -14,7 +14,9 @@
 #   • style-src 'unsafe-inline': React style attributes, everywhere.
 #   • connect-src: Supabase (API, auth, storage, realtime), the suite
 #     changelog, the OCR language models on jsDelivr (@tesseract.js-data
-#     only), the R2 hosted-files Worker, Google sign-in.
+#     only), the R2 hosted-files Worker, the portal's /api/geo (the signer's
+#     country token — same origin on the live site, named for dev and e2e),
+#     Google sign-in.
 #   • worker-src 'self' blob:: pdf.js's and tesseract's workers are files here.
 #   • frame-src: blob: previews and print, the certificate page's PDF (a
 #     Supabase or R2 signed URL), Google sign-in.
@@ -38,4 +40,4 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https:; font-src 'self' data: blob:; connect-src 'self' data: blob: https://rygfxgalojojppxmhddo.supabase.co wss://rygfxgalojojppxmhddo.supabase.co https://changelog.unisim.co.uk https://cdn.jsdelivr.net/npm/@tesseract.js-data/ https://unisim-hosted-files.inbox-12f.workers.dev https://accounts.google.com/gsi/; worker-src 'self' blob:; frame-src 'self' blob: https://rygfxgalojojppxmhddo.supabase.co https://unisim-hosted-files.inbox-12f.workers.dev https://accounts.google.com/gsi/; media-src 'self' blob: data:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https:; font-src 'self' data: blob:; connect-src 'self' data: blob: https://rygfxgalojojppxmhddo.supabase.co wss://rygfxgalojojppxmhddo.supabase.co https://changelog.unisim.co.uk https://cdn.jsdelivr.net/npm/@tesseract.js-data/ https://unisim-hosted-files.inbox-12f.workers.dev https://opensource.unisim.co.uk/api/geo https://accounts.google.com/gsi/; worker-src 'self' blob:; frame-src 'self' blob: https://rygfxgalojojppxmhddo.supabase.co https://unisim-hosted-files.inbox-12f.workers.dev https://accounts.google.com/gsi/; media-src 'self' blob: data:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'

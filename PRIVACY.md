@@ -66,6 +66,11 @@ don't offer it at all** — see `certifiedSignatureHere` in
   and the stored copy in [`src/lib/hostedStore.ts`](src/lib/hostedStore.ts)
 - The dialog that asks you (website only): [`src/components/SendToSignDialog.tsx`](src/components/SendToSignDialog.tsx)
 - Revoking a request deletes the stored copy and any signed copy.
+- About the signer, the audit trail records when they opened and signed, their
+  IP address, its country and their browser. The country comes from a
+  short-lived token the signing page fetches from
+  `opensource.unisim.co.uk/api/geo` (it names only the signer's own country)
+  and hands to the server with each step — [`src/lib/geoToken.ts`](src/lib/geoToken.ts).
 
 ⚠️ **The stored copy is ordinary cloud storage, not end-to-end encryption.**
 It is encrypted in transit and at rest, and access is restricted to your own

@@ -2,6 +2,7 @@ import { useUniversal } from '@unisim/sdk'
 import { hashSecret, randomHex, generateAccessPin } from './signAccessSecret'
 import { getT } from '../i18n'
 import { publicAppBase } from './appUrl'
+import { geoToken } from './geoToken'
 
 // Client wrappers for the "Send to sign" Edge Functions.
 //
@@ -74,7 +75,7 @@ export interface LoadSignRequestResult {
  *  without it the server answers `verification_required`. */
 export async function loadSignRequest(supabase: Supabase, token: string, session?: string): Promise<LoadSignRequestResult> {
   const { data, error } = await supabase.functions.invoke('pdf-sign-request', {
-    body: { action: 'load', token, session },
+    body: { action: 'load', token, session, geo: await geoToken() },
   })
   if (error) {
     if (isNetworkError(error)) return { ok: false, network: true, error: error.message }
@@ -118,6 +119,7 @@ export async function submitSignedPdf(
   const { data, error } = await supabase.functions.invoke('pdf-sign-request', {
     body: {
       action: 'submit', token, pdfBase64: base64FromBytes(bytes), annotations, session,
+      geo: await geoToken(),
       ...(baseSha256 ? { baseSha256 } : {}),
     },
   })
@@ -284,7 +286,7 @@ export async function verifyAccess(
   input: { code: string; pin?: string },
 ): Promise<VerifyAccessResult> {
   const { data, error } = await supabase.functions.invoke('pdf-sign-request', {
-    body: { action: 'verify', token, code: input.code, pin: input.pin },
+    body: { action: 'verify', token, code: input.code, pin: input.pin, geo: await geoToken() },
   })
   if (error) {
     const body = await parseFunctionError(error)
