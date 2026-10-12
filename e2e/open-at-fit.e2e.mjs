@@ -96,6 +96,10 @@ const { browser } = await loadPlaywright()
 // A phone, because that is where a landscape page at 100% overflows.
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
 
+// Every module URL the page loads is kept, so the store can be imported at the
+// exact URL the app imported it at — see `storeUrl` below.
+await page.addInitScript(() => performance.setResourceTimingBufferSize(100000))
+
 try {
   await page.goto(BASE, { waitUntil: 'domcontentloaded' })
   await page.waitForFunction(() => !!document.querySelector('input[type=file]'), { timeout: 30000 })
@@ -115,7 +119,21 @@ try {
     const bin = atob(b64)
     const bytes = new Uint8Array(bin.length)
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
-    const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+    // ⚠️ The store the APP is using, not a second copy of it. Once
+    // pdfStore.ts has been edited while the dev server is up (an HMR update —
+    // routine in a checkout other sessions are working in), Vite serves the
+    // app `pdfStore.ts?t=<time>`, and a bare `import('/src/stores/pdfStore.ts')`
+    // is a DIFFERENT module with its own empty store: `loadFile` then loads a
+    // document nothing renders, and every check below failed with "page 1
+    // never painted at all" (2026-10-12). Importing the URL the app actually
+    // loaded gets the one instance.
+    const storeUrl =
+      performance
+        .getEntriesByType('resource')
+        .map((e) => e.name)
+        .filter((u) => new URL(u).pathname === '/src/stores/pdfStore.ts')
+        .pop() ?? '/src/stores/pdfStore.ts'
+    const { usePdfStore } = await import(storeUrl)
     const file = new File([bytes], 'landscape.pdf', { type: 'application/pdf' })
 
     // ⚠️ Not awaited before watching starts: `loadFile` keeps working past the

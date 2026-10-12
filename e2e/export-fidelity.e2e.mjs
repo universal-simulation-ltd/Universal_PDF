@@ -104,12 +104,18 @@ await page.goto(BASE)
 
 const results = await page.evaluate(async (fx) => {
   const { buildAnnotatedPdfBytes } = await import('/src/lib/export.ts')
-  const { pdfjsLib } = await import('/src/lib/pdfjs.ts')
+  // ⚠️ `openPdf`, not `pdfjsLib.getDocument`. The app hands every document its
+  // shared worker explicitly and starts it on first use, so pdf.js's
+  // GlobalWorkerOptions are empty until something has gone through `openPdf`:
+  // the first two attempts below (rotated, cropped) used to fail with
+  // `No "GlobalWorkerOptions.workerSrc" specified`, and only the later ones
+  // passed because an export had started the worker by then (2026-10-12).
+  const { openPdf } = await import('/src/lib/pdfjs.ts')
   const bytes = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0))
   const buf = (s) => bytes(s).buffer
 
   async function open(out) {
-    const doc = await pdfjsLib.getDocument({ data: out.slice() }).promise
+    const doc = await openPdf(out.slice()).promise
     const p = await doc.getPage(1)
     const viewport = p.getViewport({ scale: 1 })
     const canvas = document.createElement('canvas')
