@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Written by scripts/app-icon.mjs — edit the drawing there, not this file.
+     PDF's phone icon is its own; the suite generator skips it (ownNativeIcon). -->
 <resources>
-    <color name="ic_launcher_background">#e05504</color>
+    <color name="ic_launcher_background">#f4f1ea</color>
 </resources>

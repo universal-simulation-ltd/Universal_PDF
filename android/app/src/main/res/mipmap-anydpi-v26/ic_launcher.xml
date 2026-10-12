@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Written by scripts/app-icon.mjs — edit the drawing there, not this file.
+     PDF's phone icon is its own; the suite generator skips it (ownNativeIcon). -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@drawable/ic_launcher_tile"/>
+    <background android:drawable="@mipmap/ic_launcher_background"/>
     <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
 </adaptive-icon>

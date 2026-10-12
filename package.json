@@ -189,7 +189,7 @@
           ]
         }
       ],
-      "icon": "build/app-icon.png",
+      "icon": "build/app-icon-mac.png",
       "category": "public.app-category.productivity",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
