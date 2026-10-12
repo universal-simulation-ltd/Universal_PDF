@@ -7,7 +7,6 @@ const previewPane = require('./previewPane.cjs')
 const libreOffice = require('./libreOffice.cjs')
 const downloads = require('./downloads.cjs')
 const strings = require('./strings.cjs')
-const { installHubHandoff } = require('@unisim/sdk/electron')
 
 // Set by `npm run electron:dev` to load the live Vite dev server. When unset
 // (the packaged app), we load the built bundle from disk over `file://`.
@@ -372,10 +371,10 @@ function createWindow({ launching = false } = {}) {
   // so any URL a PDF's link annotation could name (a `javascript:`, a `data:`
   // page, a `file://` path) got a window carrying the whole `window.desktop`
   // bridge: save-anywhere, LibreOffice, the registry. Nothing in the app needs
-  // a second window from `window.open`: hub pages open through the SDK's own
-  // IPC (installHubHandoff, which builds its window WITHOUT a preload), and the
-  // print fallback's blob: window had nothing to show it with anyway (no PDF
-  // plugin in a BrowserWindow).
+  // a second window from `window.open`: the app has no sign-in and so no hub
+  // windows (the SDK's installHubHandoff was removed with it, 2026-10-12), and
+  // the print fallback's blob: window had nothing to show it with anyway (no
+  // PDF plugin in a BrowserWindow).
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (isExternalScheme(url)) shell.openExternal(url)
     return { action: 'deny' }
@@ -571,11 +570,10 @@ if (!gotLock) {
 
   app.whenReady().then(() => {
     installAppMenu()
-    // Hub pages (profile, account settings) open in a window this app owns,
-    // signed in as the current user. Without it every hub link lands in the
-    // system browser as a stranger — the desktop app's session lives here and
-    // nowhere else.
-    installHubHandoff({ icon: path.join(__dirname, '..', 'public', 'icon-512.png') })
+    // No hub handoff (`installHubHandoff` from @unisim/sdk/electron) any more:
+    // the desktop app has no sign-in since 2026-10-12 (src/lib/accounts.ts), so
+    // there is no session to carry into a hub window, and the app shows no hub
+    // links. A hub URL now goes to the system browser like any other link.
     // Every export the page hands out — the Export dialog, a compressed copy,
     // a converted document — leaves the renderer as an ordinary browser
     // download, because that is the one path that also works in the web build.
