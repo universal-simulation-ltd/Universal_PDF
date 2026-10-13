@@ -19,6 +19,7 @@
 //   • Reset to defaults puts all of it back.
 
 import { dirname, join } from 'node:path'
+import { tmpdir } from 'node:os'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -138,7 +139,7 @@ await stroke(100, 200, 300, 200)
 const hl = (await store('return s.annotations')).at(-1)
 // Widths are display pixels over the zoom; the page canvas is the zoom.
 check('a stroke takes that width', hl && Math.abs(hl.strokeWidth * k - 30) < 0.5, json({ w: hl?.strokeWidth, k }))
-await page.screenshot({ path: join(process.env.SHOTS ?? '.', 'draw-tools-highlighter.png'), clip: { x: 0, y: 0, width: 1400, height: 120 } }).catch(() => {})
+await page.screenshot({ path: join(process.env.SHOTS ?? tmpdir(), 'draw-tools-highlighter.png'), clip: { x: 0, y: 0, width: 1400, height: 120 } }).catch(() => {})
 
 console.log('\nthe pen\'s dropdown')
 await page.getByRole('button', { name: 'Free draw', exact: true }).first().click()
