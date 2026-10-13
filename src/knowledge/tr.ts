@@ -166,7 +166,7 @@ Bu bir hukuki tavsiye değildir. Bir elektronik imzanın kabul edilebilir olup o
 
 ## İmzaya gönder
 
-1. **İmzanın yerini işaretleyin.** **İmzala**’yı açın, **İstek**’i seçin ve imzanın gelmesi gereken her yere bir “Burayı imzalayın” kutusu yerleştirin. İsterseniz önce **Ad iste** veya **Tarih iste**’yi işaretleyin.
+1. **İmzanın yerini işaretleyin.** **İmzala**’yı açın, **İstek**’i seçin ve imzanın gelmesi gereken her yere bir “Burayı imzalayın” kutusu yerleştirin. Kutunun altında ad ve tarih alanları için önce **Ad ve tarih iste**’yi, üstünde bir etiket için **“Lütfen burayı imzalayın” etiketi**’ni açın.
 2. **Siz de imzalıyorsanız kendi bölümünüzü imzalayın.** Göndermeden önce kendi kutunuza dokunup imzalayın.
 3. **Gönderin.** **İmzaya gönder**’i seçin. Telefonda paylaşım sayfası açılır; PDF’i mesajla, e-postayla veya herhangi bir uygulamayla gönderebilirsiniz. Bilgisayarda PDF kaydedilir veya indirilir ve tarayıcınız paylaşmayı da önerebilir.
 

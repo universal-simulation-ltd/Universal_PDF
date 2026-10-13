@@ -25,6 +25,7 @@ export default {
   'sfs_certified_button': 'Certified signature…',
   'certified_title': 'Certified signature',
   'menu_send_plain_hint': 'Share the PDF with signature fields anyone can sign. No upload, no account.',
+  'menu_send_needs_box': 'Place a signature box first, then send the PDF to be signed.', // under the greyed-out Send for signature button
   'sending': 'Sending…',
   'loading': 'Loading…',
   'none_yet': 'None yet.',
@@ -66,8 +67,8 @@ export default {
   'default_menu_tab': 'Sign menu opens on', // Tune this app row: the tab the Sign menu shows first (also set by double-tapping a tab),
   'default_pad_mode': 'New signature opens on', // Tune this app row: Draw or Send to sign, whichever the signature pad shows first,
   'menu_request_intro': 'Drop a “Sign here” box on the page. It becomes a signature field that can be signed in Universal PDF, Adobe Acrobat or Apple Preview.',
-  'menu_ask_name': 'Ask for name',
-  'menu_ask_date': 'Ask for date',
+  'menu_request_details': 'Request name and date', // one switch: Name: and Date: fill-in fields under the box
+  'menu_request_label': '“Please sign here” label', // one switch: a label above the box
   'menu_require_live': 'Require live signature',
   'menu_require_live_tooltip': 'This stops the user from uploading an image of their signature. Signing on a phone is still allowed — that is drawn ink too.',
   'menu_draw_box': 'Draw the box on the page…',

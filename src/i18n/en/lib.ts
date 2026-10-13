@@ -82,11 +82,10 @@ export default {
   'sig_phone': 'Phone:', // detail line label under a signature
   'sig_signed_on': 'Signed on {date}',
 
-  // export ("Sign here" request box caption, drawn into the PDF; Latin-1 only)
-  'sign_here': 'Sign here',
-  'sign_here_name': 'Name', // the signer is asked for their name
-  'sign_here_date': 'Date', // the signer is asked for the date
-  'sign_here_live': 'Live', // the signer must sign live (drawn by hand), not upload an image
+  // export (the words around a signature-request box, drawn into the PDF)
+  'please_sign_here': 'Please sign here', // printed above a signature box
+  'sig_field_name': 'Name:', // printed before the signer's name field
+  'sig_field_date': 'Date:', // printed before the date field
 
   // fonts (font picker chips)
   'font_sans': 'Sans', // sans-serif typeface

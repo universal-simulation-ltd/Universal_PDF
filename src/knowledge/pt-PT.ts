@@ -166,7 +166,7 @@ Isto não é aconselhamento jurídico. A aceitação de uma assinatura eletróni
 
 ## Enviar para assinatura
 
-1. **Marque onde assinar.** Abra **Assinar**, escolha **Pedido** e coloque uma caixa «Assinar aqui» onde cada assinatura deve ficar. Assinale antes **Pedir nome** ou **Pedir data** se os quiser.
+1. **Marque onde assinar.** Abra **Assinar**, escolha **Pedido** e coloque uma caixa «Assinar aqui» onde cada assinatura deve ficar. Ative antes **Pedir nome e data** para ter campos de nome e data por baixo da caixa, ou **Etiqueta “Assine aqui”** para uma etiqueta por cima.
 2. **Assine a sua parte, se também assinar.** Toque na sua caixa e assine-a antes de enviar.
 3. **Envie.** Escolha **Enviar para assinatura**. No telemóvel abre-se a folha de partilha, para que possa enviar o PDF por mensagem, por email ou por qualquer app. No computador, o PDF é guardado ou transferido, e o navegador pode também propor partilhá-lo.
 

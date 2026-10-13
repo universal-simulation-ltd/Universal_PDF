@@ -25,6 +25,7 @@ const sign: Messages['sign'] = {
   'sfs_certified_button': 'Signature certifiée…',
   'certified_title': 'Signature certifiée',
   'menu_send_plain_hint': 'Partagez le PDF avec des champs de signature que tout le monde peut signer. Aucun envoi en ligne, aucun compte.',
+  'menu_send_needs_box': 'Placez d’abord un cadre de signature, puis envoyez le PDF à signer.', // under the greyed-out Send for signature button
   'sending': 'Envoi…',
   'loading': 'Chargement…',
   'none_yet': 'Rien pour l’instant.',
@@ -66,8 +67,8 @@ const sign: Messages['sign'] = {
   'default_menu_tab': 'Le menu Signer s’ouvre sur',
   'default_pad_mode': 'Une nouvelle signature s’ouvre sur',
   'menu_request_intro': 'Déposez une zone « Signez ici » sur la page. Elle devient un champ de signature que l’on peut signer dans Universal PDF, Adobe Acrobat ou Aperçu d’Apple.',
-  'menu_ask_name': 'Demander le nom',
-  'menu_ask_date': 'Demander la date',
+  'menu_request_details': 'Demander le nom et la date', // one switch: Name: and Date: fill-in fields under the box
+  'menu_request_label': 'Mention « Veuillez signer ici »', // one switch: a label above the box
   'menu_require_live': 'Exiger une signature tracée',
   'menu_require_live_tooltip': 'Empêche la personne d’importer une image de sa signature. Signer sur un téléphone reste possible — c’est aussi une signature tracée à la main.',
   'menu_draw_box': 'Tracer la zone sur la page…',

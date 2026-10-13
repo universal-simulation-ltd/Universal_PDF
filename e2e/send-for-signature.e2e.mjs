@@ -239,7 +239,7 @@ check('box b on the turned page is turned into the page’s own space (60 x 200 
   JSON.stringify(fB?.rect))
 check('the legacy UPDFSigFields key is no longer written', !mod.legacyKey)
 check('pdf.js sees both as signature widgets', mod.seen.length === 2, JSON.stringify(mod.seen))
-check('with the caption as the tooltip', mod.seen.some((s) => /Sign here/.test(s.tooltip ?? '')), JSON.stringify(mod.seen))
+check('with "Please sign here" as the tooltip', mod.seen.some((s) => /Please sign here/.test(s.tooltip ?? '')), JSON.stringify(mod.seen))
 
 const a = mod.back.find((b) => b.requireName)
 const b = mod.back.find((b) => b.requireLive)

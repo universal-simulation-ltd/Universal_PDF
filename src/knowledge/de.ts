@@ -166,7 +166,7 @@ Dies ist keine Rechtsberatung. Ob eine elektronische Unterschrift ausreicht, hä
 
 ## Zum Unterschreiben senden
 
-1. **Markieren Sie, wo unterschrieben wird.** Öffnen Sie **Unterschreiben**, wählen Sie **Anfrage** und setzen Sie ein „Hier unterschreiben“-Feld an jede Stelle, an die eine Unterschrift gehört. Haken Sie vorher **Name anfordern** oder **Datum anfordern** an, wenn Sie das möchten.
+1. **Markieren Sie, wo unterschrieben wird.** Öffnen Sie **Unterschreiben**, wählen Sie **Anfrage** und setzen Sie ein „Hier unterschreiben“-Feld an jede Stelle, an die eine Unterschrift gehört. Schalten Sie vorher **Name und Datum anfordern** ein, um Felder für Name und Datum unter dem Feld zu erhalten, oder **Hinweis „Bitte hier unterschreiben“** für einen Hinweis darüber.
 2. **Unterschreiben Sie Ihren Teil, wenn Sie auch unterschreiben.** Tippen Sie Ihr Feld an und unterschreiben Sie es vor dem Senden.
 3. **Senden Sie es.** Wählen Sie **Zum Unterschreiben senden**. Auf dem Handy öffnet sich das Teilen-Menü, sodass Sie das PDF per Nachricht, per E-Mail oder mit jeder App verschicken können. Auf dem Computer wird das PDF gespeichert oder heruntergeladen, und Ihr Browser bietet unter Umständen auch das Teilen an.
 

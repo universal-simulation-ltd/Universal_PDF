@@ -139,7 +139,7 @@ When you place a signature, it is an image positioned on the page. When you down
 
 ## Signature boxes
 
-If you are preparing a document for someone else, you can place a "Sign here" box on the page, and ask for their name and the date with it. You can also set a box to require a signature drawn by hand rather than an uploaded image. Drawing on a phone still counts as drawn by hand.
+If you are preparing a document for someone else, you can place a "Sign here" box on the page, with Name and Date fields under it for them to fill in, and a "Please sign here" label above it. You can also set a box to require a signature drawn by hand rather than an uploaded image. Drawing on a phone still counts as drawn by hand.
 
 When you save or share the PDF, each box you have not signed goes in as a real signature field, the kind other PDF apps understand. The person you send it to can sign it in Universal PDF, Adobe Acrobat or Reader, or Apple Preview. When Universal PDF opens a PDF with an empty signature field, from us or from another app, it shows it as a box you can tap to sign. See "Sending a PDF for signature".
 
@@ -166,7 +166,7 @@ This is not legal advice. Whether an electronic signature is acceptable depends 
 
 ## Send for signature
 
-1. **Mark where to sign.** Open **Sign**, choose **Request**, and place a "Sign here" box wherever a signature should go. Tick **Ask for name** or **Ask for date** first if you want them.
+1. **Mark where to sign.** Open **Sign**, choose **Request**, and place a "Sign here" box wherever a signature should go. Switch on **Request name and date** first for Name and Date fields under the box, or **“Please sign here” label** for a label above it.
 2. **Sign your own part, if you are signing too.** Tap your box and sign it before you send.
 3. **Send it.** Choose **Send for signature**. On a phone the share sheet opens, so you can send the PDF by message, by email or through any app. On a computer the PDF is saved or downloaded, and your browser may offer to share it as well.
 

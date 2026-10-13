@@ -166,7 +166,7 @@ Questa non è una consulenza legale. Se una firma elettronica sia accettabile di
 
 ## Invia per la firma
 
-1. **Indica dove firmare.** Apri **Firma**, scegli **Richiesta** e inserisci un riquadro «Firma qui» dove deve andare ogni firma. Spunta prima **Chiedi il nome** o **Chiedi la data** se ti servono.
+1. **Indica dove firmare.** Apri **Firma**, scegli **Richiesta** e inserisci un riquadro «Firma qui» dove deve andare ogni firma. Attiva prima **Chiedi nome e data** per avere i campi Nome e Data sotto il riquadro, o **Etichetta «Firmare qui»** per un’etichetta sopra.
 2. **Firma la tua parte, se firmi anche tu.** Tocca il tuo riquadro e firmalo prima di inviare.
 3. **Invia.** Scegli **Invia per la firma**. Sul telefono si apre il foglio di condivisione, così puoi inviare il PDF con un messaggio, via email o con qualsiasi app. Sul computer il PDF viene salvato o scaricato, e il browser può anche proporti di condividerlo.
 

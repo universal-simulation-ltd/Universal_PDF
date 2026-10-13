@@ -25,6 +25,7 @@ const sign: Messages['sign'] = {
   'sfs_certified_button': 'Firma certificata…',
   'certified_title': 'Firma certificata',
   'menu_send_plain_hint': 'Condividi il PDF con campi firma che chiunque può firmare. Nessun caricamento, nessun account.',
+  'menu_send_needs_box': 'Posiziona prima un riquadro per la firma, poi invia il PDF da firmare.', // under the greyed-out Send for signature button
   'sending': 'Invio…',
   'loading': 'Caricamento…',
   'none_yet': 'Ancora nessuno.',
@@ -66,8 +67,8 @@ const sign: Messages['sign'] = {
   'default_menu_tab': 'Il menu Firma si apre su',
   'default_pad_mode': 'La nuova firma si apre su',
   'menu_request_intro': 'Inserisci un riquadro «Firma qui» nella pagina. Diventa un campo firma che si può firmare in Universal PDF, Adobe Acrobat o Anteprima di Apple.',
-  'menu_ask_name': 'Chiedi il nome',
-  'menu_ask_date': 'Chiedi la data',
+  'menu_request_details': 'Chiedi nome e data', // one switch: Name: and Date: fill-in fields under the box
+  'menu_request_label': 'Etichetta «Firmare qui»', // one switch: a label above the box
   'menu_require_live': 'Richiedi firma dal vivo',
   'menu_require_live_tooltip': 'Impedisce di caricare un’immagine della propria firma. Firmare sul telefono resta consentito: anche quello è inchiostro disegnato.',
   'menu_draw_box': 'Disegna il riquadro nella pagina…',

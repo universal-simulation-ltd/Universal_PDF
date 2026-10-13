@@ -25,6 +25,7 @@ const sign: Messages['sign'] = {
   'sfs_certified_button': 'Zertifizierte Unterschrift …',
   'certified_title': 'Zertifizierte Unterschrift',
   'menu_send_plain_hint': 'Teilen Sie das PDF mit Signaturfeldern, die jeder unterschreiben kann. Kein Upload, kein Konto.',
+  'menu_send_needs_box': 'Platzieren Sie zuerst ein Unterschriftsfeld und senden Sie dann das PDF zur Unterschrift.', // under the greyed-out Send for signature button
   'sending': 'Wird gesendet…',
   'loading': 'Wird geladen…',
   'none_yet': 'Noch keine.',
@@ -66,8 +67,8 @@ const sign: Messages['sign'] = {
   'default_menu_tab': 'Menü „Unterschreiben“ zeigt zuerst',
   'default_pad_mode': 'Neue Unterschrift zeigt zuerst',
   'menu_request_intro': 'Setzen Sie ein „Hier unterschreiben“-Feld auf die Seite. Daraus wird ein Signaturfeld, das sich in Universal PDF, Adobe Acrobat oder Apple Vorschau unterschreiben lässt.',
-  'menu_ask_name': 'Name anfordern',
-  'menu_ask_date': 'Datum anfordern',
+  'menu_request_details': 'Name und Datum anfordern', // one switch: Name: and Date: fill-in fields under the box
+  'menu_request_label': 'Hinweis „Bitte hier unterschreiben“', // one switch: a label above the box
   'menu_require_live': 'Handschriftliche Unterschrift verlangen',
   'menu_require_live_tooltip': 'So kann niemand ein Bild seiner Unterschrift hochladen. Auf dem Handy zu unterschreiben ist weiterhin möglich – das ist ebenfalls handschriftlich.',
   'menu_draw_box': 'Feld auf der Seite aufziehen…',

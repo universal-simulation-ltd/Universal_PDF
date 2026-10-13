@@ -243,7 +243,7 @@ export type ImageBorder = {
 }
 
 // A "Request signature" placeholder box. Until it is signed it renders as a
-// dashed "Sign here" box (plus optional Name / Date lines). When the user
+// dashed box (plus, if chosen, a label above and Name / Date fields below). When the user
 // clicks it and signs, `signed` is filled with a single baked PNG (the ink
 // plus any requested name/date beneath it), which then renders — and exports —
 // contained inside the box.
@@ -253,9 +253,18 @@ export type SignatureFieldAnnotation = Base & {
   y: number
   width: number
   height: number
-  // Which extra lines the box asks for, chosen before it was drawn.
+  // LEGACY: the name / date lines the signer's pad added to the signature
+  // image. Still honoured on boxes from older backups and files; new boxes ask
+  // with `details` instead.
   requireName?: boolean
   requireDate?: boolean
+  // "Request name and date": Name: and Date: fill-in fields UNDER the box, for
+  // the signer to type into (real text fields in the exported file).
+  details?: boolean
+  // A "Please sign here" label ABOVE the box. Both extras are drawn by
+  // lib/sigFieldLayout, and only on an unsigned box this editor made: a box
+  // read back from an exported file already has them in the page.
+  label?: boolean
   // Asks that the box be signed with live ink — the pad, or the phone (which is
   // still drawn ink, just on a better input device) — rather than an uploaded
   // image of a signature. Rides on the annotation rather than a

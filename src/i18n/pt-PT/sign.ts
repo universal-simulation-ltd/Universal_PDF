@@ -25,6 +25,7 @@ const sign: Messages['sign'] = {
   'sfs_certified_button': 'Assinatura certificada…',
   'certified_title': 'Assinatura certificada',
   'menu_send_plain_hint': 'Partilhe o PDF com campos de assinatura que qualquer pessoa pode assinar. Sem carregamentos, sem conta.',
+  'menu_send_needs_box': 'Coloque primeiro uma caixa de assinatura e depois envie o PDF para assinar.', // under the greyed-out Send for signature button
   'sending': 'A enviar…',
   'loading': 'A carregar…',
   'none_yet': 'Ainda não há nenhum.',
@@ -66,8 +67,8 @@ const sign: Messages['sign'] = {
   'default_menu_tab': 'O menu Assinar abre em',
   'default_pad_mode': 'A nova assinatura abre em',
   'menu_request_intro': 'Coloque uma caixa «Assinar aqui» na página. Passa a ser um campo de assinatura que pode ser assinado no Universal PDF, no Adobe Acrobat ou na Pré-visualização da Apple.',
-  'menu_ask_name': 'Pedir nome',
-  'menu_ask_date': 'Pedir data',
+  'menu_request_details': 'Pedir nome e data', // one switch: Name: and Date: fill-in fields under the box
+  'menu_request_label': 'Etiqueta “Assine aqui”', // one switch: a label above the box
   'menu_require_live': 'Exigir assinatura manuscrita',
   'menu_require_live_tooltip': 'Impede que o signatário carregue uma imagem da assinatura. Assinar num telemóvel continua a ser permitido — também é tinta desenhada.',
   'menu_draw_box': 'Desenhar a caixa na página…',

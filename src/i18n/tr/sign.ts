@@ -25,6 +25,7 @@ const sign: Messages['sign'] = {
   'sfs_certified_button': 'Onaylı imza…',
   'certified_title': 'Onaylı imza',
   'menu_send_plain_hint': 'PDF’i herkesin imzalayabileceği imza alanlarıyla paylaşın. Yükleme yok, hesap yok.',
+  'menu_send_needs_box': 'Önce bir imza kutusu yerleştirin, sonra PDF’i imzaya gönderin.', // under the greyed-out Send for signature button
   'sending': 'Gönderiliyor…',
   'loading': 'Yükleniyor…',
   'none_yet': 'Henüz yok.',
@@ -66,8 +67,8 @@ const sign: Messages['sign'] = {
   'default_menu_tab': 'İmzala menüsünün açılış sekmesi',
   'default_pad_mode': 'Yeni imzanın açılış modu',
   'menu_request_intro': 'Sayfaya bir “Burayı imzalayın” kutusu bırakın. Bu kutu Universal PDF’te, Adobe Acrobat’ta veya Apple Önizleme’de imzalanabilen bir imza alanına dönüşür.',
-  'menu_ask_name': 'Ad iste',
-  'menu_ask_date': 'Tarih iste',
+  'menu_request_details': 'Ad ve tarih iste', // one switch: Name: and Date: fill-in fields under the box
+  'menu_request_label': '“Lütfen burayı imzalayın” etiketi', // one switch: a label above the box
   'menu_require_live': 'Canlı imza zorunlu',
   'menu_require_live_tooltip': 'Bu, kullanıcının imzasının görselini yüklemesini engeller. Telefonda imzalamaya yine de izin verilir — o da elle çizilmiş mürekkeptir.',
   'menu_draw_box': 'Kutuyu sayfaya çizin…',

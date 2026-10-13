@@ -166,7 +166,7 @@ Ceci ne constitue pas un conseil juridique. L’acceptabilité d’une signature
 
 ## Envoyer pour signature
 
-1. **Indiquez où signer.** Ouvrez **Signer**, choisissez **Demande** et placez une zone « Signez ici » à chaque endroit où une signature est attendue. Cochez d’abord **Demander le nom** ou **Demander la date** si vous les voulez.
+1. **Indiquez où signer.** Ouvrez **Signer**, choisissez **Demande** et placez une zone « Signez ici » à chaque endroit où une signature est attendue. Activez d’abord **Demander le nom et la date** pour avoir des champs Nom et Date sous la zone, ou **Mention « Veuillez signer ici »** pour une mention au-dessus.
 2. **Signez votre partie, si vous signez aussi.** Touchez votre zone et signez-la avant d’envoyer.
 3. **Envoyez.** Choisissez **Envoyer pour signature**. Sur un téléphone, la feuille de partage s’ouvre : vous pouvez envoyer le PDF par message, par e-mail ou par n’importe quelle application. Sur un ordinateur, le PDF est enregistré ou téléchargé, et votre navigateur peut aussi proposer de le partager.
 

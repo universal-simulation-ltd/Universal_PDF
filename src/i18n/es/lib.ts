@@ -82,11 +82,10 @@ const lib: Messages['lib'] = {
   'sig_phone': 'Teléfono:',
   'sig_signed_on': 'Firmado el {date}',
 
-  // export ("Sign here" request box caption, drawn into the PDF; Latin-1 only)
-  'sign_here': 'Firma aquí',
-  'sign_here_name': 'Nombre',
-  'sign_here_date': 'Fecha',
-  'sign_here_live': 'En directo',
+  // export (the words around a signature-request box, drawn into the PDF)
+  'please_sign_here': 'Firme aquí, por favor', // printed above a signature box
+  'sig_field_name': 'Nombre:', // printed before the signer's name field
+  'sig_field_date': 'Fecha:', // printed before the date field
 
   // fonts (font picker chips)
   'font_sans': 'Sans',

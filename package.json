@@ -102,6 +102,7 @@
     "test:redact-covers": "node e2e/redact-covers-match.e2e.mjs",
     "test:redact-circle": "node e2e/redact-circle.e2e.mjs",
     "test:redact-shape": "node e2e/redact-shape.e2e.mjs",
+    "test:sigfield-extras": "node e2e/sigfield-extras.e2e.mjs",
     "test:image-border": "node e2e/image-border.e2e.mjs",
     "test:reset-defaults": "node e2e/reset-defaults.e2e.mjs",
     "test:place-ghost": "node e2e/place-ghost.e2e.mjs",

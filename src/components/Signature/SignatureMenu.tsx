@@ -126,15 +126,18 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
   const openImport = useSignatureStore((s) => s.openImport)
   const openStampPicker = useSignatureStore((s) => s.openStampPicker)
   const remove = useSignatureStore((s) => s.remove)
-  const requestName = useSignatureStore((s) => s.requestName)
-  const requestDate = useSignatureStore((s) => s.requestDate)
+  const requestDetails = useSignatureStore((s) => s.requestDetails)
+  const requestLabel = useSignatureStore((s) => s.requestLabel)
   const requestLive = useSignatureStore((s) => s.requestLive)
-  const setRequestName = useSignatureStore((s) => s.setRequestName)
-  const setRequestDate = useSignatureStore((s) => s.setRequestDate)
+  const setRequestDetails = useSignatureStore((s) => s.setRequestDetails)
+  const setRequestLabel = useSignatureStore((s) => s.setRequestLabel)
   const setRequestLive = useSignatureStore((s) => s.setRequestLive)
 
   const tool = useAnnotationStore((s) => s.tool)
   const setTool = useAnnotationStore((s) => s.setTool)
+  // "Send for signature" shares the file for someone to sign IN the boxes, so
+  // it waits until there is an unsigned box to sign (James, 2026-10-13).
+  const hasOpenBox = useAnnotationStore((s) => s.annotations.some((a) => a.type === 'sigfield' && !a.signed))
   const setSendForSignatureOpen = usePdfStore((s) => s.setSendForSignatureOpen)
   const setSendToSignOpen = usePdfStore((s) => s.setSendToSignOpen)
   // The certified route (upload, emailed link, certificate) is on the website
@@ -268,14 +271,14 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
           </p>
           <div className="space-y-2">
             <ToggleRow
-              label={t('sign.menu_ask_name')}
-              checked={requestName}
-              onChange={setRequestName}
+              label={t('sign.menu_request_details')}
+              checked={requestDetails}
+              onChange={setRequestDetails}
             />
             <ToggleRow
-              label={t('sign.menu_ask_date')}
-              checked={requestDate}
-              onChange={setRequestDate}
+              label={t('sign.menu_request_label')}
+              checked={requestLabel}
+              onChange={setRequestLabel}
             />
             <ToggleRow
               label={t('sign.menu_require_live')}
@@ -302,7 +305,8 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
           <div className="border-t border-slate-100 pt-3">
             <button
               onClick={() => { setSendForSignatureOpen(true); setOpen(false) }}
-              className="w-full px-3 py-2.5 rounded-md border border-orange-300 bg-orange-50 hover:bg-orange-100 text-orange-800 text-sm font-medium flex items-center justify-center gap-2"
+              disabled={!hasOpenBox}
+              className="w-full px-3 py-2.5 rounded-md border border-orange-300 bg-orange-50 enabled:hover:bg-orange-100 text-orange-800 text-sm font-medium flex items-center justify-center gap-2 disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
             >
               <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M3 10.5c3-4.5 5-4.5 6 0s3 4.5 5-1.5" />
@@ -311,7 +315,7 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
               {t('sign.send_for_signature')}
             </button>
             <p className="mt-1.5 text-xs text-slate-400">
-              {t('sign.menu_send_plain_hint')}
+              {hasOpenBox ? t('sign.menu_send_plain_hint') : t('sign.menu_send_needs_box')}
             </p>
             {certified && (
               <button

@@ -166,7 +166,7 @@ Isto não é aconselhamento jurídico. Se uma assinatura eletrônica é aceitáv
 
 ## Enviar para assinatura
 
-1. **Marque onde assinar.** Abra **Assinar**, escolha **Solicitar** e coloque uma caixa “Assine aqui” onde cada assinatura deve ficar. Marque antes **Pedir nome** ou **Pedir data** se quiser.
+1. **Marque onde assinar.** Abra **Assinar**, escolha **Solicitar** e coloque uma caixa “Assine aqui” onde cada assinatura deve ficar. Ative antes **Pedir nome e data** para ter campos de nome e data embaixo da caixa, ou **Rótulo “Assine aqui”** para um rótulo em cima.
 2. **Assine a sua parte, se você também assina.** Toque na sua caixa e assine antes de enviar.
 3. **Envie.** Escolha **Enviar para assinatura**. No celular, a folha de compartilhamento abre, e você pode mandar o PDF por mensagem, por e-mail ou por qualquer aplicativo. No computador, o PDF é salvo ou baixado, e o navegador também pode oferecer o compartilhamento.
 

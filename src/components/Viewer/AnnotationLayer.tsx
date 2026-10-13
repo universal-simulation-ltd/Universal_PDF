@@ -41,6 +41,7 @@ import { userLinkHref } from '../../lib/links'
 import { centreOnTap, tapRedactBox } from '../../lib/tapPlacement'
 import { isRedactableShape, redactionFromShape, topShapeAt, type RedactableShape } from '../../lib/redactShape'
 import { LINE_HEIGHT, layoutText, textBoxSize } from '../../lib/textLayout'
+import { SIG_DETAIL_SIZE, SIG_LABEL_SIZE, estimateTextWidth, sigFieldLayout, sigLabelColumn } from '../../lib/sigFieldLayout'
 import type { Annotation, DrawAnnotation, ImageAnnotation, ImageBorder, SignatureData, SignatureFieldAnnotation, SigAlign, TextAnnotation, Tool, TextRun } from '../../types/annotations'
 import type { QrPlacement } from '../../lib/qr/design'
 import { getT, useT } from '../../i18n'
@@ -639,16 +640,24 @@ function isEditableSignature(a: Annotation | undefined): boolean {
   return false
 }
 
-// A "Request signature" box. Unsigned it's a dashed placeholder with a
-// "Sign here" caption (and the requested Name / Date lines); signed it shows the
-// baked signature image contained inside the box. The whole box is clickable —
+// A "Request signature" box. Unsigned it's a dashed placeholder, with the
+// "Please sign here" label above it and the Name: / Date: fields under it when
+// the sender asked for them (lib/sigFieldLayout — the export draws the same);
+// signed it shows the baked signature image contained inside the box. The whole box is clickable —
 // the click handler on the group opens the pad to sign it.
+// The label and Name: / Date: words: dark ink, not the box's orange — they
+// stay on the page after it is signed, so they should read as the document's.
+const SIG_EXTRAS_INK = '#334155'
+const SIG_FIELD_BORDER = '#94a3b8'
+
 function SigField({
   a,
   scale,
   common,
   armed,
-  onDblClick
+  onDblClick,
+  extrasRef,
+  onLiveGeometry
 }: {
   a: SignatureFieldAnnotation
   scale: number
@@ -660,6 +669,12 @@ function SigField({
   armed: boolean
   // Double-tap a signed box to edit its name/date options (never redraws ink).
   onDblClick: () => void
+  // The label and Name: / Date: rows are a SIBLING of the box's group, not a
+  // child: inside it they made the selection frame and its resize handles wrap
+  // them too. So the parent moves them along with the box mid-gesture
+  // (syncSigExtras) and needs their node.
+  extrasRef: (node: Konva.Group | null) => void
+  onLiveGeometry: (node: Konva.Node) => void
 }) {
   const t = useT()
   const img = useImage(a.signed?.src ?? '')
@@ -688,6 +703,25 @@ function SigField({
   // usually blank, so with nothing drawn here there would be nothing to see
   // or tap. It draws the dashed box and caption itself, locked or not.
   const decorated = !a.signed && (!locked || a.fieldLook === 'other')
+  // The old in-box caption is now only for another app's field, as a cue that
+  // never reaches the file. A box made here shows what it will export: the
+  // outline, plus the label and fields the sender chose.
+  const inBoxCaption = decorated && locked
+  const extras = !a.signed && !locked
+  const nameText = t('lib.sig_field_name')
+  const dateText = t('lib.sig_field_date')
+  // Laid out on the PAGE (whether there is room above depends on where the box
+  // is), then drawn relative to the box's corner, where this group sits.
+  const layout = extras
+    ? sigFieldLayout(
+        { x: a.x, y: a.y, width: a.width, height: a.height },
+        {
+          label: !!a.label,
+          details: !!a.details,
+          labelColumn: sigLabelColumn([nameText, dateText].map((s) => estimateTextWidth(s, SIG_DETAIL_SIZE)))
+        }
+      )
+    : null
 
   // The Transformer scales the whole group live while resizing, which would
   // stretch/blur the caption AND the "Click again to sign" hint. Counter-scale
@@ -703,6 +737,7 @@ function SigField({
     const inv = { x: 1 / sx, y: 1 / sy }
     captionRef.current?.scale(inv)
     hintRef.current?.scale(inv)
+    onLiveGeometry(node)
     node.getLayer()?.batchDraw()
   }
 
@@ -716,6 +751,7 @@ function SigField({
   const hintPad = 7 / scale
 
   return (
+    <>
     <Group
       {...common}
       x={a.x}
@@ -753,7 +789,7 @@ function SigField({
           width={fit.width}
           height={fit.height}
         />
-      ) : decorated ? (
+      ) : inBoxCaption ? (
         <Text
           ref={captionRef}
           listening={false}
@@ -800,6 +836,47 @@ function SigField({
         </Group>
       )}
     </Group>
+    {layout && (layout.label || layout.rows.length > 0) && (
+      // At the box's corner; the rows ride its bottom edge ("sig-details"),
+      // which syncSigExtras moves during a resize.
+      <Group ref={extrasRef} listening={false} x={a.x} y={a.y}>
+        {layout.label && (
+          <Text
+            x={layout.label.x - a.x}
+            y={layout.label.y - a.y}
+            text={t('lib.please_sign_here')}
+            wrap="none"
+            fontSize={SIG_LABEL_SIZE}
+            fill={SIG_EXTRAS_INK}
+            fontFamily={FONT_STACK.sans}
+          />
+        )}
+        <Group name="sig-details" y={a.height}>
+          {layout.rows.map((r) => (
+            <Fragment key={r.key}>
+              <Text
+                x={r.textX - a.x}
+                y={r.textY - a.y - a.height}
+                text={r.key === 'name' ? nameText : dateText}
+                wrap="none"
+                fontSize={SIG_DETAIL_SIZE}
+                fill={SIG_EXTRAS_INK}
+                fontFamily={FONT_STACK.sans}
+              />
+              <Rect
+                x={r.field.x - a.x}
+                y={r.field.y - a.y - a.height}
+                width={r.field.width}
+                height={r.field.height}
+                stroke={SIG_FIELD_BORDER}
+                strokeWidth={1}
+              />
+            </Fragment>
+          ))}
+        </Group>
+      </Group>
+    )}
+    </>
   )
 }
 
@@ -1789,20 +1866,25 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         const x = dragged ? Math.min(x1, x2) : x1 - w / 2
         const y = dragged ? Math.min(y1, y2) : y1 - h / 2
         const sig = useSignatureStore.getState()
+        const id = crypto.randomUUID()
         add({
-          id: crypto.randomUUID(),
+          id,
           pageIndex,
           type: 'sigfield',
           x,
           y,
           width: w,
           height: h,
-          requireName: sig.requestName,
-          requireDate: sig.requestDate,
+          details: sig.requestDetails,
+          label: sig.requestLabel,
           requireLive: sig.requestLive
         })
         // One box per arming — drop back to Select so it can be signed / moved.
         useAnnotationStore.getState().setTool('select')
+        // `add` selected it; arm it too, so "Click again to sign" shows at once
+        // and the next click on it signs. It used to wait for the box to be
+        // clicked off and selected again (James, 2026-10-13).
+        armSigfield(id)
       }
     }
     drawingRef.current = false
@@ -1869,6 +1951,25 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   function restoreNodeHome(node: Konva.Node, a: Annotation) {
     node.position(nodeHomePosition(a))
     if (a.type === 'redact') placeRedactHint(a.id, a, isPaleFill(redactFillHex(a.fill)))
+    if (a.type === 'sigfield') syncSigExtras(a.id, node)
+  }
+
+  // A signature box's label and Name: / Date: rows (see SigField), kept with
+  // the box mid-gesture: at its corner, the rows at its live bottom edge. A
+  // no-op for anything else, or a box without extras.
+  const sigExtrasRefs = useRef(new Map<string, Konva.Group>())
+  function sigExtrasRefSetter(id: string) {
+    return (node: Konva.Group | null) => {
+      if (node) sigExtrasRefs.current.set(id, node)
+      else sigExtrasRefs.current.delete(id)
+    }
+  }
+  function syncSigExtras(id: string, node: Konva.Node) {
+    const g = sigExtrasRefs.current.get(id)
+    const a = annotations.find((x) => x.id === id)
+    if (!g || a?.type !== 'sigfield') return
+    g.position({ x: node.x(), y: node.y() })
+    g.findOne('.sig-details')?.y(a.height * node.scaleY())
   }
 
   // Live geometry of a shape mid-gesture: a drag moves x/y and leaves the size
@@ -2063,6 +2164,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   function onShapeDragMove(a: Annotation, e: Konva.KonvaEventObject<DragEvent>) {
     if (gestureCancelled.current) return
     if (a.type === 'redact') syncRedactHint(a.id, e.target)
+    if (a.type === 'sigfield') syncSigExtras(a.id, e.target)
     dragClient.current = clientPointOf(e.evt) ?? dragClient.current
     syncDragGhost(a, e.target)
     const last = groupDragLast.current
@@ -2080,6 +2182,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       n.position({ x: n.x() + dx, y: n.y() + dy })
       // No-op unless this member is a redaction (nothing else registers a hint).
       syncRedactHint(id, n)
+      syncSigExtras(id, n)
     }
     groupDragLast.current = { x: node.x(), y: node.y() }
     trRef.current?.forceUpdate()
@@ -2758,6 +2861,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                     common={common}
                     armed={armedSigfieldId === a.id}
                     onDblClick={() => openSigEditor(a.id)}
+                    extrasRef={sigExtrasRefSetter(a.id)}
+                    onLiveGeometry={(node) => syncSigExtras(a.id, node)}
                   />
                 )
               default:

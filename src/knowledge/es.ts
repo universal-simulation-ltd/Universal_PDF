@@ -166,7 +166,7 @@ Esto no es asesoramiento jurídico. Que una firma electrónica sea aceptable dep
 
 ## Enviar para firmar
 
-1. **Indique dónde firmar.** Abra **Firmar**, elija **Solicitar** y coloque un recuadro «Firma aquí» donde deba ir cada firma. Marque antes **Pedir nombre** o **Pedir fecha** si los quiere.
+1. **Indique dónde firmar.** Abra **Firmar**, elija **Solicitar** y coloque un recuadro «Firma aquí» donde deba ir cada firma. Active antes **Pedir nombre y fecha** para tener campos de nombre y fecha bajo el recuadro, o **Etiqueta «Firme aquí, por favor»** para una etiqueta encima.
 2. **Firme su parte, si usted también firma.** Toque su recuadro y fírmelo antes de enviar.
 3. **Envíelo.** Elija **Enviar para firmar**. En un teléfono se abre la hoja de compartir, así que puede enviar el PDF por mensaje, por correo o con cualquier aplicación. En un ordenador el PDF se guarda o se descarga, y su navegador puede ofrecerle también compartirlo.
 

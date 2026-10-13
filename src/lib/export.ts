@@ -2,8 +2,8 @@ import {
   PDFDocument, StandardFonts, LineCapStyle, degrees, PDFName, PDFHexString, PDFString, PDFArray, PDFDict, PDFStream,
   PDFTextField, PDFCheckBox, PDFRadioGroup, PDFDropdown, PDFOptionList,
   PDFAcroSignature, PDFRef, PDFNumber,
-  pushGraphicsState, popGraphicsState, concatTransformationMatrix, drawRectangle, drawText,
-  type PDFFont, type PDFImage, type PDFPage, type PDFAcroField
+  pushGraphicsState, popGraphicsState, concatTransformationMatrix, drawRectangle,
+  type PDFFont, type PDFImage, type PDFPage, type PDFAcroField, type PDFForm
 } from 'pdf-lib'
 import type { Annotation, RedactAnnotation, SignatureFieldAnnotation } from '../types/annotations'
 import type { FormFieldValue } from '../stores/formStore'
@@ -18,6 +18,7 @@ import { downloadPdfBytes } from './download'
 import { getT } from '../i18n'
 import { loadFallbackFont } from './fallbackFont'
 import { uprightJpeg } from './jpegOrientation'
+import { SIG_DETAIL_SIZE, SIG_LABEL_SIZE, estimateTextWidth, sigFieldLayout, sigLabelColumn } from './sigFieldLayout'
 
 // ⚠️ LEGACY. Exports before 2026-10-12 carried the unsigned "Sign here" boxes
 // as JSON under this custom catalog key, with the outline and caption baked
@@ -152,6 +153,8 @@ interface PageFrame {
   height: number
   /** View space → the page's user space. */
   m: Matrix
+  /** The page's /Rotate, as 0 / 90 / 180 / 270. */
+  rotation: number
 }
 
 function pageFrame(page: PDFPage): PageFrame {
@@ -161,13 +164,13 @@ function pageFrame(page: PDFPage): PageFrame {
   const r = angle % 90 === 0 ? ((angle % 360) + 360) % 360 : 0
   switch (r) {
     case 90:
-      return { width: h, height: w, m: [0, 1, -1, 0, x + w, y] }
+      return { width: h, height: w, m: [0, 1, -1, 0, x + w, y], rotation: r }
     case 180:
-      return { width: w, height: h, m: [-1, 0, 0, -1, x + w, y + h] }
+      return { width: w, height: h, m: [-1, 0, 0, -1, x + w, y + h], rotation: r }
     case 270:
-      return { width: h, height: w, m: [0, -1, 1, 0, x, y + h] }
+      return { width: h, height: w, m: [0, -1, 1, 0, x, y + h], rotation: r }
     default:
-      return { width: w, height: h, m: [1, 0, 0, 1, x, y] }
+      return { width: w, height: h, m: [1, 0, 0, 1, x, y], rotation: 0 }
   }
 }
 
@@ -735,10 +738,11 @@ function redactTouches(r: RedactAnnotation, l: PendingLink): boolean {
 // Preview. Nothing is uploaded and nobody needs an account — the "Send for
 // signature" route (SendForSignatureDialog) is just this file, shared.
 //
-// The visible outline and "Sign here • Name • Date" caption are the field's own
-// appearance stream, NOT page content: a reader that signs the field replaces
-// that appearance with the signature, so the caption goes with it instead of
-// showing through underneath.
+// The visible outline is the field's own appearance stream, NOT page content: a
+// reader that signs the field replaces that appearance with the signature, so
+// the outline goes with it instead of showing through underneath. The optional
+// "Please sign here" label and Name: / Date: fields sit OUTSIDE the box, so
+// they stay (see the end of addSignatureFields).
 
 /** The `/T` names of the AcroForm's terminal signature fields, with their widgets. */
 function signatureFields(pdf: PDFDocument): { field: PDFAcroField; name: string; signed: boolean }[] {
@@ -800,16 +804,6 @@ function invertMatrix(m: Matrix): Matrix {
   return [d / det, -b / det, -c / det, a / det, (c * f - d * e) / det, (b * e - a * f) / det]
 }
 
-/** The "Sign here • Name • Date" caption, in the language the app is in. */
-function sigFieldCaption(a: Pick<SignatureFieldAnnotation, 'requireName' | 'requireDate' | 'requireLive'>): string {
-  const t = getT()
-  const parts: string[] = []
-  if (a.requireName) parts.push(t('lib.sign_here_name'))
-  if (a.requireDate) parts.push(t('lib.sign_here_date'))
-  if (a.requireLive) parts.push(t('lib.sign_here_live'))
-  return [t('lib.sign_here'), ...parts].join(' • ')
-}
-
 /**
  * Write each unsigned box as a signature field on its page. `scale` is the
  * annotation space's scale (1 on every export path — see EXPORT_SCALE).
@@ -836,7 +830,15 @@ async function addSignatureFields(pdf: PDFDocument, boxes: SignatureFieldAnnotat
     return n
   }
   const orange = hexToPdfRgb('#ea580c')
-  const captionColour = hexToPdfRgb('#c2410c')
+  const t = getT()
+  const tooltip = t('lib.please_sign_here')
+  const nameText = t('lib.sig_field_name')
+  const dateText = t('lib.sig_field_date')
+  // The same column the editor drew, so the fields land where they were shown.
+  const labelColumn = sigLabelColumn([nameText, dateText].map((s) => estimateTextWidth(s, SIG_DETAIL_SIZE)))
+  const extrasInk = hexToPdfRgb('#334155')
+  const fieldBorder = hexToPdfRgb('#94a3b8')
+  let form: PDFForm | null = null
 
   for (const a of boxes) {
     const page = pages[a.pageIndex]
@@ -860,11 +862,9 @@ async function addSignatureFields(pdf: PDFDocument, boxes: SignatureFieldAnnotat
 
       // Appearance, drawn upright in the READER's view of the page: the form's
       // /Matrix is the page's view → user rotation, so on a /Rotate 90 page it
-      // turns with the page exactly as the page's own content does.
-      const caption = sigFieldCaption(a)
-      const { font, text } = await fonts.forText(caption, 'helvetica')
-      const size = Math.min(h * 0.28, 18)
-      const pad = Math.min(8, h * 0.12, w * 0.06)
+      // turns with the page exactly as the page's own content does. Just the
+      // dashed outline: a caption inside got cut off in a short box (James,
+      // 2026-10-13), so the words now go outside it — see below.
       const ops = [
         pushGraphicsState(),
         ...drawRectangle({
@@ -880,40 +880,30 @@ async function addSignatureFields(pdf: PDFDocument, boxes: SignatureFieldAnnotat
           xSkew: degrees(0),
           ySkew: degrees(0)
         }),
-        popGraphicsState(),
-        pushGraphicsState(),
-        ...drawText(font.encodeText(text), {
-          x: pad,
-          y: h - pad - size * 0.85,
-          size,
-          font: 'F0',
-          color: captionColour,
-          rotate: degrees(0),
-          xSkew: degrees(0),
-          ySkew: degrees(0)
-        }),
         popGraphicsState()
       ]
       const [ma, mb, mc, md] = frame.m
       const ap = pdf.context.formXObject(ops, {
         BBox: [0, 0, w, h],
-        Matrix: [ma, mb, mc, md, 0, 0],
-        Resources: { Font: { F0: font.ref } }
+        Matrix: [ma, mb, mc, md, 0, 0]
       })
       const apRef = pdf.context.register(ap)
 
+      // 'Name' / 'Date' here are the LEGACY asks (the signer's pad writes them
+      // into the signature); a new box asks with the fill-in fields below.
       const require: string[] = []
       if (a.requireName) require.push('Name')
       if (a.requireDate) require.push('Date')
       if (a.requireLive) require.push('Live')
 
+      const fieldName = nextName(a.fieldName)
       const widget = pdf.context.obj({
         Type: 'Annot',
         Subtype: 'Widget',
         FT: 'Sig',
-        T: PDFHexString.fromText(nextName(a.fieldName)),
+        T: PDFHexString.fromText(fieldName),
         // The tooltip readers show on hover, and what a screen reader announces.
-        TU: PDFHexString.fromText(caption),
+        TU: PDFHexString.fromText(tooltip),
         Rect: rect.map((n) => PDFNumber.of(n)),
         // Print: a field that vanished on paper would leave nothing to sign by hand.
         F: 4,
@@ -926,6 +916,62 @@ async function addSignatureFields(pdf: PDFDocument, boxes: SignatureFieldAnnotat
       if (annots) annots.push(ref)
       else page.node.set(PDFName.of('Annots'), pdf.context.obj([ref]))
       acroForm.addField(ref)
+
+      // The extras the sender chose (lib/sigFieldLayout, the same places the
+      // editor drew them). The label and the "Name:" / "Date:" words are PAGE
+      // content, so they stay when the box is signed; the fill-in fields are
+      // real text fields, so the signer can type in any reader. A box read
+      // back from an exported file never has these flags — its extras are
+      // already in that file.
+      if (!a.label && !a.details) continue
+      const layout = sigFieldLayout(
+        { x: a.x / scale, y: a.y / scale, width: w, height: h },
+        { label: !!a.label, details: !!a.details, labelColumn }
+      )
+      const words: { text: string; x: number; y: number; size: number }[] = []
+      if (layout.label) words.push({ text: t('lib.please_sign_here'), x: layout.label.x, y: layout.label.y, size: SIG_LABEL_SIZE })
+      for (const r of layout.rows) {
+        words.push({ text: r.key === 'name' ? nameText : dateText, x: r.textX, y: r.textY, size: SIG_DETAIL_SIZE })
+      }
+      // Drawn in the reader's view (y up), like every other annotation.
+      page.pushOperators(pushGraphicsState(), concatTransformationMatrix(...frame.m))
+      try {
+        for (const wd of words) {
+          const { font, text } = await fonts.forText(wd.text, 'helvetica')
+          page.drawText(text, {
+            x: wd.x,
+            // Top of the text → its baseline, as the editor's Konva text sits.
+            y: frame.height - (wd.y + wd.size * 0.8),
+            size: wd.size,
+            font,
+            color: extrasInk
+          })
+        }
+      } finally {
+        page.pushOperators(popGraphicsState())
+      }
+      if (layout.rows.length === 0) continue
+      form ??= pdf.getForm()
+      for (const r of layout.rows) {
+        const tf = form.createTextField(nextName(`${fieldName}_${r.key === 'name' ? 'Name' : 'Date'}`))
+        // pdf-lib takes a rotated widget as its UNROTATED corner and size, and
+        // grows it by the border: so the reader's-view bottom-left corner, in
+        // by half the border, and the size less the border. It then turns the
+        // field with the page, the way the signature box's /Matrix does.
+        const bw = 1
+        const [fx, fy] = applyMatrix(frame.m, r.field.x + bw / 2, frame.height - r.field.y - r.field.height + bw / 2)
+        tf.addToPage(page, {
+          x: fx,
+          y: fy,
+          width: r.field.width - bw,
+          height: r.field.height - bw,
+          borderWidth: bw,
+          borderColor: fieldBorder,
+          backgroundColor: undefined,
+          rotate: degrees(frame.rotation)
+        })
+        tf.setFontSize(SIG_DETAIL_SIZE)
+      }
     } catch {
       // One box that cannot be written must not cost the whole export.
     }
