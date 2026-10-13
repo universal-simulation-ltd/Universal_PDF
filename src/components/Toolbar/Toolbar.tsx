@@ -27,6 +27,7 @@ import type { Annotation, Tool } from '../../types/annotations'
 import { useT, type MessageKey } from '../../i18n'
 import { ACTIVE_CHIP, ActiveStroke, MobileToolFace, ToolNotch } from './toolLook'
 import { useShortcutRequest } from '../../stores/shortcutStore'
+import { colourKindFor, useToolPrefs } from '../../stores/toolPrefsStore'
 
 // The always-visible core fonts; the rest (FONT_DEFS) are revealed by the "+"
 // more-fonts button in the text options.
@@ -102,8 +103,64 @@ const COLORS: { hex: string; name: MessageKey }[] = [
   { hex: '#9333ea', name: 'viewer.toolbar.color_purple' }
 ]
 
-const HIGHLIGHT_YELLOW = '#eab308'
-const HIGHLIGHT_GREEN = '#16a34a'
+// The highlighter's size slider, in display pixels (16 was its fixed width).
+const HIGHLIGHT_MIN = 6
+const HIGHLIGHT_MAX = 40
+
+// The rainbow custom-colour well. A component of its own (not defined inside
+// the toolbar's render), so a colour change re-rendering the toolbar doesn't
+// remount the <input> under the open system picker.
+//
+// `onPick` follows the picker live; `onCommit` fires once, on the input's
+// native `change` (the picker closing on a colour) — that is when a colour is
+// pinned as a toolbar shortcut, rather than once for every shade dragged past.
+// React's onChange is the `input` event, so the commit listens natively.
+function ColourWell({
+  color,
+  active,
+  label,
+  onPick,
+  onCommit,
+  small = false
+}: {
+  color: string
+  active: boolean
+  label: string
+  small?: boolean
+  onPick: (hex: string) => void
+  onCommit: (hex: string) => void
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const commitRef = useRef(onCommit)
+  commitRef.current = onCommit
+  useEffect(() => {
+    const input = inputRef.current
+    if (!input) return
+    const commit = () => commitRef.current(input.value)
+    input.addEventListener('change', commit)
+    return () => input.removeEventListener('change', commit)
+  }, [])
+  return (
+    <label
+      title={label}
+      className={`${small ? 'w-6 h-6' : 'w-7 h-7'} rounded-full cursor-pointer border-2 flex-shrink-0 overflow-hidden transition-transform ${
+        active ? 'border-white scale-110' : 'border-slate-600 hover:scale-105'
+      }`}
+      style={{
+        background: 'conic-gradient(red, yellow, lime, cyan, blue, magenta, red)'
+      }}
+    >
+      <input
+        ref={inputRef}
+        type="color"
+        value={color}
+        onChange={(e) => onPick(e.target.value)}
+        aria-label={label}
+        className="sr-only"
+      />
+    </label>
+  )
+}
 
 const DRAW_SHAPES: { id: Tool; icon: string; label: MessageKey }[] = [
   { id: 'tick', icon: '✓', label: 'viewer.toolbar.shape_tick' },
@@ -388,7 +445,12 @@ export function ToolbarDesktopTools() {
   const setTool = useAnnotationStore((s) => s.setTool)
   const setColor = useAnnotationStore((s) => s.setColor)
   const setStrokeWidth = useAnnotationStore((s) => s.setStrokeWidth)
+  const highlightWidth = useAnnotationStore((s) => s.highlightWidth)
+  const setHighlightWidth = useAnnotationStore((s) => s.setHighlightWidth)
   const setSelected = useAnnotationStore((s) => s.setSelected)
+  const penColours = useToolPrefs((s) => s.penColours)
+  const highlightColours = useToolPrefs((s) => s.highlightColours)
+  const addPreferredColour = useToolPrefs((s) => s.addPreferredColour)
   const fontSize = useAnnotationStore((s) => s.fontSize)
   const setFontSize = useAnnotationStore((s) => s.setFontSize)
   const fontFamily = useAnnotationStore((s) => s.fontFamily)
@@ -549,9 +611,10 @@ export function ToolbarDesktopTools() {
     )
   }
 
-  function colorSwatch(hex: string, nameKey: MessageKey, small = false, onActiveReclick?: () => void) {
-    const active = color === hex
-    const name = t(nameKey)
+  function colorSwatch(hex: string, nameKey: MessageKey | null, small = false, onActiveReclick?: () => void) {
+    const active = color.toLowerCase() === hex.toLowerCase()
+    // A pinned custom colour has no name of its own: it goes by its hex.
+    const name = nameKey ? t(nameKey) : hex.toUpperCase()
     return (
       <button
         key={hex}
@@ -570,28 +633,23 @@ export function ToolbarDesktopTools() {
     )
   }
 
-  function ColorPickerTrigger() {
-    const isCustom = !COLORS.some((c) => c.hex === color)
-    return (
-      <label
-        title={t('viewer.toolbar.custom_colour')}
-        className={`w-7 h-7 rounded-full cursor-pointer border-2 flex-shrink-0 overflow-hidden transition-transform ${
-          isCustom ? 'border-white scale-110' : 'border-slate-600 hover:scale-105'
-        }`}
-        style={{
-          background: 'conic-gradient(red, yellow, lime, cyan, blue, magenta, red)'
-        }}
-      >
-        <input
-          type="color"
-          value={color}
-          onChange={(e) => setColor(e.target.value)}
-          aria-label={t('viewer.toolbar.custom_colour')}
-          className="sr-only"
-        />
-      </label>
-    )
-  }
+  // The colour shortcuts beside the pen / highlighter: the reader's two
+  // preferred colours (stores/toolPrefsStore), each tool its own pair.
+  const kind = colourKindFor(tool)
+  const shortcuts = kind === 'highlight' ? highlightColours : penColours
+  const nameOf = (hex: string) => COLORS.find((c) => c.hex === hex.toLowerCase())?.name ?? null
+  // A custom colour, once chosen, becomes a shortcut (two at most).
+  const pinColour = (hex: string) => addPreferredColour(kind, hex)
+  const colourWell = (label: string, small = false) => (
+    <ColourWell
+      small={small}
+      color={color}
+      active={!COLORS.some((c) => c.hex === color.toLowerCase()) && !shortcuts.some((c) => c === color.toLowerCase())}
+      label={label}
+      onPick={setColor}
+      onCommit={pinColour}
+    />
+  )
 
   return (
     <div className="hidden lg:flex items-center gap-1 text-white shrink-0 [&>*]:shrink-0">
@@ -692,22 +750,21 @@ export function ToolbarDesktopTools() {
 
       <div className="w-px h-6 bg-slate-700 mx-1" />
 
-      {/* Pencil (its notch = every drawing tool, stroke and colour) + highlighter
-          (the same sheet) + the two quick swatches (their notch = the colour
-          picker on its own). */}
+      {/* Pencil (its notch = the drawing shapes and the stroke) + highlighter
+          (no dropdown) + the colour bar: the two preferred colours, the
+          rainbow that adds one, the highlighter's size while it's armed, and
+          a notch for the full palette. */}
       <div ref={drawGroupRef} className="relative flex items-start gap-1">
         <div ref={drawToolRef} className="relative flex items-start">
-          {toolBtn('draw', '✎', t('viewer.toolbar.tool_free_draw'), 'draw', '#000000')}
+          {toolBtn('draw', '✎', t('viewer.toolbar.tool_free_draw'), 'draw', penColours[0])}
           {notch('draw', tool === 'draw', t('viewer.toolbar.open_drawing_tools'), t('viewer.toolbar.close_drawing_tools'))}
         </div>
+        {/* No dropdown (James, 2026-10-13): its colours and size sit in the
+            bar beside it while it's armed. */}
         <div className="relative flex items-start">
         <button
-          onClick={() => handleToolClick('highlight', 'draw', HIGHLIGHT_YELLOW)}
-          onPointerDown={() => startLongPress('draw')}
-          onPointerUp={endLongPress}
-          onPointerLeave={endLongPress}
-          onPointerCancel={endLongPress}
-          title={t('viewer.toolbar.tool_with_options', { tool: t('viewer.toolbar.tool_highlighter') })}
+          onClick={() => handleToolClick('highlight', undefined, highlightColours[0])}
+          title={t('viewer.toolbar.tool_highlighter')}
           aria-label={t('viewer.toolbar.tool_highlighter')}
           aria-pressed={tool === 'highlight'}
           className={`relative w-9 h-9 rounded-[10px] flex items-center justify-center transition-colors ${
@@ -717,39 +774,39 @@ export function ToolbarDesktopTools() {
           <HighlighterIcon className="w-5 h-5" />
           {tool === 'highlight' && <ActiveStroke />}
         </button>
-        {/* The highlighter's options ARE the drawing sheet, as its long-press
-            always opened. The notch says so, rather than hiding that it has
-            any. */}
-        {notch('draw', tool === 'highlight', t('viewer.toolbar.open_drawing_tools'), t('viewer.toolbar.close_drawing_tools'))}
         </div>
         {/* self-stretch, not self-center: the swatches are shorter than the tool
             buttons, and this is the box the colour popup hangs off — matched
             heights are what keep it from opening inside the toolbar. */}
         <div ref={colorGroupRef} className="relative flex items-start gap-1 self-stretch ml-1 pr-[10px]">
           <div className="flex h-full items-center gap-1">
-          {tool === 'highlight' ? (
-            <>
-              {colorSwatch(HIGHLIGHT_YELLOW, 'viewer.toolbar.color_yellow', true, () => setOpenPanel('color'))}
-              {colorSwatch(HIGHLIGHT_GREEN, 'viewer.toolbar.color_green', true, () => setOpenPanel('color'))}
-            </>
-          ) : (
-            <>
-              {colorSwatch('#000000', 'viewer.toolbar.color_black', true, () => setOpenPanel('color'))}
-              {colorSwatch('#ffffff', 'viewer.toolbar.color_white', true, () => setOpenPanel('color'))}
-            </>
+          {shortcuts.map((hex) => colorSwatch(hex, nameOf(hex), true, () => setOpenPanel('color')))}
+          {/* Pick a colour here and it joins the shortcuts beside it. */}
+          {colourWell(t('viewer.toolbar.add_colour'), true)}
+          {tool === 'highlight' && (
+            <input
+              type="range"
+              min={HIGHLIGHT_MIN}
+              max={HIGHLIGHT_MAX}
+              step={2}
+              value={highlightWidth}
+              onChange={(e) => setHighlightWidth(parseFloat(e.target.value))}
+              title={t('viewer.toolbar.highlight_size_value', { size: highlightWidth })}
+              aria-label={t('viewer.toolbar.highlight_size')}
+              className="w-16 ml-1 accent-amber-400"
+            />
           )}
           </div>
           {notch('color', false, t('viewer.toolbar.open_colours'), t('viewer.toolbar.close_colours'))}
         </div>
         {openPanel === 'draw' && (
           <FloatingPanel anchorRef={drawToolRef} panelRef={panelContentRef}>
-          {/* ⚠️ Two ROWS, not one wrapping line (owner, 2026-09-04: "show the
-              colours on a second line of the popup, don't extend it
-              horizontally"). The shapes + stroke slider are one row and the
-              colours the next, so the panel stays roughly as wide as the
-              toolbar button it hangs off instead of running away across the
-              screen. flex-wrap on a single row didn't do this: the panel is
-              content-sized, so it just grew. */}
+          {/* ⚠️ Two ROWS, not one wrapping line, so the panel stays roughly as
+              wide as the button it hangs off (owner, 2026-09-04). The shapes
+              are one row and the stroke the next; the colours are NOT here —
+              they are the bar beside the pen (James, 2026-10-13: "don't show
+              the colours in the pencil dropdown, put the stroke on the second
+              line"). */}
           <div className="bg-slate-800 border border-slate-600 rounded-lg shadow-xl px-3 py-2 flex flex-col gap-2">
             <div className="flex items-center gap-2">
               {DRAW_SHAPES.map((s) => (
@@ -766,7 +823,8 @@ export function ToolbarDesktopTools() {
                   <span aria-hidden="true">{s.icon}</span>
                 </button>
               ))}
-              <div className="w-px h-6 bg-slate-600 mx-1" />
+            </div>
+            <div className="flex items-center gap-2">
               <span className="text-xs text-slate-400">{t('viewer.toolbar.stroke')}</span>
               <input
                 type="range"
@@ -780,11 +838,6 @@ export function ToolbarDesktopTools() {
               />
               <span className="text-xs text-slate-300 w-12 tabular-nums text-right">{strokeWidth.toFixed(1)}px</span>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-slate-400">{t('viewer.toolbar.colour')}</span>
-              {COLORS.map((c) => colorSwatch(c.hex, c.name))}
-              <ColorPickerTrigger />
-            </div>
           </div>
           </FloatingPanel>
         )}
@@ -794,7 +847,7 @@ export function ToolbarDesktopTools() {
           <FloatingPanel anchorRef={colorGroupRef} panelRef={panelContentRef}>
             <div className="bg-slate-800 border border-slate-600 rounded-lg shadow-xl px-3 py-2 flex items-center gap-2 gap-y-2 flex-wrap">
               {COLORS.map((c) => colorSwatch(c.hex, c.name))}
-              <ColorPickerTrigger />
+              {colourWell(t('viewer.toolbar.custom_colour'))}
             </div>
           </FloatingPanel>
         )}
@@ -1094,7 +1147,7 @@ export function ToolbarMobile() {
             onClick={() => {
               if (tool !== 'highlight') {
                 setSelected(null)
-                setColor(HIGHLIGHT_YELLOW)
+                setColor(useToolPrefs.getState().highlightColours[0])
               }
               setTool('highlight')
             }}

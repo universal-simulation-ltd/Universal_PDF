@@ -67,6 +67,8 @@ import { installExternalLinkHandler } from './lib/externalLinks'
 import { getT, useT } from './i18n'
 import { KNOWLEDGE_BASE } from './knowledge'
 import PageScrollPreference from './components/Viewer/PageScrollPreference'
+import ToolBehaviourRows from './components/Viewer/ToolBehaviourRows'
+import { useToolPrefs } from './stores/toolPrefsStore'
 
 const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_PDF'
 
@@ -522,12 +524,12 @@ export default function App() {
             // Actions ▸ Advanced ▸ Knowledge base (SDK 0.163.0): this app's own
             // articles, bundled from ./knowledge so they read offline.
             knowledgeBase={KNOWLEDGE_BASE}
-            onResetDefaults={() => { clearDismissedPrompts(); void resetPrefs() }}
+            onResetDefaults={() => { clearDismissedPrompts(); useToolPrefs.getState().reset(); void resetPrefs() }}
             // Tune this app ▸ Page scrolling, then the double-tap defaults' rows
             // (SDK 0.170.0) — the same rows ToolbarUserProfile passes, so they
             // can be set before a document is opened. Reset to defaults clears
             // the double-tap defaults via the SDK.
-            appPreferences={<><PageScrollPreference /><SignatureDefaultViewRows /><SignatureVaultRow /></>}
+            appPreferences={<><PageScrollPreference /><ToolBehaviourRows /><SignatureDefaultViewRows /><SignatureVaultRow /></>}
             // The SDK's "Delete my account" stays ON here (its default in a
             // native shell): this is the menu a phone opens first. It was
             // switched off to stop the row doubling — but the double was in

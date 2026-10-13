@@ -37,6 +37,9 @@ const viewer: Messages['viewer'] = {
   'toolbar.tool_with_options': '{tool} — seçenekler için yeniden dokunun veya uzun basın',
   'toolbar.swatch_more_colours': '{colour} — daha fazla renk için yeniden tıklayın',
   'toolbar.custom_colour': 'Özel renk',
+  'toolbar.add_colour': 'Araç çubuğuna renk ekle (en fazla iki)', // the rainbow in the colour bar: the colour picked becomes a shortcut
+  'toolbar.highlight_size': 'Fosforlu kalem boyutu',
+  'toolbar.highlight_size_value': 'Fosforlu kalem boyutu: {size} px',
   'toolbar.open_select_options': 'Seçim seçeneklerini aç',
   'toolbar.close_select_options': 'Seçim seçeneklerini kapat',
   'toolbar.open_text_options': 'Metin seçeneklerini aç',
@@ -164,6 +167,11 @@ const viewer: Messages['viewer'] = {
   'placement.click_image': 'Görselinizi yerleştirmek için sayfaya tıklayın',
   'placement.dont_show_again': 'Bir daha gösterme',
 
+  // Tune this app ▸ how the drawing tools behave (both off by default)
+  'prefs.stay_on_tool': 'Son araçta kal',
+  'prefs.stay_on_tool_note': 'Kalem ve fosforlu kalem, başka bir araç seçene kadar diğer işaretlerin üzerinde bile çizmeye devam eder.',
+  'prefs.no_confirm': 'Notları onaylatma',
+  'prefs.no_confirm_note': 'Her çizgi, şekil, onay veya çarpı işaretinden sonra renk, ✓ ya da çöp kutusu çıkmaz; devam edebilirsiniz.',
   // Tune this app ▸ Page scrolling
   'scroll.label': 'Sayfa kaydırma',
   'scroll.vertical': 'Dikey',

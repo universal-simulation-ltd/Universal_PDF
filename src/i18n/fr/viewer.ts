@@ -37,6 +37,9 @@ const viewer: Messages['viewer'] = {
   'toolbar.tool_with_options': '{tool} — touchez à nouveau ou appuyez longuement pour les options',
   'toolbar.swatch_more_colours': '{colour} — cliquez à nouveau pour plus de couleurs',
   'toolbar.custom_colour': 'Couleur personnalisée',
+  'toolbar.add_colour': 'Ajouter une couleur à la barre d’outils (deux au plus)', // the rainbow in the colour bar: the colour picked becomes a shortcut
+  'toolbar.highlight_size': 'Taille du surligneur',
+  'toolbar.highlight_size_value': 'Taille du surligneur : {size} px',
   'toolbar.open_select_options': 'Ouvrir les options de sélection',
   'toolbar.close_select_options': 'Fermer les options de sélection',
   'toolbar.open_text_options': 'Ouvrir les options de texte',
@@ -164,6 +167,11 @@ const viewer: Messages['viewer'] = {
   'placement.click_image': 'Cliquez sur la page pour placer votre image',
   'placement.dont_show_again': 'Ne plus afficher',
 
+  // Tune this app ▸ how the drawing tools behave (both off by default)
+  'prefs.stay_on_tool': 'Rester sur le dernier outil',
+  'prefs.stay_on_tool_note': 'Le stylo et le surligneur continuent de tracer, même sur d’autres marques, jusqu’à ce que vous choisissiez un autre outil.',
+  'prefs.no_confirm': 'Ne pas confirmer les annotations',
+  'prefs.no_confirm_note': 'Pas de couleur, de ✓ ni de corbeille après chaque trait, ligne, forme, coche ou croix : vous pouvez continuer.',
   // Tune this app ▸ Page scrolling
   'scroll.label': 'Défilement des pages',
   'scroll.vertical': 'Vertical',

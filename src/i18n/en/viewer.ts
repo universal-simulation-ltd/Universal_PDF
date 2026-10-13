@@ -37,6 +37,9 @@ export default {
   'toolbar.tool_with_options': '{tool} — tap again or long-press for options', // {tool} is a tool name such as "Free draw"
   'toolbar.swatch_more_colours': '{colour} — click again for more colours', // {colour} is a colour name such as "Black"
   'toolbar.custom_colour': 'Custom colour',
+  'toolbar.add_colour': 'Add a colour to the toolbar (two at most)', // the rainbow in the colour bar: the colour picked becomes a shortcut
+  'toolbar.highlight_size': 'Highlighter size',
+  'toolbar.highlight_size_value': 'Highlighter size: {size}px',
   'toolbar.open_select_options': 'Open select options',
   'toolbar.close_select_options': 'Close select options',
   'toolbar.open_text_options': 'Open text options',
@@ -164,6 +167,11 @@ export default {
   'placement.click_image': 'Click the page to place your image',
   'placement.dont_show_again': "Don't show again",
 
+  // Tune this app ▸ how the drawing tools behave (both off by default)
+  'prefs.stay_on_tool': 'Stay on the last tool',
+  'prefs.stay_on_tool_note': 'The pen and highlighter keep drawing, even over other marks, until you pick another tool.',
+  'prefs.no_confirm': 'Don’t confirm annotations',
+  'prefs.no_confirm_note': 'No colour, ✓ or bin after each stroke, line, shape, tick or cross, so you can keep going.',
   // Tune this app ▸ Page scrolling
   'scroll.label': 'Page scrolling',
   'scroll.vertical': 'Vertical',

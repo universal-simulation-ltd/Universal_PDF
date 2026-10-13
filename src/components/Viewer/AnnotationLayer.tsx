@@ -41,6 +41,7 @@ import { userLinkHref } from '../../lib/links'
 import { centreOnTap, tapRedactBox } from '../../lib/tapPlacement'
 import { isRedactableShape, redactionFromShape, topShapeAt, type RedactableShape } from '../../lib/redactShape'
 import { LINE_HEIGHT, layoutText, textBoxSize } from '../../lib/textLayout'
+import { useToolPrefs } from '../../stores/toolPrefsStore'
 import { SIG_DETAIL_SIZE, SIG_LABEL_SIZE, estimateTextWidth, sigFieldLayout, sigLabelColumn } from '../../lib/sigFieldLayout'
 import type { Annotation, DrawAnnotation, ImageAnnotation, ImageBorder, SignatureData, SignatureFieldAnnotation, SigAlign, TextAnnotation, Tool, TextRun } from '../../types/annotations'
 import type { QrPlacement } from '../../lib/qr/design'
@@ -53,8 +54,15 @@ const FONT_STACK = FONT_CSS
 // live resize can counter-scale just the letters.
 const TEXT_RUNS_GROUP = 'text-runs'
 
-const HIGHLIGHT_STROKE_WIDTH = 16
 const HIGHLIGHT_OPACITY = 0.4
+
+// The marks "Don't confirm annotations" (Tune this app) puts down without
+// selecting them — see `place`. Text is left out (it has to be typed into), as
+// are the boxes, pictures and signatures that are placed and then adjusted.
+const NO_CONFIRM_TOOLS = new Set<Tool>(['draw', 'highlight', 'line', 'rect', 'ellipse', 'tick', 'cross'])
+// The freehand tools "Stay on the last tool" keeps armed over other marks: a
+// press on one draws across it rather than selecting it.
+const DRAW_THROUGH_TOOLS = new Set<Tool>(['draw', 'highlight'])
 
 // Remembers the user's "don't show again" choice for the fill-vs-redact
 // warning. A filled box/circle only paints over content — the text beneath
@@ -891,6 +899,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const tool = useAnnotationStore((s) => s.tool)
   const color = useAnnotationStore((s) => s.color)
   const strokeWidth = useAnnotationStore((s) => s.strokeWidth)
+  const highlightWidth = useAnnotationStore((s) => s.highlightWidth)
+  const stayOnTool = useToolPrefs((s) => s.stayOnTool)
   const lineSnap = useAnnotationStore((s) => s.lineSnap)
   const fontSize = useAnnotationStore((s) => s.fontSize)
   const fontFamily = useAnnotationStore((s) => s.fontFamily)
@@ -1361,7 +1371,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     // If the click landed on an existing annotation, select it instead of
     // adding a new one — even when an annotation tool (tick/cross/etc.) is
     // active. Empty stage clicks fall through to the add/select logic below.
-    if (e.target !== stage && !redactTapTargetRef.current) {
+    // ...unless "Stay on the last tool" is on and the pen or highlighter is
+    // armed: then a press on a mark draws across it, as it would on paper.
+    const drawThrough = DRAW_THROUGH_TOOLS.has(tool) && useToolPrefs.getState().stayOnTool
+    if (e.target !== stage && !redactTapTargetRef.current && !drawThrough) {
       const hitId = getAnnotationIdFromTarget(e.target)
       if (hitId) {
         // A locked signature box (baked into an exported page) is click-to-sign
@@ -1525,7 +1538,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       setEditingId(id)
     } else if (tool === 'tick' || tool === 'cross') {
       const tickSize = 28 / scale
-      add({
+      place({
         id: crypto.randomUUID(),
         pageIndex,
         type: tool,
@@ -1695,6 +1708,15 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     cancelGesture()
   }
 
+  // Put a mark down. `add` selects it, which brings up its Colour pill, bin
+  // and ✓; with "Don't confirm annotations" on (Tune this app) a stroke, line,
+  // shape, tick or cross is left unselected instead, so the next one can follow
+  // straight on (James, 2026-10-13).
+  function place(a: Annotation) {
+    add(a)
+    if (NO_CONFIRM_TOOLS.has(tool) && useToolPrefs.getState().noConfirm) setSelected(null)
+  }
+
   function onPointerUp(e?: Konva.KonvaEventObject<PointerEvent>) {
     if (e) activePointerIds.current.delete(e.evt.pointerId)
     // A one-shot placement armed on pointerdown and never disarmed by travel,
@@ -1745,7 +1767,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     const currentLine = currentLineRef.current
     if (drawingRef.current && currentLine) {
       if (tool === 'draw' && currentLine.length >= 4) {
-        add({
+        place({
           id: crypto.randomUUID(),
           pageIndex,
           type: 'draw',
@@ -1754,13 +1776,13 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           strokeWidth: strokeWidth / scale
         })
       } else if (tool === 'highlight' && currentLine.length >= 4) {
-        add({
+        place({
           id: crypto.randomUUID(),
           pageIndex,
           type: 'draw',
           points: currentLine,
           color,
-          strokeWidth: HIGHLIGHT_STROKE_WIDTH / scale,
+          strokeWidth: highlightWidth / scale,
           opacity: HIGHLIGHT_OPACITY
         })
       } else if (tool === 'line') {
@@ -1780,7 +1802,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         // was aiming at a point, not sweeping out a length, and a 6px stub is
         // no more use than nothing.
         const dragged = Math.hypot(x2 - x1, y2 - y1) > TAP_SLOP_PX / scale
-        add({
+        place({
           id: crypto.randomUUID(),
           pageIndex,
           type: 'draw',
@@ -1806,7 +1828,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           : tool === 'rect'
             ? tapBox(x1, y1, TAP_RECT_SIZE_PX.width, TAP_RECT_SIZE_PX.height)
             : tapBox(x1, y1, TAP_CIRCLE_SIZE_PX, TAP_CIRCLE_SIZE_PX)
-        add({
+        place({
           id: crypto.randomUUID(),
           pageIndex,
           type: tool,
@@ -2888,7 +2910,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               listening={false}
               points={currentLine}
               stroke={color}
-              strokeWidth={HIGHLIGHT_STROKE_WIDTH}
+              strokeWidth={highlightWidth}
               opacity={HIGHLIGHT_OPACITY}
               lineCap="round"
               lineJoin="round"
@@ -3250,7 +3272,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             <button
               type="button"
               title={
-                PLACEMENT_TOOLS.has(tool)
+                PLACEMENT_TOOLS.has(tool) && !stayOnTool
                   ? t('annotate.selection.done_to_select')
                   : t('annotate.selection.done_deselect')
               }
@@ -3262,7 +3284,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 // Only leave the tool if one is still armed: with Select active
                 // there is nothing to go back to, and re-setting it would be a
                 // no-op the user can't see.
-                if (PLACEMENT_TOOLS.has(tool)) setTool('select')
+                if (PLACEMENT_TOOLS.has(tool) && !stayOnTool) setTool('select')
               }}
               style={{ position: 'absolute', left: left + 36, top, zIndex: 21 }}
               className="w-8 h-8 rounded-full bg-white shadow-lg border border-slate-300 text-emerald-600 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 flex items-center justify-center transition-colors"

@@ -14,6 +14,8 @@ import { KNOWLEDGE_BASE } from '../../knowledge'
 import { usePdfStore } from '../../stores/pdfStore'
 import { clearDismissedPrompts } from '../../lib/resetDefaults'
 import PageScrollPreference from '../Viewer/PageScrollPreference'
+import ToolBehaviourRows from '../Viewer/ToolBehaviourRows'
+import { useToolPrefs } from '../../stores/toolPrefsStore'
 import SignatureDefaultViewRows from '../Signature/SignatureDefaultViewRows'
 import SignatureVaultRow from '../Signature/SignatureVaultRow'
 
@@ -250,12 +252,12 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
           // section is in this menu too and carries the row (FileMenu), and the
           // SDK's would be a second "Advanced" heading holding just that row.
           knowledgeBase={hasDoc ? undefined : KNOWLEDGE_BASE}
-          onResetDefaults={() => { clearDismissedPrompts(); void resetPrefs() }}
+          onResetDefaults={() => { clearDismissedPrompts(); useToolPrefs.getState().reset(); void resetPrefs() }}
           // Tune this app ▸ Page scrolling (vertical or horizontal pages), then
           // the double-tap defaults' rows (SDK 0.170.0). The landing navbar
           // passes the same rows; Reset to defaults clears the double-tap
           // defaults via the SDK.
-          appPreferences={<><PageScrollPreference /><SignatureDefaultViewRows /><SignatureVaultRow /></>}
+          appPreferences={<><PageScrollPreference /><ToolBehaviourRows /><SignatureDefaultViewRows /><SignatureVaultRow /></>}
           // The bar this sits in is slate-900, so the pill takes the dark
           // treatment — otherwise it reads as a white chip punched into it.
           pillTheme="dark"

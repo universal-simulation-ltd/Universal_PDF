@@ -37,6 +37,9 @@ const viewer: Messages['viewer'] = {
   'toolbar.tool_with_options': '{tool} — toque novamente ou mantenha premido para ver opções',
   'toolbar.swatch_more_colours': '{colour} — clique novamente para mais cores',
   'toolbar.custom_colour': 'Cor personalizada',
+  'toolbar.add_colour': 'Adicionar uma cor à barra (no máximo duas)', // the rainbow in the colour bar: the colour picked becomes a shortcut
+  'toolbar.highlight_size': 'Tamanho do marcador',
+  'toolbar.highlight_size_value': 'Tamanho do marcador: {size} px',
   'toolbar.open_select_options': 'Abrir opções de seleção',
   'toolbar.close_select_options': 'Fechar opções de seleção',
   'toolbar.open_text_options': 'Abrir opções de texto',
@@ -164,6 +167,11 @@ const viewer: Messages['viewer'] = {
   'placement.click_image': 'Clique na página para colocar a imagem',
   'placement.dont_show_again': 'Não mostrar novamente',
 
+  // Tune this app ▸ how the drawing tools behave (both off by default)
+  'prefs.stay_on_tool': 'Continuar na última ferramenta',
+  'prefs.stay_on_tool_note': 'A caneta e o marcador continuam a desenhar, mesmo sobre outras marcas, até escolher outra ferramenta.',
+  'prefs.no_confirm': 'Não confirmar anotações',
+  'prefs.no_confirm_note': 'Sem cor, ✓ ou caixote do lixo depois de cada traço, linha, forma, visto ou cruz, para poder continuar.',
   // Tune this app ▸ Page scrolling
   'scroll.label': 'Deslocamento das páginas',
   'scroll.vertical': 'Vertical',

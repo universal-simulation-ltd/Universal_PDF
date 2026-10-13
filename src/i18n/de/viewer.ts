@@ -37,6 +37,9 @@ const viewer: Messages['viewer'] = {
   'toolbar.tool_with_options': '{tool} – erneut tippen oder lange drücken für Optionen',
   'toolbar.swatch_more_colours': '{colour} – erneut klicken für weitere Farben',
   'toolbar.custom_colour': 'Eigene Farbe',
+  'toolbar.add_colour': 'Eine Farbe zur Werkzeugleiste hinzufügen (höchstens zwei)', // the rainbow in the colour bar: the colour picked becomes a shortcut
+  'toolbar.highlight_size': 'Textmarker-Größe',
+  'toolbar.highlight_size_value': 'Textmarker-Größe: {size} px',
   'toolbar.open_select_options': 'Auswahloptionen öffnen',
   'toolbar.close_select_options': 'Auswahloptionen schließen',
   'toolbar.open_text_options': 'Textoptionen öffnen',
@@ -164,6 +167,11 @@ const viewer: Messages['viewer'] = {
   'placement.click_image': 'Klicke auf die Seite, um dein Bild zu platzieren',
   'placement.dont_show_again': 'Nicht mehr anzeigen',
 
+  // Tune this app ▸ how the drawing tools behave (both off by default)
+  'prefs.stay_on_tool': 'Beim letzten Werkzeug bleiben',
+  'prefs.stay_on_tool_note': 'Stift und Textmarker zeichnen weiter, auch über andere Markierungen, bis Sie ein anderes Werkzeug wählen.',
+  'prefs.no_confirm': 'Anmerkungen nicht bestätigen',
+  'prefs.no_confirm_note': 'Keine Farbe, kein ✓ und kein Papierkorb nach jedem Strich, jeder Linie, Form, jedem Häkchen oder Kreuz – Sie können einfach weitermachen.',
   // Tune this app ▸ Page scrolling
   'scroll.label': 'Blätterrichtung',
   'scroll.vertical': 'Vertikal',

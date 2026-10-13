@@ -9,6 +9,9 @@ interface AnnotationState {
   // are the single control (there is no separate redaction palette any more).
   color: string
   strokeWidth: number
+  // The highlighter's width, in display pixels like strokeWidth: its own, set
+  // from the slider beside its colours in the toolbar.
+  highlightWidth: number
   // When true the line tool draws "rigid" strokes that snap to the nearest
   // horizontal, vertical or 45° diagonal. Free-form lines when false.
   lineSnap: boolean
@@ -32,6 +35,7 @@ interface AnnotationState {
   setTool: (t: Tool) => void
   setColor: (c: string) => void
   setStrokeWidth: (w: number) => void
+  setHighlightWidth: (w: number) => void
   setLineSnap: (v: boolean) => void
   setFontSize: (s: number) => void
   // Remember the size (in display pixels) the next text should be placed at,
@@ -79,6 +83,7 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
   tool: 'select',
   color: '#000000',
   strokeWidth: 2.5,
+  highlightWidth: 16,
   lineSnap: false,
   fontSize: 18,
   fontFamily: 'sans',
@@ -128,6 +133,7 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
       }
       return { strokeWidth }
     }),
+  setHighlightWidth: (highlightWidth) => set({ highlightWidth }),
   setLineSnap: (lineSnap) => set({ lineSnap }),
   setFontSize: (fontSize) =>
     set((s) => {

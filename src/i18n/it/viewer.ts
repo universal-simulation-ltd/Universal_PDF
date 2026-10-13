@@ -37,6 +37,9 @@ const viewer: Messages['viewer'] = {
   'toolbar.tool_with_options': '{tool}: tocca di nuovo o tieni premuto per le opzioni',
   'toolbar.swatch_more_colours': '{colour}: fai di nuovo clic per altri colori',
   'toolbar.custom_colour': 'Colore personalizzato',
+  'toolbar.add_colour': 'Aggiungi un colore alla barra (al massimo due)', // the rainbow in the colour bar: the colour picked becomes a shortcut
+  'toolbar.highlight_size': 'Dimensione dell’evidenziatore',
+  'toolbar.highlight_size_value': 'Dimensione dell’evidenziatore: {size} px',
   'toolbar.open_select_options': 'Apri opzioni di selezione',
   'toolbar.close_select_options': 'Chiudi opzioni di selezione',
   'toolbar.open_text_options': 'Apri opzioni di testo',
@@ -164,6 +167,11 @@ const viewer: Messages['viewer'] = {
   'placement.click_image': 'Fai clic sulla pagina per inserire l’immagine',
   'placement.dont_show_again': 'Non mostrare più',
 
+  // Tune this app ▸ how the drawing tools behave (both off by default)
+  'prefs.stay_on_tool': 'Resta sull’ultimo strumento',
+  'prefs.stay_on_tool_note': 'La penna e l’evidenziatore continuano a disegnare, anche sopra altri segni, finché non scegli un altro strumento.',
+  'prefs.no_confirm': 'Non confermare le annotazioni',
+  'prefs.no_confirm_note': 'Niente colore, ✓ o cestino dopo ogni tratto, linea, forma, spunta o croce: puoi continuare.',
   // Tune this app ▸ Page scrolling
   'scroll.label': 'Scorrimento delle pagine',
   'scroll.vertical': 'Verticale',

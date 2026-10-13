@@ -37,6 +37,9 @@ const viewer: Messages['viewer'] = {
   'toolbar.tool_with_options': '{tool}: toca de nuevo o mantén pulsado para ver opciones',
   'toolbar.swatch_more_colours': '{colour}: haz clic de nuevo para ver más colores',
   'toolbar.custom_colour': 'Color personalizado',
+  'toolbar.add_colour': 'Añadir un color a la barra (dos como máximo)', // the rainbow in the colour bar: the colour picked becomes a shortcut
+  'toolbar.highlight_size': 'Tamaño del resaltador',
+  'toolbar.highlight_size_value': 'Tamaño del resaltador: {size} px',
   'toolbar.open_select_options': 'Abrir opciones de selección',
   'toolbar.close_select_options': 'Cerrar opciones de selección',
   'toolbar.open_text_options': 'Abrir opciones de texto',
@@ -164,6 +167,11 @@ const viewer: Messages['viewer'] = {
   'placement.click_image': 'Haz clic en la página para colocar tu imagen',
   'placement.dont_show_again': 'No volver a mostrar',
 
+  // Tune this app ▸ how the drawing tools behave (both off by default)
+  'prefs.stay_on_tool': 'Seguir con la última herramienta',
+  'prefs.stay_on_tool_note': 'El lápiz y el resaltador siguen dibujando, incluso sobre otras marcas, hasta que elija otra herramienta.',
+  'prefs.no_confirm': 'No confirmar anotaciones',
+  'prefs.no_confirm_note': 'Sin color, ✓ ni papelera después de cada trazo, línea, forma, marca o cruz, para que pueda seguir.',
   // Tune this app ▸ Page scrolling
   'scroll.label': 'Desplazamiento de páginas',
   'scroll.vertical': 'Vertical',
