@@ -78,8 +78,9 @@ function placeLine(runs: TextRun[], fontSize: number, cssFamily: string): TextLi
 export function layoutText(a: TextAnnotation): TextLine[] {
   const cssFamily = cssFamilyOf(a)
   const runs = effectiveRuns(a)
-  // A sticky note's wrap width is its card; the words wrap inside the margin.
-  const wrapWidth = a.wrapWidth && a.note ? Math.max(a.fontSize, a.wrapWidth - 2 * noteInset(a)) : a.wrapWidth
+  // A sticky note is laid out by noteLayout (its size, its margin, centring).
+  if (a.note) return noteLayout(a).lines
+  const wrapWidth = a.wrapWidth
   if (!wrapWidth || !(wrapWidth > 0)) return [placeLine(runs, a.fontSize, cssFamily)]
 
   const lines: TextRun[][] = [[]]
@@ -109,11 +110,8 @@ export function textBoxSize(a: TextAnnotation): { width: number; height: number;
   const measured = lines.reduce((max, l) => Math.max(max, l.width), 0)
   const textHeight = a.fontSize * LINE_HEIGHT * Math.max(1, lines.length)
   if (a.note) {
-    // The card: the words plus their margin, and never shorter than most of
-    // its width, so a one-line note is still a note-shaped square-ish card.
-    const inset = noteInset(a)
-    const width = a.wrapWidth && a.wrapWidth > 0 ? a.wrapWidth : measured + 2 * inset
-    return { width, height: Math.max(textHeight + 2 * inset, width * NOTE_MIN_ASPECT), lines: lines.length }
+    const n = noteLayout(a)
+    return { width: n.width, height: n.height, lines: n.lines.length }
   }
   return {
     width: a.wrapWidth && a.wrapWidth > 0 ? a.wrapWidth : measured,
@@ -126,14 +124,103 @@ export function textBoxSize(a: TextAnnotation): { width: number; height: number;
 // Shared by the editor and the export, so the card and its words land in the
 // same place in both.
 
-// A card is at least this tall for its width.
+// A card is at least this tall for its width — and exactly this tall when its
+// words are sized to fit it.
 const NOTE_MIN_ASPECT = 0.8
 // How much of the note's colour is in its paper; the rest is white.
 const NOTE_TINT = 0.3
+// The margin, as a share of the card's width — of the CARD, not the type, so a
+// note whose words are sized to fit doesn't grow a giant margin with them.
+const NOTE_INSET = 0.065
+// Fit never shrinks the words below this (in points); past it they overflow.
+const NOTE_FIT_MIN = 4
+// See `top` in noteLayout.
+const NOTE_OPTICAL_DROP = 0.175
 
-/** The margin between a note's card and its words: in proportion to the type, so scaling a note keeps its look. */
-export function noteInset(a: Pick<TextAnnotation, 'fontSize' | 'note'>): number {
-  return a.note ? a.fontSize * 0.7 : 0
+/** The margin between a note's card and its words. */
+export function noteInset(a: Pick<TextAnnotation, 'fontSize' | 'note' | 'wrapWidth'>): number {
+  if (!a.note) return 0
+  return a.wrapWidth && a.wrapWidth > 0 ? a.wrapWidth * NOTE_INSET : a.fontSize * 0.7
+}
+
+export type NoteLayout = {
+  /** The card. */
+  width: number
+  height: number
+  /** The size the words are drawn at: `fontSize`, or the fitted size. */
+  fontSize: number
+  /** The lines, each with its runs at x from the line's own start. */
+  lines: TextLine[]
+  /** Where each line starts, from the card's top-left (centring included). */
+  lineX: number[]
+  /** The first line's top, from the card's top. */
+  top: number
+  /** The margin, and the width the words wrap to inside it. */
+  inset: number
+  innerWidth: number
+}
+
+const noteCache = new WeakMap<TextAnnotation, NoteLayout>()
+
+/**
+ * A sticky note, laid out: the card, the size of its words, and where each line
+ * goes. The ONE answer for the canvas, the live editor (so what is typed looks
+ * the way it will once the editor closes) and the export.
+ *
+ * Annotations are never mutated in place, so the result is cached per object —
+ * a fitted note runs a dozen trial layouts, and several things ask per render.
+ */
+export function noteLayout(a: TextAnnotation): NoteLayout {
+  const hit = noteCache.get(a)
+  if (hit) return hit
+  const inset = noteInset(a)
+  const width = a.wrapWidth && a.wrapWidth > 0 ? a.wrapWidth : 180
+  const innerWidth = Math.max(1, width - 2 * inset)
+  const linesAt = (size: number) =>
+    layoutText({ ...a, note: undefined, fontSize: size, wrapWidth: innerWidth })
+  let fontSize = a.fontSize
+  if (a.noteFit && effectiveRuns(a).some((r) => r.text.trim())) {
+    // The biggest size whose lines fit the card both ways — a word too long
+    // for the width shrinks the lot rather than spilling over the edge.
+    const innerHeight = Math.max(1, width * NOTE_MIN_ASPECT - 2 * inset)
+    const fits = (size: number) => {
+      const ls = linesAt(size)
+      return ls.length * size * LINE_HEIGHT <= innerHeight && ls.every((l) => l.width <= innerWidth + 0.5)
+    }
+    let lo = NOTE_FIT_MIN
+    let hi = innerHeight / LINE_HEIGHT
+    if (!fits(lo)) hi = lo
+    for (let i = 0; i < 14 && hi - lo > 0.25; i++) {
+      const mid = (lo + hi) / 2
+      if (fits(mid)) lo = mid
+      else hi = mid
+    }
+    fontSize = lo
+  }
+  const lines = linesAt(fontSize)
+  const textHeight = fontSize * LINE_HEIGHT * Math.max(1, lines.length)
+  const height = a.noteFit ? width * NOTE_MIN_ASPECT : Math.max(textHeight + 2 * inset, width * NOTE_MIN_ASPECT)
+  // Centred, the LETTERS are centred, not their line boxes: a line's capitals
+  // fill its box from about 0.1 to 0.8 of the type size, out of 1.25, so the
+  // block is dropped by the difference — 0.175 of the size, for any number of
+  // lines. (Centring the boxes left big fitted words visibly high.)
+  const top = inset + (a.noteCentre ? Math.max(0, (height - 2 * inset - textHeight) / 2) + fontSize * NOTE_OPTICAL_DROP : 0)
+  // Centred on the line's INK: a space left hanging at the end of a wrapped
+  // line doesn't count, as the browser doesn't count it in the editor — or the
+  // words would shift half a space sideways when the editor closed.
+  const css = cssFamilyOf(a)
+  const inkWidth = (l: TextLine) => {
+    for (let i = l.runs.length - 1; i >= 0; i--) {
+      const r = l.runs[i]
+      const kept = r.text.replace(/\s+$/, '')
+      if (kept) return r.x + runWidth({ ...r, text: kept }, fontSize, css)
+    }
+    return 0
+  }
+  const lineX = lines.map((l) => inset + (a.noteCentre ? Math.max(0, (innerWidth - inkWidth(l)) / 2) : 0))
+  const out = { width, height, fontSize, lines, lineX, top, inset, innerWidth }
+  noteCache.set(a, out)
+  return out
 }
 
 /** A note's paper: a pastel of the colour it was made in. */

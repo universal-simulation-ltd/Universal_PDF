@@ -68,6 +68,8 @@ const annotate: Messages['annotate'] = {
 
   // AnnotationLayer — colour pill for ticks, crosses, boxes, circles, pen strokes
   'shape.colour': 'Colore',
+  'note.centre': 'Centra il testo', // sticky note: centre its words across and down
+  'note.fit': 'Adatta il testo alla nota', // sticky note: size the words to fill the card
 
   // AnnotationLayer — multi-selection delete
   'selection.delete_many_one': 'Elimina {count} oggetto',

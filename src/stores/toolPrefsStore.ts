@@ -36,6 +36,10 @@ interface ToolPrefsState {
   noConfirm: boolean
   penColours: string[]
   highlightColours: string[]
+  // How the last sticky note was set (its pill's Centre / Fit), for the next.
+  noteCentre: boolean
+  noteFit: boolean
+  setNoteStyle: (style: { noteCentre?: boolean; noteFit?: boolean }) => void
   setStayOnTool: (v: boolean) => void
   setNoConfirm: (v: boolean) => void
   /** Pin a colour as a shortcut: first in line, the oldest drops out past two. */
@@ -47,7 +51,9 @@ const DEFAULTS = {
   stayOnTool: false,
   noConfirm: false,
   penColours: DEFAULT_PEN_COLOURS,
-  highlightColours: DEFAULT_HIGHLIGHT_COLOURS
+  highlightColours: DEFAULT_HIGHLIGHT_COLOURS,
+  noteCentre: false,
+  noteFit: false
 }
 
 export const useToolPrefs = create<ToolPrefsState>()(
@@ -56,6 +62,7 @@ export const useToolPrefs = create<ToolPrefsState>()(
       ...DEFAULTS,
       setStayOnTool: (stayOnTool) => set({ stayOnTool }),
       setNoConfirm: (noConfirm) => set({ noConfirm }),
+      setNoteStyle: (style) => set(style),
       addPreferredColour: (kind, hex) =>
         set((s) => {
           const key = kind === 'pen' ? 'penColours' : 'highlightColours'
@@ -73,7 +80,9 @@ export const useToolPrefs = create<ToolPrefsState>()(
         stayOnTool: s.stayOnTool,
         noConfirm: s.noConfirm,
         penColours: s.penColours,
-        highlightColours: s.highlightColours
+        highlightColours: s.highlightColours,
+        noteCentre: s.noteCentre,
+        noteFit: s.noteFit
       })
     }
   )

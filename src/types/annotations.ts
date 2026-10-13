@@ -78,6 +78,12 @@ export type TextAnnotation = Base & {
   // it by `noteInset` — so selecting, moving, resizing and exporting all see
   // the card as the box, with no code of their own.
   note?: string
+  // Sticky-note options, from its pill (James, 2026-10-13): the words centred
+  // on the card, across and down; and sized to FILL the card — a big card
+  // with a few words gets big words. Both laid out by lib/textLayout
+  // `noteLayout`, which the canvas, the live editor and the export share.
+  noteCentre?: boolean
+  noteFit?: boolean
 }
 
 export type DrawAnnotation = Base & {

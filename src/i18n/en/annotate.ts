@@ -68,6 +68,8 @@ export default {
 
   // AnnotationLayer — colour pill for ticks, crosses, boxes, circles, pen strokes
   'shape.colour': 'Colour',
+  'note.centre': 'Centre the words', // sticky note: centre its words across and down
+  'note.fit': 'Fit the words to the note', // sticky note: size the words to fill the card
 
   // AnnotationLayer — multi-selection delete
   'selection.delete_many_one': 'Delete {count} object',

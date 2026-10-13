@@ -40,7 +40,7 @@ import { effectiveRuns, runFontStyle, runHasStyle, runUnderlined, runsToPlainTex
 import { userLinkHref } from '../../lib/links'
 import { centreOnTap, tapRedactBox } from '../../lib/tapPlacement'
 import { isRedactableShape, redactionFromShape, topShapeAt, type RedactableShape } from '../../lib/redactShape'
-import { LINE_HEIGHT, NOTE_INK, layoutText, noteInset, notePaper, textBoxSize } from '../../lib/textLayout'
+import { LINE_HEIGHT, NOTE_INK, layoutText, noteLayout, notePaper, textBoxSize } from '../../lib/textLayout'
 import { useToolPrefs } from '../../stores/toolPrefsStore'
 import { SIG_DETAIL_SIZE, SIG_LABEL_SIZE, estimateTextWidth, sigFieldLayout, sigLabelColumn } from '../../lib/sigFieldLayout'
 import type { Annotation, DrawAnnotation, ImageAnnotation, ImageBorder, SignatureData, SignatureFieldAnnotation, SigAlign, TextAnnotation, Tool, TextRun } from '../../types/annotations'
@@ -945,6 +945,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // here rather than in the store so a drag doesn't leave a hundred undo steps
   // behind it; the real wrapWidth is written once, on transformend.
   const [liveWrap, setLiveWrap] = useState<{ id: string; width: number } | null>(null)
+  // The words of the sticky note being typed on, as typed — see TextEditor's
+  // onDraft. Cleared when the editor closes.
+  const [noteDraft, setNoteDraft] = useState<{ id: string; runs: TextRun[] } | null>(null)
   // Which Transformer handle is being dragged, latched during the gesture. The
   // Transformer clears its own active anchor as part of finishing, and the
   // scales alone can't tell a side handle from a corner dragged dead flat.
@@ -1568,7 +1571,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         note: color,
         wrapWidth: size.width,
         fontSize: NOTE_FONT_PX / scale,
-        fontFamily
+        fontFamily,
+        // Set the way the last note was.
+        noteCentre: useToolPrefs.getState().noteCentre || undefined,
+        noteFit: useToolPrefs.getState().noteFit || undefined
       })
       setEditingId(id)
       // One note per arming, back to Select — as the signature box does — so
@@ -2730,9 +2736,15 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 const cssFamily = FONT_STACK[a.fontFamily ?? 'sans']
                 // Mid side-drag the committed wrapWidth is still the old one, so
                 // lay out against the width the handle is currently at.
-                const shown = liveWrap && liveWrap.id === a.id ? { ...a, wrapWidth: liveWrap.width } : a
+                const wrapShown = liveWrap && liveWrap.id === a.id ? { ...a, wrapWidth: liveWrap.width } : a
+                // A note being typed on follows the draft, so its card grows
+                // (or its fitted words shrink) as the words go in.
+                const shown = noteDraft && noteDraft.id === a.id ? { ...wrapShown, runs: noteDraft.runs, text: runsToPlainText(noteDraft.runs) } : wrapShown
                 const lines = layoutText(shown)
                 const box = textBoxSize(shown)
+                // A note places its lines itself: centred or not, at its fitted
+                // size or its own (lib/textLayout noteLayout).
+                const nl = a.note ? noteLayout(shown) : null
                 return (
                   <Group
                     key={a.id}
@@ -2779,19 +2791,17 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                         letters keep their shape and re-flow into it. */}
                     <Group
                       name={TEXT_RUNS_GROUP}
-                      x={noteInset(a)}
-                      y={noteInset(a)}
                       visible={a.id !== editingId}
                     >
                       {lines.map((line, li) =>
                         line.runs.map((run, i) => (
                           <Text
                             key={`${li}:${i}`}
-                            x={run.x}
-                            y={li * a.fontSize * LINE_HEIGHT}
+                            x={(nl ? nl.lineX[li] : 0) + run.x}
+                            y={nl ? nl.top + li * nl.fontSize * LINE_HEIGHT : li * a.fontSize * LINE_HEIGHT}
                             text={run.text}
                             fill={a.color}
-                            fontSize={a.fontSize}
+                            fontSize={nl ? nl.fontSize : a.fontSize}
                             fontFamily={cssFamily}
                             fontStyle={runFontStyle(run)}
                             // A link is drawn as the export draws it: an
@@ -3284,8 +3294,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           annotation={editingAnnotation}
           scale={scale}
           apiRef={editorApiRef}
-          onCommit={commitEdit}
+          onDraft={editingAnnotation.note ? (runs) => setNoteDraft({ id: editingAnnotation.id, runs }) : undefined}
+          onCommit={(runs) => { setNoteDraft(null); commitEdit(runs) }}
           onCancel={() => {
+            setNoteDraft(null)
             if (!editingAnnotation.text.trim() && !editingAnnotation.note) {
               remove(editingAnnotation.id)
             }
@@ -3440,6 +3452,24 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             {label}
           </button>
         )
+        const noteStyleBtn = (active: boolean, onClick: () => void, title: string, icon: React.ReactNode) => (
+          <button
+            type="button"
+            title={title}
+            aria-label={title}
+            aria-pressed={active}
+            onClick={(e) => { e.stopPropagation(); onClick() }}
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+              active ? 'bg-orange-700 text-white' : 'hover:bg-slate-100 text-slate-700'
+            }`}
+          >
+            {icon}
+          </button>
+        )
+        const setNoteOption = (key: 'noteCentre' | 'noteFit', on: boolean) => {
+          update(ta.id, { [key]: on || undefined } as Partial<Annotation>)
+          useToolPrefs.getState().setNoteStyle({ [key]: on })
+        }
         // Style buttons apply to the highlighted range while editing (via the
         // editor's execCommand handle) and to the whole text otherwise.
         const editingThis = editingId === ta.id
@@ -3499,6 +3529,26 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             // clipped the wheel against the pill's own rounded edge.
             className="inline-flex items-center gap-0.5 bg-white rounded-full shadow-lg border border-slate-300 pl-1 pr-2 py-1"
           >
+            {ta.note && (
+              <>
+                {/* A sticky note's Centre and Fit. Each takes effect at once,
+                    in the editor too, and is how the next note starts. */}
+                {noteStyleBtn(!!ta.noteCentre, () => setNoteOption('noteCentre', !ta.noteCentre), t('annotate.note.centre'), (
+                  <svg viewBox="0 0 20 20" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                    <path d="M4 5h12M6.5 10h7M4 15h12" />
+                  </svg>
+                ))}
+                {noteStyleBtn(!!ta.noteFit, () => setNoteOption('noteFit', !ta.noteFit), t('annotate.note.fit'), (
+                  <svg viewBox="0 0 20 20" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M3 7V3h4M13 3h4v4M17 13v4h-4M7 17H3v-4" />
+                    <path d="M7.5 13.5 10 6.5l2.5 7M8.4 11h3.2" />
+                  </svg>
+                ))}
+                <span className="w-px h-6 bg-slate-200 mx-0.5" />
+              </>
+            )}
+            {/* A fitted note's size is the card's to decide, so no stepper. */}
+            {!ta.noteFit && (
             <FontSizeStepper
               value={Math.round(ta.fontSize * scale)}
               min={8}
@@ -3511,6 +3561,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 setDefaultFontSize(px)
               }}
             />
+            )}
             <span className="w-px h-6 bg-slate-200 mx-0.5" />
             {styleBtn(allHave('bold'), () => applyStyle('bold'), t('annotate.text.bold_letter'), t('annotate.text.bold'), 'font-bold')}
             {styleBtn(allHave('italic'), () => applyStyle('italic'), t('annotate.text.italic_letter'), t('annotate.text.italic'), 'italic font-semibold')}
@@ -4719,6 +4770,36 @@ function selectAllContents(el: HTMLElement) {
   sel?.addRange(range)
 }
 
+// How far the editor box sits above the Konva line so the two baselines meet.
+// Konva draws each line with a "middle" baseline on the EM box, fontSize/2
+// down; the browser puts its baseline in the middle of the line-height using
+// the font's own ascent and descent (A, D). The old flat 0.125 × size is the
+// answer only when A + D is exactly one em. Helvetica / Arial run taller
+// (about 1.12 em), so the typed words sat 0.03 × size low, and the big words
+// in a fitted sticky note visibly dropped when the editor closed. In full:
+//   lift = (lineHeight − 1)/2 · size + (A − D)/2 · (1 − size / (A + D))
+const liftCache = new Map<string, number>()
+function editorLift(px: number, family: string): number {
+  const key = `${px.toFixed(2)}|${family}`
+  const hit = liftCache.get(key)
+  if (hit !== undefined) return hit
+  let lift = px * (LINE_HEIGHT - 1) / 2
+  try {
+    const ctx = document.createElement('canvas').getContext('2d')
+    if (ctx) {
+      ctx.font = `${px}px ${family}`
+      const m = ctx.measureText('M')
+      const A = m.fontBoundingBoxAscent
+      const D = m.fontBoundingBoxDescent
+      if (A > 0 && D >= 0) lift += ((A - D) / 2) * (1 - px / (A + D))
+    }
+  } catch {
+    // No canvas metrics: the flat nudge it always was.
+  }
+  liftCache.set(key, lift)
+  return lift
+}
+
 // Rich-text editor: a contentEditable seeded from the annotation's runs. The
 // browser handles selection-based styling; the pill drives it through the
 // `format` handle (execCommand), and on commit the DOM is parsed back into runs.
@@ -4726,16 +4807,28 @@ function TextEditor({
   annotation,
   scale,
   apiRef,
+  onDraft,
   onCommit,
   onCancel
 }: {
   annotation: TextAnnotation
   scale: number
   apiRef: React.MutableRefObject<{ format: (kind: 'bold' | 'italic' | 'underline' | 'link') => void } | null>
+  // A sticky note's words as they're typed, so the card can follow them.
+  onDraft?: (runs: TextRun[]) => void
   onCommit: (runs: TextRun[]) => void
   onCancel: () => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
+  // A sticky note is typed on at the size and place its words will have once
+  // the editor closes — fitted, centred — so nothing jumps when it does
+  // (James, 2026-10-13: "you should see immediately in preview so it's not
+  // different when you click away"). Follows the draft, keystroke by keystroke.
+  const [draftRuns, setDraftRuns] = useState<TextRun[] | null>(null)
+  const nl = annotation.note
+    ? noteLayout(draftRuns ? { ...annotation, runs: draftRuns, text: runsToPlainText(draftRuns) } : annotation)
+    : null
+  const fs = nl ? nl.fontSize : annotation.fontSize
   // Suppress the very first blur so a focus race in Firefox doesn't silently
   // delete the empty annotation before the user gets a chance to type.
   const justMountedRef = useRef(true)
@@ -4821,6 +4914,12 @@ function TextEditor({
       // with it — its links (any scheme), remote images that loaded from a
       // third party the moment they landed, and bold/italic spans the run
       // parser then half-understood. Styling is the pill's job.
+      onInput={() => {
+        if (!annotation.note || !ref.current) return
+        const runs = parseRunsFromDom(ref.current)
+        setDraftRuns(runs)
+        onDraft?.(runs)
+      }}
       onPaste={(e) => {
         const text = e.clipboardData.getData('text/plain')
         e.preventDefault()
@@ -4851,25 +4950,24 @@ function TextEditor({
       style={{
         position: 'absolute',
         // Pixel-align with the committed Konva <Text> so glyphs don't shift when
-        // the edit ends. Konva draws the top-left at (x, y) with a "middle"
-        // baseline (glyph centre at y + fontSize/2). This box is LINE_HEIGHT×fontSize
-        // tall with its line centred by an equal line-height, so the glyph
-        // centre sits at 0.625×fontSize from the top — nudging the box up by the
-        // extra 0.125×fontSize lines the two centres up. The dashed affordance
-        // uses `outline` (no layout effect) and padding is zero, so the left
-        // edge matches Konva's x exactly.
-        // A sticky note's words sit inside its card by the inset.
-        left: (annotation.x + noteInset(annotation)) * scale,
-        top: (annotation.y + noteInset(annotation)) * scale - annotation.fontSize * scale * 0.125,
+        // the edit ends: the box is lifted so the browser's baseline meets
+        // Konva's — see editorLift. The dashed affordance uses `outline` (no
+        // layout effect) and padding is zero, so the left edge matches Konva's
+        // x exactly.
+        // A sticky note's words sit inside its card, where noteLayout puts
+        // them, at the size it gives them.
+        left: (annotation.x + (nl ? nl.inset : 0)) * scale,
+        top: (annotation.y + (nl ? nl.top : 0)) * scale - editorLift(fs * scale, FONT_STACK[annotation.fontFamily ?? 'sans']),
         color: annotation.color,
-        fontSize: (annotation.fontSize * scale) + 'px',
+        fontSize: (fs * scale) + 'px',
         fontFamily: FONT_STACK[annotation.fontFamily ?? 'sans'],
-        lineHeight: (annotation.fontSize * LINE_HEIGHT * scale) + 'px',
+        lineHeight: (fs * LINE_HEIGHT * scale) + 'px',
+        textAlign: annotation.noteCentre ? 'center' : undefined,
         // A box with a wrap width wraps as it is typed, at exactly the width
         // the canvas will wrap it at; one without stays the single growing line
         // it has always been.
         whiteSpace: wrapped ? 'pre-wrap' : 'pre',
-        width: wrapped ? (annotation.wrapWidth! - 2 * noteInset(annotation)) * scale + 'px' : undefined,
+        width: nl ? nl.innerWidth * scale + 'px' : wrapped ? annotation.wrapWidth! * scale + 'px' : undefined,
         background: 'transparent',
         border: 'none',
         outline: '1px dashed #ea580c',
@@ -4878,7 +4976,7 @@ function TextEditor({
         margin: 0,
         boxSizing: 'content-box',
         minWidth: wrapped ? undefined : '120px',
-        minHeight: annotation.fontSize * LINE_HEIGHT * scale + 'px',
+        minHeight: fs * LINE_HEIGHT * scale + 'px',
         height: wrapped ? undefined : annotation.fontSize * LINE_HEIGHT * scale + 'px',
         zIndex: 10
       }}

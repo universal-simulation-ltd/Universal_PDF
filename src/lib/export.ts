@@ -9,7 +9,7 @@ import type { Annotation, RedactAnnotation, SignatureFieldAnnotation } from '../
 import type { FormFieldValue } from '../stores/formStore'
 import { hexToPdfRgb } from './colors'
 import { fontBase, type PdfBaseFont } from './fonts'
-import { LINE_HEIGHT, layoutText, noteInset, notePaper, textBoxSize } from './textLayout'
+import { LINE_HEIGHT, layoutText, noteLayout, notePaper, textBoxSize } from './textLayout'
 import { runUnderlined } from './textRuns'
 import { openPdf, type PDFDocumentProxy } from './pdfjs'
 import { redactFillHex } from './redactGate'
@@ -464,8 +464,10 @@ async function drawAnnotations(
             // the editor showed them would be the bug. Only the advance WITHIN a
             // line uses the embedded font's own widths, as it always has.
             // A sticky note: its card first, as the editor draws it (the box IS
-            // the card — see textBoxSize), then the words inside its margin.
-            const inset = noteInset(a)
+            // the card — see textBoxSize), then its words where noteLayout
+            // puts them — fitted, centred — exactly as the editor drew them.
+            const nl = a.note ? noteLayout(a) : null
+            const fsz = nl ? nl.fontSize : a.fontSize
             if (a.note) {
               const card = textBoxSize(a)
               // pdf-lib turns a rectangle about its bottom-left corner; the
@@ -482,19 +484,19 @@ async function drawAnnotations(
               })
             }
             for (const [li, line] of layoutText(a).entries()) {
-              const lineY = a.y + inset + li * a.fontSize * LINE_HEIGHT
-              let offset = inset // canvas-space advance from a.x
+              const lineY = a.y + (nl ? nl.top : 0) + li * fsz * LINE_HEIGHT
+              let offset = nl ? nl.lineX[li] : 0 // canvas-space advance from a.x
               for (const run of line.runs) {
                 const { font, text: body } = await fonts.forText(run.text, fontBase(a.fontFamily), run.bold, run.italic)
-                const runW = body ? font.widthOfTextAtSize(body, a.fontSize) : 0
+                const runW = body ? font.widthOfTextAtSize(body, fsz) : 0
                 if (body) {
                   const rx = a.x + offset
-                  const blKy = lineY + a.fontSize * 0.8
+                  const blKy = lineY + fsz * 0.8
                   const [bx, by] = rotatePoint(rx, blKy, a.x, a.y, rad)
                   page.drawText(body, {
                     x: sx(bx),
                     y: toY(by),
-                    size: sw(a.fontSize),
+                    size: sw(fsz),
                     font,
                     color: hexToPdfRgb(a.color),
                     rotate: rot ? degrees(-rot) : undefined
@@ -504,13 +506,13 @@ async function drawAnnotations(
                   // just below the baseline, rotated with the text. The canvas and
                   // the editor draw a link the same way — see runUnderlined.
                   if (runUnderlined(run)) {
-                    const uy = lineY + a.fontSize * 0.98
+                    const uy = lineY + fsz * 0.98
                     const [ux1, uy1] = rotatePoint(rx, uy, a.x, a.y, rad)
                     const [ux2, uy2] = rotatePoint(rx + runW, uy, a.x, a.y, rad)
                     page.drawLine({
                       start: { x: sx(ux1), y: toY(uy1) },
                       end: { x: sx(ux2), y: toY(uy2) },
-                      thickness: sw(Math.max(0.75, a.fontSize * 0.06)),
+                      thickness: sw(Math.max(0.75, fsz * 0.06)),
                       color: hexToPdfRgb(a.color)
                     })
                   }
@@ -522,7 +524,7 @@ async function drawAnnotations(
                   // script URL, and it must not be written into the file.
                   const uri = run.link ? safeLinkUrl(run.link) : null
                   if (uri) {
-                    links.push({ pageIndex, x1: rx, y1: lineY, x2: rx + runW, y2: lineY + a.fontSize * 1.2, uri })
+                    links.push({ pageIndex, x1: rx, y1: lineY, x2: rx + runW, y2: lineY + fsz * 1.2, uri })
                   }
                 }
                 offset += runW
