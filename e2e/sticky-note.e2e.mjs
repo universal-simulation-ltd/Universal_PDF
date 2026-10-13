@@ -11,6 +11,9 @@
 //     and the colour bar shows the highlighter's pair.
 //   • A tap drops a note with the editor open; what is typed is kept, in dark
 //     ink on a pastel card of that colour.
+//   • Placing a note goes back to Select, and the whole card (not just its
+//     words) can be dragged ("unable to click and drag the post-it to place
+//     it").
 //   • A note left empty stays (a text box left empty goes).
 //   • A colour picked with a note selected recolours the card, not the ink.
 //   • Export: the card is in the file, pastel, with the words inside it.
@@ -139,6 +142,7 @@ await page.mouse.click(sx(100), sy(150))
 await page.waitForTimeout(300)
 const editor = page.locator('[contenteditable="true"]')
 check('a tap opens the editor on a new note', (await editor.count()) === 1 && (await notes()).length === 1)
+check('…and goes back to Select, so it can be dragged', (await store('return s.tool')) === 'select')
 await page.keyboard.type('Check this figure against the appendix')
 await page.screenshot({ path: join(SHOTS, 'sticky-note-typing.png'), clip: { x: canvasBox.x, y: canvasBox.y, width: 500, height: 400 } })
 await commitEditor()
@@ -147,6 +151,21 @@ check('what was typed is kept', n?.text === 'Check this figure against the appen
 check('dark ink on a note of the colour it was made in', n?.color === '#1f2937' && n?.note === '#eab308', json(n))
 check('the card is pastel on the page', near(await inkAt(n.x + n.wrapWidth - 6, n.y + 6), PAPER), json(await inkAt(n.x + n.wrapWidth - 6, n.y + 6)))
 await page.screenshot({ path: join(SHOTS, 'sticky-note-editor.png'), clip: { x: canvasBox.x, y: canvasBox.y, width: 500, height: 400 } })
+
+console.log('\nmoving a note into place')
+{
+  const before = (await notes())[0]
+  // From the blank lower part of the card, where there are no words to grab.
+  await page.mouse.move(sx(before.x + 40), sy(before.y + 110))
+  await page.mouse.down()
+  await page.mouse.move(sx(before.x + 80), sy(before.y + 150), { steps: 6 })
+  await page.mouse.move(sx(before.x + 140), sy(before.y + 210), { steps: 6 })
+  await page.mouse.up()
+  await page.waitForTimeout(400)
+  const after = (await notes())[0]
+  check('a drag on the card moves the note', Math.abs(after.x - before.x - 100) < 3 && Math.abs(after.y - before.y - 100) < 3, json({ before: [before.x, before.y], after: [after.x, after.y] }))
+  await store('s.update(arg.id, { x: arg.x, y: arg.y }); s.setSelected(null)', before)
+}
 
 console.log('\nan empty note stays')
 await noteBtn.click()

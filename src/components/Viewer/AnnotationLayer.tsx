@@ -55,6 +55,9 @@ const FONT_STACK = FONT_CSS
 const TEXT_RUNS_GROUP = 'text-runs'
 
 const HIGHLIGHT_OPACITY = 0.4
+// The highlighter's size slider on a highlight's pill, in display pixels.
+const HIGHLIGHT_MIN_PX = 6
+const HIGHLIGHT_MAX_PX = 40
 
 // A new sticky note's width and type size, in display pixels (like every
 // placement: the same on screen at any zoom, capped by fitPlacement).
@@ -152,7 +155,6 @@ function getAnnotationBBox(a: Annotation): { x: number; y: number; width: number
 // with them has nothing to confirm.
 const PLACEMENT_TOOLS = new Set<Tool>([
   'text',
-  'note',
   'draw',
   'highlight',
   'rect',
@@ -911,6 +913,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const color = useAnnotationStore((s) => s.color)
   const strokeWidth = useAnnotationStore((s) => s.strokeWidth)
   const highlightWidth = useAnnotationStore((s) => s.highlightWidth)
+  const setHighlightWidth = useAnnotationStore((s) => s.setHighlightWidth)
   const stayOnTool = useToolPrefs((s) => s.stayOnTool)
   const highlightColours = useToolPrefs((s) => s.highlightColours)
   const lineSnap = useAnnotationStore((s) => s.lineSnap)
@@ -1568,6 +1571,12 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         fontFamily
       })
       setEditingId(id)
+      // One note per arming, back to Select — as the signature box does — so
+      // the note can be dragged into place straight away. With the tool still
+      // armed nothing on the page is draggable, and a press on the note only
+      // re-selected it (James, 2026-10-13: "unable to click and drag the
+      // post-it to place it").
+      setTool('select')
     } else if (tool === 'tick' || tool === 'cross') {
       const tickSize = 28 / scale
       place({
@@ -2758,7 +2767,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                         shadowOpacity={0.18}
                         shadowBlur={6}
                         shadowOffsetY={2}
-                        listening={false}
+                        // The whole card is the handle, not just its words:
+                        // a new note has none, so there'd be nothing to grab.
                       />
                     ) : (
                       <Rect x={0} y={0} width={box.width} height={box.height} listening={false} />
@@ -3834,7 +3844,34 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 than no pill. `setColor` is still the store action, which
                 repaints this object and sets the default for the next one in
                 one history step. */}
-            <ColorCluster color={selected.color} setColor={setColor} />
+            {selected.type === 'draw' && isHighlighter(selected) ? (
+              // A highlight: the highlighter's own colours, and its size —
+              // here on the stroke, not in the main toolbar (James,
+              // 2026-10-13). The size repaints this stroke and is the next
+              // one's, as the colour does.
+              <>
+                <ColorCluster color={selected.color} setColor={setColor} swatches={highlightColours} />
+                <span className="w-px h-5 bg-slate-200" />
+                <span className="text-xs text-slate-500 font-medium">{t('viewer.toolbar.highlight_size')}</span>
+                <input
+                  type="range"
+                  min={HIGHLIGHT_MIN_PX}
+                  max={HIGHLIGHT_MAX_PX}
+                  step={2}
+                  value={Math.round(selected.strokeWidth * scale)}
+                  onChange={(e) => {
+                    const px = parseFloat(e.target.value)
+                    setHighlightWidth(px)
+                    update(selected.id, { strokeWidth: px / scale } as Partial<Annotation>)
+                  }}
+                  aria-label={t('viewer.toolbar.highlight_size')}
+                  title={t('viewer.toolbar.highlight_size_value', { size: Math.round(selected.strokeWidth * scale) })}
+                  className="w-20 accent-amber-500"
+                />
+              </>
+            ) : (
+              <ColorCluster color={selected.color} setColor={setColor} />
+            )}
           </div>
         )
       })()}

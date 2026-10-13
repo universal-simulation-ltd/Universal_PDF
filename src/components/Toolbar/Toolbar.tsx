@@ -115,10 +115,6 @@ const COLORS: { hex: string; name: MessageKey }[] = [
   { hex: '#9333ea', name: 'viewer.toolbar.color_purple' }
 ]
 
-// The highlighter's size slider, in display pixels (16 was its fixed width).
-const HIGHLIGHT_MIN = 6
-const HIGHLIGHT_MAX = 40
-
 // The rainbow custom-colour well. A component of its own (not defined inside
 // the toolbar's render), so a colour change re-rendering the toolbar doesn't
 // remount the <input> under the open system picker.
@@ -457,8 +453,6 @@ export function ToolbarDesktopTools() {
   const setTool = useAnnotationStore((s) => s.setTool)
   const setColor = useAnnotationStore((s) => s.setColor)
   const setStrokeWidth = useAnnotationStore((s) => s.setStrokeWidth)
-  const highlightWidth = useAnnotationStore((s) => s.highlightWidth)
-  const setHighlightWidth = useAnnotationStore((s) => s.setHighlightWidth)
   const setSelected = useAnnotationStore((s) => s.setSelected)
   const penColours = useToolPrefs((s) => s.penColours)
   const highlightColours = useToolPrefs((s) => s.highlightColours)
@@ -763,16 +757,16 @@ export function ToolbarDesktopTools() {
       <div className="w-px h-6 bg-slate-700 mx-1" />
 
       {/* Pencil (its notch = the drawing shapes and the stroke) + highlighter
-          (no dropdown) + the colour bar: the two preferred colours, the
-          rainbow that adds one, the highlighter's size while it's armed, and
-          a notch for the full palette. */}
+          (no dropdown; its size is on a highlight's floating pill) + sticky
+          note + the colour bar: the two preferred colours, the rainbow that
+          adds one, and a notch for the full palette. */}
       <div ref={drawGroupRef} className="relative flex items-start gap-1">
         <div ref={drawToolRef} className="relative flex items-start">
           {toolBtn('draw', '✎', t('viewer.toolbar.tool_free_draw'), 'draw', penColours[0])}
           {notch('draw', tool === 'draw', t('viewer.toolbar.open_drawing_tools'), t('viewer.toolbar.close_drawing_tools'))}
         </div>
-        {/* No dropdown (James, 2026-10-13): its colours and size sit in the
-            bar beside it while it's armed. */}
+        {/* No dropdown (James, 2026-10-13): its colours are the bar beside
+            it, and its size is on the pill under a highlight. */}
         <div className="relative flex items-start">
         <button
           onClick={() => handleToolClick('highlight', undefined, highlightColours[0])}
@@ -809,19 +803,6 @@ export function ToolbarDesktopTools() {
           {shortcuts.map((hex) => colorSwatch(hex, nameOf(hex), true, () => setOpenPanel('color')))}
           {/* Pick a colour here and it joins the shortcuts beside it. */}
           {colourWell(t('viewer.toolbar.add_colour'), true)}
-          {tool === 'highlight' && (
-            <input
-              type="range"
-              min={HIGHLIGHT_MIN}
-              max={HIGHLIGHT_MAX}
-              step={2}
-              value={highlightWidth}
-              onChange={(e) => setHighlightWidth(parseFloat(e.target.value))}
-              title={t('viewer.toolbar.highlight_size_value', { size: highlightWidth })}
-              aria-label={t('viewer.toolbar.highlight_size')}
-              className="w-16 ml-1 accent-amber-400"
-            />
-          )}
           </div>
           {notch('color', false, t('viewer.toolbar.open_colours'), t('viewer.toolbar.close_colours'))}
         </div>

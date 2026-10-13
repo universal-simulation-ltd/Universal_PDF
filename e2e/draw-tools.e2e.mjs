@@ -6,7 +6,9 @@
 // What is pinned here (James, 2026-10-13):
 //
 //   • The highlighter has no dropdown. While it is armed the colour bar beside
-//     it shows its two colours and a size slider, and a stroke takes that size.
+//     it shows its two colours. Its size is on a highlight's floating pill
+//     ("the size should be on the floating toolbar not the main one"), and
+//     the next stroke takes that size.
 //   • The pen's dropdown has the shapes on one line and the stroke on the
 //     next, and no colours.
 //   • A colour picked from the bar's rainbow becomes a shortcut, newest first,
@@ -132,13 +134,20 @@ await page.waitForTimeout(200)
 check('the highlighter is armed, in its first colour', json(await store('return [s.tool, s.color]')) === json(['highlight', '#eab308']))
 check('the bar shows its two colours', (await bar.getByRole('button', { name: 'Yellow' }).count()) === 1 && (await bar.getByRole('button', { name: 'Green' }).count()) === 1)
 const size = page.getByRole('slider', { name: 'Highlighter size' })
-check('…and a size slider', (await size.count()) === 1)
-await size.fill('30')
-check('the slider sets the highlighter\'s width', (await store('return s.highlightWidth')) === 30)
+check('no size slider in the main toolbar', (await size.count()) === 0)
 await stroke(100, 200, 300, 200)
+check('a highlight\'s floating pill has the size slider', (await size.count()) === 1)
+check('…and the highlighter\'s colours, not black and white', (await page.locator('[data-pill-swatch][aria-label="#EAB308"]').count()) === 1 && (await page.locator('[data-pill-swatch][aria-label="Black"]').count()) === 0)
+await size.fill('30')
+await page.waitForTimeout(150)
 const hl = (await store('return s.annotations')).at(-1)
 // Widths are display pixels over the zoom; the page canvas is the zoom.
-check('a stroke takes that width', hl && Math.abs(hl.strokeWidth * k - 30) < 0.5, json({ w: hl?.strokeWidth, k }))
+check('the slider resizes that highlight', hl && Math.abs(hl.strokeWidth * k - 30) < 0.5, json({ w: hl?.strokeWidth, k }))
+check('…and sets the size for the next one', (await store('return s.highlightWidth')) === 30)
+await store('s.setSelected(null)')
+await stroke(100, 260, 300, 260)
+const hl2 = (await store('return s.annotations')).at(-1)
+check('the next highlight takes it', hl2 && Math.abs(hl2.strokeWidth * k - 30) < 0.5, json({ w: hl2?.strokeWidth, k }))
 await page.screenshot({ path: join(process.env.SHOTS ?? tmpdir(), 'draw-tools-highlighter.png'), clip: { x: 0, y: 0, width: 1400, height: 120 } }).catch(() => {})
 
 console.log('\nthe pen\'s dropdown')
