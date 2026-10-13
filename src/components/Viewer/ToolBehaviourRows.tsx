@@ -4,10 +4,10 @@ import { useT } from '../../i18n'
 import { useToolPrefs } from '../../stores/toolPrefsStore'
 
 /**
- * Tune this app ▸ "Stay on the last tool" and "Don't confirm annotations"
- * (James, 2026-10-13). Both off by default, like every switch in the suite;
- * what they do is in stores/toolPrefsStore.ts. Same look as the
- * "Lock saved signatures" row (SignatureVaultRow).
+ * Tune this app ▸ "Stay on the last tool", "Don't confirm annotations", and
+ * how a new sticky note starts (James, 2026-10-13). All off by default, like
+ * every switch in the suite; what they do is in stores/toolPrefsStore.ts.
+ * Same look as the "Lock saved signatures" row (SignatureVaultRow).
  */
 export default function ToolBehaviourRows() {
   const t = useT()
@@ -15,6 +15,10 @@ export default function ToolBehaviourRows() {
   const noConfirm = useToolPrefs((s) => s.noConfirm)
   const setStayOnTool = useToolPrefs((s) => s.setStayOnTool)
   const setNoConfirm = useToolPrefs((s) => s.setNoConfirm)
+  const noteTopLeft = useToolPrefs((s) => s.noteTopLeft)
+  const noteSetSize = useToolPrefs((s) => s.noteSetSize)
+  const setNoteTopLeft = useToolPrefs((s) => s.setNoteTopLeft)
+  const setNoteSetSize = useToolPrefs((s) => s.setNoteSetSize)
   return (
     <>
       <SwitchRow
@@ -28,6 +32,20 @@ export default function ToolBehaviourRows() {
         note={t('viewer.prefs.no_confirm_note')}
         checked={noConfirm}
         onChange={setNoConfirm}
+      />
+      {/* How a new sticky note starts: centred and fitted, unless these are
+          on. Worded as the exceptions so they start off, like every switch. */}
+      <SwitchRow
+        label={t('viewer.prefs.note_top_left')}
+        note={t('viewer.prefs.note_top_left_note')}
+        checked={noteTopLeft}
+        onChange={setNoteTopLeft}
+      />
+      <SwitchRow
+        label={t('viewer.prefs.note_set_size')}
+        note={t('viewer.prefs.note_set_size_note')}
+        checked={noteSetSize}
+        onChange={setNoteSetSize}
       />
     </>
   )

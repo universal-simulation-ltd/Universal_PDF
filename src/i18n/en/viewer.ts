@@ -173,6 +173,10 @@ export default {
   'prefs.stay_on_tool_note': 'The pen and highlighter keep drawing, even over other marks, until you pick another tool.',
   'prefs.no_confirm': 'Don’t confirm annotations',
   'prefs.no_confirm_note': 'No colour, ✓ or bin after each stroke, line, shape, tick or cross, so you can keep going.',
+  'prefs.note_top_left': 'Start sticky notes with the words at the top', // off (default): new sticky notes are centred
+  'prefs.note_top_left_note': 'Otherwise a new note’s words are centred on it.',
+  'prefs.note_set_size': 'Start sticky notes at a set text size', // off (default): new sticky notes fit their words to the card
+  'prefs.note_set_size_note': 'Otherwise a new note’s words grow or shrink to fill it.',
   // Tune this app ▸ Page scrolling
   'scroll.label': 'Page scrolling',
   'scroll.vertical': 'Vertical',

@@ -173,6 +173,10 @@ const viewer: Messages['viewer'] = {
   'prefs.stay_on_tool_note': 'Kalem ve fosforlu kalem, başka bir araç seçene kadar diğer işaretlerin üzerinde bile çizmeye devam eder.',
   'prefs.no_confirm': 'Notları onaylatma',
   'prefs.no_confirm_note': 'Her çizgi, şekil, onay veya çarpı işaretinden sonra renk, ✓ ya da çöp kutusu çıkmaz; devam edebilirsiniz.',
+  'prefs.note_top_left': 'Yapışkan notlara metin üstte başlasın', // off (default): new sticky notes are centred
+  'prefs.note_top_left_note': 'Aksi halde yeni notun metni ortalanır.',
+  'prefs.note_set_size': 'Yapışkan notlar sabit metin boyutuyla başlasın', // off (default): new sticky notes fit their words to the card
+  'prefs.note_set_size_note': 'Aksi halde yeni notun metni notu dolduracak şekilde büyür ya da küçülür.',
   // Tune this app ▸ Page scrolling
   'scroll.label': 'Sayfa kaydırma',
   'scroll.vertical': 'Dikey',

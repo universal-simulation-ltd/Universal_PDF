@@ -173,6 +173,10 @@ const viewer: Messages['viewer'] = {
   'prefs.stay_on_tool_note': 'Le stylo et le surligneur continuent de tracer, même sur d’autres marques, jusqu’à ce que vous choisissiez un autre outil.',
   'prefs.no_confirm': 'Ne pas confirmer les annotations',
   'prefs.no_confirm_note': 'Pas de couleur, de ✓ ni de corbeille après chaque trait, ligne, forme, coche ou croix : vous pouvez continuer.',
+  'prefs.note_top_left': 'Commencer les notes adhésives avec le texte en haut', // off (default): new sticky notes are centred
+  'prefs.note_top_left_note': 'Sinon, le texte d’une nouvelle note est centré.',
+  'prefs.note_set_size': 'Commencer les notes adhésives avec une taille de texte fixe', // off (default): new sticky notes fit their words to the card
+  'prefs.note_set_size_note': 'Sinon, le texte d’une nouvelle note grandit ou rétrécit pour la remplir.',
   // Tune this app ▸ Page scrolling
   'scroll.label': 'Défilement des pages',
   'scroll.vertical': 'Vertical',

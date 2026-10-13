@@ -19,7 +19,10 @@
 //   • Export: the card is in the file, pastel, with the words inside it.
 //   • Centre and Fit on its pill ("center text and fit text to the square …
 //     you should see immediately in preview so it's not different when you
-//     click away"): the words are centred and sized to fill the card WHILE
+//     click away"): on by default ("have both enabled by default and in
+//     tuning this app have the default defined by user" — the Tune switches
+//     are worded as the exceptions, so they start off), and the pill changes
+//     one note only. The words are centred and sized to fill the card WHILE
 //     being typed, and stay exactly there when the editor closes; more words
 //     shrink, the card keeps its size; the export matches.
 //
@@ -301,10 +304,12 @@ await page.waitForTimeout(300)
 const centreBtn = page.getByRole('button', { name: 'Centre the words' })
 const fitBtn = page.getByRole('button', { name: 'Fit the words to the note' })
 check('a note\'s pill has Centre and Fit', (await centreBtn.count()) === 1 && (await fitBtn.count()) === 1)
+check('a new note starts with both on', (await centreBtn.getAttribute('aria-pressed')) === 'true' && (await fitBtn.getAttribute('aria-pressed')) === 'true')
 await centreBtn.click()
-await fitBtn.click()
+await page.waitForTimeout(100)
+check('Centre switches off for this note while typing, and the editor stays open', (await editor.count()) === 1 && !(await notes())[0].noteCentre)
+await centreBtn.click()
 await page.waitForTimeout(150)
-check('both can be switched on while typing, and the editor stays open', (await editor.count()) === 1)
 await page.keyboard.type('Hi')
 await page.waitForTimeout(200)
 let [fn] = await notes()
@@ -347,7 +352,22 @@ check('the words fit inside it on the page', ink2 && ink2.x1 >= card.x && ink2.x
 check('nothing moves when the editor closes (longer text)', same(ink2, ed2, 2), json({ ink2, ed2 }))
 await page.screenshot({ path: join(SHOTS, 'sticky-note-fit-long.png'), clip: { x: canvasBox.x, y: canvasBox.y, width: 420, height: 360 } })
 const fitted = await page.evaluate(async (a) => (await import('/src/lib/textLayout.ts')).noteLayout(a).fontSize, fn)
-check('the next note starts centred and fitted, as the last one was', json(await page.evaluate(async () => { const { useToolPrefs } = await import('/src/stores/toolPrefsStore.ts'); const p = useToolPrefs.getState(); return [p.noteCentre, p.noteFit] })) === '[true,true]')
+const prefsNow = () => page.evaluate(async () => { const { useToolPrefs } = await import('/src/stores/toolPrefsStore.ts'); const p = useToolPrefs.getState(); return [p.noteTopLeft, p.noteSetSize] })
+check('the pill changes that note only, not how new notes start', json(await prefsNow()) === '[false,false]')
+
+console.log('\nTune this app sets how a new note starts')
+await page.evaluate(async () => { const { useToolPrefs } = await import('/src/stores/toolPrefsStore.ts'); const p = useToolPrefs.getState(); p.setNoteTopLeft(true); p.setNoteSetSize(true) })
+await store('s.resetDocument(); s.setTool("select")')
+await noteBtn.click()
+await page.mouse.click(sx(80), sy(120))
+await page.waitForTimeout(300)
+await commitEditor()
+{
+  const [plain] = await notes()
+  check('with both switches on, a new note is neither centred nor fitted', plain && !plain.noteCentre && !plain.noteFit, json(plain))
+}
+await page.evaluate(async () => { const { useToolPrefs } = await import('/src/stores/toolPrefsStore.ts'); useToolPrefs.getState().reset() })
+check('Reset to defaults puts them back off', json(await prefsNow()) === '[false,false]')
 
 console.log('\nexport of a fitted, centred note')
 {

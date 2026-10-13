@@ -173,6 +173,10 @@ const viewer: Messages['viewer'] = {
   'prefs.stay_on_tool_note': 'Stift und Textmarker zeichnen weiter, auch über andere Markierungen, bis Sie ein anderes Werkzeug wählen.',
   'prefs.no_confirm': 'Anmerkungen nicht bestätigen',
   'prefs.no_confirm_note': 'Keine Farbe, kein ✓ und kein Papierkorb nach jedem Strich, jeder Linie, Form, jedem Häkchen oder Kreuz – Sie können einfach weitermachen.',
+  'prefs.note_top_left': 'Haftnotizen mit dem Text oben beginnen', // off (default): new sticky notes are centred
+  'prefs.note_top_left_note': 'Sonst steht der Text einer neuen Notiz mittig.',
+  'prefs.note_set_size': 'Haftnotizen mit fester Textgröße beginnen', // off (default): new sticky notes fit their words to the card
+  'prefs.note_set_size_note': 'Sonst wird der Text einer neuen Notiz größer oder kleiner, bis er sie füllt.',
   // Tune this app ▸ Page scrolling
   'scroll.label': 'Blätterrichtung',
   'scroll.vertical': 'Vertikal',

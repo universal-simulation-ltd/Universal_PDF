@@ -173,6 +173,10 @@ const viewer: Messages['viewer'] = {
   'prefs.stay_on_tool_note': 'A caneta e o marcador continuam desenhando, mesmo sobre outras marcas, até você escolher outra ferramenta.',
   'prefs.no_confirm': 'Não confirmar anotações',
   'prefs.no_confirm_note': 'Sem cor, ✓ ou lixeira depois de cada traço, linha, forma, visto ou X, para você continuar.',
+  'prefs.note_top_left': 'Começar as notas adesivas com o texto no topo', // off (default): new sticky notes are centred
+  'prefs.note_top_left_note': 'Caso contrário, o texto de uma nota nova fica centralizado.',
+  'prefs.note_set_size': 'Começar as notas adesivas com um tamanho de texto fixo', // off (default): new sticky notes fit their words to the card
+  'prefs.note_set_size_note': 'Caso contrário, o texto de uma nota nova aumenta ou diminui até preenchê-la.',
   // Tune this app ▸ Page scrolling
   'scroll.label': 'Rolagem das páginas',
   'scroll.vertical': 'Vertical',

@@ -173,6 +173,10 @@ const viewer: Messages['viewer'] = {
   'prefs.stay_on_tool_note': 'La penna e l’evidenziatore continuano a disegnare, anche sopra altri segni, finché non scegli un altro strumento.',
   'prefs.no_confirm': 'Non confermare le annotazioni',
   'prefs.no_confirm_note': 'Niente colore, ✓ o cestino dopo ogni tratto, linea, forma, spunta o croce: puoi continuare.',
+  'prefs.note_top_left': 'Inizia le note adesive con il testo in alto', // off (default): new sticky notes are centred
+  'prefs.note_top_left_note': 'Altrimenti il testo di una nuova nota è centrato.',
+  'prefs.note_set_size': 'Inizia le note adesive con una dimensione del testo fissa', // off (default): new sticky notes fit their words to the card
+  'prefs.note_set_size_note': 'Altrimenti il testo di una nuova nota si ingrandisce o si riduce per riempirla.',
   // Tune this app ▸ Page scrolling
   'scroll.label': 'Scorrimento delle pagine',
   'scroll.vertical': 'Verticale',

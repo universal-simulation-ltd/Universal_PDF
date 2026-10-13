@@ -1572,9 +1572,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         wrapWidth: size.width,
         fontSize: NOTE_FONT_PX / scale,
         fontFamily,
-        // Set the way the last note was.
-        noteCentre: useToolPrefs.getState().noteCentre || undefined,
-        noteFit: useToolPrefs.getState().noteFit || undefined
+        // Centred and fitted, unless Tune this app says otherwise.
+        noteCentre: !useToolPrefs.getState().noteTopLeft || undefined,
+        noteFit: !useToolPrefs.getState().noteSetSize || undefined
       })
       setEditingId(id)
       // One note per arming, back to Select — as the signature box does — so
@@ -3467,8 +3467,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           </button>
         )
         const setNoteOption = (key: 'noteCentre' | 'noteFit', on: boolean) => {
+          // This note only: how new notes start is Tune this app's.
           update(ta.id, { [key]: on || undefined } as Partial<Annotation>)
-          useToolPrefs.getState().setNoteStyle({ [key]: on })
         }
         // Style buttons apply to the highlighted range while editing (via the
         // editor's execCommand handle) and to the whole text otherwise.
@@ -3531,8 +3531,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           >
             {ta.note && (
               <>
-                {/* A sticky note's Centre and Fit. Each takes effect at once,
-                    in the editor too, and is how the next note starts. */}
+                {/* A sticky note's Centre and Fit, for this note. Each takes
+                    effect at once, in the editor too. */}
                 {noteStyleBtn(!!ta.noteCentre, () => setNoteOption('noteCentre', !ta.noteCentre), t('annotate.note.centre'), (
                   <svg viewBox="0 0 20 20" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
                     <path d="M4 5h12M6.5 10h7M4 15h12" />

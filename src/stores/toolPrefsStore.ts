@@ -11,6 +11,11 @@ import { persist } from 'zustand/middleware'
 //   • `noConfirm` — Tune this app ▸ "Don't confirm annotations". A stroke,
 //     line, shape, tick or cross is put down without being selected, so no
 //     Colour pill, bin or ✓ comes up between one mark and the next.
+//   • `noteTopLeft` / `noteSetSize` — Tune this app ▸ how a new sticky note
+//     starts. A note is centred and fitted to its card unless one is on
+//     (James, 2026-10-13: "have both enabled by default and in tuning this
+//     app have the default defined by user"). The note's own pill changes
+//     only that note.
 //   • `penColours` / `highlightColours` — the two colour shortcuts beside the
 //     pen and the highlighter in the toolbar. A custom colour picked from the
 //     rainbow goes in first and the older of the two drops out: two at most.
@@ -36,10 +41,12 @@ interface ToolPrefsState {
   noConfirm: boolean
   penColours: string[]
   highlightColours: string[]
-  // How the last sticky note was set (its pill's Centre / Fit), for the next.
-  noteCentre: boolean
-  noteFit: boolean
-  setNoteStyle: (style: { noteCentre?: boolean; noteFit?: boolean }) => void
+  // How a NEW sticky note starts. Centred and fitted unless these are on —
+  // worded as the exceptions so the switches start off (see above).
+  noteTopLeft: boolean
+  noteSetSize: boolean
+  setNoteTopLeft: (v: boolean) => void
+  setNoteSetSize: (v: boolean) => void
   setStayOnTool: (v: boolean) => void
   setNoConfirm: (v: boolean) => void
   /** Pin a colour as a shortcut: first in line, the oldest drops out past two. */
@@ -52,8 +59,8 @@ const DEFAULTS = {
   noConfirm: false,
   penColours: DEFAULT_PEN_COLOURS,
   highlightColours: DEFAULT_HIGHLIGHT_COLOURS,
-  noteCentre: false,
-  noteFit: false
+  noteTopLeft: false,
+  noteSetSize: false
 }
 
 export const useToolPrefs = create<ToolPrefsState>()(
@@ -62,7 +69,8 @@ export const useToolPrefs = create<ToolPrefsState>()(
       ...DEFAULTS,
       setStayOnTool: (stayOnTool) => set({ stayOnTool }),
       setNoConfirm: (noConfirm) => set({ noConfirm }),
-      setNoteStyle: (style) => set(style),
+      setNoteTopLeft: (noteTopLeft) => set({ noteTopLeft }),
+      setNoteSetSize: (noteSetSize) => set({ noteSetSize }),
       addPreferredColour: (kind, hex) =>
         set((s) => {
           const key = kind === 'pen' ? 'penColours' : 'highlightColours'
@@ -81,8 +89,8 @@ export const useToolPrefs = create<ToolPrefsState>()(
         noConfirm: s.noConfirm,
         penColours: s.penColours,
         highlightColours: s.highlightColours,
-        noteCentre: s.noteCentre,
-        noteFit: s.noteFit
+        noteTopLeft: s.noteTopLeft,
+        noteSetSize: s.noteSetSize
       })
     }
   )
