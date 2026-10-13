@@ -79,7 +79,7 @@ export const useToolPrefs = create<ToolPrefsState>()(
   )
 )
 
-/** The kind of colour the tool draws with: the highlighter keeps its own pair. */
+/** The kind of colour the tool draws with: the highlighter keeps its own pair, and a sticky note shares it. */
 export function colourKindFor(tool: string): ColourKind {
-  return tool === 'highlight' ? 'highlight' : 'pen'
+  return tool === 'highlight' || tool === 'note' ? 'highlight' : 'pen'
 }

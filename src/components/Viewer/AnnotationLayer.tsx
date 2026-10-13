@@ -40,7 +40,7 @@ import { effectiveRuns, runFontStyle, runHasStyle, runUnderlined, runsToPlainTex
 import { userLinkHref } from '../../lib/links'
 import { centreOnTap, tapRedactBox } from '../../lib/tapPlacement'
 import { isRedactableShape, redactionFromShape, topShapeAt, type RedactableShape } from '../../lib/redactShape'
-import { LINE_HEIGHT, layoutText, textBoxSize } from '../../lib/textLayout'
+import { LINE_HEIGHT, NOTE_INK, layoutText, noteInset, notePaper, textBoxSize } from '../../lib/textLayout'
 import { useToolPrefs } from '../../stores/toolPrefsStore'
 import { SIG_DETAIL_SIZE, SIG_LABEL_SIZE, estimateTextWidth, sigFieldLayout, sigLabelColumn } from '../../lib/sigFieldLayout'
 import type { Annotation, DrawAnnotation, ImageAnnotation, ImageBorder, SignatureData, SignatureFieldAnnotation, SigAlign, TextAnnotation, Tool, TextRun } from '../../types/annotations'
@@ -55,6 +55,11 @@ const FONT_STACK = FONT_CSS
 const TEXT_RUNS_GROUP = 'text-runs'
 
 const HIGHLIGHT_OPACITY = 0.4
+
+// A new sticky note's width and type size, in display pixels (like every
+// placement: the same on screen at any zoom, capped by fitPlacement).
+const NOTE_SIZE_PX = 180
+const NOTE_FONT_PX = 14
 
 // The marks "Don't confirm annotations" (Tune this app) puts down without
 // selecting them — see `place`. Text is left out (it has to be typed into), as
@@ -147,6 +152,7 @@ function getAnnotationBBox(a: Annotation): { x: number; y: number; width: number
 // with them has nothing to confirm.
 const PLACEMENT_TOOLS = new Set<Tool>([
   'text',
+  'note',
   'draw',
   'highlight',
   'rect',
@@ -345,23 +351,28 @@ const PILL_COLORS: { hex: string; name: 'annotate.color.black' | 'annotate.color
 
 function ColorCluster({
   color,
-  setColor
+  setColor,
+  swatches
 }: {
   color: string
   setColor: (c: string) => void
+  // In place of black / white: a sticky note offers the highlighter's two
+  // colour shortcuts (black would make a grey card), named by their hex.
+  swatches?: string[]
 }) {
   const t = useT()
+  const shown = swatches ? swatches.map((hex) => ({ hex, label: hex.toUpperCase() })) : PILL_COLORS.map((c) => ({ hex: c.hex, label: t(c.name) }))
   // The wheel shows as "chosen" whenever the colour in play is not one of the
   // two swatches, so the cluster always says which of the three is live.
-  const isCustom = !PILL_COLORS.some((c) => c.hex === color)
+  const isCustom = !shown.some((c) => c.hex === color)
   return (
     <>
-      {PILL_COLORS.map((c) => (
+      {shown.map((c) => (
         <button
           key={c.hex}
           type="button"
-          title={t(c.name)}
-          aria-label={t(c.name)}
+          title={c.label}
+          aria-label={c.label}
           // For tests: the toolbar's swatches carry the same names.
           data-pill-swatch=""
           // The text pill is rendered while a text box may be being edited, so
@@ -901,6 +912,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const strokeWidth = useAnnotationStore((s) => s.strokeWidth)
   const highlightWidth = useAnnotationStore((s) => s.highlightWidth)
   const stayOnTool = useToolPrefs((s) => s.stayOnTool)
+  const highlightColours = useToolPrefs((s) => s.highlightColours)
   const lineSnap = useAnnotationStore((s) => s.lineSnap)
   const fontSize = useAnnotationStore((s) => s.fontSize)
   const fontFamily = useAnnotationStore((s) => s.fontFamily)
@@ -1533,6 +1545,26 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         text: '',
         color,
         fontSize: fontSize / scale,
+        fontFamily
+      })
+      setEditingId(id)
+    } else if (tool === 'note') {
+      // A sticky note: a pastel card of the current colour, its top-left at
+      // the tap, ready to type on (James, 2026-10-13). A text box underneath
+      // (see TextAnnotation.note), so it edits, resizes and exports like one.
+      const id = crypto.randomUUID()
+      const size = fitPlacement(NOTE_SIZE_PX / scale, NOTE_SIZE_PX / scale, pageW, pageH)
+      add({
+        id,
+        pageIndex,
+        type: 'text',
+        x: pos.x,
+        y: pos.y,
+        text: '',
+        color: NOTE_INK,
+        note: color,
+        wrapWidth: size.width,
+        fontSize: NOTE_FONT_PX / scale,
         fontFamily
       })
       setEditingId(id)
@@ -2514,7 +2546,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   function commitEdit(runs: TextRun[]) {
     if (!editingAnnotation) return
     const plain = runsToPlainText(runs)
-    if (!plain.trim()) {
+    // An empty text box is nothing and goes; an empty sticky note is still a
+    // note (left to write on later), so it stays.
+    if (!plain.trim() && !editingAnnotation.note) {
       remove(editingAnnotation.id)
     } else {
       // Uniform, unstyled text collapses back to a plain `text` (no runs) to
@@ -2697,7 +2731,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                     x={a.x}
                     y={a.y}
                     rotation={a.rotation ?? 0}
-                    visible={a.id !== editingId}
+                    // A note's card stays up while it's typed on; only its
+                    // words make way for the editor.
+                    visible={!!a.note || a.id !== editingId}
                     onTransform={(e) => onTextTransform(a, e)}
                     onDblClick={() => onTextDblClick(a)}
                     onDblTap={() => onTextDblClick(a)}
@@ -2708,12 +2744,35 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                         side handle would then scale from the ink width and the
                         wrap width would creep on every drag. Non-listening, so
                         it doesn't widen the clickable area. */}
-                    <Rect x={0} y={0} width={box.width} height={box.height} listening={false} />
+                    {a.note ? (
+                      // A sticky note's card IS its box (see textBoxSize), so
+                      // the Transformer and every resize see the card.
+                      <Rect
+                        x={0}
+                        y={0}
+                        width={box.width}
+                        height={box.height}
+                        fill={notePaper(a.note)}
+                        cornerRadius={2}
+                        shadowColor="#0f172a"
+                        shadowOpacity={0.18}
+                        shadowBlur={6}
+                        shadowOffsetY={2}
+                        listening={false}
+                      />
+                    ) : (
+                      <Rect x={0} y={0} width={box.width} height={box.height} listening={false} />
+                    )}
                     {/* The runs live one level down so a side drag can undo the
                         Transformer's horizontal stretch on them (see
                         onTextTransform) — the box follows the handle while the
                         letters keep their shape and re-flow into it. */}
-                    <Group name={TEXT_RUNS_GROUP}>
+                    <Group
+                      name={TEXT_RUNS_GROUP}
+                      x={noteInset(a)}
+                      y={noteInset(a)}
+                      visible={a.id !== editingId}
+                    >
                       {lines.map((line, li) =>
                         line.runs.map((run, i) => (
                           <Text
@@ -3217,7 +3276,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           apiRef={editorApiRef}
           onCommit={commitEdit}
           onCancel={() => {
-            if (!editingAnnotation.text.trim()) {
+            if (!editingAnnotation.text.trim() && !editingAnnotation.note) {
               remove(editingAnnotation.id)
             }
             setEditingId(null)
@@ -3453,7 +3512,11 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 repaints the entire text box even mid-edit with part of it
                 selected, which is why it sits after the separator rather than
                 among the run-level toggles. */}
-            <ColorCluster color={color} setColor={setColor} />
+            {selected.note ? (
+              <ColorCluster color={selected.note} setColor={setColor} swatches={highlightColours} />
+            ) : (
+              <ColorCluster color={color} setColor={setColor} />
+            )}
           </div>
         )
       })()}
@@ -4758,8 +4821,9 @@ function TextEditor({
         // extra 0.125×fontSize lines the two centres up. The dashed affordance
         // uses `outline` (no layout effect) and padding is zero, so the left
         // edge matches Konva's x exactly.
-        left: annotation.x * scale,
-        top: annotation.y * scale - annotation.fontSize * scale * 0.125,
+        // A sticky note's words sit inside its card by the inset.
+        left: (annotation.x + noteInset(annotation)) * scale,
+        top: (annotation.y + noteInset(annotation)) * scale - annotation.fontSize * scale * 0.125,
         color: annotation.color,
         fontSize: (annotation.fontSize * scale) + 'px',
         fontFamily: FONT_STACK[annotation.fontFamily ?? 'sans'],
@@ -4768,7 +4832,7 @@ function TextEditor({
         // the canvas will wrap it at; one without stays the single growing line
         // it has always been.
         whiteSpace: wrapped ? 'pre-wrap' : 'pre',
-        width: wrapped ? annotation.wrapWidth! * scale + 'px' : undefined,
+        width: wrapped ? (annotation.wrapWidth! - 2 * noteInset(annotation)) * scale + 'px' : undefined,
         background: 'transparent',
         border: 'none',
         outline: '1px dashed #ea580c',

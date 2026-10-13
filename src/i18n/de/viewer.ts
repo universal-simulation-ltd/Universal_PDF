@@ -57,6 +57,7 @@ const viewer: Messages['viewer'] = {
   'toolbar.show_more_fonts': 'Mehr Schriften anzeigen',
   'toolbar.tool_free_draw': 'Freihandzeichnen',
   'toolbar.tool_highlighter': 'Textmarker',
+  'toolbar.tool_sticky_note': 'Haftnotiz', // a pastel card you place and type on
   'toolbar.stroke': 'Strichstärke',
   'toolbar.colour': 'Farbe',
   'toolbar.upload_image': 'Bild hinzufügen und platzieren',

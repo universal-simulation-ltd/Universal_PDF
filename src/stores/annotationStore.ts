@@ -106,7 +106,8 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
         // A redaction carries its colour as `fill` — the solid block it is
         // baked as — where every other annotation carries `color`. Same
         // swatches, same setter; only the field differs.
-        const patch = sel.type === 'redact' ? { fill: color } : { color }
+        // A sticky note's colour is its paper; its ink stays dark.
+        const patch = sel.type === 'redact' ? { fill: color } : sel.type === 'text' && sel.note ? { note: color } : { color }
         return {
           color,
           annotations: s.annotations.map((a) =>

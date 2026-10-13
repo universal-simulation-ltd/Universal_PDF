@@ -23,6 +23,9 @@ export type Tool =
   // signature pad and drops the resulting signature straight into the box.
   | 'sigfield'
   | 'form'
+  // A sticky note: a pastel card you type on. Stored as a TextAnnotation with
+  // `note` set — see that field.
+  | 'note'
 
 type Base = { id: string; pageIndex: number }
 
@@ -69,6 +72,12 @@ export type TextAnnotation = Base & {
   // formatting can apply to part of the text. `text` mirrors the concatenation
   // for search / export fallback / back-compat.
   runs?: TextRun[]
+  // Set on a STICKY NOTE (James, 2026-10-13): the colour the note was made in.
+  // The card is a pastel of it (lib/textLayout `notePaper`); `color` stays the
+  // ink. For a note, x / y / wrapWidth are the CARD, and the text sits inside
+  // it by `noteInset` — so selecting, moving, resizing and exporting all see
+  // the card as the box, with no code of their own.
+  note?: string
 }
 
 export type DrawAnnotation = Base & {

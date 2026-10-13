@@ -57,6 +57,7 @@ export default {
   'toolbar.show_more_fonts': 'Show more fonts',
   'toolbar.tool_free_draw': 'Free draw',
   'toolbar.tool_highlighter': 'Highlighter',
+  'toolbar.tool_sticky_note': 'Sticky note', // a pastel card you place and type on
   'toolbar.stroke': 'Stroke', // line thickness label
   'toolbar.colour': 'Colour',
   'toolbar.upload_image': 'Upload and place an image',

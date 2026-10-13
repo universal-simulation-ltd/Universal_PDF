@@ -9,7 +9,7 @@ import type { Annotation, RedactAnnotation, SignatureFieldAnnotation } from '../
 import type { FormFieldValue } from '../stores/formStore'
 import { hexToPdfRgb } from './colors'
 import { fontBase, type PdfBaseFont } from './fonts'
-import { LINE_HEIGHT, layoutText } from './textLayout'
+import { LINE_HEIGHT, layoutText, noteInset, notePaper, textBoxSize } from './textLayout'
 import { runUnderlined } from './textRuns'
 import { openPdf, type PDFDocumentProxy } from './pdfjs'
 import { redactFillHex } from './redactGate'
@@ -463,9 +463,27 @@ async function drawAnnotations(
             // differently, and a file whose words wrapped somewhere other than
             // the editor showed them would be the bug. Only the advance WITHIN a
             // line uses the embedded font's own widths, as it always has.
+            // A sticky note: its card first, as the editor draws it (the box IS
+            // the card — see textBoxSize), then the words inside its margin.
+            const inset = noteInset(a)
+            if (a.note) {
+              const card = textBoxSize(a)
+              // pdf-lib turns a rectangle about its bottom-left corner; the
+              // note turns about its top-left, so start from where that
+              // corner has gone.
+              const [cx, cy] = rotatePoint(a.x, a.y + card.height, a.x, a.y, rad)
+              page.drawRectangle({
+                x: sx(cx),
+                y: toY(cy),
+                width: sw(card.width),
+                height: sw(card.height),
+                color: hexToPdfRgb(notePaper(a.note)),
+                rotate: rot ? degrees(-rot) : undefined
+              })
+            }
             for (const [li, line] of layoutText(a).entries()) {
-              const lineY = a.y + li * a.fontSize * LINE_HEIGHT
-              let offset = 0 // canvas-space advance from a.x
+              const lineY = a.y + inset + li * a.fontSize * LINE_HEIGHT
+              let offset = inset // canvas-space advance from a.x
               for (const run of line.runs) {
                 const { font, text: body } = await fonts.forText(run.text, fontBase(a.fontFamily), run.bold, run.italic)
                 const runW = body ? font.widthOfTextAtSize(body, a.fontSize) : 0

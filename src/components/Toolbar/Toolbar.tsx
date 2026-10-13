@@ -53,6 +53,18 @@ function HighlighterIcon({ className = 'w-6 h-6' }: { className?: string }) {
   )
 }
 
+// A sticky note: a pale yellow square with its corner turned up and a few
+// lines of writing.
+function StickyNoteIcon({ className = 'w-6 h-6' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+      <path d="M4 4 H20 V15 L15 20 H4 Z" fill="#fef08a" stroke="#a16207" strokeWidth="0.9" strokeLinejoin="round" />
+      <path d="M20 15 H15 V20 Z" fill="#facc15" stroke="#a16207" strokeWidth="0.9" strokeLinejoin="round" />
+      <path d="M7.5 8.5 H16.5 M7.5 11.5 H16.5 M7.5 14.5 H12" stroke="#a16207" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function QrIcon({ className = 'w-6 h-6' }: { className?: string }) {
   // Finder eyes in the suite orange, modules in a light slate — the same
   // arrangement the generator's own default wears, so the button looks like
@@ -775,6 +787,20 @@ export function ToolbarDesktopTools() {
           {tool === 'highlight' && <ActiveStroke />}
         </button>
         </div>
+        {/* Sticky note, beside the highlighter: both are for reviewing. It
+            takes the highlighter's colours, as a pastel card. */}
+        <button
+          onClick={() => handleToolClick('note', undefined, highlightColours[0])}
+          title={t('viewer.toolbar.tool_sticky_note')}
+          aria-label={t('viewer.toolbar.tool_sticky_note')}
+          aria-pressed={tool === 'note'}
+          className={`relative w-9 h-9 rounded-[10px] flex items-center justify-center transition-colors ${
+            tool === 'note' ? ACTIVE_CHIP : 'hover:bg-slate-700'
+          }`}
+        >
+          <StickyNoteIcon className="w-5 h-5" />
+          {tool === 'note' && <ActiveStroke />}
+        </button>
         {/* self-stretch, not self-center: the swatches are shorter than the tool
             buttons, and this is the box the colour popup hangs off — matched
             heights are what keep it from opening inside the toolbar. */}
@@ -1159,6 +1185,23 @@ export function ToolbarMobile() {
             }`}
           >
             <HighlighterIcon className="w-6 h-6" />
+          </button>
+          <button
+            onClick={() => {
+              if (tool !== 'note') {
+                setSelected(null)
+                setColor(useToolPrefs.getState().highlightColours[0])
+              }
+              setTool('note')
+            }}
+            title={t('viewer.toolbar.tool_sticky_note')}
+            aria-label={t('viewer.toolbar.tool_sticky_note')}
+            aria-pressed={tool === 'note'}
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+              tool === 'note' ? ACTIVE_CHIP : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            <StickyNoteIcon className="w-6 h-6" />
           </button>
           {DRAW_SHAPES.map((s) => (
             <button

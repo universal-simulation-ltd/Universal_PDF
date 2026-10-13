@@ -57,6 +57,7 @@ const viewer: Messages['viewer'] = {
   'toolbar.show_more_fonts': 'Mostrar mais fontes',
   'toolbar.tool_free_draw': 'Desenho livre',
   'toolbar.tool_highlighter': 'Marca-texto',
+  'toolbar.tool_sticky_note': 'Nota adesiva', // a pastel card you place and type on
   'toolbar.stroke': 'Traço',
   'toolbar.colour': 'Cor',
   'toolbar.upload_image': 'Enviar e posicionar uma imagem',

@@ -57,6 +57,7 @@ const viewer: Messages['viewer'] = {
   'toolbar.show_more_fonts': 'Daha fazla yazı tipi göster',
   'toolbar.tool_free_draw': 'Serbest çizim',
   'toolbar.tool_highlighter': 'Vurgulayıcı',
+  'toolbar.tool_sticky_note': 'Yapışkan not', // a pastel card you place and type on
   'toolbar.stroke': 'Kalınlık',
   'toolbar.colour': 'Renk',
   'toolbar.upload_image': 'Görsel yükle ve yerleştir',

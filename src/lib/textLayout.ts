@@ -78,7 +78,8 @@ function placeLine(runs: TextRun[], fontSize: number, cssFamily: string): TextLi
 export function layoutText(a: TextAnnotation): TextLine[] {
   const cssFamily = cssFamilyOf(a)
   const runs = effectiveRuns(a)
-  const wrapWidth = a.wrapWidth
+  // A sticky note's wrap width is its card; the words wrap inside the margin.
+  const wrapWidth = a.wrapWidth && a.note ? Math.max(a.fontSize, a.wrapWidth - 2 * noteInset(a)) : a.wrapWidth
   if (!wrapWidth || !(wrapWidth > 0)) return [placeLine(runs, a.fontSize, cssFamily)]
 
   const lines: TextRun[][] = [[]]
@@ -106,9 +107,46 @@ export function layoutText(a: TextAnnotation): TextLine[] {
 export function textBoxSize(a: TextAnnotation): { width: number; height: number; lines: number } {
   const lines = layoutText(a)
   const measured = lines.reduce((max, l) => Math.max(max, l.width), 0)
+  const textHeight = a.fontSize * LINE_HEIGHT * Math.max(1, lines.length)
+  if (a.note) {
+    // The card: the words plus their margin, and never shorter than most of
+    // its width, so a one-line note is still a note-shaped square-ish card.
+    const inset = noteInset(a)
+    const width = a.wrapWidth && a.wrapWidth > 0 ? a.wrapWidth : measured + 2 * inset
+    return { width, height: Math.max(textHeight + 2 * inset, width * NOTE_MIN_ASPECT), lines: lines.length }
+  }
   return {
     width: a.wrapWidth && a.wrapWidth > 0 ? a.wrapWidth : measured,
-    height: a.fontSize * LINE_HEIGHT * Math.max(1, lines.length),
+    height: textHeight,
     lines: lines.length
   }
 }
+
+// ── Sticky notes ─────────────────────────────────────────────────────────────
+// Shared by the editor and the export, so the card and its words land in the
+// same place in both.
+
+// A card is at least this tall for its width.
+const NOTE_MIN_ASPECT = 0.8
+// How much of the note's colour is in its paper; the rest is white.
+const NOTE_TINT = 0.3
+
+/** The margin between a note's card and its words: in proportion to the type, so scaling a note keeps its look. */
+export function noteInset(a: Pick<TextAnnotation, 'fontSize' | 'note'>): number {
+  return a.note ? a.fontSize * 0.7 : 0
+}
+
+/** A note's paper: a pastel of the colour it was made in. */
+export function notePaper(hex: string): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim())
+  if (!m) return '#fef9c3'
+  const n = parseInt(m[1], 16)
+  const mix = (c: number) => Math.round(c * NOTE_TINT + 255 * (1 - NOTE_TINT))
+  const r = mix((n >> 16) & 255)
+  const g = mix((n >> 8) & 255)
+  const b = mix(n & 255)
+  return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')
+}
+
+/** The ink a note is written in: dark, whatever the paper. */
+export const NOTE_INK = '#1f2937'
