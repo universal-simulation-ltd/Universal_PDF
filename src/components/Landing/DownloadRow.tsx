@@ -1,5 +1,8 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
+import { useUniversal } from '@unisim/sdk'
 import { useT } from '../../i18n'
+import { isNativeShell } from '../../lib/nativeOpen'
+import { DESKTOP_READY, normaliseInterestEmail, registerDesktopInterest } from '../../lib/appInterest'
 // The app's own icon, the cobalt page with the orange highlighter: the thing
 // you get when you download (James, 2026-10-12). Drawn by
 // scripts/app-icon.mjs with the rest, so it can't drift from the real one.
@@ -146,6 +149,8 @@ export default function DownloadRow() {
         </ul>
       </div>
 
+      {showDesktopNotify() && <DesktopNotify />}
+
       {showIosHint && (
         <p id={iosHintId} className="mx-auto mt-1 max-w-sm text-[13px] text-slate-500">
           {t.rich('app.download_ios_hint', {
@@ -155,5 +160,143 @@ export default function DownloadRow() {
         </p>
       )}
     </section>
+  )
+}
+
+/**
+ * The website only, and only until the desktop app is ready (`DESKTOP_READY`
+ * in lib/appInterest.ts). Not in the desktop app (it is the thing being waited
+ * for; DownloadRow already returns null there), not in the phone apps or the
+ * extension (every one of those is Vite mode 'desktop', and the phone shell is
+ * also caught by `isNativeShell()`).
+ */
+function showDesktopNotify(): boolean {
+  if (DESKTOP_READY) return false
+  if (typeof window === 'undefined' || window.desktop) return false
+  if (import.meta.env.MODE === 'desktop' || isNativeShell()) return false
+  return /^https?:$/.test(window.location.protocol)
+}
+
+type NotifyState = 'idle' | 'busy' | 'ok' | 'already' | 'bad' | 'later' | 'offline'
+
+const NOTIFY_MSG = {
+  busy: 'app.notify_desktop_busy',
+  ok: 'app.notify_desktop_ok',
+  already: 'app.notify_desktop_already',
+  bad: 'app.notify_desktop_bad',
+  later: 'app.notify_desktop_later',
+  offline: 'app.notify_desktop_offline',
+} as const
+
+/**
+ * "Tell me when the desktop app is ready": a quiet link under the marks that
+ * opens a one-field form. The marks still download today's early release from
+ * GitHub; this is for people who would rather wait for the finished one.
+ *
+ * Hover is colour only, as a CSS transition, so leaving plays it back rather
+ * than snapping (BRANDING.md → Motion). Nothing here animates in.
+ */
+function DesktopNotify() {
+  const t = useT()
+  const { supabase } = useUniversal()
+  const [open, setOpen] = useState(false)
+  const [email, setEmail] = useState('')
+  const [state, setState] = useState<NotifyState>('idle')
+  // Addresses already taken this visit, so a second press can say "already
+  // on the list". In-page only: gone when the tab closes, never stored.
+  const sent = useRef(new Set<string>())
+  const inputRef = useRef<HTMLInputElement>(null)
+  const formId = useId()
+  const msgId = useId()
+
+  // Opening puts the cursor in the field; preventScroll so the page does not
+  // jump under the pointer.
+  useEffect(() => {
+    if (open) inputRef.current?.focus({ preventScroll: true })
+  }, [open])
+
+  const onSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    if (state === 'busy') return
+    const address = normaliseInterestEmail(email)
+    if (!address) {
+      setState('bad')
+      inputRef.current?.focus()
+      return
+    }
+    if (sent.current.has(address)) {
+      setState('already')
+      return
+    }
+    setState('busy')
+    const outcome = await registerDesktopInterest(supabase, address)
+    if (outcome === 'ok') {
+      sent.current.add(address)
+      setEmail('')
+    }
+    setState(outcome)
+  }
+
+  const isError = state === 'bad' || state === 'later' || state === 'offline'
+  const isDone = state === 'ok' || state === 'already'
+
+  return (
+    <div className="mx-auto mt-1 max-w-sm px-1">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={formId}
+        onClick={() => setOpen((was) => !was)}
+        className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-3 text-[13px] text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cobalt"
+      >
+        <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+        </svg>
+        {t('app.notify_desktop_label')}
+      </button>
+
+      {open && (
+        <form id={formId} onSubmit={onSubmit} noValidate className="mt-1 text-left" aria-busy={state === 'busy'}>
+          <div className="flex gap-2">
+            <input
+              ref={inputRef}
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              enterKeyHint="send"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                if (state === 'bad') setState('idle')
+              }}
+              placeholder="you@example.com"
+              aria-label={t('app.notify_desktop_email_aria')}
+              aria-invalid={state === 'bad' || undefined}
+              aria-describedby={msgId}
+              className="h-11 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-cobalt focus:outline-none focus:ring-1 focus:ring-cobalt aria-[invalid=true]:border-red-600"
+            />
+            <button
+              type="submit"
+              disabled={state === 'busy'}
+              className="h-11 shrink-0 rounded-lg bg-cobalt px-4 text-sm font-semibold text-white transition-colors hover:bg-cobalt-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cobalt focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {t('app.notify_desktop_button')}
+            </button>
+          </div>
+          <p
+            id={msgId}
+            role="status"
+            aria-live="polite"
+            className={`mt-1.5 min-h-[1.25rem] text-[13px] leading-snug ${
+              isError ? 'text-red-700' : isDone ? 'text-emerald-700' : 'text-slate-500'
+            }`}
+          >
+            {state === 'idle' ? '' : t(NOTIFY_MSG[state])}
+          </p>
+          <p className="mt-1 text-[11.5px] leading-snug text-slate-500">{t('app.notify_desktop_small_print')}</p>
+        </form>
+      )}
+    </div>
   )
 }

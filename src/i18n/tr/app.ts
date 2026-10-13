@@ -165,6 +165,18 @@ const app: Messages['app'] = {
   'download_ios_share': 'Paylaş',
   'download_ios_add_to_home': 'Ana Ekrana Ekle',
 
+  // DownloadRow: "Tell me when the desktop app is ready"
+  'notify_desktop_label': "Bilgisayar uygulaması hazır olduğunda bana haber ver",
+  'notify_desktop_email_aria': "E-posta adresiniz",
+  'notify_desktop_button': "Bana haber ver",
+  'notify_desktop_busy': "Ekleniyor…",
+  'notify_desktop_ok': "Listedesiniz. Bilgisayar uygulaması hazır olduğunda tek bir e-posta göndereceğiz.",
+  'notify_desktop_already': "Zaten listedesiniz. Bilgisayar uygulaması hazır olduğunda tek bir e-posta göndereceğiz.",
+  'notify_desktop_bad': "Bu bir e-posta adresine benzemiyor. Lütfen kontrol edip yeniden deneyin.",
+  'notify_desktop_later': "Şu anda eklenemediniz. Lütfen daha sonra yeniden deneyin ya da inbox@unisim.co.uk adresine yazın.",
+  'notify_desktop_offline': "Sunucumuza ulaşılamadı. Bağlantınızı kontrol edip yeniden deneyin.",
+  'notify_desktop_small_print': "Bilgisayar uygulaması erken bir sürüm. Yalnızca e-posta adresinizi saklarız, uygulama hazır olduğunda tek bir e-posta göndeririz ve adresi bundan sonraki 30 gün içinde sileriz. Uygulama 24 ay içinde hazır olmazsa adres yine de silinir. Çerez yok, başka hiçbir bilgi de yok.",
+
   // LivePreview
   'preview_failed': 'Önizleme başarısız oldu',
   'preview_title': 'Önizleme',

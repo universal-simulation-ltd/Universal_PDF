@@ -165,6 +165,18 @@ const app: Messages['app'] = {
   'download_ios_share': 'Condividi',
   'download_ios_add_to_home': 'Aggiungi alla schermata Home',
 
+  // DownloadRow: "Tell me when the desktop app is ready"
+  'notify_desktop_label': "Avvisami quando l’app per computer sarà pronta",
+  'notify_desktop_email_aria': "Il tuo indirizzo email",
+  'notify_desktop_button': "Avvisami",
+  'notify_desktop_busy': "Iscrizione in corso…",
+  'notify_desktop_ok': "Sei nella lista. Ti invieremo una sola email quando l’app per computer sarà pronta.",
+  'notify_desktop_already': "Sei già nella lista. Ti invieremo una sola email quando l’app per computer sarà pronta.",
+  'notify_desktop_bad': "Non sembra un indirizzo email. Controllalo e riprova.",
+  'notify_desktop_later': "Non siamo riusciti a iscriverti in questo momento. Riprova più tardi o scrivi a inbox@unisim.co.uk.",
+  'notify_desktop_offline': "Non siamo riusciti a raggiungere il nostro server. Controlla la connessione e riprova.",
+  'notify_desktop_small_print': "L’app per computer è una versione preliminare. Conserviamo solo il tuo indirizzo email, ti inviamo una sola email quando l’app sarà pronta e cancelliamo l’indirizzo entro 30 giorni da allora. Se l’app non è pronta entro 24 mesi, cancelliamo comunque l’indirizzo. Nessun cookie e nient’altro su di te.",
+
   // LivePreview
   'preview_failed': 'Anteprima non riuscita',
   'preview_title': 'Anteprima',

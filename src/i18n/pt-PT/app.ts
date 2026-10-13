@@ -165,6 +165,18 @@ const app: Messages['app'] = {
   'download_ios_share': 'Partilhar',
   'download_ios_add_to_home': 'Adicionar ao ecrã principal',
 
+  // DownloadRow: "Tell me when the desktop app is ready"
+  'notify_desktop_label': "Avisar-me quando a app para computador estiver pronta",
+  'notify_desktop_email_aria': "Endereço de email",
+  'notify_desktop_button': "Avisar-me",
+  'notify_desktop_busy': "A adicionar…",
+  'notify_desktop_ok': "Está na lista. Vamos enviar um único email quando a app para computador estiver pronta.",
+  'notify_desktop_already': "Já está na lista. Vamos enviar um único email quando a app para computador estiver pronta.",
+  'notify_desktop_bad': "Isto não parece um endereço de email. Verifique-o e tente novamente.",
+  'notify_desktop_later': "Não foi possível adicionar o endereço agora. Tente novamente mais tarde ou escreva para inbox@unisim.co.uk.",
+  'notify_desktop_offline': "Não foi possível contactar o nosso servidor. Verifique a ligação e tente novamente.",
+  'notify_desktop_small_print': "A app para computador é uma versão inicial. Guardamos apenas o endereço de email, enviamos um único email quando a app estiver pronta e eliminamos o endereço até 30 dias depois. Se a app não estiver pronta dentro de 24 meses, o endereço é eliminado na mesma. Sem cookies e mais nada sobre si.",
+
   // LivePreview
   'preview_failed': 'Falha na pré-visualização',
   'preview_title': 'Pré-visualização',

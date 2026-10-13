@@ -165,6 +165,18 @@ const app: Messages['app'] = {
   'download_ios_share': 'Teilen',
   'download_ios_add_to_home': 'Zum Home-Bildschirm',
 
+  // DownloadRow: "Tell me when the desktop app is ready"
+  'notify_desktop_label': "Sag mir Bescheid, wenn die Desktop-App fertig ist",
+  'notify_desktop_email_aria': "Deine E-Mail-Adresse",
+  'notify_desktop_button': "Benachrichtigen",
+  'notify_desktop_busy': "Wird eingetragen…",
+  'notify_desktop_ok': "Du stehst auf der Liste. Wir schicken dir eine einzige E-Mail, sobald die Desktop-App fertig ist.",
+  'notify_desktop_already': "Du stehst schon auf der Liste. Wir schicken dir eine einzige E-Mail, sobald die Desktop-App fertig ist.",
+  'notify_desktop_bad': "Das sieht nicht nach einer E-Mail-Adresse aus. Bitte prüfe sie und versuche es noch einmal.",
+  'notify_desktop_later': "Wir konnten dich gerade nicht eintragen. Bitte versuche es später noch einmal oder schreib an inbox@unisim.co.uk.",
+  'notify_desktop_offline': "Wir konnten unseren Server nicht erreichen. Prüfe deine Verbindung und versuche es noch einmal.",
+  'notify_desktop_small_print': "Die Desktop-App ist eine frühe Version. Wir speichern nur deine E-Mail-Adresse, schicken dir eine einzige E-Mail, sobald die App fertig ist, und löschen die Adresse innerhalb von 30 Tagen danach. Ist die App nach 24 Monaten noch nicht fertig, löschen wir die Adresse trotzdem. Keine Cookies und sonst nichts über dich.",
+
   // LivePreview
   'preview_failed': 'Vorschau fehlgeschlagen',
   'preview_title': 'Vorschau',

@@ -136,6 +136,18 @@ like a lie.
   goes to Google, not to us, encrypted, and Google says it does not pass it
   on. See [Google's ML Kit data disclosure](https://developers.google.com/ml-kit/android-data-disclosure).
   The iPhone and iPad scanner is Apple's VisionKit and sends nothing.
+- **"Tell me when the desktop app is ready" — the website only, and only if
+  you type your email address.** Under the download marks, the website offers
+  an optional sign-up for the finished desktop app (today's download is an
+  early release). Pressing **Notify me** sends one request with three things:
+  the app (`pdf`), the release you are waiting for (`desktop`) and the address
+  you typed. The address is the only thing kept — no account, no IP address,
+  no browser details, no cookie. You get one email when the desktop app is
+  ready, and the address is deleted within 30 days of that, or 24 months after
+  you signed up if it is never ready. The desktop app, the phone apps and the
+  browser extension don't show it. See
+  [`src/lib/appInterest.ts`](src/lib/appInterest.ts) and `DesktopNotify` in
+  [`src/components/Landing/DownloadRow.tsx`](src/components/Landing/DownloadRow.tsx).
 - **The changelog and update notice**, which is just fetching a list of
   releases.
 

@@ -64,6 +64,8 @@
     "test:sign-access": "node --experimental-strip-types scripts/signAccessSecret.test.mjs",
     "test:encrypt": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/pdfEncrypt.test.mjs",
     "test:names": "node --experimental-strip-types scripts/exportName.test.mjs",
+    "test:app-interest": "node --experimental-strip-types scripts/appInterest.test.mjs",
+    "test:notify-desktop": "node e2e/notify-desktop.e2e.mjs",
     "test:hosted-paths": "node --experimental-strip-types scripts/hostedPath.test.mjs",
     "test:heic-sniff": "node --experimental-strip-types scripts/heicSniff.test.mjs",
     "test:jpeg-orientation": "node --experimental-strip-types scripts/jpegOrientation.test.mjs",

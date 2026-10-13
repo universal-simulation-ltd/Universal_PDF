@@ -126,7 +126,9 @@ Son açılan dosyalar, bu cihazdaki tarayıcınızın kendi depolama alanında t
 
 ## PDF’iniz cihazınızdan çıkmasa bile uygulamanın gönderdikleri
 
-Web sitesinde ve bilgisayar uygulamasında bir Universal ID ile giriş yapabilirsiniz; giriş yapmışken uygulama, hesabınızın etkinlik sayfası için açıldığını kaydeder. Telefon uygulamalarında ve tarayıcı uzantısında hiç giriş yoktur. Web sitesinde, uygulamayı her gün ilk açışınızda, ilk tıklamanızdan veya tuşa basmanızdan sonra anonim günlük açılış sayısına bir de ekler. Bu sayım yalnızca uygulamanın adını ve platform türünü (sitede "web") içerir: hiçbir tanımlayıcı, hesap ya da ne yaptığınıza dair bir şey yoktur. "Bugün sayıldı" işareti cihazınızda kalır ve asla gönderilmez. Telefon ve bilgisayar uygulamaları ile tarayıcı uzantısı bunu göndermez. Uygulamanın gönderdiği hiçbir şey dosyalarınızla ilgili bir şey içermez. Reklam ya da üçüncü taraf izleme yoktur.`,
+Web sitesinde ve bilgisayar uygulamasında bir Universal ID ile giriş yapabilirsiniz; giriş yapmışken uygulama, hesabınızın etkinlik sayfası için açıldığını kaydeder. Telefon uygulamalarında ve tarayıcı uzantısında hiç giriş yoktur. Web sitesinde, uygulamayı her gün ilk açışınızda, ilk tıklamanızdan veya tuşa basmanızdan sonra anonim günlük açılış sayısına bir de ekler. Bu sayım yalnızca uygulamanın adını ve platform türünü (sitede "web") içerir: hiçbir tanımlayıcı, hesap ya da ne yaptığınıza dair bir şey yoktur. "Bugün sayıldı" işareti cihazınızda kalır ve asla gönderilmez. Telefon ve bilgisayar uygulamaları ile tarayıcı uzantısı bunu göndermez. Uygulamanın gönderdiği hiçbir şey dosyalarınızla ilgili bir şey içermez. Reklam ya da üçüncü taraf izleme yoktur.
+
+Web sitesinde, indirme simgelerinin altından bilgisayar uygulaması hazır olduğunda haber verilmesini de isteyebilirsiniz. E-posta adresiniz yalnızca oraya yazarsanız bize gönderilir ve saklanan tek şey odur: bilgisayar uygulaması hazır olduğunda tek bir e-posta alırsınız; adres bundan sonraki 30 gün içinde, uygulama o zamana kadar hazır olmazsa da 24 ay sonra silinir.`,
   },
   {
     id: 'signing-a-pdf',

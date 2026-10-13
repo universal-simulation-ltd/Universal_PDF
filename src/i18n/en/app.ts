@@ -165,6 +165,18 @@ export default {
   'download_ios_share': 'Share', // Safari's Share button, use the name iOS shows in this language
   'download_ios_add_to_home': 'Add to Home Screen', // iOS share-sheet item, use the name iOS shows in this language
 
+  // DownloadRow: "Tell me when the desktop app is ready"
+  'notify_desktop_label': "Tell me when the desktop app is ready", // quiet link under the download marks that opens the sign-up; the desktop app is downloadable today as an early release
+  'notify_desktop_email_aria': "Your email address",
+  'notify_desktop_button': "Notify me", // submit button, short
+  'notify_desktop_busy': "Adding you…", // shown while the address is being sent
+  'notify_desktop_ok': "You're on the list. We'll send you one email when the desktop app is ready.",
+  'notify_desktop_already': "You're already on the list. We'll send you one email when the desktop app is ready.",
+  'notify_desktop_bad': "That doesn't look like an email address. Please check it and try again.",
+  'notify_desktop_later': "We couldn't add you just now. Please try again later, or write to inbox@unisim.co.uk.",
+  'notify_desktop_offline': "We couldn't reach our server. Check your connection and try again.",
+  'notify_desktop_small_print': "The desktop app is an early release. We keep only your email address, send you one email when it's ready, and delete it within 30 days of that. If it isn't ready within 24 months, we delete it anyway. No cookies, and nothing else about you.",
+
   // LivePreview
   'preview_failed': 'Preview failed',
   'preview_title': 'Preview', // noun, heading of the preview overlay

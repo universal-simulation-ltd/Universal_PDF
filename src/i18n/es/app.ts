@@ -165,6 +165,18 @@ const app: Messages['app'] = {
   'download_ios_share': 'Compartir',
   'download_ios_add_to_home': 'Añadir a pantalla de inicio',
 
+  // DownloadRow: "Tell me when the desktop app is ready"
+  'notify_desktop_label': "Avísame cuando la aplicación de escritorio esté lista",
+  'notify_desktop_email_aria': "Tu dirección de correo electrónico",
+  'notify_desktop_button': "Avisarme",
+  'notify_desktop_busy': "Apuntándote…",
+  'notify_desktop_ok': "Estás en la lista. Te enviaremos un solo correo cuando la aplicación de escritorio esté lista.",
+  'notify_desktop_already': "Ya estabas en la lista. Te enviaremos un solo correo cuando la aplicación de escritorio esté lista.",
+  'notify_desktop_bad': "Eso no parece una dirección de correo electrónico. Revísala y vuelve a intentarlo.",
+  'notify_desktop_later': "No hemos podido apuntarte ahora mismo. Vuelve a intentarlo más tarde o escribe a inbox@unisim.co.uk.",
+  'notify_desktop_offline': "No hemos podido conectar con nuestro servidor. Comprueba tu conexión y vuelve a intentarlo.",
+  'notify_desktop_small_print': "La aplicación de escritorio es una versión preliminar. Solo guardamos tu dirección de correo, te enviamos un solo correo cuando la aplicación esté lista y borramos la dirección en los 30 días siguientes. Si la aplicación no está lista en 24 meses, borramos la dirección igualmente. Sin cookies y nada más sobre ti.",
+
   // LivePreview
   'preview_failed': 'Error en la vista previa',
   'preview_title': 'Vista previa',
