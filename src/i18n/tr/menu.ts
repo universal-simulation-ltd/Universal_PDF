@@ -46,7 +46,7 @@ const menu: Messages['menu'] = {
   'find_and_redact': 'Bul ve karart',
   'find_and_redact_info': 'Metinde arama yapın ve tüm eşleşmeleri karartın.',
   'free_draw': 'Serbest çizim',
-  'free_draw_info': 'Karartmak için herhangi bir şeyin üzerine kutu sürükleyin veya kutu bırakmak için dokunun. Dolgu rengini araç çubuğundaki renklerden seçin.',
+  'free_draw_info': 'Karartmak için herhangi bir şeyin üzerine kutu sürükleyin veya kutu bırakmak için dokunun. Çizdiğiniz bir dikdörtgen ya da daireye dokunarak o şekli karartın. Dolgu rengini araç çubuğundaki renklerden seçin.',
   // FileMenu — Undo / Redo
   'undo_redo': 'Geri al / Yinele',
   'undo': 'Geri al',

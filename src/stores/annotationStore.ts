@@ -50,6 +50,11 @@ interface AnnotationState {
   update: (id: string, patch: Partial<Annotation>) => void
   updateMany: (patches: { id: string; patch: Partial<Annotation> }[]) => void
   remove: (id: string) => void
+  // Remove one annotation and add another (on top, as `add` would), as ONE
+  // history step, and select the new one — e.g. a shape turned into a
+  // redaction (see lib/redactShape). A separate remove + add was two steps, so
+  // one undo left the page with neither.
+  replace: (id: string, next: Annotation) => void
   removeMany: (ids: string[]) => void
   clearPage: (pageIndex: number) => void
   clearAll: () => void
@@ -226,6 +231,17 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
       past: pushPast(s.past, s.annotations),
       future: []
     })),
+  replace: (id, next) =>
+    set((s) => {
+      if (!s.annotations.some((a) => a.id === id)) return {}
+      return {
+        annotations: [...s.annotations.filter((a) => a.id !== id), next],
+        selectedId: next.id,
+        selectedIds: [next.id],
+        past: pushPast(s.past, s.annotations),
+        future: []
+      }
+    }),
   removeMany: (ids) =>
     set((s) => {
       if (ids.length === 0) return {}

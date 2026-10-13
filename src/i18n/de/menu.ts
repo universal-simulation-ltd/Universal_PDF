@@ -46,7 +46,7 @@ const menu: Messages['menu'] = {
   'find_and_redact': 'Suchen und schwärzen',
   'find_and_redact_info': 'Durchsucht den Text und schwärzt jeden Treffer.',
   'free_draw': 'Freihand',
-  'free_draw_info': 'Ziehe einen Rahmen über etwas, um es zu schwärzen, oder tippe, um einen zu setzen. Die Füllfarbe wählst du in der Symbolleiste.',
+  'free_draw_info': 'Ziehe einen Rahmen über etwas, um es zu schwärzen, oder tippe, um einen zu setzen. Tippe auf ein gezeichnetes Rechteck oder einen Kreis, um genau diese Form zu schwärzen. Die Füllfarbe wählst du in der Symbolleiste.',
   // FileMenu — Undo / Redo
   'undo_redo': 'Rückgängig / Wiederholen',
   'undo': 'Rückgängig',

@@ -46,7 +46,7 @@ const menu: Messages['menu'] = {
   'find_and_redact': 'Trova e oscura',
   'find_and_redact_info': 'Cerca nel testo e oscura ogni corrispondenza.',
   'free_draw': 'A mano libera',
-  'free_draw_info': 'Trascina un riquadro su qualsiasi elemento per oscurarlo, oppure tocca per inserirne uno. Scegli il riempimento tra i colori della barra degli strumenti.',
+  'free_draw_info': 'Trascina un riquadro su qualsiasi elemento per oscurarlo, oppure tocca per inserirne uno. Tocca un rettangolo o un cerchio che hai disegnato per oscurare quella forma. Scegli il riempimento tra i colori della barra degli strumenti.',
   // FileMenu — Undo / Redo
   'undo_redo': 'Annulla / Ripeti',
   'undo': 'Annulla',

@@ -46,7 +46,7 @@ const menu: Messages['menu'] = {
   'find_and_redact': 'Buscar y censurar',
   'find_and_redact_info': 'Busca en el texto y tapa todas las coincidencias.',
   'free_draw': 'Dibujo libre',
-  'free_draw_info': 'Arrastra un cuadro sobre lo que quieras censurar o toca para colocar uno. Elige el relleno entre los colores de la barra de herramientas.',
+  'free_draw_info': 'Arrastra un cuadro sobre lo que quieras censurar o toca para colocar uno. Toca un rectángulo o un círculo que hayas dibujado para censurar esa forma. Elige el relleno entre los colores de la barra de herramientas.',
   // FileMenu — Undo / Redo
   'undo_redo': 'Deshacer / Rehacer',
   'undo': 'Deshacer',

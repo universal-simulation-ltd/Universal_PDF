@@ -46,7 +46,7 @@ const menu: Messages['menu'] = {
   'find_and_redact': 'Localizar e tarjar',
   'find_and_redact_info': 'Pesquise o texto e cubra de preto todas as ocorrências.',
   'free_draw': 'Desenho livre',
-  'free_draw_info': 'Arraste uma caixa sobre qualquer coisa para tarjar, ou toque para inserir uma. Escolha o preenchimento nas cores da barra de ferramentas.',
+  'free_draw_info': 'Arraste uma caixa sobre qualquer coisa para tarjar, ou toque para inserir uma. Toque em um retângulo ou círculo que você desenhou para tarjar essa forma. Escolha o preenchimento nas cores da barra de ferramentas.',
   // FileMenu — Undo / Redo
   'undo_redo': 'Desfazer / Refazer',
   'undo': 'Desfazer',

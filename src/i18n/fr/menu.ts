@@ -46,7 +46,7 @@ const menu: Messages['menu'] = {
   'find_and_redact': 'Rechercher et caviarder',
   'find_and_redact_info': 'Recherchez dans le texte et masquez chaque occurrence.',
   'free_draw': 'Dessin libre',
-  'free_draw_info': 'Tracez un rectangle sur n’importe quel élément pour le caviarder, ou touchez pour en déposer un. Choisissez le remplissage parmi les couleurs de la barre d’outils.',
+  'free_draw_info': 'Tracez un rectangle sur n’importe quel élément pour le caviarder, ou touchez pour en déposer un. Touchez un rectangle ou un cercle que vous avez dessiné pour caviarder cette forme. Choisissez le remplissage parmi les couleurs de la barre d’outils.',
   // FileMenu — Undo / Redo
   'undo_redo': 'Annuler / Rétablir',
   'undo': 'Annuler',

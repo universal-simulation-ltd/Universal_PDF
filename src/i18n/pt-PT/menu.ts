@@ -46,7 +46,7 @@ const menu: Messages['menu'] = {
   'find_and_redact': 'Procurar e rasurar',
   'find_and_redact_info': 'Pesquisar o texto e tapar a negro todas as ocorrências.',
   'free_draw': 'Desenho livre',
-  'free_draw_info': 'Arrastar uma caixa sobre qualquer elemento para o rasurar, ou tocar para colocar uma. Escolher o preenchimento nas cores da barra de ferramentas.',
+  'free_draw_info': 'Arrastar uma caixa sobre qualquer elemento para o rasurar, ou tocar para colocar uma. Tocar num retângulo ou círculo desenhado para rasurar essa forma. Escolher o preenchimento nas cores da barra de ferramentas.',
   // FileMenu — Undo / Redo
   'undo_redo': 'Anular / Refazer',
   'undo': 'Anular',

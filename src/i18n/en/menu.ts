@@ -46,7 +46,7 @@ export default {
   'find_and_redact': 'Find and redact',
   'find_and_redact_info': 'Search the text and black out every match.',
   'free_draw': 'Free draw', // draw redaction boxes by hand
-  'free_draw_info': 'Drag a box over anything to redact it, or tap to drop one. Pick the fill from the toolbar colours.',
+  'free_draw_info': 'Drag a box over anything to redact it, or tap to drop one. Tap a box or circle you drew to redact that shape. Pick the fill from the toolbar colours.',
   // FileMenu — Undo / Redo
   'undo_redo': 'Undo / Redo', // menu section header
   'undo': 'Undo',

@@ -39,6 +39,7 @@ import { FONT_CSS } from '../../lib/fonts'
 import { effectiveRuns, runFontStyle, runHasStyle, runUnderlined, runsToPlainText, runsToHtml, parseRunsFromDom, mergeRuns } from '../../lib/textRuns'
 import { userLinkHref } from '../../lib/links'
 import { centreOnTap, tapRedactBox } from '../../lib/tapPlacement'
+import { isRedactableShape, redactionFromShape, topShapeAt, type RedactableShape } from '../../lib/redactShape'
 import { LINE_HEIGHT, layoutText, textBoxSize } from '../../lib/textLayout'
 import type { Annotation, DrawAnnotation, ImageAnnotation, ImageBorder, SignatureData, SignatureFieldAnnotation, SigAlign, TextAnnotation, Tool, TextRun } from '../../types/annotations'
 import type { QrPlacement } from '../../lib/qr/design'
@@ -823,6 +824,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const update = useAnnotationStore((s) => s.update)
   const updateMany = useAnnotationStore((s) => s.updateMany)
   const remove = useAnnotationStore((s) => s.remove)
+  const replace = useAnnotationStore((s) => s.replace)
   const removeMany = useAnnotationStore((s) => s.removeMany)
   const setSelected = useAnnotationStore((s) => s.setSelected)
   const setSelectedIds = useAnnotationStore((s) => s.setSelectedIds)
@@ -892,6 +894,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const annotations = allAnnotations.filter((a) => a.pageIndex === pageIndex)
 
   const drawingRef = useRef(false)
+  // The box/circle a Redact-tool gesture began on, if any — redacted on
+  // pointerup only if the gesture stayed a tap. See onPointerDown.
+  const redactTapTargetRef = useRef<string | null>(null)
   const activePointerIds = useRef(new Set<number>())
   // Set by cancelGesture; makes the dragend handlers discard the move instead
   // of writing it to the store. Cleared when a fresh gesture legitimately
@@ -1255,10 +1260,31 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       return
     }
     const stage = e.target.getStage()
+    // The Redact tool works like a fill bucket on a box or circle: a TAP on its
+    // outline or anywhere inside it turns that shape into a redaction of its
+    // own shape (James, 2026-10-13). It used to fall into the branch below,
+    // which SELECTED the shape and dropped back to the Select tool — so the
+    // only way on was the bucket, whose "Redact instead" gave a square.
+    //
+    // Hit-tested by geometry rather than trusting Konva's target, so the
+    // inside of an outline counts however Konva paints its hit region. Note
+    // the topmost shape under the finger now; onPointerUp acts on it only if
+    // the gesture stays a tap, so a sweep that starts on a shape draws a
+    // rectangle (it used to drag the shape). Anything else lying on top of it
+    // (an image, text, a signature, a field) keeps the old answer below.
+    redactTapTargetRef.current = null
+    if (tool === 'redact') {
+      const p = getPos(e)
+      const all = useAnnotationStore.getState().annotations
+      const hit = topShapeAt(all, pageIndex, p.x, p.y, REDACT_SHAPE_SLOP_PX / scale)
+      const konvaId = e.target !== stage ? getAnnotationIdFromTarget(e.target) : null
+      const konvaIndex = konvaId ? all.findIndex((a) => a.id === konvaId) : -1
+      if (hit && hit.index >= konvaIndex) redactTapTargetRef.current = hit.shape.id
+    }
     // If the click landed on an existing annotation, select it instead of
     // adding a new one — even when an annotation tool (tick/cross/etc.) is
     // active. Empty stage clicks fall through to the add/select logic below.
-    if (e.target !== stage) {
+    if (e.target !== stage && !redactTapTargetRef.current) {
       const hitId = getAnnotationIdFromTarget(e.target)
       if (hitId) {
         // A locked signature box (baked into an exported page) is click-to-sign
@@ -1350,6 +1376,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // low enough that a deliberate swipe never places, high enough that the
   // wobble in a real tap on glass still does.
   const TAP_SLOP_PX = 10
+
+  // How far outside a box or circle a Redact-tool tap may land and still count
+  // as on it, in CSS pixels — the outline is 2px, and a finger is not.
+  const REDACT_SHAPE_SLOP_PX = 6
 
   // Where a TAPPED (rather than dragged) line lands: a horizontal starter line
   // centred on the tap, capped against the page like every other display-pixel
@@ -1719,14 +1749,24 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         // that travelled but collapsed to a sliver is still discarded.
         const [x1, y1, x2, y2] = currentLine
         const tapped = Math.hypot(x2 - x1, y2 - y1) <= TAP_SLOP_PX / scale
+        // A tap on a box or circle redacts THAT shape, as its own Redact
+        // button would (see onPointerDown), instead of dropping a box on it.
+        const target = tapped
+          ? useAnnotationStore.getState().annotations.find((a) => a.id === redactTapTargetRef.current)
+          : undefined
+        redactTapTargetRef.current = null
         const w = Math.abs(x2 - x1)
         const h = Math.abs(y2 - y1)
-        const box = tapped
+        const box = isRedactableShape(target)
+          ? null
+          : tapped
           ? tapRedactBox(x1, y1, pageW, pageH)
           : w > 4 && h > 4
             ? { x: Math.min(x1, x2), y: Math.min(y1, y2), width: w, height: h }
             : null
-        if (box) {
+        if (isRedactableShape(target)) {
+          redactShape(target, color)
+        } else if (box) {
           add({
             id: crypto.randomUUID(),
             pageIndex,
@@ -1767,6 +1807,13 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     }
     drawingRef.current = false
     setLine(null)
+  }
+
+  // Every "turn this box/circle into a redaction" goes through here: the
+  // Redact button, "Redact instead", and a Redact-tool tap. One undo step, and
+  // the redaction comes out selected. See lib/redactShape.
+  function redactShape(shape: RedactableShape, fill?: string) {
+    replace(shape.id, redactionFromShape(shape, crypto.randomUUID(), fill))
   }
 
   function shapeRefSetter(id: string) {
@@ -3737,21 +3784,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation()
-              const id = crypto.randomUUID()
-              remove(selected.id)
-              add({
-                id,
-                pageIndex: selected.pageIndex,
-                type: 'redact',
-                x: selected.x,
-                y: selected.y,
-                width: selected.width,
-                height: selected.height,
-                // A circle redacts its inside, the area a Fill would paint —
-                // not the square around it (James, 2026-10-12).
-                ...(selected.type === 'ellipse' ? { shape: 'ellipse' as const } : {})
-              })
-              setSelected(id)
+              // A circle redacts its inside, not the square round it.
+              redactShape(selected)
             }}
             style={{
               position: 'absolute',
@@ -3790,10 +3824,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation()
-              const id = crypto.randomUUID()
-              remove(selected.id)
-              add({
-                id,
+              // One undo step, like the way in (redactShape).
+              replace(selected.id, {
+                id: crypto.randomUUID(),
                 pageIndex: selected.pageIndex,
                 // An elliptical redaction goes back to the circle it came from.
                 type: selected.shape === 'ellipse' ? 'ellipse' : 'rect',
@@ -3806,7 +3839,6 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 color: redactFillHex(selected.fill),
                 filled: true
               })
-              setSelected(id)
             }}
             style={{
               position: 'absolute',
@@ -3838,18 +3870,12 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         }
         const redactInstead = () => {
           applyDontShow()
-          // Swap the shape for a true redaction over the same box: on export the
+          // Swap the shape for a true redaction of the same shape: on export the
           // page is rasterised so the underlying text is permanently removed.
-          remove(target.id)
-          add({
-            id: crypto.randomUUID(),
-            pageIndex: target.pageIndex,
-            type: 'redact',
-            x: target.x,
-            y: target.y,
-            width: target.width,
-            height: target.height
-          })
+          // ⚠️ Through redactShape, like the Redact button — this used to build
+          // its own box, so a circle came out as its bounding SQUARE (James,
+          // 2026-10-13).
+          redactShape(target)
           close()
         }
         return createPortal(
