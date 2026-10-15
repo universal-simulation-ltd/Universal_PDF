@@ -69,6 +69,7 @@ import { KNOWLEDGE_BASE } from './knowledge'
 import PageScrollPreference from './components/Viewer/PageScrollPreference'
 import ToolBehaviourRows from './components/Viewer/ToolBehaviourRows'
 import { useToolPrefs } from './stores/toolPrefsStore'
+import { phoneScreens } from './native/shell'
 
 const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_PDF'
 
@@ -105,6 +106,9 @@ const ConvertDialog = lazy(() => import('./components/Convert/ConvertDialog'))
 // Phone app only: Shortcuts / share-sheet actions (lib/appActions.ts).
 const ShortcutRunner = lazy(() => import('./components/Shortcuts/ShortcutRunner'))
 const QrDialog = lazy(() => import('./components/Qr/QrDialog'))
+// The phone app's own screens (src/native/, James 2026-10-16). Lazy, so the
+// website and the desktop app never download them.
+const NativeApp = lazy(() => import('./native/NativeApp'))
 
 /** True from the first time `open` is, for good. */
 function useOpenedOnce(open: boolean): boolean {
@@ -115,6 +119,8 @@ function useOpenedOnce(open: boolean): boolean {
 
 export default function App() {
   const t = useT()
+  // Decided once: whether this copy runs the phone screens never changes.
+  const [native] = useState(phoneScreens)
   // The landing navbar's "Reset to defaults" (foot of Tune this app) — the
   // same reset the open-document bar's ToolbarUserProfile offers; see there.
   const { reset: resetPrefs } = useUserPrefs()
@@ -456,6 +462,17 @@ export default function App() {
   // when deciding who TAKES the file. Promising a drop that will not be taken is
   // a lie, so the hint is gated on the same condition.
   const showDropHint = pageDrop.pageOver && !!doc && !dialogOwnsDrop
+
+  // The phone app: its own screens, built for a phone (src/native/). Every
+  // effect above still runs — the launch hold, the OS handing over a file,
+  // the share sheet, the signature lock — only the layout is different.
+  if (native) {
+    return (
+      <Suspense fallback={null}>
+        <NativeApp launching={launching} />
+      </Suspense>
+    )
+  }
 
   return (
     // ⚠️ pt-[env(safe-area-inset-top)] is for the native (Capacitor) builds, not
