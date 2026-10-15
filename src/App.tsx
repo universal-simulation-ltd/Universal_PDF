@@ -343,9 +343,12 @@ export default function App() {
   // Keep the system clock/battery legible against whichever chrome is at the
   // top right now — dark strip with a document open, the SDK bar's white
   // surface on the landing page. See `setStatusBarOverDarkChrome`.
+  // The phone screens set it themselves (NativeApp), per screen; this effect
+  // runs after theirs, so it must stand down there or it wins every time.
   useEffect(() => {
+    if (native) return
     void setStatusBarOverDarkChrome(!showLanding)
-  }, [showLanding])
+  }, [showLanding, native])
 
   // ── Leaving a document that has amendments ───────────────────────────────
   // Three ways out, one question. `requestExit` runs its action outright when
