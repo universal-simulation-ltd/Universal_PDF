@@ -40,6 +40,8 @@ export default {
   'advanced_export_info': 'Flatten the pages into pictures, lock it with a password, keep or strip the metadata.',
   'metadata': 'Document metadata',
   'metadata_info': 'See who and what this file names — then scrub it.',
+  'page_numbers': 'Page numbers', // Advanced menu row: opens the page numbers dialog
+  'page_numbers_info': 'Number every page at the foot — left, centre or right.',
   'knowledge_base_info': 'How each tool works, with guides to download.', // under the SDK's own "Knowledge base" label
   // FileMenu — Redact
   'redact': 'Redact', // menu section header

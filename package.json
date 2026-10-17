@@ -110,6 +110,8 @@
     "test:note-fold": "node e2e/note-fold.e2e.mjs",
     "test:every-page": "node --experimental-strip-types scripts/everyPage.test.mjs",
     "test:every-page:e2e": "node e2e/every-page.e2e.mjs",
+    "test:page-numbers": "node --experimental-strip-types scripts/pageNumbers.test.mjs",
+    "test:page-numbers:e2e": "node e2e/page-numbers.e2e.mjs",
     "test:image-border": "node e2e/image-border.e2e.mjs",
     "test:reset-defaults": "node e2e/reset-defaults.e2e.mjs",
     "test:place-ghost": "node e2e/place-ghost.e2e.mjs",

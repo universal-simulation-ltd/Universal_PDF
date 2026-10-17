@@ -70,6 +70,7 @@ import PageScrollPreference from './components/Viewer/PageScrollPreference'
 import ToolBehaviourRows from './components/Viewer/ToolBehaviourRows'
 import { useToolPrefs } from './stores/toolPrefsStore'
 import { phoneScreens } from './native/shell'
+import { usePageNumberSync } from './components/PageNumbers/usePageNumberSync'
 
 const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_PDF'
 
@@ -97,6 +98,7 @@ const SendToSignDialog = lazy(() => import('./components/SendToSignDialog'))
 const SendForSignatureDialog = lazy(() => import('./components/Signature/SendForSignatureDialog'))
 const AdvancedExportDialog = lazy(() => import('./components/Export/AdvancedExportDialog'))
 const MetadataDialog = lazy(() => import('./components/Metadata/MetadataDialog'))
+const PageNumbersDialog = lazy(() => import('./components/PageNumbers/PageNumbersDialog'))
 const CompareDialog = lazy(() => import('./components/Compare/CompareDialog'))
 // These three carry pdf-lib (OCR's text layer, merge, conversion): lazy so it
 // stays out of the start-up bundle. Each is mounted only while open.
@@ -151,6 +153,9 @@ export default function App() {
   const sendForSignatureMounted = useOpenedOnce(usePdfStore((s) => s.sendForSignatureOpen))
   const qrMounted = useOpenedOnce(usePdfStore((s) => s.qrOpen))
   const setMetadataOpen = usePdfStore((s) => s.setMetadataOpen)
+  const pageNumbersOpen = usePdfStore((s) => s.pageNumbersOpen)
+  const setPageNumbersOpen = usePdfStore((s) => s.setPageNumbersOpen)
+  usePageNumberSync()
   const compareOpen = usePdfStore((s) => s.compareOpen)
   const setCompareOpen = usePdfStore((s) => s.setCompareOpen)
   const sourceBytes = usePdfStore((s) => s.sourceBytes)
@@ -859,6 +864,9 @@ export default function App() {
         )}
         {metadataOpen && sourceBytes && (
           <MetadataDialog sourceBytes={sourceBytes} onClose={() => setMetadataOpen(false)} />
+        )}
+        {pageNumbersOpen && (
+          <PageNumbersDialog onClose={() => setPageNumbersOpen(false)} />
         )}
         {compareOpen && sourceBytes && (
           <CompareDialog

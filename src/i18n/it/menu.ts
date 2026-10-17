@@ -40,6 +40,8 @@ const menu: Messages['menu'] = {
   'advanced_export_info': 'Appiattisci le pagine in immagini, proteggi con password, conserva o rimuovi i metadati.',
   'metadata': 'Metadati del documento',
   'metadata_info': 'Scopri chi e cosa nomina questo file, poi ripuliscilo.',
+  'page_numbers': 'Numeri di pagina', // Advanced menu row: opens the page numbers dialog
+  'page_numbers_info': 'Numera ogni pagina in basso: a sinistra, al centro o a destra.',
   'knowledge_base_info': 'Come funziona ogni strumento, con guide da scaricare.', // under the SDK's own "Knowledge base" label
   // FileMenu — Redact
   'redact': 'Oscura',

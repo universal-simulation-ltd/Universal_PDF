@@ -40,6 +40,8 @@ const menu: Messages['menu'] = {
   'advanced_export_info': 'Converter as páginas em imagens, proteger com palavra-passe, manter ou remover os metadados.',
   'metadata': 'Metadados do documento',
   'metadata_info': 'Ver quem e o que este ficheiro identifica — e depois limpar.',
+  'page_numbers': 'Números de página', // Advanced menu row: opens the page numbers dialog
+  'page_numbers_info': 'Numere cada página no rodapé — à esquerda, ao centro ou à direita.',
   'knowledge_base_info': 'Como funciona cada ferramenta, com guias para transferir.', // under the SDK's own "Knowledge base" label
   // FileMenu — Redact
   'redact': 'Rasurar',

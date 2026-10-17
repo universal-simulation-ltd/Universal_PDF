@@ -40,6 +40,8 @@ const menu: Messages['menu'] = {
   'advanced_export_info': 'Sayfaları resimlere dönüştürerek düzleştirin, parolayla kilitleyin, meta verileri koruyun veya kaldırın.',
   'metadata': 'Belge meta verileri',
   'metadata_info': 'Bu dosyada kimin ve neyin adı geçtiğini görün — sonra temizleyin.',
+  'page_numbers': 'Sayfa numaraları', // Advanced menu row: opens the page numbers dialog
+  'page_numbers_info': 'Her sayfayı altta numaralandırın: solda, ortada veya sağda.',
   'knowledge_base_info': 'Her aracın nasıl çalıştığı, indirilebilir kılavuzlarla.', // under the SDK's own "Knowledge base" label
   // FileMenu — Redact
   'redact': 'Karart',

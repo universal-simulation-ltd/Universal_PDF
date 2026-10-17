@@ -43,6 +43,20 @@ export type TextRun = {
   link?: string
 }
 
+// A page number (James, 2026-10-18), added by Advanced → Page numbers: an
+// ordinary text mark, so it shows at once, exports with no code of its own and
+// can be nudged or deleted by hand. This says how it was made, so the numbers
+// can be put right when pages are moved, added or removed (lib/pageNumbers
+// `pageNumberFixes`) and all of them taken off again together.
+export type PageNumberMark = {
+  // The words, with {n} for this page's number and {total} for the count, in
+  // the language they were added in: "{n}" or "Page {n} of {total}".
+  template: string
+  // Which way it is set from `anchorX`, so "9" → "10" stays centred.
+  align: 'left' | 'centre' | 'right'
+  anchorX: number
+}
+
 export type TextAnnotation = Base & {
   type: 'text'
   x: number
@@ -91,6 +105,7 @@ export type TextAnnotation = Base & {
   // annotation), which every PDF reader shows as an icon that opens to the
   // words — see lib/export `addFoldedNotes`.
   noteFolded?: boolean
+  pageNumber?: PageNumberMark
 }
 
 export type DrawAnnotation = Base & {

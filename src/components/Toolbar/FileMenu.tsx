@@ -160,6 +160,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const setMergeOpen = usePdfStore((s) => s.setMergeOpen)
   const setConvertOpen = usePdfStore((s) => s.setConvertOpen)
   const setMetadataOpen = usePdfStore((s) => s.setMetadataOpen)
+  const setPageNumbersOpen = usePdfStore((s) => s.setPageNumbersOpen)
   const setCompareOpen = usePdfStore((s) => s.setCompareOpen)
   const setKnowledgeBaseOpen = usePdfStore((s) => s.setKnowledgeBaseOpen)
   const { language } = useLanguage()
@@ -651,6 +652,14 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                     info={t('menu.compare_info')}
                     onSelect={() => { setCompareOpen(true); closeMenu() }}
                   />
+                  {!isXfa && (
+                    <InfoRow
+                      icon="#"
+                      label={t('menu.page_numbers')}
+                      info={t('menu.page_numbers_info')}
+                      onSelect={() => { setPageNumbersOpen(true); closeMenu() }}
+                    />
+                  )}
                   <InfoRow
                     icon="⇄"
                     label={t('menu.convert')}

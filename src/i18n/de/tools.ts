@@ -181,6 +181,16 @@ const tools: Messages['tools'] = {
   'metadata.encrypted': 'Dieses PDF ist verschlüsselt, daher können seine Metadaten gelesen, aber nicht neu geschrieben werden.',
   'metadata.stripping': 'Wird entfernt…',
   'metadata.scrub': 'Metadaten entfernen',
+  'page_numbers.title': 'Seitenzahlen',
+  'page_numbers.where': 'Unten auf jeder Seite', // heading over the Left / Centre / Right choice
+  'page_numbers.left': 'Links',
+  'page_numbers.centre': 'Mitte',
+  'page_numbers.right': 'Rechts',
+  'page_numbers.wording': 'Darstellung', // heading over the two styles: 1 / Page 1 of 3
+  'page_numbers.template_page_of': 'Seite {n} von {total}', // written on the page: keep {n} (this page) and {total} (page count) exactly
+  'page_numbers.add': 'Seitenzahlen hinzufügen', // button
+  'page_numbers.update': 'Seitenzahlen aktualisieren', // button, when the document already has page numbers: redo them all with these choices
+  'page_numbers.remove': 'Entfernen', // button: take every page number off
 
   // OcrModal
   'ocr.preparing': 'OCR-Engine wird vorbereitet…',

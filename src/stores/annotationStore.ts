@@ -60,6 +60,13 @@ interface AnnotationState {
   // one undo left the page with neither.
   replace: (id: string, next: Annotation) => void
   removeMany: (ids: string[]) => void
+  // Take some marks off and put others on as ONE history step, nothing
+  // selected — page numbers re-applied in another style (lib/pageNumbers).
+  swapMany: (removeIds: string[], add: Annotation[]) => void
+  // Patches that are NOT a step of their own: the page numbers being put
+  // right after a page change (usePageNumberSync). Undo lands on the marks as
+  // they were, and the sync puts them right again.
+  quietUpdateMany: (patches: { id: string; patch: Partial<Annotation> }[]) => void
   clearPage: (pageIndex: number) => void
   clearAll: () => void
   // Hard reset for loading a different PDF: drops every annotation AND the
@@ -228,6 +235,27 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
         ),
         past: pushPast(s.past, s.annotations),
         future: []
+      }
+    }),
+  swapMany: (removeIds, add) =>
+    set((s) => {
+      const gone = new Set(removeIds)
+      return {
+        annotations: [...s.annotations.filter((a) => !gone.has(a.id)), ...add],
+        selectedId: null,
+        selectedIds: [],
+        past: pushPast(s.past, s.annotations),
+        future: []
+      }
+    }),
+  quietUpdateMany: (patches) =>
+    set((s) => {
+      if (patches.length === 0) return {}
+      const byId = new Map(patches.map((p) => [p.id, p.patch]))
+      return {
+        annotations: s.annotations.map((a) =>
+          byId.has(a.id) ? ({ ...a, ...byId.get(a.id) } as Annotation) : a
+        )
       }
     }),
   remove: (id) =>

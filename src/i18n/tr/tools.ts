@@ -181,6 +181,16 @@ const tools: Messages['tools'] = {
   'metadata.encrypted': 'Bu PDF şifreli olduğundan meta verileri okunabilir ancak yeniden yazılamaz.',
   'metadata.stripping': 'Kaldırılıyor…',
   'metadata.scrub': 'Meta verileri temizle',
+  'page_numbers.title': 'Sayfa numaraları',
+  'page_numbers.where': 'Her sayfanın altında', // heading over the Left / Centre / Right choice
+  'page_numbers.left': 'Sol',
+  'page_numbers.centre': 'Orta',
+  'page_numbers.right': 'Sağ',
+  'page_numbers.wording': 'Biçim', // heading over the two styles: 1 / Page 1 of 3
+  'page_numbers.template_page_of': 'Sayfa {n} / {total}', // written on the page: keep {n} (this page) and {total} (page count) exactly
+  'page_numbers.add': 'Numaraları ekle', // button
+  'page_numbers.update': 'Numaraları güncelle', // button, when the document already has page numbers: redo them all with these choices
+  'page_numbers.remove': 'Kaldır', // button: take every page number off
 
   // OcrModal
   'ocr.preparing': 'OCR motoru hazırlanıyor…',

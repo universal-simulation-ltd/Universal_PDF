@@ -181,6 +181,16 @@ const tools: Messages['tools'] = {
   'metadata.encrypted': 'Este PDF está encriptado, por isso os metadados podem ser lidos, mas não reescritos.',
   'metadata.stripping': 'A remover…',
   'metadata.scrub': 'Limpar metadados',
+  'page_numbers.title': 'Números de página',
+  'page_numbers.where': 'No rodapé de cada página', // heading over the Left / Centre / Right choice
+  'page_numbers.left': 'Esquerda',
+  'page_numbers.centre': 'Centro',
+  'page_numbers.right': 'Direita',
+  'page_numbers.wording': 'Formato', // heading over the two styles: 1 / Page 1 of 3
+  'page_numbers.template_page_of': 'Página {n} de {total}', // written on the page: keep {n} (this page) and {total} (page count) exactly
+  'page_numbers.add': 'Adicionar números', // button
+  'page_numbers.update': 'Atualizar números', // button, when the document already has page numbers: redo them all with these choices
+  'page_numbers.remove': 'Remover', // button: take every page number off
 
   // OcrModal
   'ocr.preparing': 'A preparar o motor de OCR…',

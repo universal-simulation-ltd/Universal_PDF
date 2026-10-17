@@ -181,6 +181,16 @@ export default {
   'metadata.encrypted': 'This PDF is encrypted, so its metadata can be read but not rewritten.',
   'metadata.stripping': 'Stripping…',
   'metadata.scrub': 'Scrub metadata', // button: remove the metadata
+  'page_numbers.title': 'Page numbers',
+  'page_numbers.where': 'At the foot of each page', // heading over the Left / Centre / Right choice
+  'page_numbers.left': 'Left',
+  'page_numbers.centre': 'Centre',
+  'page_numbers.right': 'Right',
+  'page_numbers.wording': 'Wording', // heading over the two styles: 1 / Page 1 of 3
+  'page_numbers.template_page_of': 'Page {n} of {total}', // written on the page: keep {n} (this page) and {total} (page count) exactly
+  'page_numbers.add': 'Add page numbers', // button
+  'page_numbers.update': 'Update page numbers', // button, when the document already has page numbers: redo them all with these choices
+  'page_numbers.remove': 'Remove', // button: take every page number off
 
   // OcrModal
   'ocr.preparing': 'Preparing OCR engine…',

@@ -40,6 +40,8 @@ const menu: Messages['menu'] = {
   'advanced_export_info': 'Aplatissez les pages en images, verrouillez le fichier par mot de passe, conservez ou supprimez les métadonnées.',
   'metadata': 'Métadonnées du document',
   'metadata_info': 'Découvrez les personnes et les logiciels que ce fichier mentionne — puis effacez ces informations.',
+  'page_numbers': 'Numéros de page', // Advanced menu row: opens the page numbers dialog
+  'page_numbers_info': 'Numérote chaque page en bas : à gauche, au centre ou à droite.',
   'knowledge_base_info': 'Le fonctionnement de chaque outil, avec des guides à télécharger.', // under the SDK's own "Knowledge base" label
   // FileMenu — Redact
   'redact': 'Caviarder',
