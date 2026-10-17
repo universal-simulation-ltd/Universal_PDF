@@ -1106,9 +1106,45 @@ function addFoldedNotes(pdf: PDFDocument, notes: TextAnnotation[], redactsByPage
   }
 }
 
+/**
+ * A sticky note that hangs over its page's edge (the editor lets it — James,
+ * 2026-10-18) can't be printed whole: a PDF page has nothing beyond its edge.
+ * So it leaves FOLDED — a real PDF sticky note (addFoldedNotes) whose icon sits
+ * where the note's corner is, pulled onto the page, and opens to every word.
+ * Notes wholly on their page are untouched.
+ */
+export function foldOverhangingNotes(annotations: Annotation[], pageSizes: { width: number; height: number }[], scale: number): Annotation[] {
+  return annotations.map((a) => {
+    if (a.type !== 'text' || !a.note || a.noteFolded) return a
+    const size = pageSizes[a.pageIndex]
+    if (!size) return a
+    const w = size.width * scale
+    const h = size.height * scale
+    const card = textBoxSize(a)
+    const rad = ((a.rotation ?? 0) * Math.PI) / 180
+    const corners = [
+      [a.x, a.y],
+      [a.x + card.width, a.y],
+      [a.x + card.width, a.y + card.height],
+      [a.x, a.y + card.height]
+    ].map(([x, y]) => rotatePoint(x, y, a.x, a.y, rad))
+    const slack = 0.5 * scale
+    const over = corners.some(([x, y]) => x < -slack || y < -slack || x > w + slack || y > h + slack)
+    if (!over) return a
+    const icon = NOTE_FOLDED_SIZE
+    return {
+      ...a,
+      noteFolded: true,
+      rotation: undefined,
+      x: Math.min(Math.max(a.x, 0), Math.max(0, w - icon)),
+      y: Math.min(Math.max(a.y, 0), Math.max(0, h - icon))
+    }
+  })
+}
+
 export async function buildAnnotatedPdfBytes(
   sourceBytes: ArrayBuffer,
-  annotations: Annotation[],
+  annotationsIn: Annotation[],
   scale: number,
   formValues?: FormFieldValue[]
 ): Promise<Uint8Array> {
@@ -1116,6 +1152,7 @@ export async function buildAnnotatedPdfBytes(
   // fresh ModDate on every save, which would quietly re-add metadata to a
   // document the user had just scrubbed (see lib/pdfMetadata.ts).
   const sourcePdf = await PDFDocument.load(sourceBytes, { updateMetadata: false })
+  const annotations = foldOverhangingNotes(annotationsIn, sourcePdf.getPages().map((p) => pageFrame(p)), scale)
 
   // Signature fields the editor shows as boxes are replaced by those boxes —
   // see removeSignatureFields. Before the form is filled and flattened.

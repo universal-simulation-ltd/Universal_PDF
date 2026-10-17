@@ -628,6 +628,11 @@ marks, added with `addMany` as ONE undo step; the original stays selected, and
 
 ## Text boxes: the size pill, the handles, and where the lines break
 
+**The pill is two rows** (James, 2026-10-18: "put it on two lines; 1 size 2
+font"): the size — and on a sticky note its Centre / Fit / Minimise — on top;
+B, I, U, link and colour below. `CHIP_W` 232 / `CHIP_H` 84 are its measured
+size, used only to centre and clamp it.
+
 A text annotation is the only annotation whose *content* has a layout, and since
 2026-09-07 (`cfdc9ed`) that layout is computed in one place and used by three
 surfaces.
@@ -1988,6 +1993,25 @@ sticky note (`/Subtype /Text`, `/Contents` = the words, flags Print + NoZoom +
 NoRotate) with its own appearance stream drawing the same icon, so every reader
 shows the icon and opens it to the words. A note under a redaction is dropped,
 words and all, as links are.
+
+**A note can hang over the page edge** (James, 2026-10-18: "could we show
+sticky notes over pages?"; for the file he chose "hang over, fold to icon").
+Each page's Stage is exactly the page, so it cuts anything at the edge. The
+part outside is drawn as an `<img>` of the note — `node.toDataURL` over its
+client rect, Konva's own pixels, so it meets the rest seamlessly — positioned
+on the page wrapper at z-index 20 (over the neighbouring pages, under the
+pills) and clipped with an evenodd `clip-path` to everything EXCEPT the page.
+clip-path also clips hit-testing, so inside the page presses still reach the
+Stage, and only the overhang takes them: a press there selects the note and
+`node.startDrag()`s it (after `stage.setPointersPositions`). The picture is
+re-taken only when its key changes (position, size, words, colour, zoom,
+editing); it is hidden while that note is dragged (the drag ghost has it).
+The right-hand resize handles of an overhanging note are still cut off.
+
+On export `foldOverhangingNotes` turns any note whose card leaves its page into
+a folded note — a PDF sticky note at the note's corner, pulled onto the page —
+so the words survive whole; a note wholly on its page prints as a card as
+before. The editor's note stays open; only the file folds it.
 
 ⚠️ `page.node.lookup(PDFName.of('Annots'), PDFArray)` THROWS when the page has
 no `/Annots` (pdf-lib's typed lookup does not return undefined). `addLinks` had

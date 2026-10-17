@@ -1130,6 +1130,17 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const [dragGhost, setDragGhost] = useState<
     { src: string; left: number; top: number; width: number; height: number } | null
   >(null)
+  // Sticky notes hanging over the page edge (James, 2026-10-18: "could we show
+  // sticky notes over pages?"). The page's Stage is the page's size, so it cuts
+  // a note off at the edge. The part outside is shown as a picture of the note
+  // — Konva's own rendering, so it meets the rest seamlessly — clipped to
+  // everything EXCEPT the page, and above the neighbouring pages. A press on
+  // it starts an ordinary drag. On export, a note that hangs over is saved as
+  // a folded note at the edge (lib/export `foldOverhangingNotes`).
+  const [overhangs, setOverhangs] = useState<
+    { id: string; src: string; left: number; top: number; width: number; height: number; square: boolean }[]
+  >([])
+  const overhangKey = useRef('')
   // Pointer position used to render the ghost-signature preview that
   // follows the cursor while the signature tool is armed.
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null)
@@ -2670,6 +2681,60 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const ghostSigWidth = ghostSig.width
   const ghostSigHeight = ghostSig.height
 
+  // Recomputed after every render that could move, resize, recolour or
+  // retype a note; skipped when nothing about the overhanging notes changed.
+  useEffect(() => {
+    const out: typeof overhangs = []
+    const keys: string[] = []
+    for (const a of annotations) {
+      if (a.type !== 'text' || !a.note || a.id === draggingId) continue
+      const node = shapeRefs.current.get(a.id)
+      if (!node) continue
+      const r = node.getClientRect({ skipShadow: true })
+      if (r.x >= -0.5 && r.y >= -0.5 && r.x + r.width <= width + 0.5 && r.y + r.height <= height + 0.5) continue
+      const key = `${a.id}:${Math.round(r.x)}:${Math.round(r.y)}:${Math.round(r.width)}:${Math.round(r.height)}`
+      keys.push(key)
+      out.push({
+        id: a.id,
+        src: '',
+        left: r.x,
+        top: r.y,
+        width: r.width,
+        height: r.height,
+        square: !a.rotation
+      })
+    }
+    // The picture is only re-taken when something drawn could have changed.
+    const key = keys.join('|') + `#${scale}#${editingId ?? ''}#${noteDraft ? noteDraft.runs.length + runsToPlainText(noteDraft.runs) : ''}#` +
+      out.map((o) => { const a = annotations.find((x) => x.id === o.id) as TextAnnotation; return `${a.text}${a.note}${a.noteCentre}${a.noteFit}${a.fontSize}${a.color}` }).join('|')
+    if (key === overhangKey.current) return
+    overhangKey.current = key
+    const ratio = window.devicePixelRatio || 1
+    for (const o of out) {
+      const node = shapeRefs.current.get(o.id)!
+      o.src = node.toDataURL({ pixelRatio: ratio, x: o.left, y: o.top, width: o.width, height: o.height })
+    }
+    setOverhangs(out)
+  })
+
+  // A press on the part of a note outside the page: select it, and hand the
+  // drag to Konva as if the press had landed on the note itself.
+  function grabOverhang(id: string, e: React.PointerEvent) {
+    if (tool !== 'select') return
+    e.stopPropagation()
+    const node = shapeRefs.current.get(id)
+    const stage = node?.getStage()
+    if (!node || !stage) return
+    stage.setPointersPositions(e.nativeEvent)
+    const ann = useAnnotationStore.getState().annotations.find((a) => a.id === id)
+    if (ann?.type === 'text' && ann.noteFolded) {
+      onShapeClick(id)
+      return
+    }
+    setSelected(id)
+    node.startDrag()
+  }
+
   return (
     <>
       <Stage
@@ -3335,6 +3400,42 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           document.body
         )}
 
+      {overhangs.map((o) => {
+        if (!o.src) return null
+        // The page, in the picture's own pixels: clipped OUT (evenodd), so
+        // only what hangs past the edge shows — and only that takes presses.
+        const px = (v: number, of: number) => `${((v / of) * 100).toFixed(3)}%`
+        const x0 = px(-o.left, o.width), y0 = px(-o.top, o.height)
+        const x1 = px(width - o.left, o.width), y1 = px(height - o.top, o.height)
+        const selectedHere = selectedId === o.id
+        return (
+          <img
+            key={o.id}
+            src={o.src}
+            alt=""
+            aria-hidden="true"
+            data-note-overhang={o.id}
+            draggable={false}
+            onPointerDown={(e) => grabOverhang(o.id, e)}
+            style={{
+              position: 'absolute',
+              left: o.left,
+              top: o.top,
+              width: o.width,
+              height: o.height,
+              zIndex: 20,
+              pointerEvents: tool === 'select' ? 'auto' : 'none',
+              cursor: tool === 'select' ? 'move' : undefined,
+              touchAction: 'none',
+              clipPath: `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${x0} ${y0}, ${x1} ${y0}, ${x1} ${y1}, ${x0} ${y1}, ${x0} ${y0})`,
+              // The selection's dashed outline, carried on past the edge.
+              outline: selectedHere && o.square ? '2px dashed #ea580c' : undefined,
+              filter: o.square ? 'drop-shadow(0 2px 3px rgba(15,23,42,0.18))' : undefined
+            }}
+          />
+        )
+      })}
+
       {editingAnnotation && (
         <TextEditor
           key={editingAnnotation.id}
@@ -3522,8 +3623,11 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         const by = bbox.y * scale
         const bw = bbox.width * scale
         const bh = bbox.height * scale
-        const CHIP_W = 292
-        const CHIP_H = 44
+        // Two rows (James, 2026-10-18: "put it on two lines; 1 size 2 font"):
+        // the size (and a note's Centre / Fit / Minimise) above, the font —
+        // B, I, U, link and colour — below. Narrower, so it stays on the page.
+        const CHIP_W = 232
+        const CHIP_H = 84
         const GAP = 10
         const left = Math.min(
           Math.max(bx + bw / 2 - CHIP_W / 2, GAP),
@@ -3632,8 +3736,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             // pr-2: the colour cluster's swatches are round and grow to 110%
             // when active, so the flush px-1 that suits the square buttons
             // clipped the wheel against the pill's own rounded edge.
-            className="inline-flex items-center gap-0.5 bg-white rounded-full shadow-lg border border-slate-300 pl-1 pr-2 py-1"
+            className="inline-flex flex-col items-start gap-0.5 bg-white rounded-2xl shadow-lg border border-slate-300 pl-1 pr-2 py-1"
           >
+            <div className="flex items-center gap-0.5">
             {ta.note && (
               <>
                 {/* A sticky note's Centre and Fit, for this note. Each takes
@@ -3661,7 +3766,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                     <path d="M7 10h6" />
                   </svg>
                 ))}
-                <span className="w-px h-6 bg-slate-200 mx-0.5" />
+                {!ta.noteFit && <span className="w-px h-6 bg-slate-200 mx-0.5" />}
               </>
             )}
             {/* A fitted note's size is the card's to decide, so no stepper. */}
@@ -3679,7 +3784,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               }}
             />
             )}
-            <span className="w-px h-6 bg-slate-200 mx-0.5" />
+            </div>
+            <div className="flex items-center gap-0.5">
             {styleBtn(allHave('bold'), () => applyStyle('bold'), t('annotate.text.bold_letter'), t('annotate.text.bold'), 'font-bold')}
             {styleBtn(allHave('italic'), () => applyStyle('italic'), t('annotate.text.italic_letter'), t('annotate.text.italic'), 'italic font-semibold')}
             {styleBtn(allHave('underline'), () => applyStyle('underline'), t('annotate.text.underline_letter'), t('annotate.text.underline'), 'underline font-semibold')}
@@ -3695,6 +3801,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             ) : (
               <ColorCluster color={color} setColor={setColor} />
             )}
+            </div>
           </div>
         )
       })()}
