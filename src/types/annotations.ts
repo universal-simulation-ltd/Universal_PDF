@@ -84,6 +84,13 @@ export type TextAnnotation = Base & {
   // `noteLayout`, which the canvas, the live editor and the export share.
   noteCentre?: boolean
   noteFit?: boolean
+  // A sticky note folded down to its icon (James, 2026-10-18: "add a button to
+  // minimise the sticky note … so they can click it to open / close"). x / y
+  // stay the card's top-left, which is where the icon sits, so unfolding opens
+  // the card from the icon. Exported as a real PDF sticky note (a /Text
+  // annotation), which every PDF reader shows as an icon that opens to the
+  // words — see lib/export `addFoldedNotes`.
+  noteFolded?: boolean
 }
 
 export type DrawAnnotation = Base & {

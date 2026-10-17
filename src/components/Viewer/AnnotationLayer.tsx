@@ -40,7 +40,7 @@ import { effectiveRuns, runFontStyle, runHasStyle, runUnderlined, runsToPlainTex
 import { userLinkHref } from '../../lib/links'
 import { centreOnTap, tapRedactBox } from '../../lib/tapPlacement'
 import { isRedactableShape, redactionFromShape, topShapeAt, type RedactableShape } from '../../lib/redactShape'
-import { LINE_HEIGHT, NOTE_INK, layoutText, noteLayout, notePaper, textBoxSize } from '../../lib/textLayout'
+import { LINE_HEIGHT, NOTE_FOLDED_SIZE, NOTE_INK, layoutText, noteLayout, notePaper, textBoxSize } from '../../lib/textLayout'
 import { useToolPrefs } from '../../stores/toolPrefsStore'
 import { SIG_DETAIL_SIZE, SIG_LABEL_SIZE, estimateTextWidth, sigFieldLayout, sigLabelColumn } from '../../lib/sigFieldLayout'
 import type { Annotation, DrawAnnotation, ImageAnnotation, ImageBorder, SignatureData, SignatureFieldAnnotation, SigAlign, TextAnnotation, Tool, TextRun } from '../../types/annotations'
@@ -455,6 +455,8 @@ function isResizable(a: Annotation): boolean {
   // Locked signature-request boxes (re-detected from an exported PDF) can't be
   // resized — their outline is baked into the page.
   if (a.type === 'sigfield') return !a.locked
+  // A folded note is an icon: there's no card to resize until it's opened.
+  if (a.type === 'text' && a.noteFolded) return false
   return a.type === 'image' || a.type === 'rect' || a.type === 'ellipse' || a.type === 'redact' || a.type === 'text'
 }
 
@@ -2075,6 +2077,12 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       return
     }
     setSelected(id)
+    // A folded sticky note opens with a click (a drag only moves it: Konva
+    // fires no click after a drag).
+    if (ann?.type === 'text' && ann.note && ann.noteFolded) {
+      update(id, { noteFolded: undefined } as Partial<Annotation>)
+      return
+    }
     // An UNSIGNED signature-request box takes two clicks: the first selects it
     // (so it can be dragged into place and shows the "Click again to sign"
     // hint), the second opens the pad. A signed box just selects — its options
@@ -2728,6 +2736,41 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 )
               }
               case 'text': {
+                if (a.note && a.noteFolded) {
+                  // A folded sticky note: a little card of its paper with a
+                  // turned-down corner and three lines of "writing" in its
+                  // colour. The export draws the same icon (lib/export
+                  // `foldedNoteIcon`), so it looks alike in every reader.
+                  const s = NOTE_FOLDED_SIZE
+                  const fold = s * 0.32
+                  return (
+                    <Group key={a.id} {...common} x={a.x} y={a.y} rotation={a.rotation ?? 0}>
+                      <Line
+                        points={[0, 0, s, 0, s, s - fold, s - fold, s, 0, s]}
+                        closed
+                        fill={notePaper(a.note)}
+                        stroke={a.note}
+                        strokeWidth={1}
+                        lineJoin="round"
+                        shadowColor="#0f172a"
+                        shadowOpacity={0.18}
+                        shadowBlur={4}
+                        shadowOffsetY={1}
+                      />
+                      <Line points={[s, s - fold, s - fold, s - fold, s - fold, s]} closed fill={a.note} opacity={0.55} listening={false} />
+                      {[0.3, 0.5, 0.7].map((f, i) => (
+                        <Line
+                          key={f}
+                          points={[s * 0.2, s * f, s * (i === 2 ? 0.55 : 0.8), s * f]}
+                          stroke={a.note}
+                          strokeWidth={1.4}
+                          lineCap="round"
+                          listening={false}
+                        />
+                      ))}
+                    </Group>
+                  )
+                }
                 // Rendered as a Group of per-run Text nodes, positioned by the
                 // shared layout (measured widths give each run's x offset, and
                 // a wrapWidth splits them across lines), so bold / italic /
@@ -3410,7 +3453,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         // link can be toggled live while typing.
         if (draggingId) return null
         const selected = annotations.find((a) => a.id === selectedId)
-        if (!selected || selected.type !== 'text') return null
+        // A folded note is an icon with nothing to style: a click opens it.
+        if (!selected || selected.type !== 'text' || selected.noteFolded) return null
         const ta = selected
         const bbox = getAnnotationBBox(selected)
         const bx = bbox.x * scale
@@ -3542,6 +3586,18 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                   <svg viewBox="0 0 20 20" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M3 7V3h4M13 3h4v4M17 13v4h-4M7 17H3v-4" />
                     <path d="M7.5 13.5 10 6.5l2.5 7M8.4 11h3.2" />
+                  </svg>
+                ))}
+                {/* Fold the note down to its icon; a click on the icon opens
+                    it again. Not while typing on it: the words would vanish
+                    under the editor. */}
+                {!editingThis && noteStyleBtn(false, () => {
+                  update(ta.id, { noteFolded: true } as Partial<Annotation>)
+                  setSelected(null)
+                }, t('annotate.note.minimise'), (
+                  <svg viewBox="0 0 20 20" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M4 4h12v8l-4 4H4z" />
+                    <path d="M7 10h6" />
                   </svg>
                 ))}
                 <span className="w-px h-6 bg-slate-200 mx-0.5" />

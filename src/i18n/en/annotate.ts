@@ -70,6 +70,7 @@ export default {
   'shape.colour': 'Colour',
   'note.centre': 'Centre the words', // sticky note: centre its words across and down
   'note.fit': 'Fit the words to the note', // sticky note: size the words to fill the card
+  'note.minimise': 'Minimise the note', // sticky note: fold it down to a small icon; a click on the icon opens it again
 
   // AnnotationLayer — multi-selection delete
   'selection.delete_many_one': 'Delete {count} object',

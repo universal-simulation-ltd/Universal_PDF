@@ -106,6 +106,9 @@ export function layoutText(a: TextAnnotation): TextLine[] {
 // The laid-out box of a text annotation in model space: the wrap width when one
 // is set (the box the user dragged), else the measured width of the single line.
 export function textBoxSize(a: TextAnnotation): { width: number; height: number; lines: number } {
+  // A folded note is its icon, so the selection box, a drag and the export
+  // all see the icon, not the card it would open to.
+  if (a.note && a.noteFolded) return { width: NOTE_FOLDED_SIZE, height: NOTE_FOLDED_SIZE, lines: 0 }
   const lines = layoutText(a)
   const measured = lines.reduce((max, l) => Math.max(max, l.width), 0)
   const textHeight = a.fontSize * LINE_HEIGHT * Math.max(1, lines.length)
@@ -136,6 +139,9 @@ const NOTE_INSET = 0.065
 const NOTE_FIT_MIN = 4
 // See `top` in noteLayout.
 const NOTE_OPTICAL_DROP = 0.175
+
+/** A folded note's icon: a square this wide, in the same space as x / y. */
+export const NOTE_FOLDED_SIZE = 22
 
 /** The margin between a note's card and its words. */
 export function noteInset(a: Pick<TextAnnotation, 'fontSize' | 'note' | 'wrapWidth'>): number {

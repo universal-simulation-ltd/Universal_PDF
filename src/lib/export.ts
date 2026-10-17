@@ -5,11 +5,11 @@ import {
   pushGraphicsState, popGraphicsState, concatTransformationMatrix, drawRectangle,
   type PDFFont, type PDFImage, type PDFPage, type PDFAcroField, type PDFForm
 } from 'pdf-lib'
-import type { Annotation, RedactAnnotation, SignatureFieldAnnotation } from '../types/annotations'
+import type { Annotation, RedactAnnotation, SignatureFieldAnnotation, TextAnnotation } from '../types/annotations'
 import type { FormFieldValue } from '../stores/formStore'
 import { hexToPdfRgb } from './colors'
 import { fontBase, type PdfBaseFont } from './fonts'
-import { LINE_HEIGHT, layoutText, noteLayout, notePaper, textBoxSize } from './textLayout'
+import { LINE_HEIGHT, NOTE_FOLDED_SIZE, layoutText, noteLayout, notePaper, textBoxSize } from './textLayout'
 import { runUnderlined } from './textRuns'
 import { openPdf, type PDFDocumentProxy } from './pdfjs'
 import { redactFillHex } from './redactGate'
@@ -1023,7 +1023,84 @@ function addLinks(pdf: PDFDocument, links: PendingLink[], redactsByPage: Map<num
       })
     })
     const ref = pdf.context.register(linkAnnot)
-    const existing = page.node.lookup(PDFName.of('Annots'), PDFArray)
+    const existing = page.node.lookupMaybe(PDFName.of('Annots'), PDFArray)
+    if (existing) existing.push(ref)
+    else page.node.set(PDFName.of('Annots'), pdf.context.obj([ref]))
+  }
+}
+
+/** A sticky note folded to its icon — written as a PDF sticky note, not drawn. */
+function isFoldedNote(a: Annotation): a is TextAnnotation {
+  return a.type === 'text' && !!a.note && !!a.noteFolded
+}
+
+/** '#rrggbb' → [r, g, b] in 0–1, for a PDF dictionary or content stream. */
+function hexToUnit(hex: string): [number, number, number] {
+  const n = parseInt(hex.replace('#', ''), 16) || 0
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]
+}
+
+/**
+ * The folded-note icon as content-stream operators, in a w × h box with y up:
+ * the editor's icon (AnnotationLayer, `noteFolded`) — paper, a turned-down
+ * corner and three lines of "writing" in the note's colour.
+ */
+function foldedNoteIcon(note: string, w: number, h: number): string {
+  const f = (n: number) => n.toFixed(3)
+  const [pr, pg, pb] = hexToUnit(notePaper(note))
+  const [cr, cg, cb] = hexToUnit(note)
+  // The editor draws the corner in the note's colour at 55% over the paper;
+  // mixed here, so the stream needs no transparency.
+  const mix = (c: number, p: number) => c * 0.55 + p * 0.45
+  const fold = w * 0.32
+  const lineW = Math.max(0.6, w * 0.064)
+  return [
+    `${f(pr)} ${f(pg)} ${f(pb)} rg ${f(cr)} ${f(cg)} ${f(cb)} RG 0.8 w 1 j`,
+    `0.4 ${f(h - 0.4)} m ${f(w - 0.4)} ${f(h - 0.4)} l ${f(w - 0.4)} ${f(fold)} l ${f(w - fold)} 0.4 l 0.4 0.4 l h B`,
+    `${f(mix(cr, pr))} ${f(mix(cg, pg))} ${f(mix(cb, pb))} rg`,
+    `${f(w - 0.4)} ${f(fold)} m ${f(w - fold)} ${f(fold)} l ${f(w - fold)} 0.4 l h f`,
+    `${f(lineW)} w 1 J`,
+    ...[0.3, 0.5, 0.7].map((k, i) => `${f(w * 0.2)} ${f(h - h * k)} m ${f(w * (i === 2 ? 0.55 : 0.8))} ${f(h - h * k)} l S`)
+  ].join('\n')
+}
+
+/**
+ * Folded sticky notes leave as REAL PDF sticky notes: a /Text annotation whose
+ * icon opens to the note's words in Acrobat, Preview, Chrome, Edge and the
+ * rest. It carries its own appearance (the editor's icon), so it looks the
+ * same everywhere, Universal PDF included. Added once the pages are final,
+ * like links; a note under a redaction is dropped, words and all.
+ */
+function addFoldedNotes(pdf: PDFDocument, notes: TextAnnotation[], redactsByPage: Map<number, RedactAnnotation[]>, scale: number) {
+  const pages = pdf.getPages()
+  for (const a of notes) {
+    const page = pages[a.pageIndex]
+    if (!page || !a.note) continue
+    const box = { pageIndex: a.pageIndex, x1: a.x, y1: a.y, x2: a.x + NOTE_FOLDED_SIZE, y2: a.y + NOTE_FOLDED_SIZE, uri: '' }
+    if ((redactsByPage.get(a.pageIndex) ?? []).some((r) => redactTouches(r, box))) continue
+    const frame = pageFrame(page)
+    const [ax, ay] = applyMatrix(frame.m, box.x1 / scale, frame.height - box.y1 / scale)
+    const [bx, by] = applyMatrix(frame.m, box.x2 / scale, frame.height - box.y2 / scale)
+    const rect = [Math.min(ax, bx), Math.min(ay, by), Math.max(ax, bx), Math.max(ay, by)]
+    const w = rect[2] - rect[0]
+    const h = rect[3] - rect[1]
+    const appearance = pdf.context.register(
+      pdf.context.stream(foldedNoteIcon(a.note, w, h), { Type: 'XObject', Subtype: 'Form', BBox: [0, 0, w, h] })
+    )
+    const annot = pdf.context.obj({
+      Type: 'Annot',
+      Subtype: 'Text',
+      Rect: rect,
+      Contents: PDFHexString.fromText(a.text),
+      C: hexToUnit(a.note),
+      Name: 'Comment',
+      Open: false,
+      // Print, NoZoom, NoRotate: an icon stays an icon, upright, at any zoom.
+      F: 28,
+      AP: pdf.context.obj({ N: appearance })
+    })
+    const ref = pdf.context.register(annot)
+    const existing = page.node.lookupMaybe(PDFName.of('Annots'), PDFArray)
     if (existing) existing.push(ref)
     else page.node.set(PDFName.of('Annots'), pdf.context.obj([ref]))
   }
@@ -1077,7 +1154,7 @@ export async function buildAnnotatedPdfBytes(
   const under: Annotation[] = []
   const over: Annotation[] = []
   annotations.forEach((a, i) => {
-    if (a.type === 'redact') return
+    if (a.type === 'redact' || isFoldedNote(a)) return
     const last = lastRedactAt.get(a.pageIndex)
     if (last !== undefined && i > last) over.push(a)
     else under.push(a)
@@ -1146,6 +1223,7 @@ export async function buildAnnotatedPdfBytes(
     pdf = sourcePdf
   }
   addLinks(pdf, links, redactsByPage, scale)
+  addFoldedNotes(pdf, annotations.filter(isFoldedNote), redactsByPage, scale)
 
   // Unsigned boxes leave as real signature fields (see addSignatureFields).
   // Signed ones were baked into the page above. The legacy catalog copy is

@@ -70,6 +70,7 @@ const annotate: Messages['annotate'] = {
   'shape.colour': 'Farbe',
   'note.centre': 'Text zentrieren', // sticky note: centre its words across and down
   'note.fit': 'Text an die Notiz anpassen', // sticky note: size the words to fill the card
+  'note.minimise': 'Notiz minimieren', // sticky note: fold it down to a small icon; a click on the icon opens it again
 
   // AnnotationLayer — multi-selection delete
   'selection.delete_many_one': '{count} Objekt löschen',
