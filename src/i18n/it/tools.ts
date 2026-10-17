@@ -191,6 +191,18 @@ const tools: Messages['tools'] = {
   'page_numbers.add': 'Aggiungi i numeri', // button
   'page_numbers.update': 'Aggiorna i numeri', // button, when the document already has page numbers: redo them all with these choices
   'page_numbers.remove': 'Rimuovi', // button: take every page number off
+  'word.title': 'Esporta in Word',
+  'word.explain': 'Crea un documento Word (.docx) modificabile da questo PDF: il testo, con titoli, paragrafi, grassetto e corsivo. Tutto avviene sul tuo dispositivo; non viene caricato nulla.',
+  'word.not_layout': 'Il layout non viene copiato: colonne, tabelle e immagini non vengono riportate, e una pagina che è solo una scansione arriva come immagine della pagina.',
+  'word.preparing': 'Preparazione del documento…',
+  'word.reading': 'Lettura della pagina {page} di {total}…', // progress; {page} and {total} are numbers
+  'word.working': 'Esportazione…', // the button while it runs
+  'word.export': 'Esporta in Word', // button
+  'word.saved': 'Il tuo documento Word è pronto.',
+  'word.all_scans': 'Nessuna pagina aveva testo da copiare (una scansione o una pagina con un oscuramento), quindi ogni pagina è arrivata come immagine. Per una scansione, usa prima «Rendi ricercabile (OCR)» per avere testo modificabile.',
+  'word.some_scans_one': '{count} pagina non aveva testo da copiare (una scansione o una pagina con un oscuramento), quindi è arrivata come immagine.',
+  'word.some_scans_other': '{count} pagine non avevano testo da copiare (scansioni o pagine con un oscuramento), quindi sono arrivate come immagini.',
+  'word.failed': 'Impossibile creare il documento Word.',
 
   // OcrModal
   'ocr.preparing': 'Preparazione del motore OCR…',

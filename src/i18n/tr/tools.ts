@@ -191,6 +191,18 @@ const tools: Messages['tools'] = {
   'page_numbers.add': 'Numaraları ekle', // button
   'page_numbers.update': 'Numaraları güncelle', // button, when the document already has page numbers: redo them all with these choices
   'page_numbers.remove': 'Kaldır', // button: take every page number off
+  'word.title': 'Word\'e aktar',
+  'word.explain': 'Bu PDF\'ten düzenlenebilir bir Word belgesi (.docx) oluşturur: başlıklar, paragraflar, kalın ve italik yazılarla birlikte metni. Her şey cihazınızda olur; hiçbir şey yüklenmez.',
+  'word.not_layout': 'Düzen kopyalanmaz: sütunlar, tablolar ve resimler aktarılmaz; yalnızca tarama olan bir sayfa, sayfanın resmi olarak gelir.',
+  'word.preparing': 'Belge hazırlanıyor…',
+  'word.reading': 'Sayfa {page} / {total} okunuyor…', // progress; {page} and {total} are numbers
+  'word.working': 'Aktarılıyor…', // the button while it runs
+  'word.export': 'Word\'e aktar', // button
+  'word.saved': 'Word belgeniz hazır.',
+  'word.all_scans': 'Hiçbir sayfada kopyalanacak metin yoktu (tarama veya karartma yapılmış sayfa), bu yüzden her sayfa resim olarak geldi. Taramaysa, düzenlenebilir metin için önce "Aranabilir hale getir (OCR)" kullanın.',
+  'word.some_scans_one': '{count} sayfada kopyalanacak metin yoktu (tarama veya karartma yapılmış sayfa), bu yüzden resim olarak geldi.',
+  'word.some_scans_other': '{count} sayfada kopyalanacak metin yoktu (tarama veya karartma yapılmış sayfa), bu yüzden resim olarak geldi.',
+  'word.failed': 'Word belgesi oluşturulamadı.',
 
   // OcrModal
   'ocr.preparing': 'OCR motoru hazırlanıyor…',

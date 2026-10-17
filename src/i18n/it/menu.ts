@@ -36,6 +36,8 @@ const menu: Messages['menu'] = {
   'compare_info': 'Scopri cosa è cambiato tra due versioni, pagina per pagina e parola per parola.',
   'convert': 'Converti in immagini',
   'convert_info': 'Trasforma ogni pagina in PNG o JPG (un file ZIP se le pagine sono più di una).',
+  'word': 'Esporta in Word', // Advanced menu row: make a .docx of the PDF's text
+  'word_info': 'Crea un documento Word (.docx) modificabile dal testo.',
   'advanced_export': 'Esportazione avanzata',
   'advanced_export_info': 'Appiattisci le pagine in immagini, proteggi con password, conserva o rimuovi i metadati.',
   'metadata': 'Metadati del documento',

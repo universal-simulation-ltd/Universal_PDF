@@ -191,6 +191,18 @@ const tools: Messages['tools'] = {
   'page_numbers.add': 'Adicionar números', // button
   'page_numbers.update': 'Atualizar números', // button, when the document already has page numbers: redo them all with these choices
   'page_numbers.remove': 'Remover', // button: take every page number off
+  'word.title': 'Exportar para Word',
+  'word.explain': 'Cria um documento do Word (.docx) editável a partir deste PDF: o texto, com títulos, parágrafos, negrito e itálico. Tudo acontece no seu dispositivo; nada é enviado.',
+  'word.not_layout': 'O layout não é copiado: colunas, tabelas e imagens não passam, e uma página que é só uma digitalização vem como imagem da página.',
+  'word.preparing': 'Preparando o documento…',
+  'word.reading': 'Lendo a página {page} de {total}…', // progress; {page} and {total} are numbers
+  'word.working': 'Exportando…', // the button while it runs
+  'word.export': 'Exportar para Word', // button
+  'word.saved': 'Seu documento do Word está pronto.',
+  'word.all_scans': 'Nenhuma página tinha texto para copiar (uma digitalização ou uma página com tarja), então todas vieram como imagens. Se for uma digitalização, use primeiro “Tornar pesquisável (OCR)” para ter texto editável.',
+  'word.some_scans_one': '{count} página não tinha texto para copiar (uma digitalização ou uma página com tarja), então veio como imagem.',
+  'word.some_scans_other': '{count} páginas não tinham texto para copiar (digitalizações ou páginas com tarja), então vieram como imagens.',
+  'word.failed': 'Não foi possível criar o documento do Word.',
 
   // OcrModal
   'ocr.preparing': 'Preparando o mecanismo de OCR…',

@@ -36,6 +36,8 @@ const menu: Messages['menu'] = {
   'compare_info': 'İki sürüm arasında neyin değiştiğini sayfa sayfa ve kelime kelime görün.',
   'convert': 'Görsellere dönüştür',
   'convert_info': 'Her sayfayı PNG veya JPG olarak oluşturun (birden çok sayfa için ZIP).',
+  'word': 'Word\'e aktar', // Advanced menu row: make a .docx of the PDF's text
+  'word_info': 'Metinden düzenlenebilir bir Word belgesi (.docx) oluşturun.',
   'advanced_export': 'Gelişmiş dışa aktarma',
   'advanced_export_info': 'Sayfaları resimlere dönüştürerek düzleştirin, parolayla kilitleyin, meta verileri koruyun veya kaldırın.',
   'metadata': 'Belge meta verileri',

@@ -191,6 +191,18 @@ const tools: Messages['tools'] = {
   'page_numbers.add': 'Seitenzahlen hinzufügen', // button
   'page_numbers.update': 'Seitenzahlen aktualisieren', // button, when the document already has page numbers: redo them all with these choices
   'page_numbers.remove': 'Entfernen', // button: take every page number off
+  'word.title': 'Als Word exportieren',
+  'word.explain': 'Erstellt aus diesem PDF ein bearbeitbares Word-Dokument (.docx): den Text mit Überschriften, Absätzen, Fett- und Kursivschrift. Alles läuft auf Ihrem Gerät, nichts wird hochgeladen.',
+  'word.not_layout': 'Das Layout wird nicht übernommen: Spalten, Tabellen und Bilder fehlen, und eine Seite, die nur ein Scan ist, kommt als Bild der Seite.',
+  'word.preparing': 'Dokument wird vorbereitet…',
+  'word.reading': 'Seite {page} von {total} wird gelesen…', // progress; {page} and {total} are numbers
+  'word.working': 'Wird exportiert…', // the button while it runs
+  'word.export': 'Als Word exportieren', // button
+  'word.saved': 'Ihr Word-Dokument ist fertig.',
+  'word.all_scans': 'Keine Seite hatte kopierbaren Text (ein Scan oder eine Seite mit Schwärzung), daher kam jede Seite als Bild. Nutzen Sie bei einem Scan zuerst „Durchsuchbar machen (OCR)“, um bearbeitbaren Text zu erhalten.',
+  'word.some_scans_one': '{count} Seite hatte keinen kopierbaren Text (ein Scan oder eine Seite mit Schwärzung) und kam daher als Bild.',
+  'word.some_scans_other': '{count} Seiten hatten keinen kopierbaren Text (Scans oder Seiten mit Schwärzung) und kamen daher als Bilder.',
+  'word.failed': 'Das Word-Dokument konnte nicht erstellt werden.',
 
   // OcrModal
   'ocr.preparing': 'OCR-Engine wird vorbereitet…',

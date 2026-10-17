@@ -112,6 +112,8 @@
     "test:every-page:e2e": "node e2e/every-page.e2e.mjs",
     "test:page-numbers": "node --experimental-strip-types scripts/pageNumbers.test.mjs",
     "test:page-numbers:e2e": "node e2e/page-numbers.e2e.mjs",
+    "test:pdf-to-docx": "node --experimental-strip-types scripts/pdfToDocx.test.mjs",
+    "test:word-export": "node e2e/word-export.e2e.mjs",
     "test:image-border": "node e2e/image-border.e2e.mjs",
     "test:reset-defaults": "node e2e/reset-defaults.e2e.mjs",
     "test:place-ghost": "node e2e/place-ghost.e2e.mjs",

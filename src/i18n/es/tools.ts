@@ -191,6 +191,18 @@ const tools: Messages['tools'] = {
   'page_numbers.add': 'Añadir números', // button
   'page_numbers.update': 'Actualizar números', // button, when the document already has page numbers: redo them all with these choices
   'page_numbers.remove': 'Quitar', // button: take every page number off
+  'word.title': 'Exportar a Word',
+  'word.explain': 'Crea un documento de Word (.docx) editable a partir de este PDF: su texto, con los títulos, párrafos, negritas y cursivas. Se hace en tu dispositivo; no se sube nada.',
+  'word.not_layout': 'No se copia el diseño: las columnas, tablas e imágenes no pasan, y una página que solo es un escaneo pasa como imagen de la página.',
+  'word.preparing': 'Preparando el documento…',
+  'word.reading': 'Leyendo la página {page} de {total}…', // progress; {page} and {total} are numbers
+  'word.working': 'Exportando…', // the button while it runs
+  'word.export': 'Exportar a Word', // button
+  'word.saved': 'Tu documento de Word está listo.',
+  'word.all_scans': 'Ninguna página tenía texto que copiar (un escaneo o una página con una censura), así que todas pasaron como imágenes. Si es un escaneo, usa primero «Permitir búsquedas (OCR)» para obtener texto editable.',
+  'word.some_scans_one': '{count} página no tenía texto que copiar (un escaneo o una página con una censura), así que pasó como imagen.',
+  'word.some_scans_other': '{count} páginas no tenían texto que copiar (escaneos o páginas con una censura), así que pasaron como imágenes.',
+  'word.failed': 'No se pudo crear el documento de Word.',
 
   // OcrModal
   'ocr.preparing': 'Preparando el motor de OCR…',

@@ -161,6 +161,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
   const setConvertOpen = usePdfStore((s) => s.setConvertOpen)
   const setMetadataOpen = usePdfStore((s) => s.setMetadataOpen)
   const setPageNumbersOpen = usePdfStore((s) => s.setPageNumbersOpen)
+  const setWordExportOpen = usePdfStore((s) => s.setWordExportOpen)
   const setCompareOpen = usePdfStore((s) => s.setCompareOpen)
   const setKnowledgeBaseOpen = usePdfStore((s) => s.setKnowledgeBaseOpen)
   const { language } = useLanguage()
@@ -666,6 +667,14 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
                     info={t('menu.convert_info')}
                     onSelect={() => { setConvertOpen(true); closeMenu() }}
                   />
+                  {!isXfa && (
+                    <InfoRow
+                      icon="📝"
+                      label={t('menu.word')}
+                      info={t('menu.word_info')}
+                      onSelect={() => { setWordExportOpen(true); closeMenu() }}
+                    />
+                  )}
                   {/* ⚠️ NOT in the Export dialog, and not two rows here
                       either. Flattening and locking both change what the file
                       IS rather than how big it is, so they were pulled out of

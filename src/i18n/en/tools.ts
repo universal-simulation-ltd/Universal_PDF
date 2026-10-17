@@ -191,6 +191,18 @@ export default {
   'page_numbers.add': 'Add page numbers', // button
   'page_numbers.update': 'Update page numbers', // button, when the document already has page numbers: redo them all with these choices
   'page_numbers.remove': 'Remove', // button: take every page number off
+  'word.title': 'Export to Word',
+  'word.explain': 'Makes an editable Word document (.docx) from this PDF: its text, with the headings, paragraphs, bold and italic. It runs on your device; nothing is uploaded.',
+  'word.not_layout': 'The layout isn\'t copied: columns, tables and pictures don\'t come across, and a page that is only a scan comes across as a picture of the page.',
+  'word.preparing': 'Getting the document ready…',
+  'word.reading': 'Reading page {page} of {total}…', // progress; {page} and {total} are numbers
+  'word.working': 'Exporting…', // the button while it runs
+  'word.export': 'Export to Word', // button
+  'word.saved': 'Your Word document is ready.',
+  'word.all_scans': 'No page had text to copy (a scan, or a page with a redaction), so every page came across as a picture. For a scan, use Make searchable (OCR) first to get text you can edit.',
+  'word.some_scans_one': '{count} page had no text to copy (a scan, or a page with a redaction), so it came across as a picture.',
+  'word.some_scans_other': '{count} pages had no text to copy (scans, or pages with a redaction), so they came across as pictures.',
+  'word.failed': 'Couldn\'t make the Word document.',
 
   // OcrModal
   'ocr.preparing': 'Preparing OCR engine…',

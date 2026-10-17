@@ -99,6 +99,7 @@ const SendForSignatureDialog = lazy(() => import('./components/Signature/SendFor
 const AdvancedExportDialog = lazy(() => import('./components/Export/AdvancedExportDialog'))
 const MetadataDialog = lazy(() => import('./components/Metadata/MetadataDialog'))
 const PageNumbersDialog = lazy(() => import('./components/PageNumbers/PageNumbersDialog'))
+const WordExportDialog = lazy(() => import('./components/Word/WordExportDialog'))
 const CompareDialog = lazy(() => import('./components/Compare/CompareDialog'))
 // These three carry pdf-lib (OCR's text layer, merge, conversion): lazy so it
 // stays out of the start-up bundle. Each is mounted only while open.
@@ -155,6 +156,8 @@ export default function App() {
   const setMetadataOpen = usePdfStore((s) => s.setMetadataOpen)
   const pageNumbersOpen = usePdfStore((s) => s.pageNumbersOpen)
   const setPageNumbersOpen = usePdfStore((s) => s.setPageNumbersOpen)
+  const wordExportOpen = usePdfStore((s) => s.wordExportOpen)
+  const setWordExportOpen = usePdfStore((s) => s.setWordExportOpen)
   usePageNumberSync()
   const compareOpen = usePdfStore((s) => s.compareOpen)
   const setCompareOpen = usePdfStore((s) => s.setCompareOpen)
@@ -867,6 +870,9 @@ export default function App() {
         )}
         {pageNumbersOpen && (
           <PageNumbersDialog onClose={() => setPageNumbersOpen(false)} />
+        )}
+        {wordExportOpen && (
+          <WordExportDialog onClose={() => setWordExportOpen(false)} />
         )}
         {compareOpen && sourceBytes && (
           <CompareDialog

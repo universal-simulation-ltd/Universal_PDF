@@ -127,6 +127,7 @@ interface PdfState {
   advancedExportOpen: boolean
   metadataOpen: boolean
   pageNumbersOpen: boolean
+  wordExportOpen: boolean
   compareOpen: boolean
   // The "Add QR code" generator (toolbar, next to the image button).
   qrOpen: boolean
@@ -196,6 +197,7 @@ interface PdfState {
   setAdvancedExportOpen: (open: boolean) => void
   setMetadataOpen: (open: boolean) => void
   setPageNumbersOpen: (open: boolean) => void
+  setWordExportOpen: (open: boolean) => void
   setCompareOpen: (open: boolean) => void
   setQrOpen: (open: boolean) => void
   /** Reopen the generator on a code already placed on a page. */
@@ -312,6 +314,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   advancedExportOpen: false,
   metadataOpen: false,
   pageNumbersOpen: false,
+  wordExportOpen: false,
   compareOpen: false,
   qrOpen: false,
   qrEdit: null,
@@ -338,6 +341,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   setAdvancedExportOpen: (advancedExportOpen) => set({ advancedExportOpen }),
   setMetadataOpen: (metadataOpen) => set({ metadataOpen }),
   setPageNumbersOpen: (pageNumbersOpen) => set({ pageNumbersOpen }),
+  setWordExportOpen: (wordExportOpen) => set({ wordExportOpen }),
   setCompareOpen: (compareOpen) => set({ compareOpen }),
   // Clearing the edit target on every open AND close is what keeps the toolbar
   // button meaning "a new code": without it, closing an edit and pressing QR
@@ -577,7 +581,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     // ⚠️ `docUndo` goes with it. Undoing a merge back onto a document that is
     // no longer open would be the same bug the annotation history avoids by
     // clearing on load.
-    set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, firstPaint: true, previewOpen: false, presentOpen: false, ocrOpen: false, mergeOpen: false, convertOpen: false, advancedExportOpen: false, metadataOpen: false, pageNumbersOpen: false, compareOpen: false, qrOpen: false, qrEdit: null, importNotice: null, lockedFile: null, openedLocked: false, docUndo: [] })
+    set({ doc: null, numPages: 0, fileName: null, sourceBytes: null, isXfa: false, firstPaint: true, previewOpen: false, presentOpen: false, ocrOpen: false, mergeOpen: false, convertOpen: false, advancedExportOpen: false, metadataOpen: false, pageNumbersOpen: false, wordExportOpen: false, compareOpen: false, qrOpen: false, qrEdit: null, importNotice: null, lockedFile: null, openedLocked: false, docUndo: [] })
     setHashSlug(null)
   },
   refreshRecents: async () => {

@@ -36,6 +36,8 @@ export default {
   'compare_info': 'See what changed between two versions — page by page and word by word.',
   'convert': 'Convert into images',
   'convert_info': 'Render each page to PNG or JPG (a ZIP for multiple pages).',
+  'word': 'Export to Word', // Advanced menu row: make a .docx of the PDF's text
+  'word_info': 'Make an editable Word document (.docx) of the text.',
   'advanced_export': 'Advanced export',
   'advanced_export_info': 'Flatten the pages into pictures, lock it with a password, keep or strip the metadata.',
   'metadata': 'Document metadata',

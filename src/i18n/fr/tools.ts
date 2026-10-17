@@ -191,6 +191,18 @@ const tools: Messages['tools'] = {
   'page_numbers.add': 'Ajouter les numéros', // button
   'page_numbers.update': 'Mettre à jour les numéros', // button, when the document already has page numbers: redo them all with these choices
   'page_numbers.remove': 'Retirer', // button: take every page number off
+  'word.title': 'Exporter vers Word',
+  'word.explain': 'Crée un document Word (.docx) modifiable à partir de ce PDF : son texte, avec les titres, les paragraphes, le gras et l’italique. Tout se fait sur votre appareil ; rien n’est envoyé.',
+  'word.not_layout': 'La mise en page n’est pas copiée : les colonnes, tableaux et images ne suivent pas, et une page qui n’est qu’un scan arrive comme une image de la page.',
+  'word.preparing': 'Préparation du document…',
+  'word.reading': 'Lecture de la page {page} sur {total}…', // progress; {page} and {total} are numbers
+  'word.working': 'Exportation…', // the button while it runs
+  'word.export': 'Exporter vers Word', // button
+  'word.saved': 'Votre document Word est prêt.',
+  'word.all_scans': 'Aucune page n’avait de texte à copier (un scan, ou une page caviardée), chaque page arrive donc comme une image. Pour un scan, utilisez d’abord « Rendre interrogeable (OCR) » pour obtenir du texte modifiable.',
+  'word.some_scans_one': '{count} page n’avait pas de texte à copier (un scan, ou une page caviardée), elle arrive donc comme une image.',
+  'word.some_scans_other': '{count} pages n’avaient pas de texte à copier (des scans, ou des pages caviardées), elles arrivent donc comme des images.',
+  'word.failed': 'Impossible de créer le document Word.',
 
   // OcrModal
   'ocr.preparing': 'Préparation du moteur OCR…',
