@@ -68,9 +68,13 @@
 }
 
 /* The orange highlighter behind a word. The word is `position: relative;
-   z-index: 0`; the stroke sits behind it at z-index -1. `.np-hl--solid` is the
-   full-height block the Desk headline uses ("just work."); the default is the
-   lower-half stroke the page headings use ("Make your mark"). */
+   z-index: 0`; the stroke sits behind it at z-index -1. The default is the
+   lower-half stroke the page headings use ("Make your mark"); `.np-hl--desk`
+   is the Desk headline's ("just work."), drawn like the website's landing
+   stroke (`.pdf-highlighter` in LandingPage.tsx) with white text over it.
+   Opaque, unlike the website's: its 0.75 orange over cobalt mixes to a muddy
+   brown. #ea580c is 3.6:1 against the white text, above the 3:1 for 38px
+   bold (the brighter --np-orange is 2.8:1). */
 .np-hl {
   position: relative;
   z-index: 0;
@@ -89,15 +93,14 @@
   transform: rotate(-2deg);
   z-index: -1;
 }
-.np-hl--solid::after {
-  left: -6px;
-  right: -8px;
-  top: 4px;
-  bottom: -1px;
-  height: auto;
-  background: var(--np-orange);
-  border-radius: 4px 12px 6px 3px;
-  transform: rotate(-1.6deg);
+.np-hl--desk::after {
+  left: -0.14em;
+  right: 0.02em;
+  bottom: 0.09em;
+  height: 44%;
+  background: #ea580c;
+  border-radius: 0.1em 0.28em 0.14em 0.07em;
+  transform: rotate(-1.4deg);
 }
 
 /* Plain paper (Tune): no tilt anywhere. */

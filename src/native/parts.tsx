@@ -3,10 +3,11 @@ import { Icon, PATHS } from './icons'
 
 /**
  * A heading with one word on the orange highlighter: "Make your *mark*",
- * "Send it on its *way*". `solid` is the Desk headline's full-height block.
+ * "Send it on its *way*". `desk` is the Desk headline's stroke, the website's
+ * landing highlighter on the cobalt desk.
  */
-export function Hl({ children, solid = false }: { children: ReactNode; solid?: boolean }) {
-  return <span className={`np-hl${solid ? ' np-hl--solid' : ''}`}>{children}</span>
+export function Hl({ children, desk = false }: { children: ReactNode; desk?: boolean }) {
+  return <span className={`np-hl${desk ? ' np-hl--desk' : ''}`}>{children}</span>
 }
 
 /**

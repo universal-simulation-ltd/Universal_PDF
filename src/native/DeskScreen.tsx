@@ -114,9 +114,7 @@ export default function DeskScreen() {
 
         <h1 className="np-serif m-0 text-[38px] leading-[1.06] font-bold tracking-[-0.015em]">
           {t('phone.headline_lead')}{' '}
-          <span className="text-[color:var(--np-ink)]">
-            <Hl solid>{t('phone.headline_hl')}</Hl>
-          </span>
+          <Hl desk>{t('phone.headline_hl')}</Hl>
         </h1>
 
         <section aria-label={t('phone.choose_aria')} className="flex flex-col gap-2">
