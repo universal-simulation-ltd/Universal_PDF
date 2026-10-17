@@ -30,6 +30,7 @@
 
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { keepAppModuleUrls } from './app-modules.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, '..')
@@ -95,10 +96,9 @@ const b64 = Buffer.from(await pdf.save()).toString('base64')
 const { browser } = await loadPlaywright()
 // A phone, because that is where a landscape page at 100% overflows.
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
-
 // Every module URL the page loads is kept, so the store can be imported at the
-// exact URL the app imported it at — see `storeUrl` below.
-await page.addInitScript(() => performance.setResourceTimingBufferSize(100000))
+// exact URL the app imported it at (app-modules.mjs).
+await keepAppModuleUrls(page)
 
 try {
   await page.goto(BASE, { waitUntil: 'domcontentloaded' })
@@ -119,21 +119,10 @@ try {
     const bin = atob(b64)
     const bytes = new Uint8Array(bin.length)
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
-    // ⚠️ The store the APP is using, not a second copy of it. Once
-    // pdfStore.ts has been edited while the dev server is up (an HMR update —
-    // routine in a checkout other sessions are working in), Vite serves the
-    // app `pdfStore.ts?t=<time>`, and a bare `import('/src/stores/pdfStore.ts')`
-    // is a DIFFERENT module with its own empty store: `loadFile` then loads a
-    // document nothing renders, and every check below failed with "page 1
-    // never painted at all" (2026-10-12). Importing the URL the app actually
-    // loaded gets the one instance.
-    const storeUrl =
-      performance
-        .getEntriesByType('resource')
-        .map((e) => e.name)
-        .filter((u) => new URL(u).pathname === '/src/stores/pdfStore.ts')
-        .pop() ?? '/src/stores/pdfStore.ts'
-    const { usePdfStore } = await import(storeUrl)
+    // ⚠️ The store the APP is using, not a second copy of it: see
+    // app-modules.mjs (every check here failed with "page 1 never painted at
+    // all" once pdfStore.ts had been edited under a running dev server).
+    const { usePdfStore } = await (globalThis.__appImport ?? ((p) => import(p)))('/src/stores/pdfStore.ts')
     const file = new File([bytes], 'landscape.pdf', { type: 'application/pdf' })
 
     // ⚠️ Not awaited before watching starts: `loadFile` keeps working past the

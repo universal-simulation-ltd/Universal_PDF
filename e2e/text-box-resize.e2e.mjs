@@ -273,8 +273,9 @@ console.log('\nand a wrapped box bakes into the PDF as separate lines')
 const baked = await page.evaluate(async (sentence) => {
   const { PDFDocument } = await import('/node_modules/pdf-lib/dist/pdf-lib.esm.js')
   const { buildAnnotatedPdfBytes } = await import('/src/lib/export.ts')
-  const pdfjsLib = await import('/node_modules/pdfjs-dist/build/pdf.mjs')
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '/node_modules/pdfjs-dist/build/pdf.worker.mjs'
+  // The app's own openPdf, so the document gets the app's pdf.js worker and
+  // settings, not a second pdf.js copy with its own (export-fidelity, 2026-10-12).
+  const { openPdf } = await import('/src/lib/pdfjs.ts')
 
   const src = await PDFDocument.create()
   src.addPage([595, 842])
@@ -292,7 +293,7 @@ const baked = await page.evaluate(async (sentence) => {
   }
   async function lines(annotation) {
     const bytes = await buildAnnotatedPdfBytes(srcBytes.slice(0).buffer, [annotation], 1)
-    const doc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise
+    const doc = await openPdf(bytes.slice(0)).promise
     const content = await (await doc.getPage(1)).getTextContent()
     // Baseline y of each drawn line, top of the page first.
     const rows = [...new Set(content.items.map((i) => Math.round(i.transform[5])))].sort((a, b) => b - a)

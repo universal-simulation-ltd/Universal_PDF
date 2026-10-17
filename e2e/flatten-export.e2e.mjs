@@ -144,8 +144,9 @@ console.log('\nFlatten pages to images — the bytes, not the checkbox')
 const out = await page.evaluate(async (sentence) => {
   const { PDFDocument, StandardFonts } = await import('/node_modules/pdf-lib/dist/pdf-lib.esm.js')
   const { compressPdf } = await import('/src/lib/export.ts')
-  const pdfjsLib = await import('/node_modules/pdfjs-dist/build/pdf.mjs')
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '/node_modules/pdfjs-dist/build/pdf.worker.mjs'
+  // The app's own openPdf, so the document gets the app's pdf.js worker and
+  // settings, not a second pdf.js copy with its own (export-fidelity, 2026-10-12).
+  const { openPdf, pdfjsLib } = await import('/src/lib/pdfjs.ts')
 
   // A TEXT-ONLY PDF: no images at all, so rasterising it can only ever make it
   // bigger. This is exactly the document the old size gate refused to offer
@@ -157,7 +158,7 @@ const out = await page.evaluate(async (sentence) => {
   const srcBytes = await src.save()
 
   async function inspect(bytes) {
-    const doc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise
+    const doc = await openPdf(bytes.slice(0)).promise
     const p = await doc.getPage(1)
     const text = (await p.getTextContent()).items.map((i) => i.str).join('').trim()
     const ops = await p.getOperatorList()

@@ -19,6 +19,7 @@
 
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { keepAppModuleUrls } from './app-modules.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:5174/'
@@ -72,6 +73,7 @@ function check(label, condition, detail) {
 const playwright = await loadPlaywright()
 const browser = await playwright.chromium.launch()
 const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1440, height: 900 } })
+await keepAppModuleUrls(context)
 const page = await context.newPage()
 page.on('pageerror', (e) => failures.push('page error: ' + e.message))
 
@@ -90,7 +92,7 @@ try {
 async function openExample() {
   await page.evaluate(async () => {
     const { createExamplePdfFile } = await import('/src/lib/examplePdf.ts')
-    const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+    const { usePdfStore } = await (globalThis.__appImport ?? ((p) => import(p)))('/src/stores/pdfStore.ts')
     await usePdfStore.getState().loadFile(await createExamplePdfFile())
   })
   await page.waitForSelector('canvas', { timeout: 20000 })
@@ -119,7 +121,7 @@ function isDirty() {
 
 function docIsOpen() {
   return page.evaluate(async () => {
-    const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+    const { usePdfStore } = await (globalThis.__appImport ?? ((p) => import(p)))('/src/stores/pdfStore.ts')
     return !!usePdfStore.getState().doc
   })
 }
@@ -262,7 +264,7 @@ check('and it closed', (await docIsOpen()) === false)
 // ── 8. marks restored from recents are the baseline, not an amendment ──────
 console.log('\nReopened from recents')
 await page.evaluate(async () => {
-  const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+  const { usePdfStore } = await (globalThis.__appImport ?? ((p) => import(p)))('/src/stores/pdfStore.ts')
   await usePdfStore.getState().refreshRecents()
   const first = usePdfStore.getState().recents[0]
   if (first) await usePdfStore.getState().openRecent(first.id)
@@ -326,6 +328,7 @@ check('the browser asks before the tab goes', dialogType === 'beforeunload', dia
 // `beforeunload` and every other check here stays green.
 console.log('\nInside a native shell the browser is never asked')
 const nativeCtx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+await keepAppModuleUrls(nativeCtx)
 await nativeCtx.addInitScript(() => {
   window.Capacitor = { isNativePlatform: () => true }
 })
@@ -333,7 +336,7 @@ const nativePage = await nativeCtx.newPage()
 await nativePage.goto(BASE, { waitUntil: 'networkidle' })
 await nativePage.evaluate(async () => {
   const { createExamplePdfFile } = await import('/src/lib/examplePdf.ts')
-  const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+  const { usePdfStore } = await (globalThis.__appImport ?? ((p) => import(p)))('/src/stores/pdfStore.ts')
   await usePdfStore.getState().loadFile(await createExamplePdfFile())
 })
 await nativePage.waitForSelector('canvas', { timeout: 20000 })

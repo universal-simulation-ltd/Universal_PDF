@@ -220,12 +220,13 @@ const path = await download.path()
 const bytes = fs.readFileSync(path)
 
 const text = await page.evaluate(async (b64) => {
-  const pdfjsLib = await import('/node_modules/pdfjs-dist/build/pdf.mjs')
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '/node_modules/pdfjs-dist/build/pdf.worker.mjs'
+  // The app's own openPdf, so the document gets the app's pdf.js worker and
+  // settings, not a second pdf.js copy with its own (export-fidelity, 2026-10-12).
+  const { openPdf } = await import('/src/lib/pdfjs.ts')
   const bin = atob(b64)
   const data = new Uint8Array(bin.length)
   for (let i = 0; i < bin.length; i++) data[i] = bin.charCodeAt(i)
-  const doc = await pdfjsLib.getDocument({ data }).promise
+  const doc = await openPdf(data).promise
   const p = await doc.getPage(1)
   return (await p.getTextContent()).items.map((i) => i.str).join(' ')
 }, bytes.toString('base64'))

@@ -16,6 +16,7 @@
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { PDFDocument } from 'pdf-lib'
+import { keepAppModuleUrls } from './app-modules.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:5174/'
@@ -52,10 +53,11 @@ const plain = Buffer.from(await pdf.save()).toString('base64')
 const playwright = await loadPlaywright()
 const browser = await playwright.chromium.launch()
 const page = await browser.newPage()
+await keepAppModuleUrls(page)
 await page.goto(BASE)
 
 const results = await page.evaluate(async (plainB64) => {
-  const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+  const { usePdfStore } = await (globalThis.__appImport ?? ((p) => import(p)))('/src/stores/pdfStore.ts')
   const { useAnnotationStore } = await import('/src/stores/annotationStore.ts')
   const { listRecents, getRecentEdits } = await import('/src/lib/recents.ts')
   const { encryptPdf } = await import('/src/lib/pdfEncrypt.ts')

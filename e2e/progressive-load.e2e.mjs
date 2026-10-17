@@ -43,6 +43,7 @@
 
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { keepAppModuleUrls } from './app-modules.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, '..')
@@ -114,6 +115,7 @@ const b64 = Buffer.from(await pdf.save()).toString('base64')
 
 const { browser } = await loadPlaywright()
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
+await keepAppModuleUrls(page)
 
 try {
   await page.goto(BASE, { waitUntil: 'domcontentloaded' })
@@ -133,7 +135,7 @@ try {
     const bin = atob(b64)
     const bytes = new Uint8Array(bin.length)
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
-    const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+    const { usePdfStore } = await (globalThis.__appImport ?? ((p) => import(p)))('/src/stores/pdfStore.ts')
     const file = new File([bytes], 'long.pdf', { type: 'application/pdf' })
 
     // ⚠️ Not awaited before watching starts: `loadFile` keeps working past the

@@ -26,6 +26,7 @@
 
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { keepAppModuleUrls } from './app-modules.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:5174/'
@@ -106,6 +107,7 @@ try {
 
 const browser = await loadPlaywright()
 const page = await browser.newPage({ viewport: { width: 1000, height: 700 } })
+await keepAppModuleUrls(page)
 const warnings = []
 page.on('console', (m) => {
   if (/cMapUrl|standardFontDataUrl|Worker was destroyed|Transport destroyed/.test(m.text())) warnings.push(m.text())
@@ -124,7 +126,7 @@ try {
     const bin = atob(b64)
     const bytes = new Uint8Array(bin.length)
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
-    const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+    const { usePdfStore } = await (globalThis.__appImport ?? ((p) => import(p)))('/src/stores/pdfStore.ts')
     await usePdfStore.getState().loadFile(new File([bytes], 'cjk.pdf', { type: 'application/pdf' }))
   }, fixture())
   await page.waitForFunction(

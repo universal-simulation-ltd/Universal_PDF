@@ -138,14 +138,15 @@ for (const fontSize of [10, 18, 40]) {
 
     const { buildAnnotatedPdfBytes } = await import('/src/lib/export.ts')
     const { layoutText } = await import('/src/lib/textLayout.ts')
-    const pdfjsLib = await import('/node_modules/pdfjs-dist/build/pdf.mjs')
-    pdfjsLib.GlobalWorkerOptions.workerSrc = '/node_modules/pdfjs-dist/build/pdf.worker.mjs'
+    // The app's own openPdf, so the document gets the app's pdf.js worker and
+    // settings, not a second pdf.js copy with its own (export-fidelity, 2026-10-12).
+    const { openPdf } = await import('/src/lib/pdfjs.ts')
     const st = window.__stores
     const anns = st.ann.getState().annotations
     const a = anns.find((x) => x.id === 'lnk')
     const linkRun = layoutText(a)[0].runs.find((r) => r.link)
     const bytes = await buildAnnotatedPdfBytes(st.pdf.getState().sourceBytes.slice(0), anns, 1)
-    const doc = await pdfjsLib.getDocument({ data: bytes }).promise
+    const doc = await openPdf(bytes).promise
     const p = await doc.getPage(1)
     const links = (await p.getAnnotations()).filter((x) => x.subtype === 'Link')
     const vp = p.getViewport({ scale: k })

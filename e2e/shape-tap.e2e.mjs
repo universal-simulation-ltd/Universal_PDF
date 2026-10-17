@@ -322,12 +322,13 @@ check(
 console.log('\nand the tapped box burns in on export like a drawn one')
 const burnt = await page.evaluate(async () => {
   const { buildAnnotatedPdfBytes } = await import('/src/lib/export.ts')
-  const pdfjsLib = await import('/node_modules/pdfjs-dist/build/pdf.mjs')
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '/node_modules/pdfjs-dist/build/pdf.worker.mjs'
+  // The app's own openPdf, so the document gets the app's pdf.js worker and
+  // settings, not a second pdf.js copy with its own (export-fidelity, 2026-10-12).
+  const { openPdf } = await import('/src/lib/pdfjs.ts')
   const st = window.__stores
   const anns = st.ann.getState().annotations
   const bytes = await buildAnnotatedPdfBytes(st.pdf.getState().sourceBytes.slice(0), anns, 1)
-  const doc = await pdfjsLib.getDocument({ data: bytes }).promise
+  const doc = await openPdf(bytes).promise
   const p = await doc.getPage(1)
   const text = (await p.getTextContent()).items.map((i) => i.str).join(' ')
   const S = 2

@@ -19,6 +19,7 @@
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { keepAppModuleUrls } from './app-modules.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:5174/'
@@ -65,6 +66,7 @@ function check(label, condition, detail) {
 const playwright = await loadPlaywright()
 const browser = await playwright.chromium.launch()
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+await keepAppModuleUrls(context)
 const page = await context.newPage()
 page.on('pageerror', (e) => failures.push('page error: ' + e.message))
 page.on('dialog', (d) => {
@@ -98,7 +100,7 @@ async function dropFiles(files) {
 
 async function state() {
   return page.evaluate(async () => {
-    const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+    const { usePdfStore } = await (globalThis.__appImport ?? ((p) => import(p)))('/src/stores/pdfStore.ts')
     const { useTabStore } = await import('/src/stores/tabStore.ts')
     const { useFormStore } = await import('/src/stores/formStore.ts')
     const t = useTabStore.getState()
@@ -219,7 +221,7 @@ try {
   console.log('\nClose PDF closes only the tab in front')
   // The call Actions → File → Close PDF makes once the guard has let it through.
   await page.evaluate(async () => {
-    const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+    const { usePdfStore } = await (globalThis.__appImport ?? ((p) => import(p)))('/src/stores/pdfStore.ts')
     usePdfStore.getState().reset()
   })
   s = await until((x) => x.tabs.length === 2 && !!x.fileName && x.fileName !== 'five.pdf')

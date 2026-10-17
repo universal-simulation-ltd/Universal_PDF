@@ -129,8 +129,9 @@ console.log('\nAES-256 in a browser, not in Node')
 const crypto = await page.evaluate(async (sentence) => {
   const { PDFDocument, StandardFonts } = await import('/node_modules/pdf-lib/dist/pdf-lib.esm.js')
   const { encryptPdf, decryptPdf } = await import('/src/lib/pdfEncrypt.ts')
-  const pdfjsLib = await import('/node_modules/pdfjs-dist/build/pdf.mjs')
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '/node_modules/pdfjs-dist/build/pdf.worker.mjs'
+  // The app's own openPdf, so the document gets the app's pdf.js worker and
+  // settings, not a second pdf.js copy with its own (export-fidelity, 2026-10-12).
+  const { openPdf } = await import('/src/lib/pdfjs.ts')
 
   const src = await PDFDocument.create()
   const font = await src.embedFont(StandardFonts.Helvetica)
@@ -144,7 +145,7 @@ const crypto = await page.evaluate(async (sentence) => {
 
   async function open(bytes, password) {
     try {
-      const doc = await pdfjsLib.getDocument({ data: bytes.slice(0), password }).promise
+      const doc = await openPdf(bytes.slice(0), { password }).promise
       const text = (await (await doc.getPage(1)).getTextContent()).items.map((i) => i.str).join('')
       return { ok: true, text }
     } catch (e) {
@@ -256,18 +257,19 @@ const path = await download.path()
 const bytes = await (await import('node:fs/promises')).readFile(path)
 
 const verdict = await page.evaluate(async (arr) => {
-  const pdfjsLib = await import('/node_modules/pdfjs-dist/build/pdf.mjs')
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '/node_modules/pdfjs-dist/build/pdf.worker.mjs'
+  // The app's own openPdf, so the document gets the app's pdf.js worker and
+  // settings, not a second pdf.js copy with its own (export-fidelity, 2026-10-12).
+  const { openPdf } = await import('/src/lib/pdfjs.ts')
   const data = new Uint8Array(arr)
   let refused = false
   try {
-    await pdfjsLib.getDocument({ data: data.slice(0) }).promise
+    await openPdf(data.slice(0)).promise
   } catch {
     refused = true
   }
   let opened = false
   try {
-    const doc = await pdfjsLib.getDocument({ data: data.slice(0), password: '4913' }).promise
+    const doc = await openPdf(data.slice(0), { password: '4913' }).promise
     opened = doc.numPages === 1
   } catch {
     opened = false

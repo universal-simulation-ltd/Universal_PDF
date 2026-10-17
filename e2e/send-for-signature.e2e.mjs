@@ -44,6 +44,7 @@
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { readFileSync, writeFileSync } from 'node:fs'
+import { keepAppModuleUrls } from './app-modules.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:5174/'
@@ -128,6 +129,7 @@ function watchAuth(page) {
 
 // ── 1–3: the export and the reader, in the page against the app's modules ──
 const context = await browser.newContext({ viewport: { width: 1300, height: 950 }, acceptDownloads: true })
+await keepAppModuleUrls(context)
 await context.addInitScript(() => {
   try { localStorage.setItem('unisim:default-view:pdf:page-scroll', 'vertical') } catch { /* no storage */ }
 })
@@ -146,8 +148,9 @@ console.log('\nthe export writes real signature fields, and reading them gives t
 const mod = await page.evaluate(async () => {
   const { PDFDocument, StandardFonts, PDFName, PDFString, degrees } = await import('/node_modules/pdf-lib/dist/pdf-lib.esm.js')
   const { buildAnnotatedPdfBytes, readEmbeddedSigFields } = await import('/src/lib/export.ts')
-  const pdfjsLib = await import('/node_modules/pdfjs-dist/build/pdf.mjs')
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '/node_modules/pdfjs-dist/build/pdf.worker.mjs'
+  // The app's own openPdf, so the document gets the app's pdf.js worker and
+  // settings, not a second pdf.js copy with its own (export-fidelity, 2026-10-12).
+  const { openPdf, pdfjsLib } = await import('/src/lib/pdfjs.ts')
 
   const src = await PDFDocument.create()
   const font = await src.embedFont(StandardFonts.Helvetica)
@@ -167,7 +170,7 @@ const mod = await page.evaluate(async () => {
   const legacyKey = !!check.catalog.get(PDFName.of('UPDFSigFields'))
 
   // What pdf.js — the engine in Firefox and in this app — makes of them.
-  const doc = await pdfjsLib.getDocument({ data: out.slice(0) }).promise
+  const doc = await openPdf(out.slice(0)).promise
   const seen = []
   for (let i = 1; i <= doc.numPages; i++) {
     for (const a of await (await doc.getPage(i)).getAnnotations()) {
@@ -188,7 +191,7 @@ const mod = await page.evaluate(async () => {
     ? { ...b, signed: { src: ink.toDataURL('image/png'), width: 300, height: 100 } }
     : b)
   const signedOut = await buildAnnotatedPdfBytes(out.slice(0).buffer, signedBoxes, 1)
-  const doc2 = await pdfjsLib.getDocument({ data: signedOut.slice(0) }).promise
+  const doc2 = await openPdf(signedOut.slice(0)).promise
   const p1 = await doc2.getPage(1)
   const ops = await p1.getOperatorList()
   const drawsImage = ops.fnArray.some((fn) => fn === pdfjsLib.OPS.paintImageXObject)
@@ -306,6 +309,7 @@ await page.getByRole('button', { name: 'Close' }).last().click()
 
 // The recipient: a fresh browser, no account, the file they were sent.
 const recipient = await browser.newContext({ viewport: { width: 1300, height: 950 } })
+await keepAppModuleUrls(recipient)
 await recipient.addInitScript(() => {
   try { localStorage.setItem('unisim:default-view:pdf:page-scroll', 'vertical') } catch { /* no storage */ }
 })
@@ -371,6 +375,7 @@ await context.close()
 // ── 5: as the phone app ─────────────────────────────────────────────────────
 console.log('\nas the phone app: no account anywhere, Share instead of the certified route')
 const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 })
+await keepAppModuleUrls(phone)
 await phone.addInitScript(() => {
   // ⚠️ Faked as the iOS bridge, not just `window.Capacitor.isNativePlatform`:
   // @capacitor/core is loaded at start-up and rebuilds that global from what
@@ -393,7 +398,7 @@ await pp.goto(BASE, { waitUntil: 'load' })
 await pp.getByText('Drop a PDF here').waitFor({ timeout: 30000 }).catch(() => {})
 await pp.waitForTimeout(500)
 await pp.evaluate(async () => {
-  const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+  const { usePdfStore } = await (globalThis.__appImport ?? ((p) => import(p)))('/src/stores/pdfStore.ts')
   const { PDFDocument } = await import('/node_modules/pdf-lib/dist/pdf-lib.esm.js')
   const d = await PDFDocument.create()
   d.addPage([595, 842])
@@ -409,7 +414,7 @@ await pp.waitForSelector('[data-page-index="0"] canvas', { timeout: 30000 }).cat
 // tab's dialogs as it settles) shut it in the meantime.
 for (let i = 0; i < 10 && (await pp.locator('[data-send-for-signature]').count()) === 0; i++) {
   await pp.evaluate(async () => {
-    const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+    const { usePdfStore } = await (globalThis.__appImport ?? ((p) => import(p)))('/src/stores/pdfStore.ts')
     usePdfStore.getState().setSendForSignatureOpen(true)
   })
   await pp.waitForSelector('[data-send-for-signature]', { timeout: 2000 }).catch(() => {})
@@ -417,7 +422,7 @@ for (let i = 0; i < 10 && (await pp.locator('[data-send-for-signature]').count()
 check('the dialog offers Share', (await pp.locator('[data-sfs-share]').count()) === 1)
 check('and no certified route, nor a link out', (await pp.locator('[data-sfs-certified], [data-send-for-signature] a[href]').count()) === 0)
 check('the certified dialog cannot be mounted', await pp.evaluate(async () => {
-  const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+  const { usePdfStore } = await (globalThis.__appImport ?? ((p) => import(p)))('/src/stores/pdfStore.ts')
   usePdfStore.getState().setSendForSignatureOpen(false)
   usePdfStore.getState().setSendToSignOpen(true)
   await new Promise((r) => setTimeout(r, 500))
@@ -425,7 +430,7 @@ check('the certified dialog cannot be mounted', await pp.evaluate(async () => {
 }))
 // The profile pill: no "Sign in" row.
 await pp.evaluate(async () => {
-  const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+  const { usePdfStore } = await (globalThis.__appImport ?? ((p) => import(p)))('/src/stores/pdfStore.ts')
   usePdfStore.getState().setSendToSignOpen(false)
 })
 const pill = pp.getByRole('button', { name: /Actions/ }).first()

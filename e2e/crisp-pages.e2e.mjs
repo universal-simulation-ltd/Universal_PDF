@@ -30,6 +30,7 @@
 
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { keepAppModuleUrls } from './app-modules.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, '..')
@@ -103,6 +104,7 @@ const [longB64, shortB64] = await Promise.all([makePdf(LONG), makePdf(SHORT)])
 const { browser } = await loadPlaywright()
 // deviceScaleFactor 2 — a retina Mac, where a 1× bitmap is visibly soft.
 const page = await browser.newPage({ viewport: { width: 1000, height: 900 }, deviceScaleFactor: 2 })
+await keepAppModuleUrls(page)
 
 // What the viewer is holding, once it has stopped changing.
 const SETTLE = `
@@ -127,7 +129,7 @@ async function open(b64) {
     const bin = atob(b64)
     const bytes = new Uint8Array(bin.length)
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
-    const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+    const { usePdfStore } = await (globalThis.__appImport ?? ((p) => import(p)))('/src/stores/pdfStore.ts')
     usePdfStore.getState().reset()
     await usePdfStore.getState().loadFile(new File([bytes], 'doc.pdf', { type: 'application/pdf' }))
     // eslint-disable-next-line no-undef
