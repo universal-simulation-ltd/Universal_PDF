@@ -616,6 +616,16 @@ Confirm. It was removed rather than kept as a second route. `Del` / `Backspace`
 still work and still clear a whole multi-selection, which neither button ever
 did.
 
+**Put on every page** (James, 2026-10-18) stacks under the bin on any selected
+picture — a signature, a stamp or a plain picture, since a stamp IS a plain
+picture once placed — and under the QR ✏️ on a code. It is hidden on a
+one-page document. `lib/everyPage.ts` makes one copy per other page, the same
+distance from the NEAREST edges (a signature at the foot of a Letter page lands
+at the foot of an A4 one), pulled back onto a smaller page, and skips a page
+that already has the same picture in the same place. The copies are separate
+marks, added with `addMany` as ONE undo step; the original stays selected, and
+"Added to N more pages" shows beside the button for a moment.
+
 ## Text boxes: the size pill, the handles, and where the lines break
 
 A text annotation is the only annotation whose *content* has a layout, and since
@@ -1964,6 +1974,75 @@ since that plugin ships no manifest of its own. Keep it in step with
 asks for Sign in with Apple (or an equivalent), and Google refuses OAuth inside
 an embedded web view anyway. The fix belongs in `@unisim/sdk`'s
 `SignInDialog`.
+
+## Sticky notes fold to an icon
+
+**Minimise** on a note's pill (James, 2026-10-18) sets `noteFolded`: the note is
+drawn as a 22pt paper icon at the card's top-left (`NOTE_FOLDED_SIZE`, and
+`textBoxSize` answers the icon's size, so selection and dragging need nothing
+of their own). A click opens it — Konva fires no click after a drag, so a drag
+only moves it. A folded note has no text pill and no resize handles.
+
+On export a folded note is **not drawn**: `addFoldedNotes` writes a real PDF
+sticky note (`/Subtype /Text`, `/Contents` = the words, flags Print + NoZoom +
+NoRotate) with its own appearance stream drawing the same icon, so every reader
+shows the icon and opens it to the words. A note under a redaction is dropped,
+words and all, as links are.
+
+⚠️ `page.node.lookup(PDFName.of('Annots'), PDFArray)` THROWS when the page has
+no `/Annots` (pdf-lib's typed lookup does not return undefined). `addLinks` had
+it since #142; both now use `lookupMaybe`.
+
+## Page numbers
+
+*Advanced → Page numbers* (James, 2026-10-18): left, centre or right at the
+foot, as "1" or "Page 1 of 3". They are ordinary text marks with a
+`pageNumber` record (`{ template, align, anchorX }`), so they render, export and
+can be nudged or deleted with no code of their own. `lib/pageNumbers.ts` builds
+them 36pt in from the foot and side of each page's own size, in slate ink at
+10pt.
+
+`usePageNumberSync` (mounted in App) rewrites them after a page is moved,
+deleted or merged in — the number, the count and, for centre/right, the start —
+through the store's `quietUpdateMany`, which is NOT an undo step (undo lands on
+the old text and the sync corrects it again). A number someone retyped is left
+alone: only text that still reads as some page of its template is touched.
+Pages added later get no number until the dialog is used again; Update re-does
+them all in one undo step (`swapMany`), Remove takes them all off.
+
+The template is stored in the language it was added in ("Seite {n} von
+{total}"), so switching the app's language does not rewrite the document.
+
+## Export to Word
+
+*Advanced → Export to Word* (James, 2026-10-18 — Word only, not Excel or
+PowerPoint) makes a .docx of the text, on the device:
+
+    pdfToDocx/extract.ts   pdf.js: each page's words, sizes, bold/italic
+    ├── layout.ts          lines → paragraphs, headings, list items (pure)
+    └── docx.ts            the XML parts of the .docx (pure); zipped by @unisim/media
+
+- Bold/italic come from the font's real name, which pdf.js only has after
+  `page.getOperatorList()` has loaded the fonts into `commonObjs`.
+- Paragraphs: lines on consecutive baselines (gap ≤ 1.75 × size, same size)
+  join; a word hyphenated over a break is rejoined; a gap or a set-in first
+  line starts a new one. Headings: lines ≥ 1.2 × the body size (the size most
+  characters are set in), ≤ 150 characters; the biggest size is Heading 1.
+  Lists keep their own bullet or number as typed (style `ListItem`, hanging
+  indent) — never renumbered.
+- Not rebuilt, on purpose and said in the dialog: columns, tables, pictures.
+  Text comes out in the order the PDF stores it.
+- A page with fewer than 3 characters of text becomes a PNG of the page.
+- ⚠️ **It converts the document AS EXPORTED** (`buildAnnotatedPdfBytes`)
+  whenever there are annotations or form values. A redacted page is flattened
+  to an image by that export, so it comes across as a picture and the redacted
+  text can never reach the Word file; the dialog says "no text to copy (a scan,
+  or a page with a redaction)".
+- The writer is in-app, not in `@unisim/doc` (which reads Word but writes only
+  PDF/text/HTML/Markdown). If Universal Converter ever wants Word output, move
+  `docx.ts` there.
+- Checked three ways: read back by `@unisim/doc` `readDocx`
+  (e2e/word-export.e2e.mjs), by macOS `textutil`, and rendered by LibreOffice.
 
 ## Suite context
 
