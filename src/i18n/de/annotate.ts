@@ -29,6 +29,10 @@ const annotate: Messages['annotate'] = {
   'selection.confirm_aria': 'Bestätigen und Auswahl aufheben',
   'selection.qr_edit_title': 'Diesen QR-Code feinjustieren – Link, Stil oder Branding',
   'selection.qr_edit_aria': 'Diesen QR-Code feinjustieren',
+  'selection.every_page': 'Auf jede Seite setzen', // button on a selected signature, stamp or picture: copy it onto every other page
+  'selection.every_page_done_one': 'Auf {count} weitere Seite gesetzt', // shown for a moment after Put on every page; {count} = pages it was added to
+  'selection.every_page_done_other': 'Auf {count} weitere Seiten gesetzt', // as above, more than one page
+  'selection.every_page_already': 'Schon auf jeder Seite', // Put on every page found it already on every page, in the same place
 
   // AnnotationLayer — text pill (size, bold / italic / underline / link)
   'text.bold_letter': 'F',

@@ -29,6 +29,10 @@ export default {
   'selection.confirm_aria': 'Confirm and deselect',
   'selection.qr_edit_title': 'Fine-tune this QR code — link, style or branding',
   'selection.qr_edit_aria': 'Fine-tune this QR code',
+  'selection.every_page': 'Put on every page', // button on a selected signature, stamp or picture: copy it onto every other page
+  'selection.every_page_done_one': 'Added to {count} more page', // shown for a moment after Put on every page; {count} = pages it was added to
+  'selection.every_page_done_other': 'Added to {count} more pages', // as above, more than one page
+  'selection.every_page_already': 'Already on every page', // Put on every page found it already on every page, in the same place
 
   // AnnotationLayer — text pill (size, bold / italic / underline / link)
   'text.bold_letter': 'B', // one-letter button face for Bold; use your language's usual letter

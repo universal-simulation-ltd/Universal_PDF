@@ -29,6 +29,10 @@ const annotate: Messages['annotate'] = {
   'selection.confirm_aria': 'Onayla ve seçimi kaldır',
   'selection.qr_edit_title': 'Bu QR koduna ince ayar yap — bağlantı, stil veya marka',
   'selection.qr_edit_aria': 'Bu QR koduna ince ayar yap',
+  'selection.every_page': 'Her sayfaya koy', // button on a selected signature, stamp or picture: copy it onto every other page
+  'selection.every_page_done_one': '{count} sayfaya daha eklendi', // shown for a moment after Put on every page; {count} = pages it was added to
+  'selection.every_page_done_other': '{count} sayfaya daha eklendi', // as above, more than one page
+  'selection.every_page_already': 'Zaten her sayfada', // Put on every page found it already on every page, in the same place
 
   // AnnotationLayer — text pill (size, bold / italic / underline / link)
   'text.bold_letter': 'K',

@@ -29,6 +29,10 @@ const annotate: Messages['annotate'] = {
   'selection.confirm_aria': 'Confirmer et désélectionner',
   'selection.qr_edit_title': 'Peaufiner ce code QR — lien, style ou identité visuelle',
   'selection.qr_edit_aria': 'Peaufiner ce code QR',
+  'selection.every_page': 'Placer sur chaque page', // button on a selected signature, stamp or picture: copy it onto every other page
+  'selection.every_page_done_one': 'Ajouté sur {count} autre page', // shown for a moment after Put on every page; {count} = pages it was added to
+  'selection.every_page_done_other': 'Ajouté sur {count} autres pages', // as above, more than one page
+  'selection.every_page_already': 'Déjà sur chaque page', // Put on every page found it already on every page, in the same place
 
   // AnnotationLayer — text pill (size, bold / italic / underline / link)
   'text.bold_letter': 'G',

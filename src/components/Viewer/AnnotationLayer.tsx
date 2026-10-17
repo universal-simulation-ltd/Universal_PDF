@@ -16,6 +16,7 @@ import {
 import type Konva from 'konva'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { usePdfStore } from '../../stores/pdfStore'
+import { copiesForEveryPage, type PageSize } from '../../lib/everyPage'
 import { useSignatureStore, type PendingExtra } from '../../stores/signatureStore'
 import { useCoarsePointer } from '../../hooks/useCoarsePointer'
 import { useImage } from '../../lib/useImage'
@@ -926,6 +927,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const selectedIds = useAnnotationStore((s) => s.selectedIds)
   const add = useAnnotationStore((s) => s.add)
   const update = useAnnotationStore((s) => s.update)
+  const addMany = useAnnotationStore((s) => s.addMany)
   const updateMany = useAnnotationStore((s) => s.updateMany)
   const remove = useAnnotationStore((s) => s.remove)
   const replace = useAnnotationStore((s) => s.replace)
@@ -973,6 +975,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // counted in the budget as such.)
   const stageRef = useRef<Konva.Stage>(null)
   const numPages = usePdfStore((s) => s.numPages)
+  // What "Put on every page" just did, said for a moment beside its button.
+  const [everyPageSaid, setEveryPageSaid] = useState<{ id: string; text: string } | null>(null)
   // ⚠️ `budgetedPageCount`, NOT `numPages` — the same divisor `PdfPage` uses
   // for the bitmap underneath. This stage only exists for the band of pages
   // around the reader, so sharing the allowance with the whole document drew
@@ -3375,6 +3379,37 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         // code sitting against the right margin of a narrow screen doesn't push
         // it out past the page.
         const placedQr = selected.type === 'image' ? selected.qr : undefined
+        // "Put on every page" (James, 2026-10-18): a copy of this signature,
+        // stamp or picture on every other page, as separate marks, in ONE undo
+        // step. A stamp is a picture once placed, so every picture gets it.
+        // Stacked under Delete (under the QR ✏️ on a code) for the reason the
+        // ✏️ is: a row running right falls off a narrow screen.
+        const everyPage = selected.type === 'image' && numPages > 1 ? selected : null
+        const everyPageTop = top + (placedQr ? 72 : 36)
+        const putOnEveryPage = async (a: ImageAnnotation) => {
+          const doc = usePdfStore.getState().doc
+          if (!doc) return
+          const sizes: PageSize[] = await Promise.all(
+            Array.from({ length: doc.numPages }, (_, i) =>
+              doc.getPage(i + 1).then((p) => {
+                const v = p.getViewport({ scale: 1 })
+                return { w: v.width, h: v.height }
+              })
+            )
+          )
+          const copies = copiesForEveryPage(a, sizes, useAnnotationStore.getState().annotations, () => crypto.randomUUID())
+          if (copies.length) {
+            addMany(copies)
+            // addMany selects what it added; the one on this page stays the
+            // selection, so its buttons don't vanish under the finger.
+            setSelected(a.id)
+          }
+          setEveryPageSaid({
+            id: a.id,
+            text: copies.length ? t.plural('annotate.selection.every_page_done', copies.length) : t('annotate.selection.every_page_already')
+          })
+          window.setTimeout(() => setEveryPageSaid((cur) => (cur?.id === a.id ? null : cur)), 2600)
+        }
         return (
           <>
             <button
@@ -3436,6 +3471,32 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                   <path d="M13.5 6.5l4 4" />
                 </svg>
               </button>
+            )}
+            {everyPage && (
+              <button
+                type="button"
+                title={t('annotate.selection.every_page')}
+                aria-label={t('annotate.selection.every_page')}
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); void putOnEveryPage(everyPage) }}
+                style={{ position: 'absolute', left, top: everyPageTop, zIndex: 21 }}
+                className="w-8 h-8 rounded-full bg-white shadow-lg border border-slate-300 text-orange-700 hover:bg-orange-700 hover:text-white hover:border-orange-700 flex items-center justify-center transition-colors"
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M8 3h10a2 2 0 0 1 2 2v12" />
+                  <rect x="4" y="7" width="12" height="14" rx="2" />
+                  <path d="M10 11v6M7 14h6" />
+                </svg>
+              </button>
+            )}
+            {everyPage && everyPageSaid?.id === everyPage.id && (
+              <div
+                role="status"
+                style={{ position: 'absolute', left: left + 40, top: everyPageTop + 4, zIndex: 21 }}
+                className="px-2.5 py-1 rounded-full bg-slate-900 text-white text-xs font-medium shadow-lg whitespace-nowrap pointer-events-none"
+              >
+                {everyPageSaid.text}
+              </div>
             )}
           </>
         )
