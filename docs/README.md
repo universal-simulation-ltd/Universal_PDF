@@ -2044,6 +2044,24 @@ PowerPoint) makes a .docx of the text, on the device:
 - Checked three ways: read back by `@unisim/doc` `readDocx`
   (e2e/word-export.e2e.mjs), by macOS `textutil`, and rendered by LibreOffice.
 
+## Not built, on purpose
+
+Decided feature by feature with James on 2026-10-18, comparing with Puter's
+"Everything" PDF app (github.com/HeyPuter/everything). Don't propose these
+again without a new reason:
+
+- **Form designer** (drag fields onto a flat PDF) — never. People design a form
+  in Word and export it; nobody designs a PDF inside a PDF reader. Filling
+  existing forms stays.
+- **Digital-ID certificate signing / validation** (.pfx / .p12) — no.
+- **PDF/A check and save** — no.
+- **Measuring tool** (distances and areas at a scale) — no.
+- **Excel and PowerPoint export** — no; Word only.
+- **Review comments** (replies, statuses, a comment list, XFDF) — no; sticky
+  notes fold to an icon instead.
+- **Accessibility check with fixes** — not now; revisit if Universal PDF picks
+  up business users.
+
 ## Suite context
 
 This repo is one part of the **Universal Simulation suite** (the open-source
