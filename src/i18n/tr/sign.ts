@@ -297,6 +297,13 @@ const sign: Messages['sign'] = {
   'send_certificate': 'Sertifika',
   'send_revoke_title': 'Bu imzalama isteğini iptal et',
   'send_revoke': 'İptal et',
+  'send_remind': 'Hatırlat',
+  'send_reminding': 'Gönderiliyor…',
+  'send_reminded': 'Hatırlatma gönderildi',
+  'send_remind_title': 'İmzalayana bağlantısını yeniden e-postayla gönder (günde en fazla bir kez)',
+  'send_remind_too_soon': 'Bir sonraki hatırlatmayı {time} itibarıyla gönderebilirsiniz',
+  'send_remind_failed': 'Hatırlatma gönderilemedi.',
+  'send_remind_no_email': 'Hatırlatılacak e-posta adresi yok. Bunun yerine bağlantıyı kopyalayın.',
 
   // HostedStoreDialog
   'hosted_title': 'Bu PDF’i yedekle',

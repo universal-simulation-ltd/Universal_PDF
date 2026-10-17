@@ -297,6 +297,13 @@ const sign: Messages['sign'] = {
   'send_certificate': 'Certificat',
   'send_revoke_title': 'Révoquer cette demande de signature',
   'send_revoke': 'Révoquer',
+  'send_remind': 'Relancer',
+  'send_reminding': 'Envoi…',
+  'send_reminded': 'Relance envoyée',
+  'send_remind_title': 'Renvoyer son lien au signataire par e-mail (une fois par jour au plus)',
+  'send_remind_too_soon': 'Vous pourrez relancer à nouveau à partir du {time}',
+  'send_remind_failed': 'Impossible d’envoyer la relance.',
+  'send_remind_no_email': 'Aucune adresse e-mail à relancer. Copiez plutôt le lien.',
 
   // HostedStoreDialog
   'hosted_title': 'Sauvegarder ce PDF',

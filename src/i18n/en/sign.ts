@@ -297,6 +297,13 @@ export default {
   'send_certificate': 'Certificate',
   'send_revoke_title': 'Revoke this signing request',
   'send_revoke': 'Revoke',
+  'send_remind': 'Remind',
+  'send_reminding': 'Sending…',
+  'send_reminded': 'Reminder sent',
+  'send_remind_title': 'Email the signer their link again (at most once a day)',
+  'send_remind_too_soon': 'You can send another reminder from {time}',
+  'send_remind_failed': 'Couldn’t send the reminder.',
+  'send_remind_no_email': 'There’s no email address to remind. Copy the link instead.',
 
   // HostedStoreDialog
   'hosted_title': 'Back up this PDF',

@@ -24,6 +24,7 @@ import {
   certLink,
   sendSignRequestEmail,
   signRequestMailto,
+  remindSignRequest,
 } from '../lib/signRequestClient'
 import { useT, intlLocale, type MessageKey } from '../i18n'
 
@@ -312,6 +313,25 @@ export default function SendToSignDialog() {
     } finally {
       setBusy(false)
     }
+  }
+
+  // Per request: what the last Remind said (kept while the dialog is open).
+  const [reminders, setReminders] = useState<Record<string, { busy?: boolean; text?: string; ok?: boolean }>>({})
+  async function onRemind(req: SignRequest) {
+    setReminders((m) => ({ ...m, [req.id]: { busy: true } }))
+    const res = await remindSignRequest(supabase, req.id)
+    const when = res.nextAt
+      ? new Date(res.nextAt).toLocaleString(intlLocale(t.lang), { dateStyle: 'medium', timeStyle: 'short' })
+      : ''
+    const text = res.ok
+      ? t('sign.send_reminded')
+      : res.code === 'too_soon' && when
+        ? t('sign.send_remind_too_soon', { time: when })
+        : res.code === 'no_recipient'
+          ? t('sign.send_remind_no_email')
+          : t('sign.send_remind_failed')
+    setReminders((m) => ({ ...m, [req.id]: { text, ok: res.ok } }))
+    if (res.code === 'completed' || res.code === 'expired') refreshList()
   }
 
   async function onRevoke(req: SignRequest) {
@@ -656,8 +676,11 @@ export default function SendToSignDialog() {
                     {requests.map((r) => {
                       const ui = STATUS_UI[r.status] ?? STATUS_UI.pending
                       const done = r.status === 'completed' || r.status === 'signed'
+                      const expired = new Date(r.expires_at).getTime() < Date.now()
+                      const reminder = reminders[r.id]
                       return (
-                        <li key={r.id} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
+                        <li key={r.id} className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+                         <div className="flex items-center gap-2">
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-xs font-medium text-slate-700">{r.doc_name || 'document.pdf'}</span>
                             <span className="block text-[10px] text-slate-400">
@@ -678,6 +701,18 @@ export default function SendToSignDialog() {
                               {t('sign.send_certificate')}
                             </a>
                           )}
+                          {!done && !expired && r.recipient_email && (
+                            <button
+                              type="button"
+                              onClick={() => void onRemind(r)}
+                              disabled={reminder?.busy}
+                              className="shrink-0 rounded-md px-2 py-1.5 text-xs font-semibold text-orange-700 hover:underline disabled:opacity-50"
+                              title={t('sign.send_remind_title')}
+                              data-testid="remind-signer"
+                            >
+                              {reminder?.busy ? t('sign.send_reminding') : t('sign.send_remind')}
+                            </button>
+                          )}
                           {!done && (
                             <button
                               onClick={() => onRevoke(r)}
@@ -687,6 +722,12 @@ export default function SendToSignDialog() {
                             >
                               {t('sign.send_revoke')}
                             </button>
+                          )}
+                         </div>
+                          {reminder?.text && (
+                            <p role="status" className={`mt-1 text-[11px] ${reminder.ok ? 'text-emerald-700' : 'text-amber-800'}`}>
+                              {reminder.text}
+                            </p>
                           )}
                         </li>
                       )

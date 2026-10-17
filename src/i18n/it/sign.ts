@@ -297,6 +297,13 @@ const sign: Messages['sign'] = {
   'send_certificate': 'Certificato',
   'send_revoke_title': 'Revoca questa richiesta di firma',
   'send_revoke': 'Revoca',
+  'send_remind': 'Sollecita',
+  'send_reminding': 'Invio…',
+  'send_reminded': 'Sollecito inviato',
+  'send_remind_title': 'Invia di nuovo il link al firmatario via email (al massimo una volta al giorno)',
+  'send_remind_too_soon': 'Potrai inviare un altro sollecito dal {time}',
+  'send_remind_failed': 'Impossibile inviare il sollecito.',
+  'send_remind_no_email': 'Nessun indirizzo email da sollecitare. Copia il link.',
 
   // HostedStoreDialog
   'hosted_title': 'Fai il backup di questo PDF',

@@ -297,6 +297,13 @@ const sign: Messages['sign'] = {
   'send_certificate': 'Certificado',
   'send_revoke_title': 'Revogar este pedido de assinatura',
   'send_revoke': 'Revogar',
+  'send_remind': 'Lembrar',
+  'send_reminding': 'A enviar…',
+  'send_reminded': 'Lembrete enviado',
+  'send_remind_title': 'Voltar a enviar a ligação ao signatário por email (no máximo uma vez por dia)',
+  'send_remind_too_soon': 'Pode enviar outro lembrete a partir de {time}',
+  'send_remind_failed': 'Não foi possível enviar o lembrete.',
+  'send_remind_no_email': 'Não há endereço de email para lembrar. Copie a ligação.',
 
   // HostedStoreDialog
   'hosted_title': 'Fazer uma cópia de segurança deste PDF',

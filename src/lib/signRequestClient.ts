@@ -179,6 +179,31 @@ export async function sendSignRequestEmail(
   return (data ?? { ok: false, error: getT()('lib.no_response') }) as SendSignEmailResult
 }
 
+export interface RemindResult {
+  ok: boolean
+  error?: string
+  /** 'too_soon' (with nextAt) · 'no_recipient' · 'completed' · 'expired' ·
+   *  'rate_limited' · 'not_configured' */
+  code?: string
+  /** When the next reminder is allowed (ISO). */
+  nextAt?: string
+}
+
+/** Sender: "Remind" — the server emails the stored recipient their link again,
+ *  at most once a day per request, counted from the first email (platform
+ *  0290, send-sign-request action 'remind'; Signatures has the same button).
+ *  Only the request id is sent: the address and link come from the server. */
+export async function remindSignRequest(supabase: Supabase, requestId: string): Promise<RemindResult> {
+  const { data, error } = await supabase.functions.invoke('send-sign-request', {
+    body: { action: 'remind', app: 'pdf', requestId },
+  })
+  if (error) {
+    const body = await parseFunctionError(error)
+    return { ok: false, error: body.error ?? error.message, code: body.code, nextAt: body.nextAt }
+  }
+  return (data ?? { ok: false, error: getT()('lib.no_response') }) as RemindResult
+}
+
 /** Prefilled mailto: draft — the fallback when the email function isn't
  *  deployed/configured. */
 export function signRequestMailto(input: { to: string; docName: string; link: string }): string {
@@ -188,14 +213,15 @@ export function signRequestMailto(input: { to: string; docName: string; link: st
   return `mailto:${encodeURIComponent(input.to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
 }
 
-async function parseFunctionError(error: unknown): Promise<{ error?: string; code?: string }> {
+async function parseFunctionError(error: unknown): Promise<{ error?: string; code?: string; nextAt?: string }> {
   // supabase-js throws FunctionsHttpError with `.context` = the Response.
   const ctx = (error as { context?: Response }).context
   if (ctx && typeof ctx.json === 'function') {
     try {
       const body = await ctx.json()
       if (body && typeof body === 'object') {
-        return { error: (body as { error?: string }).error, code: (body as { code?: string }).code }
+        const b = body as { error?: string; code?: string; nextAt?: string }
+        return { error: b.error, code: b.code, nextAt: b.nextAt }
       }
     } catch {
       // fall through to the generic message

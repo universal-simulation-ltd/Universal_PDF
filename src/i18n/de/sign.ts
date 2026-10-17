@@ -297,6 +297,13 @@ const sign: Messages['sign'] = {
   'send_certificate': 'Zertifikat',
   'send_revoke_title': 'Diese Unterschriftsanfrage widerrufen',
   'send_revoke': 'Widerrufen',
+  'send_remind': 'Erinnern',
+  'send_reminding': 'Wird gesendet…',
+  'send_reminded': 'Erinnerung gesendet',
+  'send_remind_title': 'Dem Unterzeichner den Link erneut mailen (höchstens einmal am Tag)',
+  'send_remind_too_soon': 'Eine weitere Erinnerung ist ab {time} möglich',
+  'send_remind_failed': 'Die Erinnerung konnte nicht gesendet werden.',
+  'send_remind_no_email': 'Keine E-Mail-Adresse zum Erinnern. Kopiere stattdessen den Link.',
 
   // HostedStoreDialog
   'hosted_title': 'Dieses PDF sichern',
