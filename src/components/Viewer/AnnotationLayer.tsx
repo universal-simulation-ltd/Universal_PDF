@@ -3409,13 +3409,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         const x1 = px(width - o.left, o.width), y1 = px(height - o.top, o.height)
         const selectedHere = selectedId === o.id
         return (
-          <img
+          <div
             key={o.id}
-            src={o.src}
-            alt=""
-            aria-hidden="true"
             data-note-overhang={o.id}
-            draggable={false}
             onPointerDown={(e) => grabOverhang(o.id, e)}
             style={{
               position: 'absolute',
@@ -3428,11 +3424,20 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               cursor: tool === 'select' ? 'move' : undefined,
               touchAction: 'none',
               clipPath: `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${x0} ${y0}, ${x1} ${y0}, ${x1} ${y1}, ${x0} ${y1}, ${x0} ${y0})`,
-              // The selection's dashed outline, carried on past the edge.
-              outline: selectedHere && o.square ? '2px dashed #ea580c' : undefined,
               filter: o.square ? 'drop-shadow(0 2px 3px rgba(15,23,42,0.18))' : undefined
             }}
-          />
+          >
+            <img src={o.src} alt="" aria-hidden="true" draggable={false} style={{ display: 'block', width: '100%', height: '100%' }} />
+            {/* The selection's dashed border, carried on past the edge — the
+                Transformer's own stroke, colour and dash. INSIDE the box: the
+                clip-path cuts anything outside it, which is what hid a CSS
+                outline. */}
+            {selectedHere && o.square && (
+              <svg aria-hidden="true" width={o.width} height={o.height} style={{ position: 'absolute', inset: 0, overflow: 'visible', pointerEvents: 'none' }}>
+                <rect x={0.75} y={0.75} width={Math.max(0, o.width - 1.5)} height={Math.max(0, o.height - 1.5)} fill="none" stroke="#ea580c" strokeWidth={1.5} strokeDasharray="6 4" />
+              </svg>
+            )}
+          </div>
         )
       })}
 

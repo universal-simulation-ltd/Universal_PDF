@@ -122,9 +122,22 @@ check('the part past the edge is drawn', (await page.locator('[data-note-overhan
 const gapX = cx(595) + 20
 const midY = cy(260)
 check('…visible over the gap, in the note\'s paper', near(await pixel(gapX, midY), paperRgb), json({ got: await pixel(gapX, midY), want: paperRgb }))
-check('…and on top there', await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.dataset?.noteOverhang === 'n', { x: gapX, y: midY }))
-check('inside the page, presses still reach the page\'s own layer', await page.evaluate(({ x, y }) => !document.elementFromPoint(x, y)?.dataset?.noteOverhang, { x: cx(500), y: midY }))
+check('…and on top there', await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('[data-note-overhang]')?.dataset.noteOverhang === 'n', { x: gapX, y: midY }))
+check('inside the page, presses still reach the page\'s own layer', await page.evaluate(({ x, y }) => !document.elementFromPoint(x, y)?.closest('[data-note-overhang]'), { x: cx(500), y: midY }))
 await page.screenshot({ path: join(process.env.SHOTS ?? tmpdir(), 'note-overhang.png') })
+
+console.log('\nselected')
+await store('s.setSelected("n")')
+await page.waitForTimeout(400)
+// Along the note's top edge, past the page: some of it is the orange dash.
+const edge = []
+for (let i = 0; i < 14; i++) edge.push(await pixel(cx(595) + 6 + i, cy(200) + 0.5))
+const ORANGE = [234, 88, 12]
+check('the selection border carries on past the edge', edge.some((px) => near(px, ORANGE, 40)), json(edge))
+await page.screenshot({ path: join(process.env.SHOTS ?? tmpdir(), 'note-overhang-selected.png') })
+await store('s.setSelected(null)')
+await page.waitForTimeout(300)
+check('…and goes when it is let go', !(await (async () => { const e = []; for (let i = 0; i < 14; i++) e.push(await pixel(cx(595) + 6 + i, cy(200) + 0.5)); return e })()).some((px) => near(px, ORANGE, 40)))
 
 console.log('\ndragging it by the overhang')
 await page.mouse.move(gapX, midY)

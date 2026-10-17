@@ -2006,7 +2006,10 @@ Stage, and only the overhang takes them: a press there selects the note and
 `node.startDrag()`s it (after `stage.setPointersPositions`). The picture is
 re-taken only when its key changes (position, size, words, colour, zoom,
 editing); it is hidden while that note is dragged (the drag ghost has it).
-The right-hand resize handles of an overhanging note are still cut off.
+When the note is selected, the Transformer's dashed border is carried on round
+the overhang by an SVG rect INSIDE the box (stroke, width and dash copied):
+a CSS `outline` sits outside the box, where the clip-path cut it off. The
+resize handles on the overhanging side are still cut off.
 
 On export `foldOverhangingNotes` turns any note whose card leaves its page into
 a folded note — a PDF sticky note at the note's corner, pulled onto the page —
