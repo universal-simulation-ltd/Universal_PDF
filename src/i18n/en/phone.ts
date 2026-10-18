@@ -62,8 +62,10 @@ export default {
   'job_markup_note': 'notes, ticks and circles',
   'desk_title': 'On your desk',
   'desk_only_here': 'only on this phone',
-  'desk_empty': 'Nothing here yet. Open a PDF, scan a page or try the example, and it will wait for you here.',
+  'desk_empty': 'Nothing here yet. The PDFs you open or scan will wait for you here.',
   'desk_no_match': 'Nothing on your desk matches that.',
+  'desk_example': 'Open the example PDF', // a card on the empty desk, its picture the example's first page; tapping it opens the example
+  'desk_example_note': 'a feature tour to practise on', // under it, after the page count
   'doc_options_aria': 'Options for {name}',
   'doc_open': 'Open',
   'doc_remove': 'Take it off this phone',

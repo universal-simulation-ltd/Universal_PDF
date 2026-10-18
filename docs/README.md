@@ -2093,6 +2093,48 @@ PowerPoint) makes a .docx of the text, on the device:
 - Checked three ways: read back by `@unisim/doc` `readDocx`
   (e2e/word-export.e2e.mjs), by macOS `textutil`, and rendered by LibreOffice.
 
+## The example PDF — a feature tour
+
+`lib/examplePdf.ts` makes the example on the device with pdf-lib (James,
+2026-10-18: "update the example PDF with all the new features explained"):
+three A4 pages, each section what a tool does + how to try it on that page,
+with room left to try it — a line to highlight, a yellow box for a sticky note
+that runs off the page edge (so a note can hang over it), made-up details to
+black out, the six form fields, blank lines for Text, a box to sign in and one
+for a picture or QR code.
+
+- **True on the phone app AND the website.** The words say "tap or click"; each
+  section ends with a grey *where* line ("Phone app: Mark up › Highlight ·
+  Website: Highlighter") built from the app's OWN labels (`phone.*`,
+  `viewer.toolbar.*`, `menu.*`, the `LABELS` list), so a renamed button can't
+  leave the tour pointing at nothing. Page numbers, Export to Word, pictures
+  and QR codes say "Website and computer app" — the phone app has no door to
+  them yet.
+- **In the app's language** — the `example` namespace in `src/i18n/<lang>/`.
+  Helvetica (WinAnsi) spells all of them but Turkish; a language whose strings
+  don't fit draws the whole document in the Liberation Sans the export already
+  ships (`fallbackFont.ts`, fetched on demand, subset to ~15 KB here) with bold
+  faked by text rendering mode 2. No font to be had (offline on the website's
+  first try) → letters fold to Latin-1 (ş → s), never a failure. French's
+  narrow no-break space becomes a plain one.
+- ⚠️ **The form fields don't move**: `example_name` … `example_phone` keep their
+  names and rectangles in every language (`formTop = H - 207`), and each
+  carries a `/TU` in the language — on the WIDGET, the only place pdf.js reads
+  `alternativeText` — so an empty field is labelled "Your full name", not
+  "example_name".
+- `npm run test:example` builds it in all eight languages and fails on any text
+  that runs off its column, into the footer or over the form (the layout
+  records it in `overflows`), on a moved field, or on Turkish without its font.
+
+**The empty desk shows it** (phone app): with nothing on the desk (not a search
+that matched nothing), "On your desk" holds one entry drawn like any other —
+the example's real first page as its picture (`native/examplePreview.ts`:
+pdf.js renders page 1 of the generated example, per language, cached for the
+session, started after the desk paints), "Open the example PDF", "3 pages · a
+feature tour to practise on" — and tapping it is `runJob('example')`, the
+carousel card's own road. The page count comes from `lib/exampleMeta.ts` so the
+desk doesn't pull pdf-lib into the start-up bundle.
+
 ## Not built, on purpose
 
 Decided feature by feature with James on 2026-10-18, comparing with Puter's
