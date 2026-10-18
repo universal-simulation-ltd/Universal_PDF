@@ -1999,8 +1999,9 @@ sticky notes over pages?"; for the file he chose "hang over, fold to icon").
 Each page's Stage is exactly the page, so it cuts anything at the edge. The
 part outside is drawn as an `<img>` of the note — `node.toDataURL` over its
 client rect, Konva's own pixels, so it meets the rest seamlessly — positioned
-on the page wrapper at z-index 20 (over the neighbouring pages, under the
-pills) and clipped with an evenodd `clip-path` to everything EXCEPT the page.
+on the page wrapper at z-index 5 (over the neighbouring pages, which are
+z auto; under this page's text editor at 10, so words being typed show over
+it) and clipped with an evenodd `clip-path` to everything EXCEPT the page.
 clip-path also clips hit-testing, so inside the page presses still reach the
 Stage, and only the overhang takes them: a press there selects the note and
 `node.startDrag()`s it (after `stage.setPointersPositions`). The picture is
@@ -2010,6 +2011,11 @@ When the note is selected, the Transformer's dashed border is carried on round
 the overhang by an SVG rect INSIDE the box (stroke, width and dash copied):
 a CSS `outline` sits outside the box, where the clip-path cut it off. The
 resize handles on the overhanging side are still cut off.
+
+⚠️ The note editor is `innerWidth + 0.5` points wide (plus a pixel), not
+`innerWidth`: `noteLayout`'s fit counts a line as fitting at up to half a point
+over, so a fitted word sized to the edge broke in two the moment a double-click
+opened the editor ("mhf" → "mh" / "f").
 
 On export `foldOverhangingNotes` turns any note whose card leaves its page into
 a folded note — a PDF sticky note at the note's corner, pulled onto the page —
