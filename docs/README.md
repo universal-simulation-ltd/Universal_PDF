@@ -2228,6 +2228,15 @@ each became. Pinned by `e2e/phone-markup.e2e.mjs` (`npm run test:phone-markup`).
   landed a keyboard's height from the note. It now sits on the page like a
   resting note's overhang (`data-drag-ghost`), clipped to everything except
   its own page, where the canvas already draws it.
+- **The handles were left behind when a note was moved by its overhang**
+  ("weird artifact left when dragging the post it note"). The stand-in edge
+  handles are drawn from the last overhang worked out, and `grabOverhang`
+  moves the note without a render, so they stayed where the note had been.
+  They now stand down while it moves (`overhangMoving`, and during a Konva
+  drag), and a `lostpointercapture` with no `pointerup` (WebKit can drop the
+  capture when the element moves under the finger) still ends the move where
+  the finger last was. Pinned in `e2e/note-overhang.e2e.mjs`; the check fails
+  with the fix taken out.
 - **Fill's icon** is a form's labelled box with a typing cursor, not a pencil
   (which read as Mark up's pen). It is on the Desk's "Fill in a form" too.
 

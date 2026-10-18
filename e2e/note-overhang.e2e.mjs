@@ -207,12 +207,20 @@ await store('s.remove("f"); s.setSelected(null)')
 await page.waitForTimeout(300)
 
 console.log('\ndragging it by the overhang')
+await store('s.setSelected("n")')
+await page.waitForTimeout(300)
+check('selected, its edge handles stand past the page', (await page.locator('[data-note-handle]').count()) === 3)
 await page.mouse.move(gapX, midY)
 await page.mouse.down()
 await page.mouse.move(gapX - 40, midY, { steps: 5 })
 await page.mouse.move(gapX - 140 * k, midY, { steps: 8 })
+// Its stand-in edge handles are drawn from where it WAS; mid-move they stand
+// down rather than stay behind (James, 2026-10-18: "weird artifact left when
+// dragging the post it note").
+const handlesMidMove = await page.locator('[data-note-handle]').count()
 await page.mouse.up()
 await page.waitForTimeout(500)
+check('mid-move, no edge handles are left where it was', handlesMidMove === 0, String(handlesMidMove))
 let n = await note()
 check('a press on the overhang drags the note', Math.abs(n.x - (480 - 140)) < 3 && Math.abs(n.y - 200) < 3, json([n.x, n.y]))
 check('…and it is selected', (await store('return s.selectedId')) === 'n')

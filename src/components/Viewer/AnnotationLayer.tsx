@@ -1260,6 +1260,11 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // typed go with the card (James, 2026-10-18: the text entry "stays where it
   // was" when the note is moved). The store only hears of the move on drop.
   const [editDrag, setEditDrag] = useState<{ x: number; y: number } | null>(null)
+  // A note being moved by the part that hangs past its page (grabOverhang),
+  // while it moves: its stand-in handles stand down, as Konva's own do in a
+  // drag. They are drawn from the last overhang worked out, so they stayed
+  // put while the note went — left behind on the page (James, 2026-10-18).
+  const [overhangMoving, setOverhangMoving] = useState<string | null>(null)
   // Snap to align (James, 2026-10-18: "add snap to align so that you can
   // easily align items e.g. your name and date … on the signature"). While one
   // mark is dragged, its left / centre / right and top / middle / bottom catch
@@ -2950,21 +2955,34 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     let moved = false
     const at = (ev: PointerEvent) => ({ dx: ev.clientX - start.x, dy: ev.clientY - start.y })
     const move = (ev: PointerEvent) => {
+      last = ev
       const { dx, dy } = at(ev)
       if (!moved && Math.hypot(dx, dy) < 4) return
       if (!moved) {
         moved = true
         setSelected(id)
+        setOverhangMoving(id)
       }
       node.position({ x: from.x + dx / scale, y: from.y + dy / scale })
       node.getLayer()?.batchDraw()
       Object.assign(el.style, overhangBox({ ...o, left: o.left + dx, top: o.top + dy }))
     }
+    let ended = false
+    let last: PointerEvent | null = null
     const end = (ev: PointerEvent) => {
+      if (ended) return
+      ended = true
       el.removeEventListener('pointermove', move)
       el.removeEventListener('pointerup', end)
       el.removeEventListener('pointercancel', end)
+      el.removeEventListener('lostpointercapture', end)
       if (el.hasPointerCapture(ev.pointerId)) el.releasePointerCapture(ev.pointerId)
+      setOverhangMoving(null)
+      // ⚠️ A capture lost without a pointerup (WebKit can drop it when the
+      // element moves under the finger) still ends the move, where the finger
+      // last was — otherwise the note stayed drawn where it went but stored
+      // where it came from.
+      if (ev.type === 'lostpointercapture' && last) ev = last
       if (!moved) {
         onShapeClick(id)
         return
@@ -2981,6 +2999,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     el.addEventListener('pointermove', move)
     el.addEventListener('pointerup', end)
     el.addEventListener('pointercancel', end)
+    el.addEventListener('lostpointercapture', end)
   }
 
   // The Transformer's right-hand handles of a note whose right edge hangs past
@@ -3749,7 +3768,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         const c = o.card
         const right = c.left + c.width
         const handle = coarsePointer ? 18 : 9
-        const handles: ['tr' | 'mr' | 'br', number][] = selectedHere && o.square && right > width
+        const handles: ['tr' | 'mr' | 'br', number][] = selectedHere && o.square && right > width && overhangMoving !== o.id && draggingId !== o.id
           ? [['tr', c.top], ['mr', c.top + c.height / 2], ['br', c.top + c.height]]
           : []
         return (
