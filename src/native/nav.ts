@@ -4,13 +4,15 @@ import { create } from 'zustand'
 // while no document is open; with one open, the document fills the screen and
 // pages (Sign, Share, the Signed and Smaller moments) stack on top of it, with
 // at most one bottom sheet (Mark up, What else, All free) over the lot.
+// The knowledge base ('kb', and 'kb-article' over it) is the one page that can
+// also sit over the tabs, since Tune opens it with no document open.
 //
 // ⚠️ Every layer is also a history entry, so Android's back gesture and the
 // browser's Back close the top one: see `useHistoryLayers` in NativeApp.tsx.
 // Code here only changes the state; it never touches `history` itself.
 
 export type Tab = 'desk' | 'signatures' | 'tune'
-export type Screen = 'sign' | 'share' | 'signed' | 'smaller'
+export type Screen = 'sign' | 'share' | 'signed' | 'smaller' | 'kb' | 'kb-article'
 export type Sheet = 'markup' | 'more' | 'free'
 
 /** What the Smaller moment shows: the sizes before and after, and the file. */
@@ -33,6 +35,8 @@ interface NavState {
   toast: string | null
   /** A signature from the Sign page is on its way to the page: its landing is the Signed moment. */
   awaitingSignature: boolean
+  /** The article the 'kb-article' page shows. */
+  kbArticle: string | null
   setTab: (tab: Tab) => void
   push: (screen: Screen) => void
   /** Back one page (the history entry follows on its own). */
@@ -49,6 +53,10 @@ interface NavState {
   say: (message: string) => void
   dismissToast: () => void
   setAwaitingSignature: (v: boolean) => void
+  /** Open an article over the knowledge base's list, or turn to another in place. */
+  readArticle: (id: string) => void
+  /** Take the knowledge base's pages off the stack (a document arrived under them). */
+  dropKnowledge: () => void
 }
 
 export const useNav = create<NavState>((set) => ({
@@ -60,6 +68,7 @@ export const useNav = create<NavState>((set) => ({
   sharePassword: false,
   toast: null,
   awaitingSignature: false,
+  kbArticle: null,
   setTab: (tab) => set({ tab }),
   push: (screen) => set((s) => ({ screens: [...s.screens, screen], sheet: null, toast: null })),
   pop: () => set((s) => ({ screens: s.screens.slice(0, -1) })),
@@ -73,9 +82,17 @@ export const useNav = create<NavState>((set) => ({
   say: (toast) => set({ toast }),
   dismissToast: () => set({ toast: null }),
   setAwaitingSignature: (awaitingSignature) => set({ awaitingSignature }),
+  readArticle: (id) =>
+    set((s) => (topScreen(s.screens) === 'kb-article' ? { kbArticle: id } : { screens: [...s.screens, 'kb-article'], kbArticle: id, sheet: null, toast: null })),
+  dropKnowledge: () => set((s) => ({ screens: s.screens.filter((x) => !isKnowledge(x)) })),
 }))
 
 /** The page on top, or null for the document itself. */
 export function topScreen(screens: Screen[]): Screen | null {
   return screens.length ? screens[screens.length - 1] : null
+}
+
+/** The knowledge base's pages, the only ones that may sit over the tabs. */
+export function isKnowledge(screen: Screen | null): boolean {
+  return screen === 'kb' || screen === 'kb-article'
 }

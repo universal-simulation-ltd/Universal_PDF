@@ -122,7 +122,8 @@
     "test:scrub-export": "node e2e/scrub-export.e2e.mjs",
     "test:merge-guard": "node e2e/merge-guard.e2e.mjs",
     "test:cross-page-drag": "node e2e/cross-page-drag.e2e.mjs",
-    "test:phone-markup": "node e2e/phone-markup.e2e.mjs"
+    "test:phone-markup": "node e2e/phone-markup.e2e.mjs",
+    "test:phone-knowledge": "node e2e/phone-knowledge.e2e.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",

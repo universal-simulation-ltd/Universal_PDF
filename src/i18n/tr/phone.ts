@@ -218,6 +218,15 @@ const phone: Messages['phone'] = {
   'sigs_delete_aria': 'Çöpe at: {name}',
   'sigs_locked': 'Kayıtlı imzalarınız kilitli.',
   'sigs_unlock': 'Kilidi aç',
+
+  // The knowledge base, a page
+  'kb_lead': 'Bilmeniz',
+  'kb_hl': 'gerekenler',
+  'kb_note': 'PDF’ler ve bu uygulamanın nasıl çalıştığı üzerine sade dilde rehberler. Uygulamanın içindeler, internet olmadan da okunur.',
+  'kb_search': 'Rehberlerde ara',
+  'kb_clear': 'Aramayı temizle',
+  'kb_no_match': 'Buna uyan rehber yok.',
+  'kb_all': 'Tüm rehberler',
 }
 
 export default phone

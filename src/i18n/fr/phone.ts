@@ -218,6 +218,15 @@ const phone: Messages['phone'] = {
   'sigs_delete_aria': 'Jeter {name}',
   'sigs_locked': 'Vos signatures enregistrées sont verrouillées.',
   'sigs_unlock': 'Déverrouiller',
+
+  // The knowledge base, a page
+  'kb_lead': 'Bon à',
+  'kb_hl': 'savoir',
+  'kb_note': 'Des guides en langage clair sur les PDF et le fonctionnement de cette application. Ils sont dans l’application, donc lisibles hors ligne aussi.',
+  'kb_search': 'Chercher dans les guides',
+  'kb_clear': 'Effacer la recherche',
+  'kb_no_match': 'Aucun guide ne correspond.',
+  'kb_all': 'Tous les guides',
 }
 
 export default phone

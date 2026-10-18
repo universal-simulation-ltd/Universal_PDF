@@ -27,6 +27,7 @@ export const PATHS = {
   back: 'M15 5l-7 7 7 7',
   undo: 'M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3',
   share: 'M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6',
+  download: 'M12 3v12M7 10l5 5 5-5M5 21h14',
   chevron: 'M9 5l7 7-7 7',
   help: 'M12 18h.01M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.7v.5',
   images: 'M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6',

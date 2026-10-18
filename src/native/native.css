@@ -212,3 +212,11 @@
 .np-switch:disabled {
   opacity: 0.5;
 }
+
+/* The knowledge base's search box draws its own × (KnowledgeScreen). */
+.np-kb-search::-webkit-search-cancel-button,
+.np-kb-search::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
