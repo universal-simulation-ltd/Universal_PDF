@@ -6,6 +6,7 @@ import { useTabStore, closeTab } from '../stores/tabStore'
 import { useExitGuard } from '../stores/exitGuard'
 import { useUndo } from '../hooks/useUndo'
 import { useToolPrefs } from '../stores/toolPrefsStore'
+import { useSignatureStore } from '../stores/signatureStore'
 import PdfViewer from '../components/Viewer/PdfViewer'
 import PlacementHint from '../components/Viewer/PlacementHint'
 import type { Annotation, Tool } from '../types/annotations'
@@ -60,28 +61,35 @@ export default function DocumentScreen() {
   const { canUndo, undo } = useUndo()
   const markingUp = sheet === 'markup'
 
-  // A signature from the Sign page lands on the page, and once it is where
-  // it should be → the Signed moment. Not the moment it lands: it nearly
-  // always wants moving first, and the moment covered it (James, 2026-10-18:
-  // "maybe it appears after it's repositioned or if they click the tick").
-  // So it waits for the signature to be let go of — the ✓, or a tap off it —
-  // and is dropped if the signature is binned instead.
+  // A signature from the Sign page lands on the page, and the Signed moment
+  // follows once it is where it should be — kept with its ✓ (James,
+  // 2026-10-18: "force the user to click a tick button once it's correctly
+  // placed"). Not on landing (it nearly always wants moving), and not on a tap
+  // off it either: a tap elsewhere to move the page along counted as done.
+  // The signature's name and date pieces, placed straight after it, count as
+  // part of it, so their ✓ does too.
   const before = useRef(signaturesOn(useAnnotationStore.getState().annotations))
-  const placed = useRef<string | null>(null)
+  const placed = useRef<Set<string>>(new Set())
   useEffect(
     () =>
-      useAnnotationStore.subscribe((s) => {
+      useAnnotationStore.subscribe((s, prev) => {
         const now = signaturesOn(s.annotations)
         const nav = useNav.getState()
         if (now > before.current && nav.awaitingSignature) {
           nav.setAwaitingSignature(false)
-          placed.current = s.selectedId
+          const known = new Set(prev.annotations.map((a) => a.id))
+          placed.current = new Set(s.annotations.filter((a) => !known.has(a.id)).map((a) => a.id))
+        } else if (placed.current.size && useSignatureStore.getState().pendingExtras.length > 0 && s.annotations.length > prev.annotations.length) {
+          // A name or date piece put down while the signature's pieces are
+          // still being placed.
+          const known = new Set(prev.annotations.map((a) => a.id))
+          for (const a of s.annotations) if (!known.has(a.id) && a.type === 'text') placed.current.add(a.id)
         }
         before.current = now
-        const id = placed.current
-        if (id && s.selectedId !== id) {
-          placed.current = null
-          if (s.annotations.some((a) => a.id === id)) window.setTimeout(() => useNav.getState().push('signed'), 250)
+        const c = s.confirmed
+        if (c && c !== prev.confirmed && placed.current.has(c.id)) {
+          placed.current = new Set()
+          window.setTimeout(() => useNav.getState().push('signed'), 250)
         }
       }),
     []

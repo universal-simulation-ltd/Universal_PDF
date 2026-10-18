@@ -44,9 +44,29 @@ function markupOf(tool: Tool, qr: boolean): MarkupId | null {
   return null
 }
 
+/** The tool a selected mark was made with, so tapping one shows its own
+ *  options — its ink, its width (James, 2026-10-18: "when clicking an existing
+ *  shape open up the shape dialog so you can change the colour"). */
+function markupOfMark(a: Annotation): MarkupId | null {
+  if (a.type === 'draw') return a.shape === 'line' ? 'shape' : a.opacity !== undefined ? 'highlight' : 'pen'
+  if (a.type === 'rect' || a.type === 'ellipse' || a.type === 'tick' || a.type === 'cross') return 'shape'
+  if (a.type === 'text') return a.note ? 'note' : 'text'
+  if (a.type === 'redact') return 'blackout'
+  return null
+}
+
+/** Which of the Shape chips made a selected shape. */
+function shapeToolOf(a: Annotation): Tool {
+  if (a.type === 'draw') return 'line'
+  if (a.type === 'rect' || a.type === 'ellipse' || a.type === 'tick' || a.type === 'cross') return a.type
+  return 'select'
+}
+
 /** What the width slider is for: the selected stroke if there is one, else the tool in hand. */
 function widthTarget(current: MarkupId | null, selected: Annotation | undefined): 'pen' | 'highlight' | 'blackout' | null {
-  if (selected?.type === 'draw') return selected.opacity !== undefined ? 'highlight' : 'pen'
+  // A selected mark's own width, or none: a box, a circle, a tick or words have
+  // no stroke width to set here.
+  if (selected) return selected.type === 'draw' ? (selected.opacity !== undefined ? 'highlight' : 'pen') : null
   if (current === 'pen' || current === 'shape') return 'pen'
   if (current === 'highlight') return 'highlight'
   if (current === 'blackout') return 'blackout'
@@ -68,7 +88,8 @@ export default function MarkupSheet() {
   const pictureRef = useRef<HTMLInputElement>(null)
   const gripRef = useRef<{ y: number } | null>(null)
   const rowHint = useScrollHint<HTMLDivElement>()
-  const current = markupOf(tool, armedQr)
+  // The tool in hand; with nothing in hand, the one the selected mark was made with.
+  const current = tool === 'select' && selected ? markupOfMark(selected) : markupOf(tool, armedQr)
 
   function pick(id: MarkupId) {
     const s = useAnnotationStore.getState()
@@ -220,7 +241,7 @@ export default function MarkupSheet() {
       <input ref={pictureRef} type="file" accept="image/*" className="hidden" onChange={onPicture} />
 
       <div className="px-[18px] flex flex-col gap-3.5">
-        {current === 'shape' && <ShapeRow tool={tool} labels={shapeLabels} />}
+        {current === 'shape' && <ShapeRow tool={tool === 'select' && selected ? shapeToolOf(selected) : tool} labels={shapeLabels} />}
 
         {current === 'blackout' && <p className="m-0 text-[14px] leading-[1.4] text-[color:var(--np-ink-2)]">{t('phone.blackout_note')}</p>}
 

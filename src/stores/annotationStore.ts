@@ -26,6 +26,11 @@ interface AnnotationState {
   // and width of what is selected, so the page's own Colour pill for a drawn
   // mark stands down rather than repeat it.
   toolSheetOpen: boolean
+  // The last mark kept with its ✓ ("I'm done with this one"), and a count so
+  // the same mark kept twice is still news. The phone's Signed moment waits
+  // for this on a signature it saw placed.
+  confirmed: { id: string; seq: number } | null
+  confirm: (id: string) => void
   // When true the line tool draws "rigid" strokes that snap to the nearest
   // horizontal, vertical or 45° diagonal. Free-form lines when false.
   lineSnap: boolean
@@ -113,6 +118,7 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
   redactWidth: 22,
   viewScale: 1,
   toolSheetOpen: false,
+  confirmed: null,
   lineSnap: false,
   fontSize: 18,
   fontFamily: 'sans',
@@ -187,6 +193,7 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
   setRedactWidth: (redactWidth) => set({ redactWidth }),
   setViewScale: (viewScale) => set({ viewScale }),
   setToolSheetOpen: (toolSheetOpen) => set({ toolSheetOpen }),
+  confirm: (id) => set((s) => ({ confirmed: { id, seq: (s.confirmed?.seq ?? 0) + 1 } })),
   setLineSnap: (lineSnap) => set({ lineSnap }),
   setFontSize: (fontSize) =>
     set((s) => {

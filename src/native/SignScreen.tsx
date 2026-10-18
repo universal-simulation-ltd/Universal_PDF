@@ -4,7 +4,7 @@ import { usePdfStore } from '../stores/pdfStore'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useSignatureStore } from '../stores/signatureStore'
 import { renderInkSignature } from '../lib/renderInk'
-import { DEFAULT_LABEL_SCALE, DEFAULT_SIG_ALIGN } from '../lib/composeSignature'
+import { composeSignature, dateLineSeed, DEFAULT_LABEL_SCALE, DEFAULT_SIG_ALIGN } from '../lib/composeSignature'
 import type { SignatureData } from '../types/annotations'
 import { BackLink, Hl } from './parts'
 import { useNav } from './nav'
@@ -36,6 +36,14 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
   const [busy, setBusy] = useState(false)
   const typeId = useId()
   const keepId = useId()
+  // Name and date under the ink (James, 2026-10-18: "they may still need to
+  // add their name and date"). Drawn INTO the signature, so they always sit
+  // lined up beneath it — one thing to place, not three — and stay editable
+  // on the page (double-tap) like any signature's labels.
+  const [nameUnder, setNameUnder] = useState('')
+  const [dateUnder, setDateUnder] = useState(false)
+  const nameId = useId()
+  const dateId = useId()
 
   const ready = how === 'draw' ? lines.length > 0 : how === 'type' ? typed.trim().length > 0 : false
 
@@ -73,8 +81,19 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
         }
       } else {
         made = await renderTyped(typed.trim())
+        if (made) sig = { ink: made.dataUrl, inkWidth: made.width, inkHeight: made.height, align: DEFAULT_SIG_ALIGN, labelScale: DEFAULT_LABEL_SCALE, color: INK }
       }
       if (!made) return
+      if (sig && (nameUnder.trim() || dateUnder)) {
+        sig = {
+          ...sig,
+          name: nameUnder.trim() || undefined,
+          showName: !!nameUnder.trim(),
+          showDate: dateUnder,
+          dateText: dateUnder ? dateLineSeed() : undefined,
+        }
+        made = await composeSignature(sig)
+      }
       const store = useSignatureStore.getState()
       const name = how === 'type' ? typed.trim() : t('sign.default_signature_name', { n: store.signatures.length + 1 })
       const id = store.add({ name, dataUrl: made.dataUrl, width: made.width, height: made.height, sig })
@@ -192,6 +211,33 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
             >
               {t('phone.photo_button')}
             </button>
+          </div>
+        )}
+
+        {how !== 'photo' && (
+          <div className="flex flex-col gap-2.5">
+            <h2 className="np-serif m-0 text-[19px] font-bold">{t('phone.sign_under')}</h2>
+            <label htmlFor={nameId} className="text-[13px] text-[color:var(--np-muted)]">{t('phone.sign_name_label')}</label>
+            <input
+              id={nameId}
+              value={nameUnder}
+              onChange={(e) => setNameUnder(e.target.value)}
+              placeholder={t('phone.type_placeholder')}
+              autoComplete="name"
+              className="w-full text-[17px] px-3 py-2.5 rounded-xl bg-white outline-none"
+              style={{ border: '1px solid var(--np-line)' }}
+            />
+            <label htmlFor={dateId} className="flex items-center gap-2.5 text-[15px] min-h-[44px]">
+              <input
+                id={dateId}
+                type="checkbox"
+                checked={dateUnder}
+                onChange={(e) => setDateUnder(e.target.checked)}
+                className="w-[22px] h-[22px]"
+                style={{ accentColor: 'var(--np-cobalt)' }}
+              />
+              {t('phone.sign_date_label', { date: dateLineSeed() })}
+            </label>
           </div>
         )}
 

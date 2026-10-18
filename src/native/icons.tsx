@@ -21,7 +21,10 @@ export const PATHS = {
   markup: 'M15 4l5 5-9 9H6v-5zM4 20h8',
   doc: 'M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8zM14 3v5h5',
   tune: 'M4 7h10M18 7h2M4 17h4M12 17h8M16 5a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM10 15a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
-  fill: 'M4 20h16M6 16l9-9 3 3-9 9H6z',
+  // Fill: a form's labelled box with a typing cursor in it — typing INTO the
+  // boxes, not writing on the page (James, 2026-10-18; it was a pencil, which
+  // read as Mark up's pen).
+  fill: 'M3 4.5h8M5 8h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2zM8 10.5v6M6.5 10.5h3M6.5 16.5h3',
   pen: 'M4 20l4-1 11-11-3-3L5 16zM14 6l3 3',
   grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   back: 'M15 5l-7 7 7 7',

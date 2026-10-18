@@ -66,7 +66,7 @@ export function jobCards(): JobCard[] {
     c('compress', 'job_compress', PATHS.compress),
     c('sign', 'job_sign', PATHS.sign),
     c('send-sign', 'job_send_sign', PATHS.send),
-    c('fill', 'job_fill', PATHS.form),
+    c('fill', 'job_fill', PATHS.fill),
     c('merge', 'job_merge', PATHS.merge),
     c('blackout', 'job_blackout', PATHS.blackout),
     c('pages', 'job_pages', PATHS.pages),

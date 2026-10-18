@@ -17,7 +17,9 @@
 //     carries the colour and width), and the sheet's width repaints the
 //     selected highlight.
 //   • Form-field names fit their boxes.
-//   • The Signed moment waits for the signature to be let go of.
+//   • The Signed moment waits for the signature's ✓ (not a tap off it).
+//   • The Sign page can put a name and the date under the signature.
+//   • Tapping a shape (or any mark) shows its own options in the sheet.
 //   • The bar is Fill · Mark up · Sign · Share; Pages is in What else (⋯).
 //   • The tool row shows it scrolls: a nudge along and back as it appears, and
 //     a fade at the edge with more beyond it.
@@ -256,7 +258,7 @@ console.log('\nthe sheet carries a selected highlight\'s colour and width')
   check('the width slider repaints it', after.strokeWidth > before * 1.5, json({ before, after: after.strokeWidth }))
 }
 
-console.log('\nthe Signed moment waits until the signature is let go of')
+console.log('\nthe Signed moment waits for the signature\'s ✓')
 {
   await store('s.resetDocument()')
   await mod('/src/native/nav.ts', 'm.useNav.getState().setAwaitingSignature(true)')
@@ -273,7 +275,49 @@ console.log('\nthe Signed moment waits until the signature is let go of')
   await store('s.setSelected(null)')
   await page.waitForTimeout(600)
   const screens3 = await mod('/src/native/nav.ts', 'return m.useNav.getState().screens')
-  check('on letting it go', screens3.includes('signed'), json(screens3))
+  check('not on a tap off it', !screens3.includes('signed'), json(screens3))
+  await store("s.setSelected('sig1')")
+  await page.waitForTimeout(300)
+  await page.getByRole('button', { name: 'Confirm and deselect' }).click()
+  await page.waitForTimeout(600)
+  const screens4 = await mod('/src/native/nav.ts', 'return m.useNav.getState().screens')
+  check('on its ✓', screens4.includes('signed'), json(screens4))
+}
+
+console.log('\nthe Sign page puts a name and the date under the signature')
+{
+  await mod('/src/native/nav.ts', 'm.useNav.getState().clearScreens(); m.useNav.getState().closeSheet()')
+  await store('s.resetDocument()')
+  await page.waitForTimeout(300)
+  await page.locator('nav[aria-label="Tools"]').getByRole('button', { name: 'Sign' }).click()
+  await page.waitForTimeout(500)
+  await page.getByRole('tab', { name: 'Type' }).click()
+  await page.getByPlaceholder('Type your name').first().fill('Jo')
+  await page.getByLabel('Your name (optional)').fill('Jo Bloggs')
+  const dateBox = page.getByLabel(/^Add the date/)
+  check('the date starts unticked', !(await dateBox.isChecked()))
+  await dateBox.check()
+  await page.getByRole('button', { name: 'Put it on the page' }).click()
+  await page.waitForTimeout(800)
+  const kept = await mod('/src/stores/signatureStore.ts', 'const s = m.useSignatureStore.getState(); const a = s.signatures.find((x) => x.id === s.activeId); return a && { h: a.height, inkH: a.sig?.inkHeight, name: a.sig?.name, showName: a.sig?.showName, showDate: a.sig?.showDate }')
+  check('the signature carries the name and date as its own labels', !!kept && kept.name === 'Jo Bloggs' && kept.showName && kept.showDate, json(kept))
+  check('…drawn under the ink', !!kept && kept.h > kept.inkH, json(kept))
+  await store("s.setTool('select')")
+  await mod('/src/native/nav.ts', 'm.useNav.getState().setAwaitingSignature(false)')
+}
+
+console.log('\ntapping a shape shows its own options in the sheet')
+{
+  await mod('/src/native/nav.ts', "m.useNav.getState().clearScreens(); m.useNav.getState().openSheet('markup')")
+  await store("s.resetDocument(); s.add({ id: 'c1', pageIndex: 0, type: 'ellipse', x: 80, y: 300, width: 100, height: 100, color: '#1b1d22', filled: true }); s.setTool('select'); s.setSelected('c1')")
+  await page.waitForTimeout(400)
+  check('Shape is lit', (await page.getByRole('button', { name: 'Shape', exact: true }).getAttribute('aria-pressed')) === 'true')
+  check('…and Circle among the shapes', (await page.getByRole('button', { name: 'Circle', exact: true }).getAttribute('aria-pressed')) === 'true')
+  await page.getByRole('button', { name: 'Blue', exact: true }).click()
+  await page.waitForTimeout(200)
+  const c = (await annotations()).find((a) => a.id === 'c1')
+  check('its Ink recolours it', c?.color === '#2353c9', json(c))
+  check('no width for a circle', (await page.locator('section input[type="range"]').count()) === 0)
 }
 
 console.log('\nthe bar is Fill · Mark up · Sign · Share, and Pages is in What else')
@@ -370,9 +414,12 @@ console.log('\na note being typed on takes its words with it when dragged')
   await touch('touchEnd', gx + 40, gy + 30)
   await page.waitForTimeout(400)
   const moved = (await annotations()).find((a) => a.id === n.id)
-  check('the note was dragged', !!moved && Math.abs((moved.x - n.x) * k - 40) < 6, json(moved && { dx: (moved.x - n.x) * k, dy: (moved.y - n.y) * k }))
+  check('the note was dragged', !!moved && Math.abs((moved.x - n.x) * k - 40) < 10, json(moved && { dx: (moved.x - n.x) * k, dy: (moved.y - n.y) * k }))
   check('the editor is still open while dragged', !!before && !!during, json({ before, during }))
-  if (before && during) check('…and moved with the card', Math.abs(during.x - before.x - 40) < 6 && Math.abs(during.y - before.y - 30) < 6, json({ dx: during.x - before.x, dy: during.y - before.y }))
+  // With the card, wherever the card went — it may have snapped onto a line.
+  const cardDx = moved ? (moved.x - n.x) * k : 0
+  const cardDy = moved ? (moved.y - n.y) * k : 0
+  if (before && during) check('…and moved with the card', Math.abs(during.x - before.x - cardDx) < 3 && Math.abs(during.y - before.y - cardDy) < 3, json({ dx: during.x - before.x, dy: during.y - before.y, cardDx, cardDy }))
   await page.mouse.click(pageBox.x + 20, pageBox.y + pageBox.height - 20)
   await page.waitForTimeout(300)
 }

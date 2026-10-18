@@ -1260,6 +1260,12 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // typed go with the card (James, 2026-10-18: the text entry "stays where it
   // was" when the note is moved). The store only hears of the move on drop.
   const [editDrag, setEditDrag] = useState<{ x: number; y: number } | null>(null)
+  // Snap to align (James, 2026-10-18: "add snap to align so that you can
+  // easily align items e.g. your name and date … on the signature"). While one
+  // mark is dragged, its left / centre / right and top / middle / bottom catch
+  // the same lines of the other marks on the page (and the page's own centre)
+  // when within SNAP_PX, and the lines it caught show as guides.
+  const [guides, setGuides] = useState<{ v: number[]; h: number[] } | null>(null)
   // Pointer position used to render the ghost-signature preview that
   // follows the cursor while the signature tool is armed.
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null)
@@ -1416,6 +1422,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     trRef.current?.getLayer()?.batchDraw()
     setDraggingId(null)
     setEditDrag(null)
+    setGuides(null)
   }
 
   // A pinch can begin with its second finger on a different page (each page has
@@ -2349,9 +2356,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   function syncDragGhost(a: Annotation, node: Konva.Node) {
     const container = stageRef.current?.container()
     if (!container) return
-    const page = container.getBoundingClientRect()
     const r = node.getClientRect()
-    const inside = r.x >= 0 && r.y >= 0 && r.x + r.width <= page.width && r.y + r.height <= page.height
+    const inside = r.x >= 0 && r.y >= 0 && r.x + r.width <= width && r.y + r.height <= height
     if (inside) {
       if (dragGhost) setDragGhost(null)
       return
@@ -2359,10 +2365,11 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     if (dragGhostSrc.current?.id !== a.id) {
       dragGhostSrc.current = { id: a.id, src: node.toDataURL({ pixelRatio: window.devicePixelRatio || 1 }) }
     }
+    // In this page's own coordinates, like the overhang of a resting note.
     setDragGhost({
       src: dragGhostSrc.current.src,
-      left: page.left + r.x,
-      top: page.top + r.y,
+      left: r.x,
+      top: r.y,
       width: r.width,
       height: r.height
     })
@@ -2372,6 +2379,46 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     dragClient.current = null
     dragGhostSrc.current = null
     setDragGhost(null)
+  }
+
+  /** Nudge the dragged node onto the nearest edge or centre line of another mark (see `guides`). */
+  function snapToAlign(a: Annotation, node: Konva.Node) {
+    const r = node.getClientRect({ skipShadow: true })
+    const snapPx = coarsePointer ? 8 : 5
+    const xs: number[] = [width / 2]
+    const ys: number[] = [height / 2]
+    for (const other of useAnnotationStore.getState().annotations) {
+      if (other.id === a.id || other.pageIndex !== pageIndex) continue
+      const n = shapeRefs.current.get(other.id)
+      if (!n) continue
+      const o = n.getClientRect({ skipShadow: true })
+      if (o.width <= 0 && o.height <= 0) continue
+      xs.push(o.x, o.x + o.width / 2, o.x + o.width)
+      ys.push(o.y, o.y + o.height / 2, o.y + o.height)
+    }
+    const best = (mine: number[], lines: number[]) => {
+      let pick: { d: number; at: number } | null = null
+      for (const m of mine) {
+        for (const l of lines) {
+          const d = l - m
+          if (Math.abs(d) <= snapPx && (!pick || Math.abs(d) < Math.abs(pick.d))) pick = { d, at: l }
+        }
+      }
+      return pick
+    }
+    const bx = best([r.x, r.x + r.width / 2, r.x + r.width], xs)
+    const by = best([r.y, r.y + r.height / 2, r.y + r.height], ys)
+    if (bx || by) {
+      node.position({ x: node.x() + (bx?.d ?? 0) / scale, y: node.y() + (by?.d ?? 0) / scale })
+    }
+    // Every line the mark now sits on, after the snap — a box can line up
+    // left AND centre with two marks at once.
+    const after = node.getClientRect({ skipShadow: true })
+    const on = (mine: number[], lines: number[]) =>
+      [...new Set(lines.filter((l) => mine.some((m) => Math.abs(l - m) < 0.75)).map((l) => Math.round(l * 2) / 2))]
+    const v = bx ? on([after.x, after.x + after.width / 2, after.x + after.width], xs) : []
+    const h = by ? on([after.y, after.y + after.height / 2, after.y + after.height], ys) : []
+    setGuides(v.length || h.length ? { v, h } : null)
   }
 
   function onShapeDragStart(a: Annotation) {
@@ -2391,6 +2438,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // selected node by the same delta so the group moves rigidly together.
   function onShapeDragMove(a: Annotation, e: Konva.KonvaEventObject<DragEvent>) {
     if (gestureCancelled.current) return
+    if (useAnnotationStore.getState().selectedIds.length <= 1) snapToAlign(a, e.target)
     if (a.type === 'redact') syncRedactHint(a.id, e.target)
     if (a.type === 'sigfield') syncSigExtras(a.id, e.target)
     dragClient.current = clientPointOf(e.evt) ?? dragClient.current
@@ -2484,6 +2532,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   function onShapeDragEnd(a: Annotation, e: Konva.KonvaEventObject<DragEvent>) {
     setDraggingId(null)
     setEditDrag(null)
+    setGuides(null)
     const dropAt = clientPointOf(e.evt) ?? dragClient.current
     clearDragGhost()
     if (gestureCancelled.current) {
@@ -3646,22 +3695,52 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       {/* The dragged shape, drawn over every page once it crosses its own
           page's edge — see dragClient. Fixed to the viewport because that is
           the space the pointer and the page rects are measured in. */}
-      {dragGhost &&
-        createPortal(
+      {dragGhost && (() => {
+        // ⚠️ On the page, not `position: fixed` on <body>: with the iPhone's
+        // keyboard up the web view is scrolled, and a fixed copy placed from
+        // getBoundingClientRect landed a keyboard's height away from the note
+        // — the note showed twice (James, 2026-10-18, dragging a note being
+        // typed on). Placed like a resting note's overhang, above the
+        // neighbouring pages, and clipped to everything EXCEPT its own page,
+        // where the canvas already draws it (the whole copy at 80% over the
+        // real one was a second, fainter note there too).
+        const g = dragGhost
+        const px = (v: number, of: number) => `${((v / of) * 100).toFixed(3)}%`
+        const x0 = px(-g.left, g.width), y0 = px(-g.top, g.height)
+        const x1 = px(width - g.left, g.width), y1 = px(height - g.top, g.height)
+        return (
           <img
-            src={dragGhost.src}
+            src={g.src}
             alt=""
             aria-hidden="true"
-            className="pointer-events-none fixed z-40 opacity-80"
+            data-drag-ghost=""
+            className="pointer-events-none"
             style={{
-              left: dragGhost.left,
-              top: dragGhost.top,
-              width: dragGhost.width,
-              height: dragGhost.height
+              position: 'absolute',
+              left: g.left,
+              top: g.top,
+              width: g.width,
+              height: g.height,
+              // With the overhangs: over the neighbouring pages, under this
+              // page's text editor (10), so words being typed stay on top.
+              zIndex: 5,
+              opacity: 0.9,
+              clipPath: `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${x0} ${y0}, ${x1} ${y0}, ${x1} ${y1}, ${x0} ${y1}, ${x0} ${y0})`
             }}
-          />,
-          document.body
-        )}
+          />
+        )
+      })()}
+
+      {guides && (
+        <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 6 }}>
+          {guides.v.map((x) => (
+            <div key={`v${x}`} style={{ position: 'absolute', left: x - 0.5, top: 0, width: 1, height: '100%', background: '#ec4899' }} />
+          ))}
+          {guides.h.map((y) => (
+            <div key={`h${y}`} style={{ position: 'absolute', top: y - 0.5, left: 0, height: 1, width: '100%', background: '#ec4899' }} />
+          ))}
+        </div>
+      )}
 
       {overhangs.map((o) => {
         if (!o.src) return null
@@ -3843,6 +3922,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation()
+                useAnnotationStore.getState().confirm(selected.id)
                 setSelected(null)
                 // Only leave the tool if one is still armed: with Select active
                 // there is nothing to go back to, and re-setting it would be a

@@ -149,7 +149,7 @@ await page.mouse.move(grab.x, grab.y + 20, { steps: 3 })
 await page.mouse.move(drop.x, drop.y, { steps: 12 })
 await page.waitForTimeout(200)
 const ghost = await page.evaluate(() => {
-  const img = [...document.body.querySelectorAll(':scope > img.fixed')].find((i) => i.src.startsWith('data:'))
+  const img = [...document.querySelectorAll('img[data-drag-ghost]')].find((i) => i.src.startsWith('data:'))
   if (!img) return null
   const r = img.getBoundingClientRect()
   return { cx: r.left + r.width / 2, cy: r.top + r.height / 2 }
@@ -180,7 +180,7 @@ if (moved) {
 }
 check(
   'the floating copy is gone once it lands',
-  (await page.evaluate(() => [...document.body.querySelectorAll(':scope > img.fixed')].filter((i) => i.src.startsWith('data:')).length)) === 0,
+  (await page.evaluate(() => [...document.querySelectorAll('img[data-drag-ghost]')].filter((i) => i.src.startsWith('data:')).length)) === 0,
 )
 
 // ── And a move within one page still works ──────────────────────────────────

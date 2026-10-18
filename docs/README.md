@@ -2193,6 +2193,44 @@ each became. Pinned by `e2e/phone-markup.e2e.mjs` (`npm run test:phone-markup`).
   their own component (the hook's effect runs once, on mount).
 - All pinned in `e2e/phone-markup.e2e.mjs`.
 
+## The phone, third round (2026-10-18)
+
+- **Snap to align — website and phone** ("so that you can easily align items
+  e.g. your name and date"). `snapToAlign` in AnnotationLayer, from
+  `onShapeDragMove` for a single mark: its left / centre / right and top /
+  middle / bottom catch the same lines of every other mark on the page, and
+  the page's centre, within 5px (8px for a finger). Each line it sits on shows
+  as a pink guide (`guides`) until it is let go. Resizes and group drags don't
+  snap. Pinned by `e2e/snap-align.e2e.mjs` — with a mouse on the website,
+  because in a desktop browser's phone emulation a touch on a mark is taken as
+  a scroll.
+- **The Signed moment opens on the signature's ✓**, and only then (James:
+  "force the user to click a tick button once it's correctly placed"). The ✓
+  calls `annotationStore.confirm(id)`; DocumentScreen remembers the signature it
+  saw placed, plus any name / date pieces put down straight after it, and opens
+  the moment when one of them is confirmed. A tap off the signature used to
+  count as done, and that came too early.
+- **Name and date under the signature, from the Sign page** ("they may still
+  need to add their name and date"). An optional name line and an unticked
+  "Add the date" box. They become the signature's own labels
+  (`SignatureData.name` / `showDate` / `dateText`, through `composeSignature`),
+  so they sit lined up under the ink as one thing to place and can be edited
+  later on the page (double-tap) like any signature's labels. A typed signature
+  now carries `SignatureData` as well, so it can take labels.
+- **Tapping a mark shows its own options in Mark up**, e.g. a shape's Ink to
+  recolour it ("when clicking an existing shape open up the shape dialog").
+  With nothing in hand, the sheet takes its tool from the selected mark
+  (`markupOfMark`), lights the shape it is among the Shape chips, and offers a
+  Width only for strokes.
+- **The note showed twice while dragged on the iPhone.** The cross-page drag
+  copy (`dragGhost`) was `position: fixed` on `<body>`, placed from
+  `getBoundingClientRect`. With the keyboard up the web view is scrolled, so it
+  landed a keyboard's height from the note. It now sits on the page like a
+  resting note's overhang (`data-drag-ghost`), clipped to everything except
+  its own page, where the canvas already draws it.
+- **Fill's icon** is a form's labelled box with a typing cursor, not a pencil
+  (which read as Mark up's pen). It is on the Desk's "Fill in a form" too.
+
 ## The phone's knowledge base is a page (2026-10-18)
 
 James: "Make knowledge base native page." On the phone app the knowledge base
