@@ -3419,7 +3419,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               top: o.top,
               width: o.width,
               height: o.height,
-              zIndex: 20,
+              // Over the neighbouring pages (z auto), under this page's text
+              // editor (10), so a note being typed on shows its words over
+              // the part that hangs past the edge.
+              zIndex: 5,
               pointerEvents: tool === 'select' ? 'auto' : 'none',
               cursor: tool === 'select' ? 'move' : undefined,
               touchAction: 'none',
@@ -5196,7 +5199,11 @@ function TextEditor({
         // the canvas will wrap it at; one without stays the single growing line
         // it has always been.
         whiteSpace: wrapped ? 'pre-wrap' : 'pre',
-        width: nl ? nl.innerWidth * scale + 'px' : wrapped ? annotation.wrapWidth! * scale + 'px' : undefined,
+        // ⚠️ A note gets the half point `noteLayout`'s fit allows ("fits" is
+        // width ≤ innerWidth + 0.5) and a pixel for the browser's rounding: at
+        // exactly the inner width a fitted word sized to the edge broke in two
+        // the moment the editor opened ("mhf" → "mh" / "f", James 2026-10-18).
+        width: nl ? (nl.innerWidth + 0.5) * scale + 1 + 'px' : wrapped ? annotation.wrapWidth! * scale + 'px' : undefined,
         background: 'transparent',
         border: 'none',
         outline: '1px dashed #ea580c',

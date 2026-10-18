@@ -139,6 +139,23 @@ await store('s.setSelected(null)')
 await page.waitForTimeout(300)
 check('…and goes when it is let go', !(await (async () => { const e = []; for (let i = 0; i < 14; i++) e.push(await pixel(cx(595) + 6 + i, cy(200) + 0.5)); return e })()).some((px) => near(px, ORANGE, 40)))
 
+console.log('\ntyping on it (double-click)')
+// A fitted note whose one word is sized to the card's width (James,
+// 2026-10-18: "first time after double click it cuts half").
+await store('s.add({ id: "f", type: "text", pageIndex: 0, x: 470, y: 600, text: "mhf", color: "#1f2937", fontSize: 14, note: "#38bdf8", wrapWidth: 180, noteCentre: true, noteFit: true }); s.setSelected(null)')
+await page.waitForTimeout(400)
+await page.mouse.dblclick(cx(520), cy(660))
+await page.waitForTimeout(500)
+const ed = await page.evaluate(() => {
+  const el = document.querySelector('[contenteditable="true"]')
+  return el ? { h: el.getBoundingClientRect().height, line: parseFloat(getComputedStyle(el).lineHeight), r: el.getBoundingClientRect().toJSON() } : null
+})
+check('the editor opens with the word on one line, not broken in two', ed && ed.h < ed.line * 1.5, json(ed))
+check('…and its words show over the part past the edge', await page.evaluate(({ x, y }) => !!document.elementFromPoint(x, y)?.closest('[contenteditable="true"]'), { x: Math.min(ed.r.right - 4, cx(595) + 10), y: ed.r.top + ed.r.height / 2 }))
+await page.keyboard.press('Escape')
+await store('s.remove("f"); s.setSelected(null)')
+await page.waitForTimeout(300)
+
 console.log('\ndragging it by the overhang')
 await page.mouse.move(gapX, midY)
 await page.mouse.down()
