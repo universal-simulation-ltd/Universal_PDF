@@ -2003,14 +2003,30 @@ on the page wrapper at z-index 5 (over the neighbouring pages, which are
 z auto; under this page's text editor at 10, so words being typed show over
 it) and clipped with an evenodd `clip-path` to everything EXCEPT the page.
 clip-path also clips hit-testing, so inside the page presses still reach the
-Stage, and only the overhang takes them: a press there selects the note and
-`node.startDrag()`s it (after `stage.setPointersPositions`). The picture is
+Stage, and only the overhang takes them. A press there under 4px of movement
+is a click (select; open if folded); past that the app drags it itself —
+moving the Konva node and the picture live — and the drop is one `update`.
+⚠️ Not `node.startDrag()`: handing Konva a press it never saw made a plain
+click jump the note ~100pt and left `draggingId` set, which stopped the
+overhang being drawn and double-click editing for the rest of the session.
+A double-click on the overhang opens the editor. The picture is
 re-taken only when its key changes (position, size, words, colour, zoom,
 editing); it is hidden while that note is dragged (the drag ghost has it).
 When the note is selected, the Transformer's dashed border is carried on round
 the overhang by an SVG rect INSIDE the box (stroke, width and dash copied):
-a CSS `outline` sits outside the box, where the clip-path cut it off. The
-resize handles on the overhanging side are still cut off.
+a CSS `outline` sits outside the box, where the clip-path cut it off. It is
+hidden while the note is typed on, as the Transformer is.
+
+The right-hand resize handles, which the Stage cuts off, are stand-ins
+(`data-note-handle` tr / mr / br) that do what Konva's do: the side re-wraps,
+a corner scales card and words together with the opposite corner fixed. Live
+as `quietUpdateMany`, then restored and committed as one `update`, so one
+undo puts it back.
+
+The picture includes Konva's own card shadow (`getClientRect()` with shadow),
+snapped to whole pixels, and the hole is the page less a pixel all round: a
+CSS drop-shadow shadowed the WORDS too (they looked doubled), and a fractional
+position plus two anti-aliased edges left a seam through the text at the edge.
 
 ⚠️ The note editor is `innerWidth + 0.5` points wide (plus a pixel), not
 `innerWidth`: `noteLayout`'s fit counts a line as fitting at up to half a point

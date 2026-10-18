@@ -928,6 +928,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const add = useAnnotationStore((s) => s.add)
   const update = useAnnotationStore((s) => s.update)
   const addMany = useAnnotationStore((s) => s.addMany)
+  const quietUpdateMany = useAnnotationStore((s) => s.quietUpdateMany)
   const updateMany = useAnnotationStore((s) => s.updateMany)
   const remove = useAnnotationStore((s) => s.remove)
   const replace = useAnnotationStore((s) => s.replace)
@@ -1138,7 +1139,18 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // it starts an ordinary drag. On export, a note that hangs over is saved as
   // a folded note at the edge (lib/export `foldOverhangingNotes`).
   const [overhangs, setOverhangs] = useState<
-    { id: string; src: string; left: number; top: number; width: number; height: number; square: boolean }[]
+    {
+      id: string
+      src: string
+      // The picture: the note WITH its shadow (Konva's own, baked in).
+      left: number
+      top: number
+      width: number
+      height: number
+      // The card itself, for the border and the handles.
+      card: { left: number; top: number; width: number; height: number }
+      square: boolean
+    }[]
   >([])
   const overhangKey = useRef('')
   // Pointer position used to render the ghost-signature preview that
@@ -2692,15 +2704,21 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       if (!node) continue
       const r = node.getClientRect({ skipShadow: true })
       if (r.x >= -0.5 && r.y >= -0.5 && r.x + r.width <= width + 0.5 && r.y + r.height <= height + 0.5) continue
+      // Whole pixels, so the picture's pixels sit exactly on the Stage's —
+      // a fractional left blurred it and left a seam at the page edge.
+      const raw = node.getClientRect()
+      const fx = Math.floor(raw.x), fy = Math.floor(raw.y)
+      const full = { x: fx, y: fy, width: Math.ceil(raw.x + raw.width) - fx, height: Math.ceil(raw.y + raw.height) - fy }
       const key = `${a.id}:${Math.round(r.x)}:${Math.round(r.y)}:${Math.round(r.width)}:${Math.round(r.height)}`
       keys.push(key)
       out.push({
         id: a.id,
         src: '',
-        left: r.x,
-        top: r.y,
-        width: r.width,
-        height: r.height,
+        left: full.x,
+        top: full.y,
+        width: full.width,
+        height: full.height,
+        card: { left: r.x, top: r.y, width: r.width, height: r.height },
         square: !a.rotation
       })
     }
@@ -2717,22 +2735,115 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     setOverhangs(out)
   })
 
-  // A press on the part of a note outside the page: select it, and hand the
-  // drag to Konva as if the press had landed on the note itself.
-  function grabOverhang(id: string, e: React.PointerEvent) {
-    if (tool !== 'select') return
-    e.stopPropagation()
-    const node = shapeRefs.current.get(id)
-    const stage = node?.getStage()
-    if (!node || !stage) return
-    stage.setPointersPositions(e.nativeEvent)
-    const ann = useAnnotationStore.getState().annotations.find((a) => a.id === id)
-    if (ann?.type === 'text' && ann.noteFolded) {
-      onShapeClick(id)
-      return
+  // Where an overhang picture goes, and its clip: everything in its box EXCEPT
+  // the page (evenodd), so only what hangs past the edge shows or takes presses.
+  function overhangBox(o: { left: number; top: number; width: number; height: number }) {
+    const px = (v: number, of: number) => `${((v / of) * 100).toFixed(3)}%`
+    // The hole is the page less a pixel all round: the picture overlaps the
+    // Stage by that pixel (identical pixels, so it can't be seen) instead of
+    // two anti-aliased edges meeting in a faint seam.
+    const x0 = px(1 - o.left, o.width), y0 = px(1 - o.top, o.height)
+    const x1 = px(width - 1 - o.left, o.width), y1 = px(height - 1 - o.top, o.height)
+    return {
+      left: `${o.left}px`,
+      top: `${o.top}px`,
+      clipPath: `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${x0} ${y0}, ${x1} ${y0}, ${x1} ${y1}, ${x0} ${y1}, ${x0} ${y0})`
     }
-    setSelected(id)
-    node.startDrag()
+  }
+
+  // A press on the part of a note outside the page. Under a few pixels of
+  // movement it is a click (select it; open it if folded); past that it moves
+  // the note — the Konva node and this picture, live — and the drop is ONE
+  // update, so one undo puts it back.
+  //
+  // ⚠️ Not `node.startDrag()`. Handing a press that Konva never saw to its
+  // drag made a plain click jump the note ~100pt and left the drag half-open
+  // (draggingId never cleared), so the overhang stopped being drawn and
+  // double-click stopped editing for the rest of the session (2026-10-18).
+  function grabOverhang(id: string, e: React.PointerEvent<HTMLDivElement>) {
+    if (tool !== 'select' || e.button !== 0) return
+    e.stopPropagation()
+    e.preventDefault()
+    const el = e.currentTarget
+    const o = overhangs.find((x) => x.id === id)
+    const node = shapeRefs.current.get(id)
+    const a = useAnnotationStore.getState().annotations.find((x) => x.id === id)
+    if (!o || !node || !a || a.type !== 'text') return
+    el.setPointerCapture(e.pointerId)
+    const start = { x: e.clientX, y: e.clientY }
+    const from = { x: a.x, y: a.y }
+    let moved = false
+    const at = (ev: PointerEvent) => ({ dx: ev.clientX - start.x, dy: ev.clientY - start.y })
+    const move = (ev: PointerEvent) => {
+      const { dx, dy } = at(ev)
+      if (!moved && Math.hypot(dx, dy) < 4) return
+      if (!moved) {
+        moved = true
+        setSelected(id)
+      }
+      node.position({ x: from.x + dx / scale, y: from.y + dy / scale })
+      node.getLayer()?.batchDraw()
+      Object.assign(el.style, overhangBox({ ...o, left: o.left + dx, top: o.top + dy }))
+    }
+    const end = (ev: PointerEvent) => {
+      el.removeEventListener('pointermove', move)
+      el.removeEventListener('pointerup', end)
+      el.removeEventListener('pointercancel', end)
+      if (el.hasPointerCapture(ev.pointerId)) el.releasePointerCapture(ev.pointerId)
+      if (!moved) {
+        onShapeClick(id)
+        return
+      }
+      if (ev.type === 'pointercancel') {
+        node.position(from)
+        node.getLayer()?.batchDraw()
+        Object.assign(el.style, overhangBox(o))
+        return
+      }
+      const { dx, dy } = at(ev)
+      update(id, { x: from.x + dx / scale, y: from.y + dy / scale } as Partial<Annotation>)
+    }
+    el.addEventListener('pointermove', move)
+    el.addEventListener('pointerup', end)
+    el.addEventListener('pointercancel', end)
+  }
+
+  // The Transformer's right-hand handles of a note whose right edge hangs past
+  // the page: the page's Stage cuts Konva's own off, so these stand in for
+  // them and do what they do — the side re-wraps (width), a corner scales the
+  // card and its words together, the opposite corner staying put. Live as
+  // quiet updates; the release is ONE undo step from where it started.
+  function dragOverhangHandle(id: string, kind: 'tr' | 'mr' | 'br', e: React.PointerEvent<HTMLDivElement>) {
+    if (e.button !== 0) return
+    e.stopPropagation()
+    e.preventDefault()
+    const el = e.currentTarget
+    const a = useAnnotationStore.getState().annotations.find((x) => x.id === id)
+    if (!a || a.type !== 'text') return
+    el.setPointerCapture(e.pointerId)
+    const startX = e.clientX
+    const box = textBoxSize(a)
+    const original: Partial<TextAnnotation> = { x: a.x, y: a.y, fontSize: a.fontSize, wrapWidth: a.wrapWidth }
+    const patchAt = (clientX: number): Partial<TextAnnotation> => {
+      const w = box.width + (clientX - startX) / scale
+      if (kind === 'mr') return { wrapWidth: Math.max(a.fontSize * 2, w) }
+      const k = Math.max(0.1, w / box.width)
+      const fontSize = Math.max(4, a.fontSize * k)
+      const wrapWidth = a.wrapWidth && a.wrapWidth > 0 ? Math.max(fontSize * 2, a.wrapWidth * k) : undefined
+      return kind === 'tr' ? { fontSize, wrapWidth, y: a.y + box.height - box.height * k } : { fontSize, wrapWidth }
+    }
+    const move = (ev: PointerEvent) => quietUpdateMany([{ id, patch: patchAt(ev.clientX) as Partial<Annotation> }])
+    const end = (ev: PointerEvent) => {
+      el.removeEventListener('pointermove', move)
+      el.removeEventListener('pointerup', end)
+      el.removeEventListener('pointercancel', end)
+      if (el.hasPointerCapture(ev.pointerId)) el.releasePointerCapture(ev.pointerId)
+      quietUpdateMany([{ id, patch: original as Partial<Annotation> }])
+      if (ev.type === 'pointerup' && ev.clientX !== startX) update(id, patchAt(ev.clientX) as Partial<Annotation>)
+    }
+    el.addEventListener('pointermove', move)
+    el.addEventListener('pointerup', end)
+    el.addEventListener('pointercancel', end)
   }
 
   return (
@@ -3402,21 +3513,26 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
 
       {overhangs.map((o) => {
         if (!o.src) return null
-        // The page, in the picture's own pixels: clipped OUT (evenodd), so
-        // only what hangs past the edge shows — and only that takes presses.
-        const px = (v: number, of: number) => `${((v / of) * 100).toFixed(3)}%`
-        const x0 = px(-o.left, o.width), y0 = px(-o.top, o.height)
-        const x1 = px(width - o.left, o.width), y1 = px(height - o.top, o.height)
-        const selectedHere = selectedId === o.id
+        // While it is typed on, the Transformer is down, so its border is too.
+        const selectedHere = selectedId === o.id && editingId !== o.id
+        const c = o.card
+        const right = c.left + c.width
+        const handle = coarsePointer ? 18 : 9
+        const handles: ['tr' | 'mr' | 'br', number][] = selectedHere && o.square && right > width
+          ? [['tr', c.top], ['mr', c.top + c.height / 2], ['br', c.top + c.height]]
+          : []
         return (
+          <Fragment key={o.id}>
           <div
-            key={o.id}
             data-note-overhang={o.id}
             onPointerDown={(e) => grabOverhang(o.id, e)}
+            onDoubleClick={() => {
+              const a = annotations.find((x) => x.id === o.id)
+              if (a?.type === 'text' && !a.noteFolded) onTextDblClick(a)
+            }}
             style={{
               position: 'absolute',
-              left: o.left,
-              top: o.top,
+              ...overhangBox(o),
               width: o.width,
               height: o.height,
               // Over the neighbouring pages (z auto), under this page's text
@@ -3425,9 +3541,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               zIndex: 5,
               pointerEvents: tool === 'select' ? 'auto' : 'none',
               cursor: tool === 'select' ? 'move' : undefined,
-              touchAction: 'none',
-              clipPath: `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${x0} ${y0}, ${x1} ${y0}, ${x1} ${y1}, ${x0} ${y1}, ${x0} ${y0})`,
-              filter: o.square ? 'drop-shadow(0 2px 3px rgba(15,23,42,0.18))' : undefined
+              touchAction: 'none'
             }}
           >
             <img src={o.src} alt="" aria-hidden="true" draggable={false} style={{ display: 'block', width: '100%', height: '100%' }} />
@@ -3437,10 +3551,32 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 outline. */}
             {selectedHere && o.square && (
               <svg aria-hidden="true" width={o.width} height={o.height} style={{ position: 'absolute', inset: 0, overflow: 'visible', pointerEvents: 'none' }}>
-                <rect x={0.75} y={0.75} width={Math.max(0, o.width - 1.5)} height={Math.max(0, o.height - 1.5)} fill="none" stroke="#ea580c" strokeWidth={1.5} strokeDasharray="6 4" />
+                <rect x={c.left - o.left + 0.75} y={c.top - o.top + 0.75} width={Math.max(0, c.width - 1.5)} height={Math.max(0, c.height - 1.5)} fill="none" stroke="#ea580c" strokeWidth={1.5} strokeDasharray="6 4" />
               </svg>
             )}
           </div>
+          {handles.map(([kind, y]) => (
+            <div
+              key={kind}
+              data-note-handle={kind}
+              onPointerDown={(e) => dragOverhangHandle(o.id, kind, e)}
+              style={{
+                position: 'absolute',
+                left: right - handle / 2,
+                top: y - handle / 2,
+                width: handle,
+                height: handle,
+                zIndex: 6,
+                boxSizing: 'border-box',
+                background: '#ffffff',
+                border: '1px solid #ea580c',
+                borderRadius: 2,
+                touchAction: 'none',
+                cursor: kind === 'mr' ? 'ew-resize' : kind === 'tr' ? 'nesw-resize' : 'nwse-resize'
+              }}
+            />
+          ))}
+          </Fragment>
         )
       })}
 
