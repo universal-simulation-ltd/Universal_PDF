@@ -2153,10 +2153,11 @@ each became. Pinned by `e2e/phone-markup.e2e.mjs` (`npm run test:phone-markup`).
 
 ## The phone, second round (2026-10-18)
 
-- **The bar is Fill · Mark up · Share · Pages.** Sign lives in Mark up's row
-  now, so its place went to Share (James: "maybe that could be share"), and the
-  header's Share icon went with it — the ⋯ is balanced by a blank, so the name
-  stays centred.
+- **The bar is Fill · Mark up · Sign · Share; Pages is in What else (⋯).**
+  Briefly Share took Sign's place; James then settled on "fill mark up sign
+  share and pages in …". The header's Share icon went (the ⋯ is balanced by a
+  blank, so the name stays centred), and What else gained "Split or reorder
+  pages" (opens the same PageNavigator). Sign is in Mark up's row as well.
 - **QR code is a page** (`src/native/QrScreen.tsx`), like Sign: the link on a
   white slip, the code drawn as you type, the six looks, Put it on the page.
   Same model and renderer as the website's dialog, so the placed code carries

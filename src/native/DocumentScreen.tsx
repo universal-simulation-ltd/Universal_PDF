@@ -16,14 +16,14 @@ import { BackLink } from './parts'
 
 // Board 2 · A document open: the pages lie on the warm grey desk, a back
 // chevron and the name at the top with ⋯, and four tools floating
-// at the foot (Fill · Mark up · Share · Pages). The pages are the website's own
+// at the foot (Fill · Mark up · Sign · Share). The pages are the website's own
 // viewer — every gesture, form field and annotation works as it does there;
 // only the chrome around it is the phone's.
 
-// Sign moved into Mark up's row (James, 2026-10-18: "remove signature from
-// main nav at bottom as it's now in mark up — maybe that could be share"), so
-// the bar's third tool is Share, which used to be an icon in the header.
-type BarTool = 'fill' | 'markup' | 'share' | 'pages'
+// Fill · Mark up · Sign · Share (James, 2026-10-18, after trying Sign's place
+// going to Share: "actually fill mark up sign share and pages in …"). Share
+// used to be an icon in the header; Pages is in What else (the ⋯).
+type BarTool = 'fill' | 'markup' | 'sign' | 'share'
 
 /** How many signatures are on the pages: placed ones, and signed request boxes. */
 function signaturesOn(annotations: Annotation[]): number {
@@ -51,7 +51,6 @@ export default function DocumentScreen() {
   const t = useT()
   const fileName = usePdfStore((s) => s.fileName)
   const numPages = usePdfStore((s) => s.numPages)
-  const setPageNavOpen = usePdfStore((s) => s.setPageNavOpen)
   const tool = useAnnotationStore((s) => s.tool)
   const setTool = useAnnotationStore((s) => s.setTool)
   const sheet = useNav((s) => s.sheet)
@@ -125,18 +124,18 @@ export default function DocumentScreen() {
         a.setTool('highlight')
       }
       openSheet('markup')
-    } else if (id === 'share') {
-      push('share')
+    } else if (id === 'sign') {
+      push('sign')
     } else {
-      setPageNavOpen(true)
+      push('share')
     }
   }
 
   const tools: { id: BarTool; label: string; icon: string }[] = [
     { id: 'fill', label: t('phone.tool_fill'), icon: PATHS.fill },
     { id: 'markup', label: t('phone.tool_markup'), icon: PATHS.pen },
+    { id: 'sign', label: t('phone.tool_sign'), icon: PATHS.sign },
     { id: 'share', label: t('phone.tool_share'), icon: PATHS.share },
-    { id: 'pages', label: t('phone.tool_pages'), icon: PATHS.grid },
   ]
 
   return (

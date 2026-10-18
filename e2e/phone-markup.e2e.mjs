@@ -18,7 +18,7 @@
 //     selected highlight.
 //   • Form-field names fit their boxes.
 //   • The Signed moment waits for the signature to be let go of.
-//   • The bar's third tool is Share (Sign is in Mark up's row now).
+//   • The bar is Fill · Mark up · Sign · Share; Pages is in What else (⋯).
 //   • QR code is a page of its own, and its link box is not focused on arrival.
 //   • Text and notes get a choice of three fonts.
 //   • A note being typed on takes its words with it when it is dragged.
@@ -257,14 +257,22 @@ console.log('\nthe Signed moment waits until the signature is let go of')
   check('on letting it go', screens3.includes('signed'), json(screens3))
 }
 
-console.log('\nthe bar is Fill · Mark up · Share · Pages')
+console.log('\nthe bar is Fill · Mark up · Sign · Share, and Pages is in What else')
 {
   // Off the Signed moment the last check left up, and out of Mark up.
   await mod('/src/native/nav.ts', 'm.useNav.getState().clearScreens(); m.useNav.getState().closeSheet()')
   await page.waitForTimeout(400)
   const bar = page.locator('nav[aria-label="Tools"]')
   check('Share is in the bar', (await bar.getByRole('button', { name: 'Share' }).count()) === 1)
-  check('Sign is not', (await bar.getByRole('button', { name: 'Sign' }).count()) === 0)
+  check('Sign is in the bar', (await bar.getByRole('button', { name: 'Sign' }).count()) === 1)
+  check('Pages is not', (await bar.getByRole('button', { name: 'Pages' }).count()) === 0)
+  await page.getByRole('button', { name: 'What else' }).click()
+  await page.waitForTimeout(400)
+  await page.getByRole('button', { name: 'Split or reorder pages' }).click()
+  await page.waitForTimeout(400)
+  check('What else ▸ Split or reorder pages opens the pages', await mod('/src/stores/pdfStore.ts', 'return m.usePdfStore.getState().pageNavOpen'))
+  await mod('/src/stores/pdfStore.ts', 'm.usePdfStore.getState().setPageNavOpen(false)')
+  await page.waitForTimeout(300)
   await bar.getByRole('button', { name: 'Share' }).click()
   await page.waitForTimeout(400)
   const screens = await mod('/src/native/nav.ts', 'return m.useNav.getState().screens')

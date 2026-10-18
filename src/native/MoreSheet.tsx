@@ -63,6 +63,9 @@ export default function MoreSheet() {
   ]
 
   const rows = [
+    // Pages lives here, not in the bar (James, 2026-10-18: "fill mark up sign
+    // share and pages in …").
+    { label: t('phone.job_pages'), icon: PATHS.pages, run: () => { close(); pdf.setPageNavOpen(true) } },
     { label: t('phone.more_ocr'), icon: PATHS.search, run: () => { close(); pdf.setOcrOpen(true) } },
     { label: t('phone.more_compare'), icon: PATHS.compare, run: () => { close(); pdf.setCompareOpen(true) } },
     { label: t('phone.more_merge'), icon: PATHS.merge, run: () => { close(); pdf.setMergeOpen(true) } },
