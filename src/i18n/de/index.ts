@@ -7,5 +7,6 @@ import sign from './sign'
 import tools from './tools'
 import lib from './lib'
 import phone from './phone'
+import example from './example'
 
-export const de: Messages = { app, menu, viewer, annotate, sign, tools, lib, phone }
+export const de: Messages = { app, menu, viewer, annotate, sign, tools, lib, phone, example }

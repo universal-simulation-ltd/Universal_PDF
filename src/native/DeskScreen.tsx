@@ -5,7 +5,9 @@ import type { RecentMeta } from '../lib/recents'
 import { formatSize } from '../components/Export/formatSize'
 import { AppMark, Dots, Icon, PATHS } from './icons'
 import { Hl, Sheet } from './parts'
-import { jobCards, runJob, useJobs, type JobCard } from './jobs'
+import { jobCards, runJob, useJobs, type JobCard, type JobId } from './jobs'
+import { examplePreview } from './examplePreview'
+import { EXAMPLE_PAGES } from '../lib/exampleMeta'
 
 // Board 1 · Home, round 4: the top half is the cobalt desk with the headline
 // and the carousel of coloured sheets lying scattered on it; "On your desk"
@@ -200,7 +202,14 @@ export default function DeskScreen() {
           />
         )}
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain -mx-5 px-5 pb-4">
-          {shown.length === 0 ? (
+          {shown.length === 0 && recents.length === 0 ? (
+            // Nothing on the desk at all (not a search that matched nothing):
+            // the example lies there instead, drawn like any desk entry.
+            <>
+              <ExampleEntry busy={busy} />
+              <p className="m-0 pt-2 pb-4 text-[15px] leading-[1.45] text-[color:var(--np-muted)]">{t('phone.desk_empty')}</p>
+            </>
+          ) : shown.length === 0 ? (
             <p className="m-0 py-4 text-[15px] leading-[1.45] text-[color:var(--np-muted)]">
               {query ? t('phone.desk_no_match') : t('phone.desk_empty')}
             </p>
@@ -270,6 +279,64 @@ export default function DeskScreen() {
         </Sheet>
       )}
     </div>
+  )
+}
+
+const PREVIEW_W = 40
+
+/**
+ * The empty desk's one entry: the example PDF, its picture the example's real
+ * first page (`examplePreview`). Tapping it opens the example exactly as the
+ * "Try with example PDF" card does.
+ */
+function ExampleEntry({ busy }: { busy: JobId | null }) {
+  const t = useT()
+  const [src, setSrc] = useState<string | null>(null)
+  useEffect(() => {
+    let live = true
+    // After the desk has painted: the preview boots pdf.js.
+    const start = () => {
+      void examplePreview(t.lang, PREVIEW_W).then((url) => {
+        if (live) setSrc(url)
+      })
+    }
+    const idle = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback
+    const handle = idle ? idle(start, { timeout: 600 }) : window.setTimeout(start, 200)
+    return () => {
+      live = false
+      if (!idle) window.clearTimeout(handle)
+    }
+  }, [t.lang])
+
+  return (
+    <button
+      type="button"
+      onClick={() => void runJob('example')}
+      disabled={busy !== null}
+      aria-busy={busy === 'example'}
+      className="w-full flex items-center gap-3.5 py-2.5 text-left disabled:cursor-wait"
+    >
+      {src ? (
+        <img
+          src={src}
+          alt=""
+          aria-hidden="true"
+          className="np-tilt flex-none bg-white rounded-sm"
+          style={{ width: PREVIEW_W, height: Math.round(PREVIEW_W * 1.414), boxShadow: '0 2px 6px rgba(23,30,50,0.16)', transform: `rotate(${DOC_TILTS[0]})` }}
+        />
+      ) : (
+        <DocThumb tilt={DOC_TILTS[0]} />
+      )}
+      <span className="flex-1 min-w-0 flex flex-col gap-1">
+        <span className="text-[16px] font-semibold truncate">{busy === 'example' ? t('phone.opening') : t('phone.desk_example')}</span>
+        <span className="text-[13px] text-[color:var(--np-muted)] truncate">
+          {t.plural('phone.pages', EXAMPLE_PAGES)} · {t('phone.desk_example_note')}
+        </span>
+      </span>
+      <span className="w-11 h-11 flex-none flex items-center justify-center" aria-hidden="true">
+        <Icon d={PATHS.chevron} size={20} stroke="#5d6068" />
+      </span>
+    </button>
   )
 }
 
