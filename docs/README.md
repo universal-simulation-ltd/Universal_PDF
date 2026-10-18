@@ -2184,6 +2184,39 @@ each became. Pinned by `e2e/phone-markup.e2e.mjs` (`npm run test:phone-markup`).
   `leaveDocument` now puts the pages away first.
 - All pinned in `e2e/phone-markup.e2e.mjs`.
 
+## The phone's knowledge base is a page (2026-10-18)
+
+James: "Make knowledge base native page." On the phone app the knowledge base
+is `native/KnowledgeScreen.tsx`, a page in the house style, not the SDK's
+`KnowledgeBaseDialog`. The website and the desktop app keep the dialog as it
+was (`ToolbarUserProfile`, the landing navbar).
+
+- **Where it opens:** Tune ▸ How to… (no document open: it stands over the
+  tabs) and What else ▸ How to… (over the document; the back link names the
+  file). Anything that still sets `pdfStore.knowledgeBaseOpen` on the phone
+  gets the page too (`useKnowledgeBaseRequests`).
+- **The page:** a back link, "Good to *know*", a search box, then the articles
+  in the knowledge base's own groups. ⚠️ The search box is never focused for
+  the reader, so the keyboard doesn't come up before the page has been read.
+  The search wants every word somewhere in the title, summary, group or body,
+  and ignores accents and case.
+- **An article** is a page of its own: its group, title and summary, the body
+  on a white sheet, the guide PDF, the research, and Previous / Next (these
+  turn the page in place). The body goes through the SDK's own
+  `parseArticleBody`, so the closed little markdown means the same as in the
+  dialog. Only the look is the phone's. The dialog's own words (Research and
+  sources, Download this guide, the kinds of source) come from the SDK's
+  translations (`translateNav`), and the articles from `src/knowledge` in the
+  app's language.
+- **Navigation:** two `Screen`s on the nav stack, `'kb'` (the list) and
+  `'kb-article'` (with `kbArticle`), so Android's back closes article → list
+  → page. They are the one page that may sit over the tabs: with no document
+  open, `useHistoryLayers` counts only those (`isKnowledge`). A document that
+  arrives under them (from the share sheet) drops them (`dropKnowledge`). The
+  status bar keeps dark glyphs over them, even on the Desk tab.
+- `npm run test:phone-knowledge` (WebKit, iPhone size) pins all of the above,
+  and checks that the website still opens the SDK dialog.
+
 ## The example PDF — a feature tour
 
 `lib/examplePdf.ts` makes the example on the device with pdf-lib (James,

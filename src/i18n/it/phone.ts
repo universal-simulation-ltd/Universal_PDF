@@ -228,6 +228,15 @@ const phone: Messages['phone'] = {
   'sigs_delete_aria': 'Butta via {name}',
   'sigs_locked': 'Le tue firme salvate sono bloccate.',
   'sigs_unlock': 'Sblocca',
+
+  // The knowledge base, a page
+  'kb_lead': 'Buono a',
+  'kb_hl': 'sapersi',
+  'kb_note': 'Guide in parole semplici sui PDF e su come funziona questa app. Sono nell’app, quindi si leggono anche offline.',
+  'kb_search': 'Cerca nelle guide',
+  'kb_clear': 'Cancella la ricerca',
+  'kb_no_match': 'Nessuna guida corrisponde.',
+  'kb_all': 'Tutte le guide',
 }
 
 export default phone

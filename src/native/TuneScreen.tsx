@@ -1,7 +1,6 @@
 import { useEffect, useId, useState } from 'react'
 import { AboutAppDialog, LANGUAGE_LABELS, SUPPORTED_LANGUAGES, useDefaultView, useLanguage, useResetAppDefaults, useUserPrefs } from '@unisim/sdk'
 import { useT, type Language } from '../i18n'
-import { usePdfStore } from '../stores/pdfStore'
 import { useToolPrefs } from '../stores/toolPrefsStore'
 import { clearDismissedPrompts } from '../lib/resetDefaults'
 import { PAGE_SCROLL_ID, PAGE_SCROLLS, pageScrollDefault, type PageScroll } from '../lib/pageScroll'
@@ -124,7 +123,7 @@ export default function TuneScreen() {
               ))}
             </select>
           </label>
-          <LinkRow label={t('phone.howto')} onClick={() => usePdfStore.getState().setKnowledgeBaseOpen(true)} />
+          <LinkRow label={t('phone.howto')} onClick={() => useNav.getState().push('kb')} />
           <LinkRow label={t('phone.privacy')} onClick={() => window.open(PRIVACY_URL, '_blank', 'noopener')} />
           <LinkRow label={t('phone.about')} onClick={() => setAboutOpen(true)} />
         </Card>

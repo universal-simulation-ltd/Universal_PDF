@@ -1,19 +1,17 @@
 import { lazy, Suspense, useEffect, useRef } from 'react'
-import { KnowledgeBaseDialog } from '@unisim/sdk'
 import { useT } from '../i18n'
 import { usePdfStore } from '../stores/pdfStore'
 import { useSignatureStore } from '../stores/signatureStore'
 import { useTabStore } from '../stores/tabStore'
 import { useShortcutStore } from '../stores/shortcutStore'
 import { setStatusBarOverDarkChrome } from '../lib/nativeOpen'
-import { KNOWLEDGE_BASE } from '../knowledge'
 import PageNavigator from '../components/Viewer/PageNavigator'
 import SignaturePad from '../components/Signature/SignaturePad'
 import SignatureImport from '../components/Signature/SignatureImport'
 import UnsavedChangesDialog from '../components/Exit/UnsavedChangesDialog'
 import LockedFilePrompt from '../components/Lock/LockedFilePrompt'
 import { Icon, PATHS } from './icons'
-import { topScreen, useNav, type Tab } from './nav'
+import { isKnowledge, topScreen, useNav, type Tab } from './nav'
 import { useJobs } from './jobs'
 import { usePhonePrefs } from './prefs'
 import DeskScreen from './DeskScreen'
@@ -24,6 +22,7 @@ import ShareScreen from './ShareScreen'
 import MoreSheet from './MoreSheet'
 import TuneScreen from './TuneScreen'
 import SignaturesScreen from './SignaturesScreen'
+import KnowledgeScreen, { useKnowledgeBaseRequests } from './KnowledgeScreen'
 import { SignedMoment, SmallerMoment } from './Moments'
 import './native.css'
 
@@ -59,6 +58,8 @@ export default function NativeApp({ launching }: { launching: boolean }) {
 
   const inDocument = !!doc || loading || hasTabs || !!lockedFile
   const top = inDocument ? topScreen(screens) : null
+  // The knowledge base over the tabs (opened from Tune with no document open).
+  const overTabs = !inDocument && isKnowledge(topScreen(screens))
 
   useDocumentChanges()
   useHistoryLayers(inDocument)
@@ -66,10 +67,11 @@ export default function NativeApp({ launching }: { launching: boolean }) {
   useShortcutRequests()
   useNoFocusZoom()
   useQrPage()
+  useKnowledgeBaseRequests()
 
   // The clock and battery stay legible: light glyphs over the cobalt desk and
   // the moments, dark ones over paper.
-  const darkTop = inDocument ? top === 'signed' || top === 'smaller' : tab === 'desk'
+  const darkTop = inDocument ? top === 'signed' || top === 'smaller' : tab === 'desk' && !overTabs
   useEffect(() => {
     void setStatusBarOverDarkChrome(darkTop)
   }, [darkTop])
@@ -90,6 +92,7 @@ export default function NativeApp({ launching }: { launching: boolean }) {
               {top === 'signed' && <SignedMoment />}
               {top === 'smaller' && <SmallerMoment />}
               {top === 'qr' && <QrScreen />}
+              {isKnowledge(top) && <KnowledgeScreen />}
             </div>
           )}
           {doc && sheet === 'more' && !top && <MoreSheet />}
@@ -107,6 +110,11 @@ export default function NativeApp({ launching }: { launching: boolean }) {
           {tab === 'signatures' && <SignaturesScreen />}
           {tab === 'tune' && <TuneScreen />}
           <TabBar />
+          {overTabs && (
+            <div className="absolute inset-0 z-[150] flex flex-col">
+              <KnowledgeScreen />
+            </div>
+          )}
         </>
       )}
 
@@ -185,7 +193,6 @@ function SharedDialogs() {
   const mergeOpen = usePdfStore((s) => s.mergeOpen)
   const convertOpen = usePdfStore((s) => s.convertOpen)
   const compareOpen = usePdfStore((s) => s.compareOpen)
-  const knowledgeBaseOpen = usePdfStore((s) => s.knowledgeBaseOpen)
   const sourceBytes = usePdfStore((s) => s.sourceBytes)
   const fileName = usePdfStore((s) => s.fileName)
   const dialog = useJobs((s) => s.dialog)
@@ -230,7 +237,6 @@ function SharedDialogs() {
         )}
         {dialog?.kind === 'compare' && <CompareDialog firstBytes={dialog.bytes} firstName={dialog.name} onClose={closeJob} />}
       </Suspense>
-      <KnowledgeBaseDialog {...KNOWLEDGE_BASE} open={knowledgeBaseOpen} onClose={() => pdf.setKnowledgeBaseOpen(false)} />
       <UnsavedChangesDialog />
       <LockedFilePrompt />
     </>
@@ -248,6 +254,8 @@ function useDocumentChanges() {
     // share sheet, say): it starts on its own pages. Opening one from the desk
     // (null → doc) keeps whatever the job pushed on top of it.
     if (!doc || (was && was !== doc)) useNav.getState().clearScreens()
+    // One arrived (the share sheet) while the knowledge base was over the tabs.
+    else if (!was) useNav.getState().dropKnowledge()
   }, [doc])
 }
 
@@ -266,7 +274,8 @@ function useHistoryLayers(inDocument: boolean) {
   const sheet = useNav((s) => s.sheet)
   const pushed = useRef(0)
   const ignore = useRef(0)
-  const wanted = inDocument ? 1 + screens.length + (sheet ? 1 : 0) : 0
+  // With no document, only the knowledge base's pages stand over the tabs.
+  const wanted = inDocument ? 1 + screens.length + (sheet ? 1 : 0) : screens.filter(isKnowledge).length
 
   useEffect(() => {
     if (wanted > pushed.current) {

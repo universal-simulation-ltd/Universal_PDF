@@ -78,6 +78,8 @@ export default function MarkupSheet() {
       s.setColor(useToolPrefs.getState().highlightColours[0])
       s.setTool('highlight')
     } else if (id === 'text') {
+      // Words start in ink, not in the highlighter's yellow left in hand.
+      s.setColor('#1b1d22')
       s.setTool('text')
     } else if (id === 'note') {
       s.setColor(useToolPrefs.getState().highlightColours[0])

@@ -228,6 +228,15 @@ const phone: Messages['phone'] = {
   'sigs_delete_aria': '{name} wegwerfen',
   'sigs_locked': 'Deine gespeicherten Unterschriften sind gesperrt.',
   'sigs_unlock': 'Entsperren',
+
+  // The knowledge base, a page
+  'kb_lead': 'Gut zu',
+  'kb_hl': 'wissen',
+  'kb_note': 'Verständliche Anleitungen zu PDFs und dazu, wie diese App funktioniert. Sie sind in der App, also auch offline lesbar.',
+  'kb_search': 'In den Anleitungen suchen',
+  'kb_clear': 'Suche löschen',
+  'kb_no_match': 'Keine Anleitung passt dazu.',
+  'kb_all': 'Alle Anleitungen',
 }
 
 export default phone

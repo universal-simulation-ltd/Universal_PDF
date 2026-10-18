@@ -68,7 +68,7 @@ export default function MoreSheet() {
     { label: t('phone.more_merge'), icon: PATHS.merge, run: () => { close(); pdf.setMergeOpen(true) } },
     { label: t('phone.more_images'), icon: PATHS.images, run: () => { close(); pdf.setConvertOpen(true) } },
     { label: t('phone.more_rename'), icon: PATHS.rename, run: () => setRenaming(true) },
-    { label: t('phone.more_howto'), icon: PATHS.help, run: () => { close(); pdf.setKnowledgeBaseOpen(true) } },
+    { label: t('phone.more_howto'), icon: PATHS.help, run: () => nav.push('kb') },
     { label: t('phone.more_put_away'), icon: PATHS.put, run: () => { close(); leaveDocument() } },
   ]
 

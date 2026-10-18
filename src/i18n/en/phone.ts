@@ -233,4 +233,13 @@ export default {
   'sigs_delete_aria': 'Throw away {name}',
   'sigs_locked': 'Your saved signatures are locked.',
   'sigs_unlock': 'Unlock',
+
+  // The knowledge base, a page (What else ▸ How to…, Tune ▸ How to…). The heading is split so "know" can carry the highlighter.
+  'kb_lead': 'Good to',
+  'kb_hl': 'know',
+  'kb_note': 'Plain-English guides to PDFs and how this app works. They’re kept in the app, so they read offline too.',
+  'kb_search': 'Search the guides',
+  'kb_clear': 'Clear the search',
+  'kb_no_match': 'No guide matches that.',
+  'kb_all': 'All guides',
 }
