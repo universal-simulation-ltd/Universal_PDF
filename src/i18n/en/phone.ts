@@ -35,7 +35,7 @@ export default {
   'scan': 'Scan paper',
   'scan_note': 'a letter, a form, a receipt',
   'example': 'Try with example PDF',
-  'example_note': 'a practice form to try things on',
+  'example_note': 'a feature tour to practise on',
   'job_compress': 'Compress a PDF',
   'job_compress_note': 'small enough to email',
   'job_sign': 'Sign a PDF',

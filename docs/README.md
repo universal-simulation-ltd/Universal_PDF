@@ -2165,9 +2165,10 @@ for a picture or QR code.
   section ends with a grey *where* line ("Phone app: Mark up › Highlight ·
   Website: Highlighter") built from the app's OWN labels (`phone.*`,
   `viewer.toolbar.*`, `menu.*`, the `LABELS` list), so a renamed button can't
-  leave the tour pointing at nothing. Page numbers, Export to Word, pictures
-  and QR codes say "Website and computer app" — the phone app has no door to
-  them yet.
+  leave the tour pointing at nothing. Page numbers and Export to Word say
+  "Website and computer app" — the phone app has no door to them yet.
+  Pictures and QR codes point at Mark up › Picture / QR code, and Black out
+  says it is a stroke on the phone and a box on the website.
 - **In the app's language** — the `example` namespace in `src/i18n/<lang>/`.
   Helvetica (WinAnsi) spells all of them but Turkish; a language whose strings
   don't fit draws the whole document in the Liberation Sans the export already

@@ -20,7 +20,7 @@ export default {
   'note_body': 'Placez une note dans le cadre jaune et écrivez dessus. Réduire la replie en une petite icône ; touchez ou cliquez sur l’icône pour la rouvrir. Une note peut dépasser du bord de la page, et le fichier enregistré la garde comme une note PDF repliée que tout lecteur PDF sait ouvrir.',
   'note_area': 'Placez une note ici, ou faites-en dépasser une à moitié de la page',
   'bo_title': 'Caviarder',
-  'bo_body': 'Tracez un cadre sur les coordonnées inventées ci-dessous. Quand vous enregistrez ou envoyez le fichier, ce qui se trouve dessous est supprimé pour de bon, pas seulement masqué.',
+  'bo_body': 'Passez sur les coordonnées inventées ci-dessous : un trait comme au surligneur dans l’app mobile, un cadre sur le site. Quand vous enregistrez ou envoyez le fichier, ce qui se trouve dessous est supprimé pour de bon, pas seulement masqué.',
   'bo_name': 'Nom',
   'bo_account': 'Numéro de compte',
   'p1_tip': 'Astuce : une erreur ? Annuler la répare.',

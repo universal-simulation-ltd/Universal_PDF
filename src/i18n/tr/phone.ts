@@ -32,7 +32,7 @@ const phone: Messages['phone'] = {
   'scan': 'Kâğıt tara',
   'scan_note': 'bir mektup, bir form, bir fiş',
   'example': 'Örnek PDF ile dene',
-  'example_note': 'denemeler için bir alıştırma formu',
+  'example_note': 'alıştırma için bir özellik turu',
   'job_compress': 'PDF sıkıştır',
   'job_compress_note': 'e-postaya sığacak kadar küçük',
   'job_sign': 'PDF imzala',

@@ -20,7 +20,7 @@ export default {
   'note_body': 'Metti una nota nel riquadro giallo e scrivici sopra. Riduci la ripiega in una piccola icona; tocca o fai clic sull’icona per riaprirla. Una nota può sporgere dal bordo della pagina, e il file salvato la conserva come nota PDF ripiegata che qualsiasi lettore PDF apre.',
   'note_area': 'Metti qui una nota, o trascinane una mezza fuori dalla pagina',
   'bo_title': 'Oscura',
-  'bo_body': 'Trascina un riquadro sui dati inventati qui sotto. Quando salvi o invii il file, ciò che c’è sotto viene tolto per sempre, non solo coperto.',
+  'bo_body': 'Passa sui dati inventati qui sotto: un tratto come con l’evidenziatore nell’app per telefono, un riquadro sul sito. Quando salvi o invii il file, ciò che c’è sotto viene tolto per sempre, non solo coperto.',
   'bo_name': 'Nome',
   'bo_account': 'Numero di conto',
   'p1_tip': 'Suggerimento: un errore? Annulla rimedia.',

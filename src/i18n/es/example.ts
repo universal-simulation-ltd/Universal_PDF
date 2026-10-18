@@ -20,7 +20,7 @@ export default {
   'note_body': 'Pon una nota en el recuadro amarillo y escribe en ella. Minimizar la pliega en un pequeño icono; toca o haz clic en el icono para volver a abrirla. Una nota puede sobresalir del borde de la página, y el archivo guardado la conserva como una nota adhesiva PDF plegada que cualquier lector de PDF abre.',
   'note_area': 'Pon aquí una nota, o arrastra una hasta medio salirse de la página',
   'bo_title': 'Censurar',
-  'bo_body': 'Arrastra un recuadro sobre los datos inventados de abajo. Al guardar o enviar el archivo, lo que haya debajo se borra para siempre, no solo se tapa.',
+  'bo_body': 'Pasa por encima de los datos inventados de abajo: un trazo como el subrayador en la app del móvil, un recuadro en la web. Al guardar o enviar el archivo, lo que haya debajo se borra para siempre, no solo se tapa.',
   'bo_name': 'Nombre',
   'bo_account': 'Número de cuenta',
   'p1_tip': 'Consejo: ¿te has equivocado? Deshacer lo arregla.',

@@ -20,7 +20,7 @@ export default {
   'note_body': 'Setz eine Notiz in das gelbe Feld und schreib darauf. Minimieren faltet sie zu einem kleinen Symbol; tippe oder klicke auf das Symbol, um sie wieder zu öffnen. Eine Notiz darf über den Seitenrand hängen, und die gespeicherte Datei behält sie als gefaltete PDF-Notiz, die jeder PDF-Reader öffnet.',
   'note_area': 'Setz hier eine Notiz hin oder zieh eine halb über den Rand',
   'bo_title': 'Schwärzen',
-  'bo_body': 'Zieh ein Rechteck über die erfundenen Angaben unten. Wenn du die Datei speicherst oder sendest, wird alles darunter endgültig entfernt, nicht nur verdeckt.',
+  'bo_body': 'Fahr über die erfundenen Angaben unten: in der Handy-App wie mit dem Textmarker, auf der Website mit einem Rechteck. Wenn du die Datei speicherst oder sendest, wird alles darunter endgültig entfernt, nicht nur verdeckt.',
   'bo_name': 'Name',
   'bo_account': 'Kontonummer',
   'p1_tip': 'Tipp: Vertan? Rückgängig macht es wieder gut.',

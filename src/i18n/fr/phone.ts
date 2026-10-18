@@ -32,7 +32,7 @@ const phone: Messages['phone'] = {
   'scan': 'Numériser du papier',
   'scan_note': 'une lettre, un formulaire, un reçu',
   'example': 'Essayer avec un PDF d’exemple',
-  'example_note': 'un formulaire pour s’entraîner',
+  'example_note': 'une visite des fonctions pour s’entraîner',
   'job_compress': 'Compresser un PDF',
   'job_compress_note': 'assez léger pour partir par e-mail',
   'job_sign': 'Signer un PDF',

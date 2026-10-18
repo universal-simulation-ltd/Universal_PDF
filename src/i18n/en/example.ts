@@ -28,7 +28,7 @@ export default {
   'note_body': 'Put a note in the yellow box and type on it. Minimise folds it to a small icon; tap or click the icon to open it again. A note can hang over the edge of the page, and the saved file keeps it as a folded PDF sticky note that any PDF reader opens.',
   'note_area': 'Put a note here, or drag one half off the page',
   'bo_title': 'Black out',
-  'bo_body': 'Drag a box over the made-up details below. When you save or send the file, whatever is under the box is removed for good, not just covered.',
+  'bo_body': 'Run over the made-up details below: a stroke like the highlighter in the phone app, a box on the website. When you save or send the file, whatever is under it is removed for good, not just covered.',
   'bo_name': 'Name',
   'bo_account': 'Account number',
   'p1_tip': 'Tip: made a mistake? Undo puts it back.', // footer, bottom left

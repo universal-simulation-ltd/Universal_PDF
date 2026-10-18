@@ -20,7 +20,7 @@ export default {
   'note_body': 'Coloque uma nota na caixa amarela e digite nela. Minimizar dobra a nota num pequeno ícone; toque ou clique no ícone para abrir de novo. Uma nota pode ficar para fora da borda da página, e o arquivo salvo guarda a nota como uma nota adesiva PDF dobrada que qualquer leitor de PDF abre.',
   'note_area': 'Coloque uma nota aqui, ou arraste uma até ficar meio para fora da página',
   'bo_title': 'Tarjar',
-  'bo_body': 'Arraste uma caixa sobre os dados inventados abaixo. Ao salvar ou enviar o arquivo, o que estiver embaixo é apagado de vez, não só coberto.',
+  'bo_body': 'Passe por cima dos dados inventados abaixo: um traço como o marca-texto no app do celular, uma caixa no site. Ao salvar ou enviar o arquivo, o que estiver embaixo é apagado de vez, não só coberto.',
   'bo_name': 'Nome',
   'bo_account': 'Número da conta',
   'p1_tip': 'Dica: errou? Desfazer resolve.',

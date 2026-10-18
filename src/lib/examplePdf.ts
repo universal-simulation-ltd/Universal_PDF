@@ -72,7 +72,7 @@ type ExampleKey = keyof Messages['example']
 /** The app's own button and menu names the "where" lines are built from. */
 const LABELS = [
   'phone.tool_markup', 'phone.mk_highlight', 'phone.mk_pen', 'phone.mk_shape', 'phone.mk_note', 'phone.mk_blackout',
-  'phone.mk_text', 'phone.tool_fill', 'phone.tool_sign', 'phone.tool_pages', 'phone.more_title',
+  'phone.mk_text', 'phone.mk_picture', 'phone.mk_qr', 'phone.tool_fill', 'phone.tool_sign', 'phone.tool_pages', 'phone.more_title',
   'viewer.toolbar.tool_highlighter', 'viewer.toolbar.tool_free_draw', 'viewer.toolbar.tool_sticky_note',
   'viewer.toolbar.tool_add_text', 'viewer.toolbar.upload_image', 'viewer.toolbar.add_qr_code', 'viewer.toolbar.export',
   'menu.actions', 'menu.redact', 'menu.free_draw', 'menu.advanced', 'menu.page_numbers', 'menu.word', 'menu.view',
@@ -469,7 +469,10 @@ export async function buildExamplePdf(opts: ExampleOptions = {}): Promise<BuiltE
     y -= 12
     y = section(
       page, n, y, E('pic_title'), E('pic_body'),
-      whereWeb([T('viewer.toolbar.upload_image'), T('viewer.toolbar.add_qr_code')].join('   ·   ')),
+      whereBoth(
+        `${path(T('phone.tool_markup'), T('phone.mk_picture'))} / ${T('phone.mk_qr')}`,
+        [T('viewer.toolbar.upload_image'), T('viewer.toolbar.add_qr_code')].join('   ·   '),
+      ),
     )
     y -= 12
     y = section(page, n, y, E('pages_title'), E('pages_body'), whereBoth(T('phone.tool_pages'), path(T('menu.actions'), T('menu.view'), T('menu.pages'))))

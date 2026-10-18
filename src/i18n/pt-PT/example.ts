@@ -20,7 +20,7 @@ export default {
   'note_body': 'Ponha uma nota na caixa amarela e escreva nela. Minimizar dobra-a num pequeno ícone; toque ou clique no ícone para a voltar a abrir. Uma nota pode ficar por fora da margem da página, e o ficheiro guardado mantém-na como nota PDF dobrada que qualquer leitor de PDF abre.',
   'note_area': 'Ponha aqui uma nota, ou arraste uma até meio fora da página',
   'bo_title': 'Rasurar',
-  'bo_body': 'Arraste uma caixa sobre os dados inventados abaixo. Ao guardar ou enviar o ficheiro, o que estiver por baixo é removido de vez, não apenas tapado.',
+  'bo_body': 'Passe por cima dos dados inventados abaixo: um traço como o marcador na app do telemóvel, uma caixa no site. Ao guardar ou enviar o ficheiro, o que estiver por baixo é removido de vez, não apenas tapado.',
   'bo_name': 'Nome',
   'bo_account': 'Número de conta',
   'p1_tip': 'Dica: enganou-se? Anular resolve.',

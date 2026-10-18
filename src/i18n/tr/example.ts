@@ -20,7 +20,7 @@ export default {
   'note_body': 'Sarı kutuya bir not koyun ve üzerine yazın. Küçült, notu küçük bir simgeye katlar; yeniden açmak için simgeye dokunun ya da tıklayın. Bir not sayfanın kenarından taşabilir; kaydedilen dosya onu her PDF okuyucunun açabildiği katlanmış bir PDF yapışkan notu olarak saklar.',
   'note_area': 'Buraya bir not koyun ya da birini yarısı sayfa dışında kalacak şekilde sürükleyin',
   'bo_title': 'Karartma',
-  'bo_body': 'Aşağıdaki uydurma bilgilerin üzerine bir kutu sürükleyin. Dosyayı kaydettiğinizde ya da gönderdiğinizde kutunun altındaki her şey yalnızca örtülmez, kalıcı olarak silinir.',
+  'bo_body': 'Aşağıdaki uydurma bilgilerin üzerinden geçin: telefon uygulamasında fosforlu kalem gibi bir çizgiyle, web sitesinde bir kutuyla. Dosyayı kaydettiğinizde ya da gönderdiğinizde altındaki her şey yalnızca örtülmez, kalıcı olarak silinir.',
   'bo_name': 'Ad',
   'bo_account': 'Hesap numarası',
   'p1_tip': 'İpucu: bir hata mı yaptınız? Geri al düzeltir.',
