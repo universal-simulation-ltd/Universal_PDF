@@ -10,7 +10,7 @@ import { create } from 'zustand'
 // Code here only changes the state; it never touches `history` itself.
 
 export type Tab = 'desk' | 'signatures' | 'tune'
-export type Screen = 'sign' | 'share' | 'signed' | 'smaller'
+export type Screen = 'sign' | 'share' | 'signed' | 'smaller' | 'qr'
 export type Sheet = 'markup' | 'more' | 'free'
 
 /** What the Smaller moment shows: the sizes before and after, and the file. */

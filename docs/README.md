@@ -2151,6 +2151,39 @@ each became. Pinned by `e2e/phone-markup.e2e.mjs` (`npm run test:phone-markup`).
   waits until the signature is let go of (✓, or a tap off it), and is dropped
   if the signature is binned.
 
+## The phone, second round (2026-10-18)
+
+- **The bar is Fill · Mark up · Share · Pages.** Sign lives in Mark up's row
+  now, so its place went to Share (James: "maybe that could be share"), and the
+  header's Share icon went with it — the ⋯ is balanced by a blank, so the name
+  stays centred.
+- **QR code is a page** (`src/native/QrScreen.tsx`), like Sign: the link on a
+  white slip, the code drawn as you type, the six looks, Put it on the page.
+  Same model and renderer as the website's dialog, so the placed code carries
+  `ImageAnnotation.qr` and its ✏️ (or a double-tap) opens this page on it.
+  `useQrPage` (NativeApp) turns any `qrOpen` into the page; the page ends the
+  request when it unmounts. No saved-codes shelf and no company branding —
+  both need a signed-in account, which the phone screens don't have; a code
+  branded on the website keeps its branding when edited here. ⚠️ The link box
+  is NOT focused on arrival (James: let them take the page in before the
+  keyboard comes up). `PresetGlyph` and `QR_PRESET_KEYS` moved to
+  `components/Qr/PresetGlyph.tsx` for both. The page's own placement banner
+  (PlacementHint) says "tap the page", so neither the QR page nor Mark up's
+  Picture adds a toast of its own.
+- **Text and notes get a Font row**: Sans, Serif, Mono — only the three
+  that save as they look (`FONT_DEFS` maps the others to one of these on
+  export). It sets the selected text's font, or the next one's.
+- **A note being typed on takes its words with it when dragged.** The editor
+  is HTML over the canvas, placed from the annotation, and the store only hears
+  of a move on drop, so the words stayed behind. `editDrag` follows the node
+  during the drag. (On a computer a press on the canvas ends the typing anyway;
+  on a phone a touch doesn't, which is where it showed.)
+- **"Back to my desk" from the Smaller or Signed moment looked dead** when the
+  document had changes: the "Save your changes?" prompt is the website's dialog
+  (z-80) and the moments sit at z-150, so it opened underneath.
+  `leaveDocument` now puts the pages away first.
+- All pinned in `e2e/phone-markup.e2e.mjs`.
+
 ## The example PDF — a feature tour
 
 `lib/examplePdf.ts` makes the example on the device with pdf-lib (James,

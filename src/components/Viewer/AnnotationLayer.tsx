@@ -1256,6 +1256,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     }[]
   >([])
   const overhangKey = useRef('')
+  // Where a note being typed on is while it is dragged, so the words being
+  // typed go with the card (James, 2026-10-18: the text entry "stays where it
+  // was" when the note is moved). The store only hears of the move on drop.
+  const [editDrag, setEditDrag] = useState<{ x: number; y: number } | null>(null)
   // Pointer position used to render the ghost-signature preview that
   // follows the cursor while the signature tool is armed.
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null)
@@ -1411,6 +1415,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     trRef.current?.forceUpdate()
     trRef.current?.getLayer()?.batchDraw()
     setDraggingId(null)
+    setEditDrag(null)
   }
 
   // A pinch can begin with its second finger on a different page (each page has
@@ -2390,6 +2395,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     if (a.type === 'sigfield') syncSigExtras(a.id, e.target)
     dragClient.current = clientPointOf(e.evt) ?? dragClient.current
     syncDragGhost(a, e.target)
+    if (a.id === editingId && a.type === 'text') setEditDrag({ x: e.target.x(), y: e.target.y() })
     const last = groupDragLast.current
     if (!last) return
     const ids = useAnnotationStore.getState().selectedIds
@@ -2477,6 +2483,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
 
   function onShapeDragEnd(a: Annotation, e: Konva.KonvaEventObject<DragEvent>) {
     setDraggingId(null)
+    setEditDrag(null)
     const dropAt = clientPointOf(e.evt) ?? dragClient.current
     clearDragGhost()
     if (gestureCancelled.current) {
@@ -3728,7 +3735,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       {editingAnnotation && (
         <TextEditor
           key={editingAnnotation.id}
-          annotation={editingAnnotation}
+          annotation={editDrag ? { ...editingAnnotation, ...editDrag } : editingAnnotation}
           scale={scale}
           apiRef={editorApiRef}
           onDraft={editingAnnotation.note ? (runs) => setNoteDraft({ id: editingAnnotation.id, runs }) : undefined}

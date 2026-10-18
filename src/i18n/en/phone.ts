@@ -82,6 +82,7 @@ export default {
   'tool_markup': 'Mark up',
   'tool_sign': 'Sign',
   'tool_pages': 'Pages',
+  'tool_share': 'Share',
   'fill_hint': 'Tap a box to type in it, or anywhere else to add words.',
 
   // Mark up (a sheet under the page)
@@ -103,6 +104,7 @@ export default {
   'shape_cross': 'Cross',
   'ink': 'Ink',
   'width': 'Width',
+  'font': 'Font',
   'c_black': 'Black',
   'c_blue': 'Blue',
   'c_orange': 'Orange',
@@ -133,6 +135,16 @@ export default {
   'put_on_page': 'Put it on the page',
   'keep_it': 'Keep it',
   'place_hint': 'Now tap where it goes.',
+
+  // The QR code page. The heading is split so "QR code" can carry the highlighter.
+  'qr_lead': 'Make a',
+  'qr_hl': 'QR code',
+  'qr_link_label': 'Where it takes them',
+  'qr_link_placeholder': 'A web address, or any words',
+  'qr_preview_alt': 'QR code for {data}',
+  'qr_preview_empty': 'Your code appears here as you type.',
+  'qr_look': 'Look',
+  'qr_save': 'Save the changes',
 
   // The Signed moment
   'signed_title': 'Signed.',

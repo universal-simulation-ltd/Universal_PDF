@@ -4,6 +4,7 @@ import { useAnnotationStore } from '../stores/annotationStore'
 import { usePdfStore } from '../stores/pdfStore'
 import { useToolPrefs } from '../stores/toolPrefsStore'
 import type { Annotation, Tool } from '../types/annotations'
+import { FONT_DEFS } from '../lib/fonts'
 import { useNav } from './nav'
 
 // Board 3 · Mark up: a sheet under the page (the page stays usable above it),
@@ -60,6 +61,7 @@ export default function MarkupSheet() {
   const redactWidth = useAnnotationStore((s) => s.redactWidth)
   const viewScale = useAnnotationStore((s) => s.viewScale)
   const armedQr = useAnnotationStore((s) => !!s.uploadedImageQr)
+  const fontFamily = useAnnotationStore((s) => s.fontFamily)
   const selected = useAnnotationStore((s) => s.annotations.find((a) => a.id === s.selectedId))
   const widthId = useId()
   const pictureRef = useRef<HTMLInputElement>(null)
@@ -103,8 +105,8 @@ export default function MarkupSheet() {
     reader.onload = () => {
       const s = useAnnotationStore.getState()
       s.setUploadedImageSrc(reader.result as string)
+      // The page's own placement banner says "tap the page" (PlacementHint).
       s.setTool('image')
-      useNav.getState().say(t('phone.place_hint'))
     }
     reader.readAsDataURL(file)
   }
@@ -139,6 +141,12 @@ export default function MarkupSheet() {
       : target === 'blackout'
         ? { min: 10, max: 40, step: 1, value: redactWidth }
         : { min: 1, max: 10, step: 0.5, value: selectedPx ?? strokeWidth }
+  // Words — a text box or a note, in hand or selected — get a choice of font:
+  // the three that save as they look (fonts.ts maps the others to one of these
+  // on export, so offering them here would promise a look the file can't keep).
+  const selectedText = selected?.type === 'text' ? selected : null
+  const showsFont = current === 'text' || current === 'note' || !!selectedText
+  const fontNow = selectedText ? (selectedText.fontFamily ?? 'sans') : fontFamily
   const showsInk = current !== null && current !== 'blackout' && current !== 'picture' && current !== 'qr' && current !== 'signature'
 
   return (
@@ -244,6 +252,36 @@ export default function MarkupSheet() {
                       boxShadow: on ? '0 0 0 3px var(--np-sheet), 0 0 0 5px var(--np-cobalt-deep)' : 'inset 0 0 0 1px rgba(0,0,0,0.12)',
                     }}
                   />
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {showsFont && (
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[14px] font-semibold text-[color:var(--np-ink-2)]">{t('phone.font')}</span>
+            <div className="flex flex-wrap justify-end gap-2">
+              {FONT_DEFS.filter((f) => !f.extended).map((f) => {
+                const on = fontNow === f.id
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => useAnnotationStore.getState().setFontFamily(f.id)}
+                    className="min-h-[40px] px-3 rounded-xl flex items-center gap-1.5 text-[14px]"
+                    style={
+                      on
+                        ? { background: 'var(--np-cobalt)', color: '#ffffff', fontWeight: 700 }
+                        : { background: 'var(--np-slip)', border: '1px solid var(--np-line)', color: 'var(--np-ink-2)', fontWeight: 600 }
+                    }
+                  >
+                    <span aria-hidden="true" className="text-[18px] leading-none" style={{ fontFamily: f.css }}>
+                      Aa
+                    </span>
+                    {f.label}
+                  </button>
                 )
               })}
             </div>

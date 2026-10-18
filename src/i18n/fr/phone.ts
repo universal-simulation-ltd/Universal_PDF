@@ -79,6 +79,7 @@ const phone: Messages['phone'] = {
   'tool_markup': 'Annoter',
   'tool_sign': 'Signer',
   'tool_pages': 'Pages',
+  'tool_share': 'Partager',
   'fill_hint': 'Touchez une case pour y écrire, ou ailleurs pour ajouter du texte.',
 
   // Mark up (a sheet under the page)
@@ -100,6 +101,7 @@ const phone: Messages['phone'] = {
   'shape_cross': 'Croix',
   'ink': 'Encre',
   'width': 'Épaisseur',
+  'font': 'Police',
   'c_black': 'Noir',
   'c_blue': 'Bleu',
   'c_orange': 'Orange',
@@ -130,6 +132,14 @@ const phone: Messages['phone'] = {
   'put_on_page': 'La poser sur la page',
   'keep_it': 'La garder',
   'place_hint': 'Touchez maintenant l’endroit où elle va.',
+  'qr_lead': 'Créez un',
+  'qr_hl': 'QR code',
+  'qr_link_label': 'Où il mène',
+  'qr_link_placeholder': 'Une adresse web, ou n’importe quel texte',
+  'qr_preview_alt': 'QR code pour {data}',
+  'qr_preview_empty': 'Votre code apparaît ici pendant que vous tapez.',
+  'qr_look': 'Style',
+  'qr_save': 'Enregistrer les modifications',
 
   // The Signed moment
   'signed_title': 'Signé.',

@@ -15,12 +15,15 @@ import MarkupSheet, { MARKUP_TOOLS } from './MarkupSheet'
 import { BackLink } from './parts'
 
 // Board 2 · A document open: the pages lie on the warm grey desk, a back
-// chevron and the name at the top with Share and ⋯, and four tools floating
-// at the foot (Fill · Mark up · Sign · Pages). The pages are the website's own
+// chevron and the name at the top with ⋯, and four tools floating
+// at the foot (Fill · Mark up · Share · Pages). The pages are the website's own
 // viewer — every gesture, form field and annotation works as it does there;
 // only the chrome around it is the phone's.
 
-type BarTool = 'fill' | 'markup' | 'sign' | 'pages'
+// Sign moved into Mark up's row (James, 2026-10-18: "remove signature from
+// main nav at bottom as it's now in mark up — maybe that could be share"), so
+// the bar's third tool is Share, which used to be an icon in the header.
+type BarTool = 'fill' | 'markup' | 'share' | 'pages'
 
 /** How many signatures are on the pages: placed ones, and signed request boxes. */
 function signaturesOn(annotations: Annotation[]): number {
@@ -34,6 +37,11 @@ function signaturesOn(annotations: Annotation[]): number {
 
 /** Leave the document for the desk, asking first if it has unsaved changes. */
 export function leaveDocument(): void {
+  // ⚠️ Down to the document first. The "Save your changes?" prompt is the
+  // website's dialog (z-80) and the Signed and Smaller moments sit above it
+  // (z-150), so their "Back to my desk" opened the prompt UNDER the moment
+  // and the button looked dead (James, 2026-10-18, after Smaller still).
+  useNav.getState().clearScreens()
   const { tabs, activeId } = useTabStore.getState()
   if (tabs.length > 1 && activeId) closeTab(activeId)
   else useExitGuard.getState().requestExit('close', usePdfStore.getState().reset)
@@ -117,8 +125,8 @@ export default function DocumentScreen() {
         a.setTool('highlight')
       }
       openSheet('markup')
-    } else if (id === 'sign') {
-      push('sign')
+    } else if (id === 'share') {
+      push('share')
     } else {
       setPageNavOpen(true)
     }
@@ -127,7 +135,7 @@ export default function DocumentScreen() {
   const tools: { id: BarTool; label: string; icon: string }[] = [
     { id: 'fill', label: t('phone.tool_fill'), icon: PATHS.fill },
     { id: 'markup', label: t('phone.tool_markup'), icon: PATHS.pen },
-    { id: 'sign', label: t('phone.tool_sign'), icon: PATHS.sign },
+    { id: 'share', label: t('phone.tool_share'), icon: PATHS.share },
     { id: 'pages', label: t('phone.tool_pages'), icon: PATHS.grid },
   ]
 
@@ -169,9 +177,8 @@ export default function DocumentScreen() {
               <span className="np-serif text-[17px] font-bold truncate max-w-full">{(fileName ?? '').replace(/\.pdf$/i, '')}</span>
               {numPages > 0 && <span className="text-[12px] text-[color:var(--np-muted)]">{t.plural('phone.pages', numPages)}</span>}
             </div>
-            <button type="button" aria-label={t('phone.send_aria')} onClick={() => push('share')} className="w-11 h-11 flex items-center justify-center">
-              <Icon d={PATHS.share} size={22} stroke="var(--np-cobalt)" />
-            </button>
+            {/* Balances the back chevron, so the name stays centred now Share is in the bar. */}
+            <span aria-hidden="true" className="w-11 h-11" />
             <button type="button" aria-label={t('phone.more_aria')} onClick={() => openSheet('more')} className="w-11 h-11 flex items-center justify-center">
               <Dots size={22} fill="var(--np-cobalt)" />
             </button>

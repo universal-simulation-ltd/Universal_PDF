@@ -79,6 +79,7 @@ const phone: Messages['phone'] = {
   'tool_markup': 'İşaretle',
   'tool_sign': 'İmzala',
   'tool_pages': 'Sayfalar',
+  'tool_share': 'Paylaş',
   'fill_hint': 'Yazmak için bir kutuya, yazı eklemek için başka herhangi bir yere dokunun.',
 
   // Mark up (a sheet under the page)
@@ -100,6 +101,7 @@ const phone: Messages['phone'] = {
   'shape_cross': 'Çarpı',
   'ink': 'Mürekkep',
   'width': 'Kalınlık',
+  'font': 'Yazı tipi',
   'c_black': 'Siyah',
   'c_blue': 'Mavi',
   'c_orange': 'Turuncu',
@@ -130,6 +132,14 @@ const phone: Messages['phone'] = {
   'put_on_page': 'Sayfaya koy',
   'keep_it': 'Sakla',
   'place_hint': 'Şimdi nereye gideceğine dokunun.',
+  'qr_lead': 'Bir QR kod',
+  'qr_hl': 'oluşturun',
+  'qr_link_label': 'Nereye götürür',
+  'qr_link_placeholder': 'Bir web adresi ya da herhangi bir metin',
+  'qr_preview_alt': '{data} için QR kod',
+  'qr_preview_empty': 'Kodunuz siz yazdıkça burada görünür.',
+  'qr_look': 'Görünüm',
+  'qr_save': 'Değişiklikleri kaydet',
 
   // The Signed moment
   'signed_title': 'İmzalandı.',

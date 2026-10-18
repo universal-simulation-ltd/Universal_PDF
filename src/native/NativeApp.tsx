@@ -19,6 +19,7 @@ import { usePhonePrefs } from './prefs'
 import DeskScreen from './DeskScreen'
 import DocumentScreen, { leaveDocument } from './DocumentScreen'
 import SignScreen from './SignScreen'
+import QrScreen from './QrScreen'
 import ShareScreen from './ShareScreen'
 import MoreSheet from './MoreSheet'
 import TuneScreen from './TuneScreen'
@@ -37,7 +38,6 @@ import './native.css'
 
 const StampPicker = lazy(() => import('../components/Signature/StampPicker'))
 const SendForSignatureDialog = lazy(() => import('../components/Signature/SendForSignatureDialog'))
-const QrDialog = lazy(() => import('../components/Qr/QrDialog'))
 const OcrModal = lazy(() => import('../components/Ocr/OcrModal'))
 const MergeDialog = lazy(() => import('../components/Convert/MergeDialog'))
 const ConvertDialog = lazy(() => import('../components/Convert/ConvertDialog'))
@@ -65,6 +65,7 @@ export default function NativeApp({ launching }: { launching: boolean }) {
   useKeepAwake(!!doc)
   useShortcutRequests()
   useNoFocusZoom()
+  useQrPage()
 
   // The clock and battery stay legible: light glyphs over the cobalt desk and
   // the moments, dark ones over paper.
@@ -88,6 +89,7 @@ export default function NativeApp({ launching }: { launching: boolean }) {
               {top === 'share' && <ShareScreen />}
               {top === 'signed' && <SignedMoment />}
               {top === 'smaller' && <SmallerMoment />}
+              {top === 'qr' && <QrScreen />}
             </div>
           )}
           {doc && sheet === 'more' && !top && <MoreSheet />}
@@ -179,7 +181,6 @@ function Toast() {
 function SharedDialogs() {
   const stampPickerOpen = useSignatureStore((s) => s.stampPickerOpen)
   const sendForSignatureOpen = usePdfStore((s) => s.sendForSignatureOpen)
-  const qrOpen = usePdfStore((s) => s.qrOpen)
   const ocrOpen = usePdfStore((s) => s.ocrOpen)
   const mergeOpen = usePdfStore((s) => s.mergeOpen)
   const convertOpen = usePdfStore((s) => s.convertOpen)
@@ -204,7 +205,6 @@ function SharedDialogs() {
       <Suspense fallback={null}>
         {stampPickerOpen && <StampPicker />}
         {sendForSignatureOpen && <SendForSignatureDialog />}
-        {qrOpen && <QrDialog />}
         {ocrOpen && sourceBytes && (
           <OcrModal sourceBytes={sourceBytes} fileName={fileName ?? 'document.pdf'} onClose={() => pdf.setOcrOpen(false)} onOpen={openResult} />
         )}
@@ -308,6 +308,21 @@ function useHistoryLayers(inDocument: boolean) {
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [])
+}
+
+/**
+ * A QR code is a page here, like Sign (James, 2026-10-18), not the website's
+ * dialog: whatever asks for the QR editor — Mark up's QR code, the ✏️ on a
+ * placed code, a double-tap on one — opens the page. It ends the request
+ * itself when it closes (QrScreen).
+ */
+function useQrPage() {
+  const qrOpen = usePdfStore((s) => s.qrOpen)
+  useEffect(() => {
+    if (!qrOpen) return
+    const nav = useNav.getState()
+    if (topScreen(nav.screens) !== 'qr') nav.push('qr')
+  }, [qrOpen])
 }
 
 /**

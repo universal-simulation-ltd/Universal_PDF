@@ -18,6 +18,12 @@
 //     selected highlight.
 //   • Form-field names fit their boxes.
 //   • The Signed moment waits for the signature to be let go of.
+//   • The bar's third tool is Share (Sign is in Mark up's row now).
+//   • QR code is a page of its own, and its link box is not focused on arrival.
+//   • Text and notes get a choice of three fonts.
+//   • A note being typed on takes its words with it when it is dragged.
+//   • "Back to my desk" from a moment puts the moment away before the save
+//     prompt, which used to open underneath it.
 
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -249,6 +255,114 @@ console.log('\nthe Signed moment waits until the signature is let go of')
   await page.waitForTimeout(600)
   const screens3 = await mod('/src/native/nav.ts', 'return m.useNav.getState().screens')
   check('on letting it go', screens3.includes('signed'), json(screens3))
+}
+
+console.log('\nthe bar is Fill · Mark up · Share · Pages')
+{
+  // Off the Signed moment the last check left up, and out of Mark up.
+  await mod('/src/native/nav.ts', 'm.useNav.getState().clearScreens(); m.useNav.getState().closeSheet()')
+  await page.waitForTimeout(400)
+  const bar = page.locator('nav[aria-label="Tools"]')
+  check('Share is in the bar', (await bar.getByRole('button', { name: 'Share' }).count()) === 1)
+  check('Sign is not', (await bar.getByRole('button', { name: 'Sign' }).count()) === 0)
+  await bar.getByRole('button', { name: 'Share' }).click()
+  await page.waitForTimeout(400)
+  const screens = await mod('/src/native/nav.ts', 'return m.useNav.getState().screens')
+  check('…and opens the Share page', screens.includes('share'), json(screens))
+  await mod('/src/native/nav.ts', 'm.useNav.getState().clearScreens()')
+  await page.waitForTimeout(400)
+}
+
+console.log('\nQR code is a page of its own, and the keyboard waits')
+{
+  await store('s.resetDocument()')
+  await page.getByRole('button', { name: 'Mark up' }).click()
+  await page.waitForTimeout(400)
+  await page.getByRole('button', { name: 'QR code', exact: true }).click()
+  await page.waitForTimeout(600)
+  const screens = await mod('/src/native/nav.ts', 'return m.useNav.getState().screens')
+  check('the QR page is open', screens.includes('qr'), json(screens))
+  check('no website dialog', (await page.locator('#qr-data').count()) === 0)
+  const focused = await page.evaluate(() => document.activeElement?.tagName)
+  check('nothing typed into is focused', focused !== 'INPUT' && focused !== 'TEXTAREA', focused)
+  await page.getByLabel('Where it takes them').fill('https://unisim.co.uk')
+  await page.waitForTimeout(900)
+  check('the code is drawn as you type', (await page.getByAltText('QR code for https://unisim.co.uk').count()) === 1)
+  await page.getByRole('button', { name: 'Put it on the page' }).click()
+  // The full-size code takes a moment to draw.
+  for (let i = 0; i < 40; i++) {
+    const now = await mod('/src/native/nav.ts', 'return m.useNav.getState().screens')
+    if (!now.includes('qr')) break
+    await page.waitForTimeout(250)
+  }
+  const armed = await store('return { tool: s.tool, qr: !!s.uploadedImageQr }')
+  check('the code is in hand to place', armed.tool === 'image' && armed.qr, json(armed))
+  const after = await mod('/src/native/nav.ts', 'return m.useNav.getState().screens')
+  check('…back on the document', !after.includes('qr'), json(after))
+  const open = await mod('/src/stores/pdfStore.ts', 'return m.usePdfStore.getState().qrOpen')
+  check('…and the request is over', open === false)
+  await store("s.setUploadedImageSrc(null); s.setTool('select')")
+}
+
+console.log('\ntext gets a choice of font')
+{
+  await store('s.resetDocument()')
+  await mod('/src/native/nav.ts', "m.useNav.getState().openSheet('markup')")
+  await page.waitForTimeout(400)
+  await page.getByRole('button', { name: 'Text', exact: true }).click()
+  await page.waitForTimeout(300)
+  const fonts = await page.locator('section button').filter({ hasText: /^Aa/ }).count()
+  check('three fonts', fonts === 3, String(fonts))
+  await page.locator('section button').filter({ hasText: /^AaSerif/ }).click()
+  check('Serif is the next text\'s font', (await store('return s.fontFamily')) === 'serif')
+  await store('s.setFontFamily("sans")')
+}
+
+console.log('\na note being typed on takes its words with it when dragged')
+{
+  await store('s.resetDocument()')
+  await page.getByRole('button', { name: 'Note', exact: true }).click()
+  await page.mouse.click(pageBox.x + 60, pageBox.y + 200)
+  await page.waitForTimeout(600)
+  await page.keyboard.type('Move me')
+  const before = await page.locator('.upd-text-editor').boundingBox()
+  const n = (await annotations()).find((a) => a.type === 'text' && a.note)
+  const k = await store('return s.viewScale')
+  // A FINGER on the card's left margin, a quarter of the way down — clear of
+  // the words (the editor) and of the resize handles. (A mouse press would end the typing: in a desktop
+  // browser a press on the canvas blurs the editor. A touch, as on the
+  // phone, does not.)
+  const gx = Math.round(pageBox.x + n.x * k + 2)
+  const gy = Math.round(pageBox.y + (n.y + n.wrapWidth * 0.25) * k)
+  const cdp = await context.newCDPSession(page)
+  const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] })
+  await touch('touchStart', gx, gy)
+  for (let i = 1; i <= 6; i++) await touch('touchMove', gx + (40 * i) / 6, gy + (30 * i) / 6)
+  await page.waitForTimeout(150)
+  const during = await page.locator('.upd-text-editor').boundingBox().catch(() => null)
+  await touch('touchEnd', gx + 40, gy + 30)
+  await page.waitForTimeout(400)
+  const moved = (await annotations()).find((a) => a.id === n.id)
+  check('the note was dragged', !!moved && Math.abs((moved.x - n.x) * k - 40) < 6, json(moved && { dx: (moved.x - n.x) * k, dy: (moved.y - n.y) * k }))
+  check('the editor is still open while dragged', !!before && !!during, json({ before, during }))
+  if (before && during) check('…and moved with the card', Math.abs(during.x - before.x - 40) < 6 && Math.abs(during.y - before.y - 30) < 6, json({ dx: during.x - before.x, dy: during.y - before.y }))
+  await page.mouse.click(pageBox.x + 20, pageBox.y + pageBox.height - 20)
+  await page.waitForTimeout(300)
+}
+
+console.log('\n"Back to my desk" on the Smaller moment shows the save prompt on top')
+{
+  // An amendment, so leaving asks first.
+  await store("s.add({ id: 'tick1', pageIndex: 0, type: 'tick', x: 50, y: 50, size: 20, color: '#000000' }); s.setSelected(null)")
+  await mod('/src/native/nav.ts', "m.useNav.getState().closeSheet(); m.useNav.getState().push('smaller')")
+  await page.waitForTimeout(400)
+  await mod('/src/native/DocumentScreen.tsx', 'm.leaveDocument()')
+  await page.waitForTimeout(500)
+  const screens = await mod('/src/native/nav.ts', 'return m.useNav.getState().screens')
+  check('the moment is put away first', !screens.includes('smaller'), json(screens))
+  const pending = await mod('/src/stores/exitGuard.ts', 'return !!m.useExitGuard.getState().pending')
+  check('the save prompt is up', pending)
+  await mod('/src/stores/exitGuard.ts', 'm.useExitGuard.getState().cancel()')
 }
 
 await browser.close()
