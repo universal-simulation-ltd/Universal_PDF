@@ -2093,6 +2093,64 @@ PowerPoint) makes a .docx of the text, on the device:
 - Checked three ways: read back by `@unisim/doc` `readDocx`
   (e2e/word-export.e2e.mjs), by macOS `textutil`, and rendered by LibreOffice.
 
+## The phone's Mark up, after the first go on the iPhone (2026-10-18)
+
+James's notes from using the phone app (`src/native/`) on his iPhone, and what
+each became. Pinned by `e2e/phone-markup.e2e.mjs` (`npm run test:phone-markup`).
+
+- **Typing zoomed the whole app in** (header and the sheet's ends off screen).
+  iOS zooms the web view in on any box being typed in with words under 16px,
+  and never zooms back out. The phone screens add `maximum-scale=1` to the
+  viewport (`useNoFocusZoom`, NativeApp.tsx). The viewer does its own pinch,
+  so nothing is lost. The website's tag is untouched.
+- **No sign of the other pages.** With Page scrolling horizontal, on a narrow
+  screen a page is fitted so 20px of the next one shows past the gap
+  (`ROW_PEEK_PX` in PdfViewer's `fitZoomFor`), and the row's gap is 12px under
+  640px wide (24px above).
+- **A sticky note was half the page.** `NOTE_SIZE_PX` (180) is display pixels,
+  and at phone zoom that is half an A4 page. A new note is now at most 30% of
+  the page across (`NOTE_MAX_PAGE_SHARE`) and is moved in to stay on the page
+  when placed near the edge. Its editor focuses with `preventScroll`, because a
+  plain `focus()` scrolled the row of pages and left the reader between two.
+- **Form-field names spilled out of their boxes.** The placeholder was
+  `text-xs` (12px on a 16px line) in a box about 11px high at phone zoom. It is
+  now sized to the box, as the value already was.
+- **The floating colour pill ran off the screen and repeated the sheet.** The
+  pills under a drawn mark are `PagePill`s: kept inside the page, wrapping to
+  a second row when wider. While the Mark up sheet is open
+  (`toolSheetOpen` in the annotation store) they stand down. The sheet's Ink
+  and Width then edit the selected mark: `setHighlightWidth` repaints a
+  selected highlight, and `setStrokeWidth` now stores PAGE units
+  (`/ viewScale`; PdfViewer publishes the scale). It had stored the
+  display-pixel value as it was, so a selected line's width jumped by the zoom.
+- **🗑 / ✓ off the screen** for a mark against the page's right edge: they
+  move to the mark's top-left corner when the top-right would leave the page.
+- **Black out acts like the highlighter** ("we already have the shape fill").
+  On the phone (`redactStroke`, set by DocumentScreen) the Redact tool draws a
+  freehand stroke: one `redact` annotation with `shape: 'stroke'`, its path in
+  FRACTIONS of its box (`points`) and a page-unit `strokeWidth`. The box is
+  the stroke's bounds, so moving, resizing, undo, the "This will be redacted"
+  caption and the box tests in export (links, folded notes under a redaction)
+  needed nothing new. Export strokes the path into the rasterised page.
+  ⚠️ It is stroked by hand in `sceneFunc`/`hitFunc`, not through the node's
+  `stroke` attributes: Konva adds a stroked node's width all round its bounds,
+  so the selection box stood a stroke-width clear of the ink. The website's
+  Redact tool still sweeps a box. A stroke has no 🪣 "back to a box" button.
+- **Mark up's way back wasn't clear** ("Done" on the right). It is now
+  "‹ Done" on the left, the back link every other page has, with Undo on the
+  right. Pulling the sheet's grip down also puts it away.
+- **The row scrolls on to Signature, Picture and QR code**, five and a bit
+  across so the cut-off one shows there is more. Signature opens the Sign
+  page. Picture opens the photo picker and arms the image for a tap. QR code
+  opens the generator.
+- **Each tool is drawn as what it is**, not six markers in different
+  colours: pen, highlighter and black marker stay markers; Text is a type
+  block, Note a sticky pad, Shape a stencil, Signature a signed card,
+  Picture a photo print, QR a code tile.
+- **The Signed moment covered the signature before it could be moved.** It now
+  waits until the signature is let go of (✓, or a tap off it), and is dropped
+  if the signature is binned.
+
 ## Not built, on purpose
 
 Decided feature by feature with James on 2026-10-18, comparing with Puter's

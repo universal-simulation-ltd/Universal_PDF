@@ -91,6 +91,9 @@ export default {
   'mk_note': 'Note',
   'mk_shape': 'Shape',
   'mk_blackout': 'Black out',
+  'mk_signature': 'Signature',
+  'mk_picture': 'Picture',
+  'mk_qr': 'QR code',
   'shape_box': 'Box',
   'shape_circle': 'Circle',
   'shape_line': 'Line',
@@ -104,7 +107,7 @@ export default {
   'c_yellow': 'Yellow',
   'c_green': 'Green',
   'c_pink': 'Pink',
-  'blackout_note': 'Drag over what should go. It is removed from the file for good when you send it.',
+  'blackout_note': 'Run your finger over what should go, like a highlighter. It is removed from the file for good when you send it.',
 
   // Sign (a page). The heading is split so "mark" can carry the highlighter.
   'sign_back': 'Back to the document',

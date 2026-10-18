@@ -12,6 +12,20 @@ interface AnnotationState {
   // The highlighter's width, in display pixels like strokeWidth: its own, set
   // from the slider beside its colours in the toolbar.
   highlightWidth: number
+  // Black out drawn as a freehand stroke, like the highlighter, rather than a
+  // box swept out (the phone's Mark up sheet: James, 2026-10-18 — "can redact
+  // act like a highlighter, we already have the shape fill"). The website's
+  // Redact tool keeps the box. The width is in display pixels, as above.
+  redactStroke: boolean
+  redactWidth: number
+  // The viewer's current page scale (zoom × 96/72), published by PdfViewer so
+  // a width set from outside the page — the phone's Mark up sheet — can be
+  // turned into the page units a selected stroke stores.
+  viewScale: number
+  // A tool sheet (the phone's Mark up sheet) is open and carries the colour
+  // and width of what is selected, so the page's own Colour pill for a drawn
+  // mark stands down rather than repeat it.
+  toolSheetOpen: boolean
   // When true the line tool draws "rigid" strokes that snap to the nearest
   // horizontal, vertical or 45° diagonal. Free-form lines when false.
   lineSnap: boolean
@@ -37,6 +51,10 @@ interface AnnotationState {
   setStrokeWidth: (w: number) => void
   setHighlightWidth: (w: number) => void
   setLineSnap: (v: boolean) => void
+  setRedactStroke: (v: boolean) => void
+  setRedactWidth: (w: number) => void
+  setViewScale: (k: number) => void
+  setToolSheetOpen: (v: boolean) => void
   setFontSize: (s: number) => void
   // Remember the size (in display pixels) the next text should be placed at,
   // WITHOUT touching the selected annotation. The floating size pill sets a
@@ -91,6 +109,10 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
   color: '#000000',
   strokeWidth: 2.5,
   highlightWidth: 16,
+  redactStroke: false,
+  redactWidth: 22,
+  viewScale: 1,
+  toolSheetOpen: false,
   lineSnap: false,
   fontSize: 18,
   fontFamily: 'sans',
@@ -133,7 +155,10 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
         return {
           strokeWidth,
           annotations: s.annotations.map((a) =>
-            a.id === sel.id ? ({ ...a, strokeWidth } as Annotation) : a
+            // ⚠️ In page units, as the stroke was placed (`strokeWidth / scale`
+            // in AnnotationLayer). The display-pixel value went in as it was,
+            // so a selected line jumped by the zoom the moment its width moved.
+            a.id === sel.id ? ({ ...a, strokeWidth: strokeWidth / s.viewScale } as Annotation) : a
           ),
           past: pushPast(s.past, s.annotations),
           future: []
@@ -141,7 +166,27 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
       }
       return { strokeWidth }
     }),
-  setHighlightWidth: (highlightWidth) => set({ highlightWidth }),
+  // Repaints a selected highlighter stroke as well, as the colour does — the
+  // size is in display pixels, the stroke stores page units.
+  setHighlightWidth: (highlightWidth) =>
+    set((s) => {
+      const sel = s.annotations.find((a) => a.id === s.selectedId)
+      if (sel && sel.type === 'draw' && sel.opacity !== undefined) {
+        return {
+          highlightWidth,
+          annotations: s.annotations.map((a) =>
+            a.id === sel.id ? ({ ...a, strokeWidth: highlightWidth / s.viewScale } as Annotation) : a
+          ),
+          past: pushPast(s.past, s.annotations),
+          future: []
+        }
+      }
+      return { highlightWidth }
+    }),
+  setRedactStroke: (redactStroke) => set({ redactStroke }),
+  setRedactWidth: (redactWidth) => set({ redactWidth }),
+  setViewScale: (viewScale) => set({ viewScale }),
+  setToolSheetOpen: (toolSheetOpen) => set({ toolSheetOpen }),
   setLineSnap: (lineSnap) => set({ lineSnap }),
   setFontSize: (fontSize) =>
     set((s) => {

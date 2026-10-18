@@ -63,6 +63,8 @@ const HIGHLIGHT_MAX_PX = 40
 // A new sticky note's width and type size, in display pixels (like every
 // placement: the same on screen at any zoom, capped by fitPlacement).
 const NOTE_SIZE_PX = 180
+// …but never more than this share of the page's width (a phone's zoom).
+const NOTE_MAX_PAGE_SHARE = 0.3
 const NOTE_FONT_PX = 14
 
 // The marks "Don't confirm annotations" (Tune this app) puts down without
@@ -294,6 +296,102 @@ function ellipseInBox(ctx: Konva.Context, shape: Konva.Shape) {
   ctx.ellipse(rx, ry, rx, ry, 0, 0, Math.PI * 2)
   ctx.closePath()
   ctx.fillStrokeShape(shape)
+}
+
+/**
+ * A pill floated under a mark, kept inside the page: it starts at the mark's
+ * left edge and is moved in when that would take it past the page's right
+ * edge. One wider than the page wraps onto a second row rather than running
+ * off the screen (a phone: James, 2026-10-18).
+ */
+function PagePill({ left, top, pageWidth, className, children }: {
+  left: number
+  top: number
+  pageWidth: number
+  className: string
+  children: React.ReactNode
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [x, setX] = useState(left)
+  useLayoutEffect(() => {
+    const w = ref.current?.offsetWidth ?? 0
+    setX(Math.max(4, Math.min(left, pageWidth - w - 4)))
+  })
+  return (
+    <div
+      ref={ref}
+      onMouseDown={(e) => e.stopPropagation()}
+      style={{ position: 'absolute', left: x, top, zIndex: 21, maxWidth: Math.max(160, pageWidth - 8) }}
+      className={`inline-flex flex-wrap rounded-[20px] whitespace-nowrap ${className}`}
+    >
+      {children}
+    </div>
+  )
+}
+
+// A freehand redaction ('stroke'): its path, stored as fractions of the box,
+// drawn into the box at whatever size it now is.
+// ⚠️ Stroked by hand rather than through the node's `stroke` attributes:
+// Konva adds a stroked node's line width all round its bounds, so the
+// selection box stood a whole stroke-width clear of the ink. The hit canvas
+// draws the same path in the node's hit colour, so only the ink takes presses.
+function traceRedactStroke(ctx: Konva.Context, shape: Konva.Shape, style: string) {
+  const pts = (shape.getAttr('redactPoints') as number[] | undefined) ?? []
+  const w = shape.width()
+  const h = shape.height()
+  ctx.beginPath()
+  for (let i = 0; i + 1 < pts.length; i += 2) {
+    if (i === 0) ctx.moveTo(pts[0] * w, pts[1] * h)
+    else ctx.lineTo(pts[i] * w, pts[i + 1] * h)
+  }
+  // A single point still shows as a dot.
+  if (pts.length === 2) ctx.lineTo(pts[0] * w + 0.01, pts[1] * h)
+  ctx.setAttr('strokeStyle', style)
+  ctx.setAttr('lineWidth', (shape.getAttr('redactLine') as number | undefined) ?? 1)
+  ctx.setAttr('lineCap', 'round')
+  ctx.setAttr('lineJoin', 'round')
+  ctx.stroke()
+}
+
+function strokeInBox(ctx: Konva.Context, shape: Konva.Shape) {
+  traceRedactStroke(ctx, shape, shape.getAttr('redactInk') as string)
+}
+
+function strokeInBoxHit(ctx: Konva.Context, shape: Konva.Shape) {
+  traceRedactStroke(ctx, shape, shape.colorKey)
+}
+
+/** How far a freehand stroke reaches, corner to corner of its bounds. */
+function strokeExtent(pts: number[]): number {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+  for (let i = 0; i + 1 < pts.length; i += 2) {
+    minX = Math.min(minX, pts[i]); maxX = Math.max(maxX, pts[i])
+    minY = Math.min(minY, pts[i + 1]); maxY = Math.max(maxY, pts[i + 1])
+  }
+  return Math.hypot(maxX - minX, maxY - minY)
+}
+
+/** The box (stroke bounds plus half its width) and fractional path of a freehand redaction. */
+function redactStrokeBox(pts: number[], width: number) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+  for (let i = 0; i + 1 < pts.length; i += 2) {
+    minX = Math.min(minX, pts[i]); maxX = Math.max(maxX, pts[i])
+    minY = Math.min(minY, pts[i + 1]); maxY = Math.max(maxY, pts[i + 1])
+  }
+  const x = minX - width / 2
+  const y = minY - width / 2
+  const w = maxX - minX + width
+  const h = maxY - minY + width
+  const points: number[] = []
+  for (let i = 0; i + 1 < pts.length; i += 2) points.push((pts[i] - x) / w, (pts[i + 1] - y) / h)
+  return { x, y, width: w, height: h, shape: 'stroke' as const, points, strokeWidth: width }
+}
+
+/** A tapped freehand redaction: a short level stroke centred on the tap, kept on the page. */
+function tapRedactStroke(x: number, y: number, pageW: number): number[] {
+  const half = Math.min(pageW * 0.12, 60)
+  const cx = Math.min(Math.max(x, half), Math.max(pageW - half, half))
+  return [cx - half, y, cx + half, y]
 }
 
 function fitPlacement(
@@ -916,6 +1014,11 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const color = useAnnotationStore((s) => s.color)
   const strokeWidth = useAnnotationStore((s) => s.strokeWidth)
   const highlightWidth = useAnnotationStore((s) => s.highlightWidth)
+  const redactWidth = useAnnotationStore((s) => s.redactWidth)
+  const redactStroke = useAnnotationStore((s) => s.redactStroke)
+  // Black out drawn like the highlighter (the phone's Mark up sheet).
+  const redactFreehand = tool === 'redact' && redactStroke
+  const toolSheetOpen = useAnnotationStore((s) => s.toolSheetOpen)
   const setHighlightWidth = useAnnotationStore((s) => s.setHighlightWidth)
   const stayOnTool = useToolPrefs((s) => s.stayOnTool)
   const highlightColours = useToolPrefs((s) => s.highlightColours)
@@ -1493,7 +1596,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       return
     }
     const pos = getPos(e)
-    if (tool === 'draw' || tool === 'highlight') {
+    if (tool === 'draw' || tool === 'highlight' || redactFreehand) {
       // Palm rejection: once an Apple Pencil (or any stylus) has drawn, a
       // hand resting on the glass no longer leaves marks.
       if (penSeen && e.evt.pointerType === 'touch') return
@@ -1588,17 +1691,22 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       // the tap, ready to type on (James, 2026-10-13). A text box underneath
       // (see TextAnnotation.note), so it edits, resizes and exports like one.
       const id = crypto.randomUUID()
-      const size = fitPlacement(NOTE_SIZE_PX / scale, NOTE_SIZE_PX / scale, pageW, pageH)
+      // No more than NOTE_MAX_PAGE_SHARE of the page across: at phone zoom
+      // 180px was half the page, so a note came out the size of a paragraph
+      // with words to match (James, 2026-10-18). And on the page: a tap near
+      // the right or bottom edge moves the card in, rather than hanging most
+      // of it over the next page. It can still be dragged over the edge.
+      const side = Math.min(fitPlacement(NOTE_SIZE_PX / scale, NOTE_SIZE_PX / scale, pageW, pageH).width, pageW * NOTE_MAX_PAGE_SHARE)
       add({
         id,
         pageIndex,
         type: 'text',
-        x: pos.x,
-        y: pos.y,
+        x: Math.max(0, Math.min(pos.x, pageW - side)),
+        y: Math.max(0, Math.min(pos.y, pageH - side)),
         text: '',
         color: NOTE_INK,
         note: color,
-        wrapWidth: size.width,
+        wrapWidth: side,
         fontSize: NOTE_FONT_PX / scale,
         fontFamily,
         // Centred and fitted, unless Tune this app says otherwise.
@@ -1734,7 +1842,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     if (!drawingRef.current) return
     const prev = currentLineRef.current
     if (!prev) return
-    if (tool === 'draw' || tool === 'highlight') {
+    if (tool === 'draw' || tool === 'highlight' || redactFreehand) {
       // Freehand: append in place and repaint the live line once a frame —
       // see `currentLineRef` for why this never touches React state.
       prev.push(pos.x, pos.y)
@@ -1922,8 +2030,13 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         //
         // Only a TAP changes. A sweep is kept exactly as drawn, and a sweep
         // that travelled but collapsed to a sliver is still discarded.
-        const [x1, y1, x2, y2] = currentLine
-        const tapped = Math.hypot(x2 - x1, y2 - y1) <= TAP_SLOP_PX / scale
+        // Freehand (the phone's Black out), the line holds every point;
+        // the box tests below only want where it started and ended.
+        const [x1, y1] = currentLine
+        const [x2, y2] = currentLine.length >= 4 ? currentLine.slice(-2) : [x1, y1]
+        const tapped = redactFreehand
+          ? strokeExtent(currentLine) <= TAP_SLOP_PX / scale
+          : Math.hypot(x2 - x1, y2 - y1) <= TAP_SLOP_PX / scale
         // A tap on a box or circle redacts THAT shape, as its own Redact
         // button would (see onPointerDown), instead of dropping a box on it.
         const target = tapped
@@ -1941,6 +2054,12 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             : null
         if (isRedactableShape(target)) {
           redactShape(target, color)
+        } else if (redactFreehand) {
+          // A tap draws a short stroke across where it landed, so the tool
+          // never looks dead; it can be stretched like any other.
+          const width = redactWidth / scale
+          const pts = tapped ? tapRedactStroke(x1, y1, pageW) : currentLine
+          add({ id: crypto.randomUUID(), pageIndex, type: 'redact', fill: color, ...redactStrokeBox(pts, width) })
         } else if (box) {
           add({
             id: crypto.randomUUID(),
@@ -3102,7 +3221,21 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 }
                 return (
                   <Fragment key={a.id}>
-                    {a.shape === 'ellipse'
+                    {a.shape === 'stroke' ? (
+                      // Only the stroke: the box is its bounds, and only the
+                      // ink takes presses (the hit canvas draws the same path).
+                      <Shape
+                        {...block}
+                        fill={undefined}
+                        stroke={undefined}
+                        strokeWidth={0}
+                        redactPoints={a.points}
+                        redactInk={hex}
+                        redactLine={a.strokeWidth ?? 1}
+                        sceneFunc={strokeInBox}
+                        hitFunc={strokeInBoxHit}
+                      />
+                    ) : a.shape === 'ellipse'
                       ? <Shape {...block} sceneFunc={ellipseInBox} />
                       : <Rect {...block} />}
                     <Text
@@ -3261,7 +3394,19 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               />
             )
           })()}
-          {currentLine && tool === 'redact' && (() => {
+          {currentLine && redactFreehand && (
+            <Line
+              ref={liveStrokeRef}
+              listening={false}
+              points={currentLine}
+              stroke={color}
+              strokeWidth={redactWidth / scale}
+              opacity={0.7}
+              lineCap="round"
+              lineJoin="round"
+            />
+          )}
+          {currentLine && tool === 'redact' && !redactFreehand && (() => {
             const [x1, y1, x2, y2] = currentLine
             const pale = isPaleFill(color)
             return (
@@ -3617,7 +3762,14 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         // the page. They shouldn't get selected anyway, but guard here too.
         if (selected.type === 'sigfield' && selected.locked) return null
         const bbox = getAnnotationBBox(selected)
-        const left = (bbox.x + bbox.width) * scale + 8
+        // Off the top-right corner — unless that runs past the page's edge
+        // (a mark against the right margin, on a phone: James, 2026-10-18,
+        // the ✓ went off the screen), when they sit off the top-LEFT corner
+        // instead, or failing that just inside the page's right edge.
+        const ROW_W = 68
+        const right = (bbox.x + bbox.width) * scale + 8
+        const leftOf = bbox.x * scale - 8 - ROW_W
+        const left = right + ROW_W <= width ? right : leftOf >= 0 ? leftOf : Math.max(0, width - ROW_W - 4)
         const top = bbox.y * scale - 8
         // Delete and Confirm run rightwards off the top-right corner; the QR
         // Edit button stacks BENEATH Delete instead of extending that row, so a
@@ -4179,16 +4331,13 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             update(selected.id, { points: [x1, y1, s.x, s.y] } as Partial<Annotation>)
           }
         }
+        if (toolSheetOpen) return null
         return (
-          <div
-            onMouseDown={(e) => e.stopPropagation()}
-            style={{
-              position: 'absolute',
-              left: bbox.x * scale,
-              top: (bbox.y + bbox.height) * scale + 10,
-              zIndex: 21
-            }}
-            className="inline-flex items-center gap-2 bg-white rounded-full shadow-lg border border-slate-300 px-3 py-1.5 whitespace-nowrap"
+          <PagePill
+            left={bbox.x * scale}
+            top={(bbox.y + bbox.height) * scale + 10}
+            pageWidth={width}
+            className="items-center gap-2 bg-white shadow-lg border border-slate-300 px-3 py-1.5"
           >
             <span className="text-xs text-slate-500 font-medium">{t('annotate.line.stroke')}</span>
             <input
@@ -4214,7 +4363,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             >
               {lineSnap ? t('annotate.line.snap_on') : t('annotate.line.snap_off')}
             </button>
-          </div>
+          </PagePill>
         )
       })()}
 
@@ -4244,17 +4393,15 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           selected.type === 'ellipse' ||
           (selected.type === 'draw' && !isLine(selected))
         if (!drawn) return null
+        // The phone's Mark up sheet already shows this mark's colour and width.
+        if (toolSheetOpen) return null
         const bbox = getAnnotationBBox(selected)
         return (
-          <div
-            onMouseDown={(e) => e.stopPropagation()}
-            style={{
-              position: 'absolute',
-              left: bbox.x * scale,
-              top: (bbox.y + bbox.height) * scale + 10,
-              zIndex: 21
-            }}
-            className="inline-flex items-center gap-2 bg-white rounded-full shadow-lg border border-slate-300 pl-3 pr-2 py-1.5 whitespace-nowrap"
+          <PagePill
+            left={bbox.x * scale}
+            top={(bbox.y + bbox.height) * scale + 10}
+            pageWidth={width}
+            className="items-center gap-2 bg-white shadow-lg border border-slate-300 pl-3 pr-2 py-1.5"
           >
             <span className="text-xs text-slate-500 font-medium">{t('annotate.shape.colour')}</span>
             {/* ⚠️ The SELECTED object's colour, not the store's current default
@@ -4280,8 +4427,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                   value={Math.round(selected.strokeWidth * scale)}
                   onChange={(e) => {
                     const px = parseFloat(e.target.value)
+                    // Repaints this stroke too (the store converts to page units).
                     setHighlightWidth(px)
-                    update(selected.id, { strokeWidth: px / scale } as Partial<Annotation>)
                   }}
                   aria-label={t('viewer.toolbar.highlight_size')}
                   title={t('viewer.toolbar.highlight_size_value', { size: Math.round(selected.strokeWidth * scale) })}
@@ -4291,7 +4438,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             ) : (
               <ColorCluster color={selected.color} setColor={setColor} />
             )}
-          </div>
+          </PagePill>
         )
       })()}
 
@@ -4460,7 +4607,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         // not privacy.
         if (draggingId || editingId) return null
         const selected = annotations.find((a) => a.id === selectedId)
-        if (!selected || selected.type !== 'redact') return null
+        // A freehand redaction has no box or circle to go back to.
+        if (!selected || selected.type !== 'redact' || selected.shape === 'stroke') return null
         const bbox = getAnnotationBBox(selected)
         return (
           <button
@@ -5212,13 +5360,16 @@ function TextEditor({
     const el = ref.current
     if (!el) return
     el.innerHTML = runsToHtml(effectiveRuns(annotation))
-    el.focus()
+    // ⚠️ Without scrolling: a plain focus() scrolled the row of pages (Page
+    // scrolling horizontal) to bring the box into view, so a note placed
+    // near a page's edge left the reader between two pages (James, 2026-10-18).
+    el.focus({ preventScroll: true })
     selectAllContents(el)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   useEffect(() => {
     const t = requestAnimationFrame(() => {
-      if (document.activeElement !== ref.current) ref.current?.focus()
+      if (document.activeElement !== ref.current) ref.current?.focus({ preventScroll: true })
       justMountedRef.current = false
     })
     return () => cancelAnimationFrame(t)
@@ -5297,7 +5448,7 @@ function TextEditor({
         // If we blur in the same frame as mount (focus never landed), or a link
         // prompt has focus, keep the editor open.
         if (justMountedRef.current) {
-          ref.current?.focus()
+          ref.current?.focus({ preventScroll: true })
           return
         }
         if (formattingRef.current) return

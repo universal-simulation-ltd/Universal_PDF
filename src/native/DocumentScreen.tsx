@@ -12,6 +12,7 @@ import type { Annotation, Tool } from '../types/annotations'
 import { Dots, Icon, PATHS } from './icons'
 import { useNav } from './nav'
 import MarkupSheet, { MARKUP_TOOLS } from './MarkupSheet'
+import { BackLink } from './parts'
 
 // Board 2 · A document open: the pages lie on the warm grey desk, a back
 // chevron and the name at the top with Share and ⋯, and four tools floating
@@ -52,8 +53,14 @@ export default function DocumentScreen() {
   const { canUndo, undo } = useUndo()
   const markingUp = sheet === 'markup'
 
-  // A signature from the Sign page lands on the page → the Signed moment.
+  // A signature from the Sign page lands on the page, and once it is where
+  // it should be → the Signed moment. Not the moment it lands: it nearly
+  // always wants moving first, and the moment covered it (James, 2026-10-18:
+  // "maybe it appears after it's repositioned or if they click the tick").
+  // So it waits for the signature to be let go of — the ✓, or a tap off it —
+  // and is dropped if the signature is binned instead.
   const before = useRef(signaturesOn(useAnnotationStore.getState().annotations))
+  const placed = useRef<string | null>(null)
   useEffect(
     () =>
       useAnnotationStore.subscribe((s) => {
@@ -61,13 +68,30 @@ export default function DocumentScreen() {
         const nav = useNav.getState()
         if (now > before.current && nav.awaitingSignature) {
           nav.setAwaitingSignature(false)
-          // Let the page draw the signature before the moment covers it.
-          window.setTimeout(() => useNav.getState().push('signed'), 450)
+          placed.current = s.selectedId
         }
         before.current = now
+        const id = placed.current
+        if (id && s.selectedId !== id) {
+          placed.current = null
+          if (s.annotations.some((a) => a.id === id)) window.setTimeout(() => useNav.getState().push('signed'), 250)
+        }
       }),
     []
   )
+
+  // While the sheet is open it carries the selected mark's colour and width,
+  // so the page's own Colour pill stands down; and Black out is drawn like the
+  // highlighter on the phone (the website's stays a box).
+  useEffect(() => {
+    const a = useAnnotationStore.getState()
+    a.setToolSheetOpen(markingUp)
+    return () => a.setToolSheetOpen(false)
+  }, [markingUp])
+  useEffect(() => {
+    useAnnotationStore.getState().setRedactStroke(true)
+    return () => useAnnotationStore.getState().setRedactStroke(false)
+  }, [])
 
   const active: BarTool | null = markingUp || MARKUP_TOOLS.includes(tool as Tool) ? 'markup' : tool === 'text' || tool === 'select' ? 'fill' : null
 
@@ -115,25 +139,25 @@ export default function DocumentScreen() {
       >
         {markingUp ? (
           <>
-            <button
-              type="button"
-              onClick={undo}
-              disabled={!canUndo}
-              className="min-h-[44px] px-2.5 text-[16px] text-[color:var(--np-cobalt)] disabled:opacity-40"
-            >
-              {t('phone.undo')}
-            </button>
-            <span className="np-serif flex-1 text-center text-[17px] font-bold">{t('phone.markup_title')}</span>
-            <button
-              type="button"
+            {/* The way back to Fill · Mark up · Sign · Pages is the back
+                chevron every other page here has — "Done" on the right didn't
+                read as the way out (James, 2026-10-18). */}
+            <BackLink
+              label={t('phone.done')}
               onClick={() => {
                 closeSheet()
                 setTool('select')
               }}
-              className="min-h-[44px] px-3.5 mr-1.5 rounded-full text-[16px] font-bold text-white"
-              style={{ background: 'var(--np-cobalt)' }}
+            />
+            <span className="np-serif flex-1 text-center text-[17px] font-bold">{t('phone.markup_title')}</span>
+            <button
+              type="button"
+              onClick={undo}
+              disabled={!canUndo}
+              className="min-h-[44px] px-3 mr-1 flex items-center gap-1 text-[16px] font-semibold text-[color:var(--np-cobalt)] disabled:opacity-40"
             >
-              {t('phone.done')}
+              <Icon d={PATHS.undo} size={20} width={2.2} stroke="var(--np-cobalt)" />
+              {t('phone.undo')}
             </button>
           </>
         ) : (

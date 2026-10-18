@@ -25,6 +25,7 @@ export const PATHS = {
   pen: 'M4 20l4-1 11-11-3-3L5 16zM14 6l3 3',
   grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   back: 'M15 5l-7 7 7 7',
+  undo: 'M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3',
   share: 'M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6',
   chevron: 'M9 5l7 7-7 7',
   help: 'M12 18h.01M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.7v.5',

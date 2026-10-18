@@ -166,7 +166,15 @@ export type RedactAnnotation = Base & {
   // 'ellipse' when the redaction came from an ellipse/circle (its Redact
   // button): only the ellipse inscribed in the box is redacted, the same area
   // a Fill would cover (James, 2026-10-12). Undefined = the whole box.
-  shape?: 'ellipse'
+  // 'stroke' when it was drawn freehand, like the highlighter (the phone's
+  // Black out, James 2026-10-18): only the stroke is redacted. The box is the
+  // stroke's bounds, so moving, resizing and export's box tests need nothing
+  // of their own.
+  shape?: 'ellipse' | 'stroke'
+  // A 'stroke' redaction's path, as x,y pairs in FRACTIONS of the box (0–1),
+  // so a resize stretches it with the box; and its width, in page units.
+  points?: number[]
+  strokeWidth?: number
 }
 
 export type MarkAnnotation = Base & {

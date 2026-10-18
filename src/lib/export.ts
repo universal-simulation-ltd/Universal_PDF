@@ -1227,7 +1227,23 @@ export async function buildAnnotatedPdfBytes(
               const y = (r.y / scale) * k
               const w = (r.width / scale) * k
               const h = (r.height / scale) * k
-              if (r.shape === 'ellipse') {
+              if (r.shape === 'stroke' && r.points && r.points.length >= 2) {
+                // Only the freehand stroke, as on screen (the phone's Black
+                // out). The page is rasterised whole either way.
+                ctx.strokeStyle = ctx.fillStyle
+                ctx.lineWidth = ((r.strokeWidth ?? 1) / scale) * k
+                ctx.lineCap = 'round'
+                ctx.lineJoin = 'round'
+                ctx.beginPath()
+                for (let j = 0; j + 1 < r.points.length; j += 2) {
+                  const px = x + r.points[j] * w
+                  const py = y + r.points[j + 1] * h
+                  if (j === 0) ctx.moveTo(px, py)
+                  else ctx.lineTo(px, py)
+                }
+                if (r.points.length === 2) ctx.lineTo(x + r.points[0] * w + 0.01, y + r.points[1] * h)
+                ctx.stroke()
+              } else if (r.shape === 'ellipse') {
                 // Only the inside of the circle, as on screen. The whole page
                 // is rasterised regardless, so nothing outside it survives as
                 // text either — it just stays visible.

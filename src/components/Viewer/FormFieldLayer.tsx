@@ -269,12 +269,15 @@ export default function FormFieldLayer({ page, pageIndex, scale }: Props) {
                 // Opaque once there is a value of OUR drawing to show, for the
                 // same reason as the tick boxes: the canvas still has the PDF's.
                 className={`w-full h-full flex items-center px-1 cursor-text border border-dashed border-blue-400 hover:bg-blue-50/80 transition-colors ${val !== f.initial ? 'bg-white' : 'bg-blue-50/40'}`}
-                style={{ fontSize: Math.min(14, f.ch * 0.65) }}
+                style={{ fontSize: Math.min(14, f.ch * 0.65), lineHeight: 1 }}
               >
                 {val !== f.initial ? (
                   <span className="text-slate-800 truncate">{val}</span>
                 ) : (
-                  !val && <span className="text-blue-400 text-xs truncate">{f.label}</span>
+                  // Sized to the box, as the value is: `text-xs` was a fixed
+                  // 12px on a 16px line, so at phone zoom (a box ~11px high)
+                  // the name spilled out over the box (James, 2026-10-18).
+                  !val && <span className="text-blue-400 truncate" style={{ fontSize: Math.min(12, f.ch * 0.55) }}>{f.label}</span>
                 )}
               </div>
             )}

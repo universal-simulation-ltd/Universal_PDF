@@ -64,6 +64,7 @@ export default function NativeApp({ launching }: { launching: boolean }) {
   useHistoryLayers(inDocument)
   useKeepAwake(!!doc)
   useShortcutRequests()
+  useNoFocusZoom()
 
   // The clock and battery stay legible: light glyphs over the cobalt desk and
   // the moments, dark ones over paper.
@@ -306,6 +307,26 @@ function useHistoryLayers(inDocument: boolean) {
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
+  }, [])
+}
+
+/**
+ * iOS zooms the whole web view in on any box being typed in whose words are
+ * smaller than 16px — a sticky note, a text box, a form field at phone zoom —
+ * and never zooms back out, so the header and the sheet's ends were left off
+ * the screen (James, 2026-10-18). `maximum-scale=1` stops that zoom. The
+ * phone screens never want the web view itself zoomed: the viewer does its
+ * own pinch (PdfViewer), so nothing is lost. The website keeps its own tag.
+ */
+function useNoFocusZoom() {
+  useEffect(() => {
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]')
+    if (!meta) return
+    const before = meta.content
+    if (!/maximum-scale/.test(before)) meta.content = `${before}, maximum-scale=1`
+    return () => {
+      meta.content = before
+    }
   }, [])
 }
 

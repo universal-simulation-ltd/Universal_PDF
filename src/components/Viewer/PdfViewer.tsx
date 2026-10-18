@@ -31,6 +31,9 @@ const FIT_HEIGHT_MIN_ZOOM = 0.75
 // the row's sideways scrollbar (a classic Windows one is ~17px; an overlay one
 // takes none, and then the page is just a touch shy of the window).
 const HORIZONTAL_SCROLLBAR_ALLOWANCE = 20
+// With Page scrolling horizontal on a narrow screen, how much of the next
+// page shows beside the one being read — see fitZoomFor.
+const ROW_PEEK_PX = 20
 // Quick presets offered when you click the % label while at 100%.
 const ZOOM_PRESETS = [50, 75, 125, 150]
 // How long the pages wait for the fit-on-open zoom to be worked out before they
@@ -58,6 +61,9 @@ export default function PdfViewer() {
   const resetSearch = useSearchStore((s) => s.reset)
   const [zoom, setZoom] = useState(1)
   const scale = zoom * BASE_SCALE
+  useEffect(() => {
+    useAnnotationStore.getState().setViewScale(scale)
+  }, [scale])
   // Tune this app ▸ Page scrolling: the pages one under another (the default)
   // or side by side in a row. Everything below that reads the reading axis off
   // layout — the active band, the wheel, a returning tab's scroll — follows it.
@@ -990,8 +996,15 @@ export default function PdfViewer() {
       // page came out ~460px wide on a 390px screen, its right edge cut off.
       // A page is the unit a swipe moves by, so it must fit whole; on a
       // computer the height is always the tighter of the two.
+      // …and, where the WIDTH is what binds (a phone), narrow enough that the
+      // next page's edge shows past the gap, so it is plain there are more
+      // pages and which way they lie (James, 2026-10-18: "not clear there's
+      // other pages … you don't see a glimpse of them"). The row's gap is read
+      // from the row itself (it is narrower on a small screen).
+      const gap = contentRef.current ? parseFloat(getComputedStyle(contentRef.current).columnGap) || 0 : 0
+      const rowW = usePdfStore.getState().numPages > 1 ? el.clientWidth - 2 * (gap + ROW_PEEK_PX) : availableW
       const heightFit = (availableH - HORIZONTAL_SCROLLBAR_ALLOWANCE) / pageHeight
-      const fit = availableW > 0 ? Math.min(heightFit, availableW / pageWidth) : heightFit
+      const fit = rowW > 0 ? Math.min(heightFit, Math.min(availableW, rowW) / pageWidth) : heightFit
       return Math.max(MIN_ZOOM, Math.min(1, fit))
     }
     if (availableW > 0 && availableH > 0) {
@@ -1285,7 +1298,7 @@ export default function PdfViewer() {
               until that lands the floor is the vertical layout's 16px. */}
           <div
             ref={contentRef}
-            className={`flex items-center gap-6 py-6 shrink-0 my-auto ${horizontal ? 'flex-row w-max mx-auto' : 'flex-col px-4'}`}
+            className={`flex items-center py-6 shrink-0 my-auto ${horizontal ? 'flex-row w-max mx-auto gap-3 sm:gap-6' : 'flex-col px-4 gap-6'}`}
             style={horizontal ? { paddingInline: 'max(16px, calc(50% - var(--doc-display-width, 0px) / 2))' } : undefined}
           >
             {fitted && Array.from({ length: numPages }, (_, i) => (

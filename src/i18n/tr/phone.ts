@@ -88,6 +88,9 @@ const phone: Messages['phone'] = {
   'mk_note': 'Not',
   'mk_shape': 'Şekil',
   'mk_blackout': 'Karart',
+  'mk_signature': 'İmza',
+  'mk_picture': 'Resim',
+  'mk_qr': 'QR kod',
   'shape_box': 'Kutu',
   'shape_circle': 'Daire',
   'shape_line': 'Çizgi',
@@ -101,7 +104,7 @@ const phone: Messages['phone'] = {
   'c_yellow': 'Sarı',
   'c_green': 'Yeşil',
   'c_pink': 'Pembe',
-  'blackout_note': 'Gitmesi gerekenin üzerinden sürükleyin. Gönderdiğinizde dosyadan kalıcı olarak silinir.',
+  'blackout_note': 'Fosforlu kalem gibi, gitmesi gerekenin üzerinden parmağınızla geçin. Gönderdiğinizde dosyadan kalıcı olarak silinir.',
 
   // Sign (a page). The heading is split so "mark" can carry the highlighter.
   'sign_back': 'Belgeye dön',

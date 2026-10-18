@@ -88,6 +88,9 @@ const phone: Messages['phone'] = {
   'mk_note': 'Nota',
   'mk_shape': 'Forma',
   'mk_blackout': 'Tarjar',
+  'mk_signature': 'Assinatura',
+  'mk_picture': 'Imagem',
+  'mk_qr': 'QR code',
   'shape_box': 'Retângulo',
   'shape_circle': 'Círculo',
   'shape_line': 'Linha',
@@ -101,7 +104,7 @@ const phone: Messages['phone'] = {
   'c_yellow': 'Amarelo',
   'c_green': 'Verde',
   'c_pink': 'Rosa',
-  'blackout_note': 'Arraste sobre o que precisa sumir. Ao enviar, isso sai do arquivo de vez.',
+  'blackout_note': 'Passe o dedo sobre o que precisa sumir, como um marca-texto. Ao enviar, isso sai do arquivo de vez.',
 
   // Sign (a page). The heading is split so "mark" can carry the highlighter.
   'sign_back': 'Voltar ao documento',
