@@ -2183,6 +2183,14 @@ each became. Pinned by `e2e/phone-markup.e2e.mjs` (`npm run test:phone-markup`).
   document had changes: the "Save your changes?" prompt is the website's dialog
   (z-80) and the moments sit at z-150, so it opened underneath.
   `leaveDocument` now puts the pages away first.
+- **The tool row shows it scrolls** (James: "make it a global rule";
+  `Docs_UNI_SIM/BRANDING.md` → "A row that scrolls shows it scrolls"):
+  `useScrollHint()` in `src/native/parts.tsx` nudges it ~56px along and back
+  once as it appears (not with reduced motion; a touch stops it) and fades the
+  edge with more beyond it. ⚠️ The row snaps, so it has `scroll-px-2.5` to rest
+  at the start, and the snapping is paused during the nudge — otherwise it
+  rested 10px in and the nudge was skipped. The shapes chips use it too, as
+  their own component (the hook's effect runs once, on mount).
 - All pinned in `e2e/phone-markup.e2e.mjs`.
 
 ## The phone's knowledge base is a page (2026-10-18)

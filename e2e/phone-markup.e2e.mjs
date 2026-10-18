@@ -19,6 +19,8 @@
 //   • Form-field names fit their boxes.
 //   • The Signed moment waits for the signature to be let go of.
 //   • The bar is Fill · Mark up · Sign · Share; Pages is in What else (⋯).
+//   • The tool row shows it scrolls: a nudge along and back as it appears, and
+//     a fade at the edge with more beyond it.
 //   • QR code is a page of its own, and its link box is not focused on arrival.
 //   • Text and notes get a choice of three fonts.
 //   • A note being typed on takes its words with it when it is dragged.
@@ -133,7 +135,24 @@ console.log('\nform-field names fit their boxes')
 
 console.log('\nMark up: the way back, and the tools further along the row')
 await page.getByRole('button', { name: 'Mark up' }).click()
-await page.waitForTimeout(500)
+{
+  // The row shows it scrolls: a nudge along and back, and a fade at the end.
+  const trace = await page.evaluate(async () => {
+    const out = []
+    const rest = document.querySelector('section [role="group"]')?.scrollLeft ?? 0
+    const t0 = performance.now()
+    while (performance.now() - t0 < 1900) {
+      const g = document.querySelector('section [role="group"]')
+      if (g) out.push(g.scrollLeft)
+      await new Promise((r) => requestAnimationFrame(r))
+    }
+    const g = document.querySelector('section [role="group"]')
+    return { rest, peak: Math.max(...out) - rest, end: (g?.scrollLeft ?? -1) - rest, mask: g ? getComputedStyle(g).webkitMaskImage || getComputedStyle(g).maskImage : '' }
+  })
+  check('the tool row nudges along to show it scrolls', trace.peak > 20, json(trace))
+  check('…and comes back to where it rests', Math.abs(trace.end) <= 1, json(trace))
+  check('…and fades where there is more', /gradient/.test(trace.mask), json(trace.mask))
+}
 {
   check('a "Done" back link on the left', (await page.getByRole('button', { name: 'Done' }).count()) === 1)
   for (const name of ['Signature', 'Picture', 'QR code']) {

@@ -6,6 +6,7 @@ import { useToolPrefs } from '../stores/toolPrefsStore'
 import type { Annotation, Tool } from '../types/annotations'
 import { FONT_DEFS } from '../lib/fonts'
 import { useNav } from './nav'
+import { useScrollHint } from './parts'
 
 // Board 3 · Mark up: a sheet under the page (the page stays usable above it),
 // the tools standing in a row as the things they are — pens, a pad of notes, a
@@ -66,6 +67,7 @@ export default function MarkupSheet() {
   const widthId = useId()
   const pictureRef = useRef<HTMLInputElement>(null)
   const gripRef = useRef<{ y: number } | null>(null)
+  const rowHint = useScrollHint<HTMLDivElement>()
   const current = markupOf(tool, armedQr)
 
   function pick(id: MarkupId) {
@@ -180,7 +182,13 @@ export default function MarkupSheet() {
         <div className="np-grip" aria-hidden="true" />
       </div>
 
-      <div className="flex overflow-x-auto np-jobs px-2.5 snap-x" role="group" aria-label={t('phone.markup_tools_aria')}>
+      <div
+        ref={rowHint.ref}
+        className="flex overflow-x-auto np-jobs px-2.5 snap-x scroll-px-2.5"
+        style={rowHint.style}
+        role="group"
+        aria-label={t('phone.markup_tools_aria')}
+      >
         {tools.map((m) => {
           const on = current === m.id
           return (
@@ -212,26 +220,7 @@ export default function MarkupSheet() {
       <input ref={pictureRef} type="file" accept="image/*" className="hidden" onChange={onPicture} />
 
       <div className="px-[18px] flex flex-col gap-3.5">
-        {current === 'shape' && (
-          <div className="flex gap-2 overflow-x-auto np-jobs -mx-1 px-1">
-            {SHAPES.map((sh) => (
-              <button
-                key={sh}
-                type="button"
-                aria-pressed={tool === sh}
-                onClick={() => useAnnotationStore.getState().setTool(sh)}
-                className="flex-none min-h-[38px] px-3.5 rounded-full text-[14px] font-semibold"
-                style={
-                  tool === sh
-                    ? { background: 'var(--np-cobalt)', color: '#ffffff' }
-                    : { background: 'var(--np-slip)', border: '1px solid var(--np-line)', color: 'var(--np-ink-2)' }
-                }
-              >
-                {shapeLabels[sh]}
-              </button>
-            ))}
-          </div>
-        )}
+        {current === 'shape' && <ShapeRow tool={tool} labels={shapeLabels} />}
 
         {current === 'blackout' && <p className="m-0 text-[14px] leading-[1.4] text-[color:var(--np-ink-2)]">{t('phone.blackout_note')}</p>}
 
@@ -317,6 +306,32 @@ export default function MarkupSheet() {
         )}
       </div>
     </section>
+  )
+}
+
+/** Box · Circle · Line · Tick · Cross, under Shape. Its own component so its
+ *  scroll hint starts when it appears (see useScrollHint). */
+function ShapeRow({ tool, labels }: { tool: Tool; labels: Record<string, string> }) {
+  const shapeHint = useScrollHint<HTMLDivElement>()
+  return (
+    <div ref={shapeHint.ref} className="flex gap-2 overflow-x-auto np-jobs -mx-1 px-1" style={shapeHint.style}>
+      {SHAPES.map((sh) => (
+        <button
+          key={sh}
+          type="button"
+          aria-pressed={tool === sh}
+          onClick={() => useAnnotationStore.getState().setTool(sh)}
+          className="flex-none min-h-[38px] px-3.5 rounded-full text-[14px] font-semibold"
+          style={
+            tool === sh
+              ? { background: 'var(--np-cobalt)', color: '#ffffff' }
+              : { background: 'var(--np-slip)', border: '1px solid var(--np-line)', color: 'var(--np-ink-2)' }
+          }
+        >
+          {labels[sh]}
+        </button>
+      ))}
+    </div>
   )
 }
 
