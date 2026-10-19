@@ -302,6 +302,68 @@ console.log('\npages in a row: pinched smaller than the window, the row lands wh
   await context.close()
 }
 
+console.log('\npages in a row, at either end: the page lands where the pinch left it, not to one side')
+{
+  // James, 2026-10-19, on his iPhone: "When zooming in and out the page jumps
+  // to the right for some reason." Page 1 can never sit right of the middle of
+  // the window and the last page never left of it — the row's end padding and
+  // the end of the scroll range see to that — so a pinch about a point that
+  // asked for either was held there by the gesture and then jumped on release
+  // as the commit scrolled as far as it could: right on the last page (21px
+  // and 89px for the two pinches below), left on page 1 (105px). The gesture
+  // now eases the page into where the commit can put it, so release is still.
+  const IPHONE = {
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 390, height: 844 },
+    screen: { width: 390, height: 844 },
+    deviceScaleFactor: 3
+  }
+  const readPage = (page, i) =>
+    page.evaluate((i) => {
+      const r = document.querySelector(`[data-page-index="${i}"]`).getBoundingClientRect()
+      return { left: r.left, top: r.top, width: r.width }
+    }, i)
+  // One pinch about (x, 380) and its release: the anchored page's position
+  // with the fingers still down, and once the zoom has committed.
+  async function pinchAndRelease(page, touch, i, x, spread, endSpread) {
+    await pinch(touch, { x, y: 380, spread, endSpread, steps: 15 })
+    const during = await readPage(page, i)
+    await touch('touchEnd', [])
+    await page.waitForTimeout(1500)
+    const after = await readPage(page, i)
+    return { during, after }
+  }
+  const landed = ({ during, after }) =>
+    `moved (${(after.left - during.left).toFixed(1)}, ${(after.top - during.top).toFixed(1)}) px on release`
+  const still = ({ during, after }) =>
+    Math.abs(after.left - during.left) < 3 && Math.abs(after.top - during.top) < 3
+
+  const { context, page, touch } = await openViewer(IPHONE, 'horizontal')
+  const last = await page.evaluate(() => document.querySelectorAll('[data-page-index]').length - 1)
+  await page.evaluate((i) => document.querySelector(`[data-page-index="${i}"]`).scrollIntoView({ inline: 'center' }), last)
+  await page.waitForTimeout(800)
+  const shrunk = await pinchAndRelease(page, touch, last, 140, 200, 110)
+  check('the last page, pinched smaller left of centre, does not jump right', still(shrunk), landed(shrunk))
+  const grown = await pinchAndRelease(page, touch, last, 300, 60, 140)
+  check('the last page, pinched bigger near its right edge, does not jump right', still(grown), landed(grown))
+  // Something the clamp must NOT do: a pinch in the middle of the row still
+  // holds the point under the fingers exactly.
+  await page.evaluate(() => document.querySelector('[data-page-index="1"]').scrollIntoView({ inline: 'center' }))
+  await page.waitForTimeout(800)
+  const before = await readPage(page, 1)
+  const middle = await pinchAndRelease(page, touch, 1, 150, 100, 180)
+  const ratio = middle.during.width / before.width
+  check('a page mid-row still scales about the fingers', Math.abs(middle.during.left - anchoredTo(before.left, 150, ratio)) < 2,
+    `page at ${middle.during.left.toFixed(1)}, an anchored scale puts it at ${anchoredTo(before.left, 150, ratio).toFixed(1)}`)
+  check('…and lands there', still(middle), landed(middle))
+  await page.evaluate(() => { document.querySelector('.overflow-auto').scrollLeft = 0 })
+  await page.waitForTimeout(800)
+  const first = await pinchAndRelease(page, touch, 0, 250, 200, 110)
+  check('page 1, pinched smaller right of centre, does not jump left', still(first), landed(first))
+  await context.close()
+}
+
 console.log('\nthe limits, and cleaning up after itself')
 {
   const { context, page, touch } = await openViewer(PHONE)

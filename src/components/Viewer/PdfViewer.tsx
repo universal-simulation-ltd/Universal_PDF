@@ -34,6 +34,11 @@ const HORIZONTAL_SCROLLBAR_ALLOWANCE = 20
 // With Page scrolling horizontal on a narrow screen, how much of the next
 // page shows beside the one being read — see fitZoomFor.
 const ROW_PEEK_PX = 20
+// The least padding at either end of a row of pages — the row's padding is
+// half the window less half of page 1, and never under this. One number for
+// the layout and for the pinch, which has to predict where that layout will
+// put the row (see `draw` in the pinch handler).
+const ROW_END_MIN_PAD = 16
 // Quick presets offered when you click the % label while at 100%.
 const ZOOM_PRESETS = [50, 75, 125, 150]
 // How long the pages wait for the fit-on-open zoom to be worked out before they
@@ -622,9 +627,53 @@ export default function PdfViewer() {
       scrollLeft: number
       scrollTop: number
       ratio: number
+      // Pages in a row only: the row as it was laid out when the gesture
+      // began, measured once, so `draw` can work out where the commit will
+      // put the row at any scale — see the sideways clamp there.
+      row: RowLayout | null
+    }
+    interface RowLayout {
+      width: number
+      pad: number
+      gap: number
+      pages: number
+      firstPageWidth: number
+      // The anchored page: its position in the row, and its left edge from
+      // the row's own left edge.
+      anchorIndex: number
+      anchorLeft: number
     }
     let pinch: Pinch | null = null
+    // Set when two fingers come down, cleared only when the LAST one lifts.
+    // Lifting one finger ends the zoom, but the other is still on the glass
+    // and usually still moving — and its touchmoves, no longer cancelled, are
+    // free to start the browser scrolling the row under it: a pan (and on an
+    // iPhone a fling) straight after the zoom commits, sliding the page out
+    // from under the commit's own scroll correction. Chromium happens not to
+    // scroll there (pinch-zoom.e2e can't make it), WebKit's rules for a touch
+    // sequence that stops being cancelled are its own; cancelling the rest of
+    // the sequence settles it either way (2026-10-19).
+    let fingersFromPinch = false
     let frame = 0
+
+    // How the row is laid out right now, untransformed. Null when the pages
+    // run down the screen, or there is no anchor page to measure from.
+    function measureRow(content: HTMLDivElement, anchor: ZoomAnchor | null): RowLayout | null {
+      if (!horizontalRef.current || !anchor) return null
+      const pages = content.querySelectorAll<HTMLElement>('[data-page-index]')
+      const page = content.querySelector<HTMLElement>(`[data-page-index="${anchor.pageIndex}"]`)
+      if (!pages.length || !page) return null
+      const style = getComputedStyle(content)
+      return {
+        width: content.offsetWidth,
+        pad: parseFloat(style.paddingLeft) || 0,
+        gap: parseFloat(style.columnGap) || 0,
+        pages: pages.length,
+        firstPageWidth: pages[0].offsetWidth,
+        anchorIndex: anchor.pageIndex,
+        anchorLeft: page.getBoundingClientRect().left - content.getBoundingClientRect().left
+      }
+    }
 
     function dist(t1: Touch, t2: Touch) {
       return Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY)
@@ -667,7 +716,7 @@ export default function PdfViewer() {
       // them as it grows.
       const anchoredX = pinch.scrollLeft + pinch.anchorX - content.offsetLeft
       const anchoredY = pinch.scrollTop + pinch.anchorY - content.offsetTop
-      const tx = pinch.anchorX + el.scrollLeft - content.offsetLeft - pinch.ratio * anchoredX
+      let tx = pinch.anchorX + el.scrollLeft - content.offsetLeft - pinch.ratio * anchoredX
       let ty = pinch.anchorY + el.scrollTop - content.offsetTop - pinch.ratio * anchoredY
       // ⚠️ PAGES IN A ROW: KEEP THE ROW WHERE THE COMMIT WILL PUT IT, UP AND
       // DOWN (2026-10-12). Across the row there is only one page's height of
@@ -691,6 +740,40 @@ export default function PdfViewer() {
           : Math.min(0, Math.max(viewH - committedH, anchoredTop))
         ty += top - anchoredTop
       }
+      // ⚠️ …AND ACROSS, AT EITHER END OF THE ROW (James, 2026-10-19: "When
+      // zooming in and out the page jumps to the right for some reason"). The
+      // same trap sideways: page 1 can never sit right of the middle of the
+      // window (the row's padding is what centres it, and there is no scroll
+      // left of 0), and the last page can never sit left of it. Pinched about a
+      // point that asks for either, the gesture held the page there and the
+      // commit then scrolled as far as it could and stopped short — the page
+      // jumped on release, to the RIGHT on the last page (and on a one-page
+      // document), to the left on page 1; 21px for a pinch left of centre on
+      // the example's last page. So, as up and down: where the commit will be
+      // able to put the anchored page is worked out from the row as it was
+      // laid out when the fingers landed, and the page is held inside that.
+      //
+      // The arithmetic mirrors the row's layout rather than scaling it: the
+      // pages scale, but the gaps between them do not, and the end padding is
+      // re-derived from the new width of page 1 (see the content's style).
+      const row = pinch.row
+      if (row) {
+        const r = pinch.ratio
+        const viewW = el.clientWidth
+        const gaps = row.gap * (row.pages - 1)
+        const pad = Math.max(ROW_END_MIN_PAD, viewW / 2 - (row.firstPageWidth * r) / 2)
+        const committedW = 2 * pad + r * (row.width - 2 * row.pad - gaps) + gaps
+        const before = row.gap * row.anchorIndex
+        const committedLeft = pad + r * (row.anchorLeft - row.pad - before) + before
+        // A row narrower than the window is centred by its auto margins and
+        // cannot scroll; a wider one starts at 0 and scrolls this far.
+        const offset = committedW < viewW ? (viewW - committedW) / 2 : 0
+        const maxScroll = Math.max(0, committedW - viewW)
+        const heldLeft = content.offsetLeft - el.scrollLeft + tx + r * row.anchorLeft
+        const lo = offset + committedLeft - maxScroll
+        const hi = offset + committedLeft
+        tx += Math.min(hi, Math.max(lo, heldLeft)) - heldLeft
+      }
       content.style.transform = `translate(${tx}px, ${ty}px) scale(${pinch.ratio})`
     }
 
@@ -707,6 +790,9 @@ export default function PdfViewer() {
       const rect = el.getBoundingClientRect()
       const anchorX = (t1.clientX + t2.clientX) / 2 - rect.left
       const anchorY = (t1.clientY + t2.clientY) / 2 - rect.top
+      const anchor = captureAnchor(el, anchorX, anchorY)
+      const content = contentRef.current
+      fingersFromPinch = true
       pinch = {
         baseDist: dist(t1, t2),
         baseRatio: 1,
@@ -716,12 +802,12 @@ export default function PdfViewer() {
         // The gesture holds this point of the document under the midpoint the
         // whole way — the transform below scales about it, and the commit
         // scrolls it back under it once the pages have re-rendered.
-        anchor: captureAnchor(el, anchorX, anchorY),
+        anchor,
         scrollLeft: el.scrollLeft,
         scrollTop: el.scrollTop,
-        ratio: 1
+        ratio: 1,
+        row: content ? measureRow(content, anchor) : null
       }
-      const content = contentRef.current
       if (content) {
         content.style.transformOrigin = '0 0'
         content.style.willChange = 'transform'
@@ -729,6 +815,12 @@ export default function PdfViewer() {
     }
 
     function onMove(e: TouchEvent) {
+      // The finger left behind by a pinch is still part of the pinch: it
+      // neither scrolls nor flings the row. See `fingersFromPinch`.
+      if (!pinch && fingersFromPinch) {
+        if (e.cancelable) e.preventDefault()
+        return
+      }
       if (!pinch || e.touches.length !== 2 || !el) return
       if (e.cancelable) e.preventDefault()
       const [t1, t2] = [e.touches[0], e.touches[1]]
@@ -744,7 +836,10 @@ export default function PdfViewer() {
       // one would otherwise hand the remaining finger straight back to the
       // annotation layer mid-gesture, which is exactly the accidental drag
       // this flag exists to prevent.
-      if (e.touches.length === 0) usePdfStore.getState().setPinching(false)
+      if (e.touches.length === 0) {
+        usePdfStore.getState().setPinching(false)
+        fingersFromPinch = false
+      }
       if (!pinch) return
       if (e.touches.length >= 2) {
         // Still a pinch, just with different fingers: carry the scale reached
@@ -1299,7 +1394,7 @@ export default function PdfViewer() {
           <div
             ref={contentRef}
             className={`flex items-center py-6 shrink-0 my-auto ${horizontal ? 'flex-row w-max mx-auto gap-3 sm:gap-6' : 'flex-col px-4 gap-6'}`}
-            style={horizontal ? { paddingInline: 'max(16px, calc(50% - var(--doc-display-width, 0px) / 2))' } : undefined}
+            style={horizontal ? { paddingInline: `max(${ROW_END_MIN_PAD}px, calc(50% - var(--doc-display-width, 0px) / 2))` } : undefined}
           >
             {fitted && Array.from({ length: numPages }, (_, i) => (
               <PdfPage
