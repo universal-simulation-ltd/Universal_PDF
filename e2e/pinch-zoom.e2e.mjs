@@ -24,6 +24,7 @@
 
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { keepAppModuleUrls } from './app-modules.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:5174/'
@@ -361,6 +362,119 @@ console.log('\npages in a row, at either end: the page lands where the pinch lef
   await page.waitForTimeout(800)
   const first = await pinchAndRelease(page, touch, 0, 250, 200, 110)
   check('page 1, pinched smaller right of centre, does not jump left', still(first), landed(first))
+  await context.close()
+}
+
+console.log('\nthe phone screens, Mark up: nothing moves under the fingers, from the first finger to release')
+{
+  // James, 2026-10-19, an iPhone recording of Mark up: "see how it jumps on
+  // zoom". Two jumps, both measured here on the phone screens (`?app`) at an
+  // iPhone 15 Pro's 393x852:
+  //
+  //   • ON RELEASE, every page slid 180px sideways. The row is padded by half
+  //     the window less half of page 1 (`--doc-display-width`), and a zoom
+  //     dropped that variable and set it again from a promise — so the zoom
+  //     put the fingers' point back against a row padded by half the window,
+  //     then the variable landed and the padding shrank by 180px.
+  //   • AS THE PINCH BEGAN, the pages slid up 34px: the first finger landed on
+  //     a highlight, which selected it, the Mark up sheet grew to show its ink
+  //     and width, and the document above the sheet got shorter.
+  //
+  // What is asserted is the document point under the fingers' midpoint, as a
+  // fraction of the page, before, during and after.
+  const IPHONE = {
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 393, height: 852 },
+    screen: { width: 393, height: 852 },
+    deviceScaleFactor: 3
+  }
+  const context = await browser.newContext(IPHONE)
+  await keepAppModuleUrls(context)
+  const page = await context.newPage()
+  page.on('pageerror', (e) => failures.push('page error: ' + e.message))
+  await page.goto(`${BASE}?app`, { waitUntil: 'load' })
+  await page.getByText('Try with example PDF').click()
+  await page.waitForSelector('[data-page-index="0"] canvas', { timeout: 30000 })
+  await page.waitForTimeout(1200)
+  await page.getByRole('button', { name: 'Mark up' }).click()
+  await page.waitForTimeout(1000)
+  const cdp = await context.newCDPSession(page)
+  const touch = (type, points) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points })
+  const store = (src) =>
+    page.evaluate(async (src) => {
+      const m = await (globalThis.__appImport ?? ((p) => import(p)))('/src/stores/annotationStore.ts')
+      // eslint-disable-next-line no-new-func
+      return new Function('s', src)(m.useAnnotationStore.getState())
+    }, src)
+  const box = (i) =>
+    page.evaluate((i) => {
+      const r = document.querySelector(`[data-page-index="${i}"]`).getBoundingClientRect()
+      return { left: r.left, top: r.top, width: r.width, height: r.height, viewH: document.querySelector('.overflow-auto').clientHeight }
+    }, i)
+  // Where (x, y) on screen is on the page, in page pixels at that box's size.
+  const offBy = (a, b, x, y) =>
+    Math.hypot(((x - a.left) / a.width - (x - b.left) / b.width) * b.width, ((y - a.top) / a.height - (y - b.top) / b.height) * b.height)
+  // A real pinch: one finger, then the other a beat later, spread, lift one, lift both.
+  async function realPinch(x, y, spread, endSpread) {
+    await touch('touchStart', [{ x: x - spread / 2, y, id: 1 }])
+    await page.waitForTimeout(50)
+    const pressed = await box(0)
+    await touch('touchStart', [{ x: x - spread / 2, y, id: 1 }, { x: x + spread / 2, y, id: 2 }])
+    for (let i = 1; i <= 16; i++) {
+      const half = (spread + ((endSpread - spread) * i) / 16) / 2
+      await touch('touchMove', [{ x: x - half, y, id: 1 }, { x: x + half, y, id: 2 }])
+    }
+    await page.waitForTimeout(100)
+    const during = await box(0)
+    await touch('touchEnd', [{ x: x + endSpread / 2, y, id: 2 }])
+    await touch('touchEnd', [])
+    await page.waitForTimeout(1500)
+    const after = await box(0)
+    return { pressed, during, after }
+  }
+
+  // A highlight across page 1, then nothing in hand, as in the recording.
+  await page.getByRole('button', { name: 'Highlight', exact: true }).click()
+  let p1 = await box(0)
+  const lineY = p1.top + p1.height * 0.5
+  await touch('touchStart', [{ x: p1.left + p1.width * 0.2, y: lineY, id: 1 }])
+  for (let i = 1; i <= 10; i++) await touch('touchMove', [{ x: p1.left + p1.width * (0.2 + 0.06 * i), y: lineY, id: 1 }])
+  await touch('touchEnd', [])
+  await page.waitForTimeout(500)
+  await store("s.setTool('select'); s.setSelected(null)")
+  await page.waitForTimeout(600)
+
+  // Pinch out about a point right of the middle of page 1, the first finger
+  // on the highlight.
+  const before = await box(0)
+  const y = before.top + before.height * 0.5
+  const x = 230
+  const { pressed, during, after } = await realPinch(x, y, 60, 130)
+  check('the first finger on a mark does not move the pages', offBy(before, pressed, x, y) < 2 && pressed.viewH === before.viewH,
+    `page moved ${offBy(before, pressed, x, y).toFixed(1)}px, document ${before.viewH}px tall then ${pressed.viewH}px`)
+  check('the point under the fingers stays under them while they pinch', offBy(before, during, x, y) < 3,
+    `${offBy(before, during, x, y).toFixed(1)}px off`)
+  check('…and when they lift (it slid 180px sideways)', offBy(during, after, x, y) < 3,
+    `${offBy(during, after, x, y).toFixed(1)}px on release, page left ${during.left.toFixed(1)} -> ${after.left.toFixed(1)}`)
+  check('the zoom took', after.width > before.width * 2, `${(after.width / before.width).toFixed(2)}x`)
+  check('the pinch leaves the mark under the first finger unselected', (await store('return s.selectedIds.length')) === 0)
+  check('…and nothing in hand', (await store('return s.tool')) === 'select')
+
+  // Back out again, about a point left of the middle, on a bare bit of page.
+  const zoomed = await box(0)
+  const back = await realPinch(150, 300, 160, 80)
+  check('pinching back in: still on release', offBy(back.during, back.after, 150, 300) < 3,
+    `${offBy(back.during, back.after, 150, 300).toFixed(1)}px on release`)
+  check('…and it did shrink', back.after.width < zoomed.width * 0.7, `${(back.after.width / zoomed.width).toFixed(2)}x`)
+
+  // A tap on the mark still selects it (the sheet's hold only lasts the press).
+  p1 = await box(0)
+  await touch('touchStart', [{ x: p1.left + p1.width * 0.5, y: p1.top + p1.height * 0.5, id: 1 }])
+  await touch('touchEnd', [])
+  await page.waitForTimeout(500)
+  check('a tap on the highlight still selects it', (await store('return s.selectedIds.length')) === 1)
+  check('…and the sheet shows its width', (await page.getByText('Width', { exact: true }).count()) > 0)
   await context.close()
 }
 

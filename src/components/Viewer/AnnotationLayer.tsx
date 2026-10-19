@@ -1117,6 +1117,29 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // of writing it to the store. Cleared when a fresh gesture legitimately
   // starts (a new pointerdown or dragstart) or when the cancelled drag ends.
   const gestureCancelled = useRef(false)
+  // ⚠️ WHAT A FINGER'S PRESS CHANGED, SO A PINCH CAN PUT IT BACK (James,
+  // 2026-10-19, "see how it jumps on zoom"). A press selects the mark under it
+  // straight away (so it can be dragged at once), and a press on bare page in
+  // Select deselects. When that press turns out to be the first finger of a
+  // pinch, the change stood: on the phone the Mark up sheet grew to show the
+  // mark's colour and width (or shrank, deselecting), the document above it
+  // got shorter and the pages slid up 33px just as the pinch began, and the
+  // mark was left selected afterwards. The selection and tool as they were
+  // before this press, while it is the only finger down; `undoPress` restores
+  // them, and `pressBecamePinch` keeps the lifting finger's tap from
+  // selecting the mark all over again.
+  const pressBefore = useRef<{ ids: string[]; tool: Tool } | null>(null)
+  const pressBecamePinch = useRef(false)
+  function undoPress() {
+    const before = pressBefore.current
+    pressBefore.current = null
+    pressBecamePinch.current = true
+    if (!before) return
+    const st = useAnnotationStore.getState()
+    if (st.tool !== before.tool) setTool(before.tool)
+    const now = useAnnotationStore.getState().selectedIds
+    if (now.length !== before.ids.length || now.some((id, i) => id !== before.ids[i])) setSelectedIds(before.ids)
+  }
   // A placement that is waiting to find out whether this gesture is a tap or a
   // swipe. The one-shot tools (text/tick/cross/signature/image) used to commit
   // on pointerDOWN, so on a phone the box landed the instant a finger touched
@@ -1434,7 +1457,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // its own Stage and pointer bookkeeping), so react to the viewer's flag too
   // rather than relying on this layer seeing both fingers.
   useEffect(() => {
-    if (pinching) cancelGesture()
+    if (pinching) {
+      cancelGesture()
+      undoPress()
+    }
     // cancelGesture only touches refs + setState, so re-running solely on the
     // pinch edge is what we want.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1491,11 +1517,17 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       // touch handler) also catches one straddling two pages, where each
       // layer only ever sees a single finger.
       cancelGesture()
+      undoPress()
       return
     }
     // A clean single-pointer gesture is starting — whatever a previous pinch
     // cancelled is behind us.
     gestureCancelled.current = false
+    pressBecamePinch.current = false
+    {
+      const st = useAnnotationStore.getState()
+      pressBefore.current = e.evt.pointerType === 'touch' ? { ids: st.selectedIds, tool: st.tool } : null
+    }
     if (editingId) return // ignore stage events while typing
     if (tool === 'hand') return // pan handled by PdfViewer
     // Let Konva's Transformer own clicks on its anchors / rotate knob —
@@ -1910,6 +1942,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // multi-touch — and abandon whatever it had started.
   function onPointerCancel(e: Konva.KonvaEventObject<PointerEvent>) {
     activePointerIds.current.delete(e.evt.pointerId)
+    pressBefore.current = null
     setHoverPos(null)
     cancelGesture()
   }
@@ -1925,6 +1958,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
 
   function onPointerUp(e?: Konva.KonvaEventObject<PointerEvent>) {
     if (e) activePointerIds.current.delete(e.evt.pointerId)
+    pressBefore.current = null
     // A one-shot placement armed on pointerdown and never disarmed by travel,
     // a pinch or a browser-owned scroll: the finger stayed put, so it was a tap.
     const tap = pendingTapRef.current
@@ -2234,6 +2268,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
 
   function onShapeClick(id: string, e?: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
     if (tool !== 'select') return
+    // The finger lifting off the end of a pinch is not a tap. See `pressBefore`.
+    if (pressBecamePinch.current) return
     // Shift-clicks are handled on pointerdown (toggle); don't let the trailing
     // click collapse the selection back to a single item.
     if (e?.evt && 'shiftKey' in e.evt && e.evt.shiftKey) return

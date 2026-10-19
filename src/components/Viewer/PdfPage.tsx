@@ -32,8 +32,12 @@ interface Props {
    * frame later. That one frame is the release flash: measured at **1.716×
    * too big** for a frame, which is exactly the gesture's own scale applied on
    * top of a layout that had already grown to match it.
+   *
+   * It carries the page and its new width because page 1's width is what the
+   * row of pages is padded by (see `--doc-display-width` in PdfViewer), and
+   * that has to change in this same commit too.
    */
-  onSized?: () => void
+  onSized?: (pageIndex: number, width: number) => void
   /**
    * Whether this page is near enough to the reader to hold pixels at all — its
    * BITMAP, and its interactive layers (the Konva annotation stage, the
@@ -266,7 +270,7 @@ function PdfPage({ doc, pageIndex, scale, isXfa, active, onSized }: Props) {
     const key = size ? `${size.width}x${size.height}` : ''
     if (key === sized.current) return
     sized.current = key
-    if (key) onSized?.()
+    if (size) onSized?.(pageIndex, size.width)
   })
 
   return (

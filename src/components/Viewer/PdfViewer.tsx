@@ -379,11 +379,38 @@ export default function PdfViewer() {
     el.scrollTop += r.top + a.fy * r.height - box.top - a.screenY
   }
 
+  // Page 1's width as the row of pages is padded by it: `--doc-display-width`,
+  // which centres page 1 in the window (the content's paddingInline) and
+  // lines the desktop toolbar up with the document.
+  //
+  // ⚠️ SET IN THE SAME COMMIT AS PAGE 1'S NEW SIZE, NEVER LATER (James,
+  // 2026-10-19, on the iPhone: "see how it jumps on zoom"). It used to be
+  // removed by a zoom's effect cleanup and set again from `doc.getPage(1)`'s
+  // promise — so for the moment in between the row was padded by HALF THE
+  // WINDOW. The pages took their new size in that gap, the committed zoom
+  // put the fingers' point back under them against that padding, and then
+  // the variable landed and the padding shrank back: every page slid
+  // sideways by the difference, 181px on a 393px iPhone pinching page 1 up
+  // to about 2x, after the fingers had lifted. Published from the page's own
+  // size report instead, the padding and the page change together and the
+  // anchor is restored against the layout that stays.
+  const displayWidthRef = useRef('')
+  function publishDisplayWidth(width: number) {
+    const value = `${width}px`
+    if (value === displayWidthRef.current) return
+    displayWidthRef.current = value
+    document.documentElement.style.setProperty('--doc-display-width', value)
+  }
+
   // Pages report a new box size here, from a LAYOUT effect — synchronously
   // after React writes it and before the browser paints. A settling zoom
   // listens; see `commitZoom`.
   const sizeListeners = useRef(new Set<() => void>())
-  const notifySized = useCallback(() => {
+  const notifySized = useCallback((pageIndex: number, width: number) => {
+    // Page 1's width pads the row of pages (see the content's style), so it
+    // is published HERE, in the commit that gave page 1 its new size and
+    // before any listener measures the layout. See `publishDisplayWidth`.
+    if (pageIndex === 0) publishDisplayWidth(width)
     // Copy first: a listener that finishes removes itself mid-iteration.
     for (const fn of [...sizeListeners.current]) fn()
     // A page taking its size changes which pages are on screen — see
@@ -1214,13 +1241,6 @@ export default function PdfViewer() {
       }, 0)
     }
 
-    doc.getPage(1).then((page) => {
-      if (cancelled) return
-      const { width } = page.getViewport({ scale })
-      document.documentElement.style.setProperty('--doc-display-width', `${width}px`)
-      updateScrollbar()
-    }).catch(() => {})
-
     updateScrollbar()
     const ro = scrollEl ? new ResizeObserver(updateScrollbar) : null
     if (scrollEl && ro) {
@@ -1233,10 +1253,16 @@ export default function PdfViewer() {
       cancelled = true
       if (timer) clearTimeout(timer)
       ro?.disconnect()
-      document.documentElement.style.removeProperty('--doc-display-width')
       document.documentElement.style.removeProperty('--doc-scrollbar-width')
     }
   }, [doc, scale])
+
+  // `--doc-display-width` (page 1's width) is published by `notifySized` as
+  // page 1 takes each new size; it goes only when the viewer does.
+  useEffect(() => () => {
+    displayWidthRef.current = ''
+    document.documentElement.style.removeProperty('--doc-display-width')
+  }, [])
 
   // Ctrl/Cmd+F opens the find bar (and re-focuses it if already open),
   // overriding the browser's own find. Find reads the text layer, which XFA

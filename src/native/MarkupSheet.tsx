@@ -74,9 +74,65 @@ function widthTarget(current: MarkupId | null, selected: Annotation | undefined)
   return null
 }
 
+// How long a press on the page may hold the sheet as it was before it changed
+// the selection. A pinch's second finger lands well inside this.
+const PRESS_HOLD_MS = 180
+
+/** The tool and selected mark the sheet shows: the store's, except that a
+ *  change made by a finger PRESSING the page is held back until that finger
+ *  lifts, or for `PRESS_HOLD_MS` if it stays down.
+ *
+ *  ⚠️ The sheet is part of the screen's layout, so a change in what it shows
+ *  changes the height of the document above it, and the pages (centred in
+ *  that height) slide up or down. A press selects the mark under it at once
+ *  (so it can be dragged), and on bare page deselects — so the first finger of
+ *  a pinch grew or shrank the sheet and the pages slid 34px under the fingers
+ *  just as the pinch began (James, 2026-10-19: "see how it jumps on zoom").
+ *  The pinch now puts the selection back (AnnotationLayer's `pressBefore`);
+ *  holding the sheet until then means it never moved at all. A tap shows its
+ *  options the moment the finger lifts. */
+function usePressHeld(tool: Tool, selectedId: string | null): { tool: Tool; selectedId: string | null } {
+  const [held, setHeld] = useState<{ tool: Tool; selectedId: string | null } | null>(null)
+  const pressing = useRef(new Set<number>())
+  const latest = useRef({ tool, selectedId })
+  latest.current = { tool, selectedId }
+  // Capture listeners on the window run before the page's own (Konva's)
+  // pointerdown, which is where the selection changes.
+  useEffect(() => {
+    const down = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') return
+      if (!pressing.current.size) setHeld({ ...latest.current })
+      pressing.current.add(e.pointerId)
+    }
+    const up = (e: PointerEvent) => {
+      if (!pressing.current.delete(e.pointerId) || pressing.current.size) return
+      setHeld(null)
+    }
+    const opts = { capture: true, passive: true }
+    window.addEventListener('pointerdown', down, opts)
+    window.addEventListener('pointerup', up, opts)
+    window.addEventListener('pointercancel', up, opts)
+    return () => {
+      window.removeEventListener('pointerdown', down, opts)
+      window.removeEventListener('pointerup', up, opts)
+      window.removeEventListener('pointercancel', up, opts)
+    }
+  }, [])
+  // A finger held down (a drag, a long press) lets the sheet catch up.
+  const differs = !!held && (held.tool !== tool || held.selectedId !== selectedId)
+  useEffect(() => {
+    if (!differs) return
+    const timer = setTimeout(() => setHeld(null), PRESS_HOLD_MS)
+    return () => clearTimeout(timer)
+  }, [differs])
+  return held ?? { tool, selectedId }
+}
+
 export default function MarkupSheet() {
   const t = useT()
-  const tool = useAnnotationStore((s) => s.tool)
+  const storeTool = useAnnotationStore((s) => s.tool)
+  const storeSelectedId = useAnnotationStore((s) => s.selectedId)
+  const { tool, selectedId } = usePressHeld(storeTool, storeSelectedId)
   const color = useAnnotationStore((s) => s.color)
   const strokeWidth = useAnnotationStore((s) => s.strokeWidth)
   const highlightWidth = useAnnotationStore((s) => s.highlightWidth)
@@ -84,7 +140,7 @@ export default function MarkupSheet() {
   const viewScale = useAnnotationStore((s) => s.viewScale)
   const armedQr = useAnnotationStore((s) => !!s.uploadedImageQr)
   const fontFamily = useAnnotationStore((s) => s.fontFamily)
-  const selected = useAnnotationStore((s) => s.annotations.find((a) => a.id === s.selectedId))
+  const selected = useAnnotationStore((s) => s.annotations.find((a) => a.id === selectedId))
   const widthId = useId()
   const pictureRef = useRef<HTMLInputElement>(null)
   const sheetRef = useRef<HTMLElement>(null)
