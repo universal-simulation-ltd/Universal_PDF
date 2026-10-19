@@ -33,6 +33,9 @@ const annotate: Messages['annotate'] = {
   'selection.every_page_done_one': 'Ajouté sur {count} autre page', // shown for a moment after Put on every page; {count} = pages it was added to
   'selection.every_page_done_other': 'Ajouté sur {count} autres pages', // as above, more than one page
   'selection.every_page_already': 'Déjà sur chaque page', // Put on every page found it already on every page, in the same place
+  'selection.every_page_remove': 'Retirer des autres pages', // the same button once the mark is on every page: take the copies off the other pages, keep this one
+  'selection.every_page_removed_one': 'Retiré de {count} autre page', // shown for a moment after that; {count} = pages it was taken off
+  'selection.every_page_removed_other': 'Retiré de {count} autres pages', // as above, more than one page
 
   // AnnotationLayer — text pill (size, bold / italic / underline / link)
   'text.bold_letter': 'G',

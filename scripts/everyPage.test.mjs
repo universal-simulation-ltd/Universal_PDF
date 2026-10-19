@@ -13,7 +13,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { copiesForEveryPage, placeOnPage } from '../src/lib/everyPage.ts'
+import { copiesForEveryPage, copiesOnOtherPages, placeOnPage } from '../src/lib/everyPage.ts'
 
 const A4 = { w: 595, h: 842 }
 const LETTER = { w: 612, h: 792 }
@@ -60,4 +60,17 @@ test('a page that already has it in that place gets nothing', () => {
 
 test('a one-page document has nowhere to copy to', () => {
   assert.equal(copiesForEveryPage(stamp, [A4], [stamp], id).length, 0)
+})
+
+test('taking it off the other pages finds every copy, and only the copies', () => {
+  const sizes = [A4, LETTER, A4]
+  const copies = copiesForEveryPage(stamp, sizes, [stamp], id)
+  // Moved by hand on page 3: no longer where the button put it, so it stays.
+  const moved = { ...copies[1], id: 'moved', x: copies[1].x + 50 }
+  // Another picture in the same spot is not this one.
+  const other = { ...copies[0], id: 'other', src: 'data:image/png;base64,BBB' }
+  const ids = copiesOnOtherPages(stamp, sizes, [stamp, copies[0], moved, other])
+  assert.deepEqual(ids, [copies[0].id])
+  // Selected on another page, it is the original on page 1 that goes.
+  assert.deepEqual(copiesOnOtherPages(copies[0], sizes, [stamp, ...copies]).sort(), [stamp.id, copies[1].id].sort())
 })

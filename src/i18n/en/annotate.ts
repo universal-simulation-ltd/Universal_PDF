@@ -33,6 +33,9 @@ export default {
   'selection.every_page_done_one': 'Added to {count} more page', // shown for a moment after Put on every page; {count} = pages it was added to
   'selection.every_page_done_other': 'Added to {count} more pages', // as above, more than one page
   'selection.every_page_already': 'Already on every page', // Put on every page found it already on every page, in the same place
+  'selection.every_page_remove': 'Take off the other pages', // the same button once the mark is on every page: take the copies off the other pages, keep this one
+  'selection.every_page_removed_one': 'Taken off {count} other page', // shown for a moment after that; {count} = pages it was taken off
+  'selection.every_page_removed_other': 'Taken off {count} other pages', // as above, more than one page
 
   // AnnotationLayer — text pill (size, bold / italic / underline / link)
   'text.bold_letter': 'B', // one-letter button face for Bold; use your language's usual letter

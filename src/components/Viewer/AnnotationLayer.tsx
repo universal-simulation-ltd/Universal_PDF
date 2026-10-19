@@ -16,7 +16,7 @@ import {
 import type Konva from 'konva'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { usePdfStore } from '../../stores/pdfStore'
-import { copiesForEveryPage, type PageSize } from '../../lib/everyPage'
+import { copiesForEveryPage, copiesOnOtherPages, type PageSize } from '../../lib/everyPage'
 import { useSignatureStore, type PendingExtra } from '../../stores/signatureStore'
 import { useCoarsePointer } from '../../hooks/useCoarsePointer'
 import { useImage } from '../../lib/useImage'
@@ -47,6 +47,7 @@ import { SIG_DETAIL_SIZE, SIG_LABEL_SIZE, estimateTextWidth, sigFieldLayout, sig
 import type { Annotation, DrawAnnotation, ImageAnnotation, ImageBorder, SignatureData, SignatureFieldAnnotation, SigAlign, TextAnnotation, Tool, TextRun } from '../../types/annotations'
 import type { QrPlacement } from '../../lib/qr/design'
 import { getT, useT } from '../../i18n'
+import type { PDFDocumentProxy } from '../../lib/pdfjs'
 
 // On-screen font stacks, keyed by family id (shared with the toolbar + export).
 const FONT_STACK = FONT_CSS
@@ -1008,6 +1009,26 @@ function SigField({
 // or palm can't draw with the pen or highlighter (see onPointerDown).
 let penSeen = false
 
+// Every page's size at scale 1, once per document — "Put on every page" needs
+// them all to place the copies, and its button needs them to know whether the
+// selected mark is already on every page (James, 2026-10-19). Keyed on the
+// document, and on its page count, since pages can be added and taken away.
+const pageSizesCache = new WeakMap<PDFDocumentProxy, { pages: number; sizes: Promise<PageSize[]> }>()
+function pageSizesOf(doc: PDFDocumentProxy): Promise<PageSize[]> {
+  const hit = pageSizesCache.get(doc)
+  if (hit && hit.pages === doc.numPages) return hit.sizes
+  const sizes = Promise.all(
+    Array.from({ length: doc.numPages }, (_, i) =>
+      doc.getPage(i + 1).then((p) => {
+        const v = p.getViewport({ scale: 1 })
+        return { w: v.width, h: v.height }
+      })
+    )
+  )
+  pageSizesCache.set(doc, { pages: doc.numPages, sizes })
+  return sizes
+}
+
 export default function AnnotationLayer({ pageIndex, width, height, scale }: Props) {
   const t = useT()
   const tool = useAnnotationStore((s) => s.tool)
@@ -1081,6 +1102,14 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const numPages = usePdfStore((s) => s.numPages)
   // What "Put on every page" just did, said for a moment beside its button.
   const [everyPageSaid, setEveryPageSaid] = useState<{ id: string; text: string } | null>(null)
+  const pdfDoc = usePdfStore((s) => s.doc)
+  const [pageSizes, setPageSizes] = useState<PageSize[] | null>(null)
+  useEffect(() => {
+    if (!pdfDoc) return
+    let live = true
+    void pageSizesOf(pdfDoc).then((sizes) => { if (live) setPageSizes(sizes) })
+    return () => { live = false }
+  }, [pdfDoc, numPages])
   // ⚠️ `budgetedPageCount`, NOT `numPages` — the same divisor `PdfPage` uses
   // for the bitmap underneath. This stage only exists for the band of pages
   // around the reader, so sharing the allowance with the whole document drew
@@ -3935,17 +3964,31 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         // ✏️ is: a row running right falls off a narrow screen.
         const everyPage = selected.type === 'image' && numPages > 1 ? selected : null
         const everyPageTop = top + (placedQr ? 72 : 36)
+        // Once it is on every page, the same button takes the copies off the
+        // other pages again — with a no-entry sign over it, red like the bin
+        // (James, 2026-10-19). Until the page sizes are in, it offers to add.
+        const onEveryPage =
+          everyPage && pageSizes && pageSizes.length === numPages
+            ? copiesForEveryPage(everyPage, pageSizes, allAnnotations, () => '').length === 0
+            : false
+        const sayEveryPage = (id: string, text: string) => {
+          setEveryPageSaid({ id, text })
+          window.setTimeout(() => setEveryPageSaid((cur) => (cur?.id === id && cur.text === text ? null : cur)), 2600)
+        }
+        const takeOffOtherPages = async (a: ImageAnnotation) => {
+          const doc = usePdfStore.getState().doc
+          if (!doc) return
+          const ids = copiesOnOtherPages(a, await pageSizesOf(doc), useAnnotationStore.getState().annotations)
+          if (!ids.length) return
+          // One undo step puts them all back; the one here stays selected.
+          removeMany(ids)
+          setSelected(a.id)
+          sayEveryPage(a.id, t.plural('annotate.selection.every_page_removed', ids.length))
+        }
         const putOnEveryPage = async (a: ImageAnnotation) => {
           const doc = usePdfStore.getState().doc
           if (!doc) return
-          const sizes: PageSize[] = await Promise.all(
-            Array.from({ length: doc.numPages }, (_, i) =>
-              doc.getPage(i + 1).then((p) => {
-                const v = p.getViewport({ scale: 1 })
-                return { w: v.width, h: v.height }
-              })
-            )
-          )
+          const sizes = await pageSizesOf(doc)
           const copies = copiesForEveryPage(a, sizes, useAnnotationStore.getState().annotations, () => crypto.randomUUID())
           if (copies.length) {
             addMany(copies)
@@ -3953,11 +3996,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             // selection, so its buttons don't vanish under the finger.
             setSelected(a.id)
           }
-          setEveryPageSaid({
-            id: a.id,
-            text: copies.length ? t.plural('annotate.selection.every_page_done', copies.length) : t('annotate.selection.every_page_already')
-          })
-          window.setTimeout(() => setEveryPageSaid((cur) => (cur?.id === a.id ? null : cur)), 2600)
+          sayEveryPage(a.id, copies.length ? t.plural('annotate.selection.every_page_done', copies.length) : t('annotate.selection.every_page_already'))
         }
         return (
           <>
@@ -4025,17 +4064,30 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             {everyPage && (
               <button
                 type="button"
-                title={t('annotate.selection.every_page')}
-                aria-label={t('annotate.selection.every_page')}
+                title={t(onEveryPage ? 'annotate.selection.every_page_remove' : 'annotate.selection.every_page')}
+                aria-label={t(onEveryPage ? 'annotate.selection.every_page_remove' : 'annotate.selection.every_page')}
                 onMouseDown={(e) => e.stopPropagation()}
-                onClick={(e) => { e.stopPropagation(); void putOnEveryPage(everyPage) }}
+                onClick={(e) => { e.stopPropagation(); void (onEveryPage ? takeOffOtherPages : putOnEveryPage)(everyPage) }}
                 style={{ position: 'absolute', left, top: everyPageTop, zIndex: 21 }}
-                className="w-8 h-8 rounded-full bg-white shadow-lg border border-slate-300 text-orange-700 hover:bg-orange-700 hover:text-white hover:border-orange-700 flex items-center justify-center transition-colors"
+                className={`w-8 h-8 rounded-full bg-white shadow-lg border border-slate-300 flex items-center justify-center transition-colors ${
+                  onEveryPage
+                    ? 'text-red-600 hover:bg-red-600 hover:text-white hover:border-red-600'
+                    : 'text-orange-700 hover:bg-orange-700 hover:text-white hover:border-orange-700'
+                }`}
               >
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M8 3h10a2 2 0 0 1 2 2v12" />
-                  <rect x="4" y="7" width="12" height="14" rx="2" />
-                  <path d="M10 11v6M7 14h6" />
+                <svg viewBox="0 0 24 24" width={onEveryPage ? 20 : 16} height={onEveryPage ? 20 : 16} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <g opacity={onEveryPage ? 0.5 : 1} transform={onEveryPage ? 'translate(3.6 3.6) scale(0.7)' : undefined}>
+                    <path d="M8 3h10a2 2 0 0 1 2 2v12" />
+                    <rect x="4" y="7" width="12" height="14" rx="2" />
+                    <path d="M10 11v6M7 14h6" />
+                  </g>
+                  {onEveryPage && (
+                    // The no-entry sign, over the "every page" pages.
+                    <>
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M4.9 4.9l14.2 14.2" />
+                    </>
+                  )}
                 </svg>
               </button>
             )}

@@ -10,7 +10,9 @@
 //     one-page document); a tap copies it to every other page and says so.
 //   • Copies keep their distance from the nearest edges on a page of another
 //     size (the arithmetic is scripts/everyPage.test.mjs).
-//   • The original stays selected; a second tap adds nothing.
+//   • The original stays selected; once it is on every page the button
+//     becomes "Take off the other pages" (a no-entry sign over it, James,
+//     2026-10-19), which takes every copy but this one off — in one undo step.
 //   • ONE undo takes every copy away.
 //   • Export: the stamp is on every page of the file.
 
@@ -123,9 +125,8 @@ check('…the same distance from the bottom-right corner on the Letter page', on
 check('it says how many pages it added to', (await page.getByRole('status').filter({ hasText: 'Added to 2 more pages' }).count()) === 1)
 check('the original stays selected', (await store('return s.selectedId')) === 'st')
 await page.screenshot({ path: join(process.env.SHOTS ?? tmpdir(), 'every-page.png') })
-await btn.click()
-await page.waitForTimeout(400)
-check('a second tap adds nothing, and says so', (await images()).length === 3 && (await page.getByRole('status').filter({ hasText: 'Already on every page' }).count()) === 1)
+const off = page.getByRole('button', { name: 'Take off the other pages' })
+check('once on every page, the button offers to take them off instead', (await off.count()) === 1 && (await btn.count()) === 0)
 
 console.log('\nexport')
 const out = await page.evaluate(
@@ -153,6 +154,16 @@ const out = await page.evaluate(
   { src: pdf.toString('base64'), annotations: await images() },
 )
 check('the stamp is on every page of the file', out.length === 3 && out.every((px) => px[0] > 200 && px[1] < 60 && px[2] < 60), json(out))
+
+console.log('\ntaking it off the other pages')
+await off.click()
+await page.waitForTimeout(400)
+check('every copy but this one goes', json((await images()).map((a) => [a.id, a.pageIndex])) === '[["st",0]]', json(await images()))
+check('it says how many pages it took it off', (await page.getByRole('status').filter({ hasText: 'Taken off 2 other pages' }).count()) === 1)
+check('the original is still selected, and the button offers to add again', (await store('return s.selectedId')) === 'st' && (await btn.count()) === 1)
+await store('s.undo()')
+await page.waitForTimeout(200)
+check('one undo puts them all back', json((await images()).map((a) => a.pageIndex).sort()) === '[0,1,2]', json(await images()))
 
 console.log('\nundo')
 await store('s.undo()')

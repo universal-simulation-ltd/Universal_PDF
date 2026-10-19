@@ -24,9 +24,16 @@ export function placeOnPage(a: Pick<ImageAnnotation, 'x' | 'y' | 'width' | 'heig
   return { x: clamp(across, a.width, to.w), y: clamp(down, a.height, to.h) }
 }
 
+/** Is `b` the copy of a picture with this `src` that would sit at (x, y) on `pageIndex`? */
+function isCopyAt(b: Annotation, src: string, pageIndex: number, x: number, y: number): boolean {
+  return b.type === 'image' && b.pageIndex === pageIndex && b.src === src && Math.abs(b.x - x) < 1 && Math.abs(b.y - y) < 1
+}
+
 /**
  * Copies of `a` for every other page, skipping a page that already has the
- * same picture in the same place (so a second tap adds nothing).
+ * same picture in the same place (so a second tap adds nothing). Empty means
+ * `a` is already on every page — its button then offers to take the copies
+ * off instead (`copiesOnOtherPages`).
  */
 export function copiesForEveryPage(
   a: ImageAnnotation,
@@ -40,10 +47,27 @@ export function copiesForEveryPage(
   sizes.forEach((to, pageIndex) => {
     if (pageIndex === a.pageIndex) return
     const { x, y } = placeOnPage(a, from, to)
-    const already = existing.some(
-      (b) => b.type === 'image' && b.pageIndex === pageIndex && b.src === a.src && Math.abs(b.x - x) < 1 && Math.abs(b.y - y) < 1
-    )
-    if (!already) out.push({ ...a, id: makeId(), pageIndex, x, y })
+    if (!existing.some((b) => isCopyAt(b, a.src, pageIndex, x, y))) out.push({ ...a, id: makeId(), pageIndex, x, y })
   })
   return out
+}
+
+/**
+ * The ids of `a`'s copies on the OTHER pages — the same picture, where "Put on
+ * every page" puts it — for "Take off the other pages" (James, 2026-10-19:
+ * "turn the button to the no-go symbol on top to show you can then remove it
+ * off all (bar the selected one)"). `a` itself always stays. Any other copy of
+ * the picture, moved somewhere else on its page by hand, is no longer "the
+ * copy" and stays too.
+ */
+export function copiesOnOtherPages(a: ImageAnnotation, sizes: PageSize[], existing: Annotation[]): string[] {
+  const from = sizes[a.pageIndex]
+  if (!from) return []
+  const ids: string[] = []
+  sizes.forEach((to, pageIndex) => {
+    if (pageIndex === a.pageIndex) return
+    const { x, y } = placeOnPage(a, from, to)
+    for (const b of existing) if (b.id !== a.id && isCopyAt(b, a.src, pageIndex, x, y)) ids.push(b.id)
+  })
+  return ids
 }
