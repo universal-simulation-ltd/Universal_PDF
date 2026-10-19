@@ -21,8 +21,8 @@
 //   • The Sign page can put a name and the date under the signature.
 //   • Tapping a shape (or any mark) shows its own options in the sheet.
 //   • The bar is Fill · Mark up · Sign · Share; Pages is in What else (⋯).
-//   • The tool row shows it scrolls: a nudge along and back as it appears, and
-//     a fade at the edge with more beyond it.
+//   • The tool row shows it scrolls: a fade at the edge with more beyond it,
+//     and no nudge (dropped 2026-10-19).
 //   • QR code is a page of its own, and its link box is not focused on arrival.
 //   • Text and notes get a choice of three fonts.
 //   • A note being typed on takes its words with it when it is dragged.
@@ -138,7 +138,8 @@ console.log('\nform-field names fit their boxes')
 console.log('\nMark up: the way back, and the tools further along the row')
 await page.getByRole('button', { name: 'Mark up' }).click()
 {
-  // The row shows it scrolls: a nudge along and back, and a fade at the end.
+  // The row shows it scrolls with a fade at the end, and stays put: the nudge
+  // along and back was dropped (James, 2026-10-19).
   const trace = await page.evaluate(async () => {
     const out = []
     const rest = document.querySelector('section [role="group"]')?.scrollLeft ?? 0
@@ -151,8 +152,7 @@ await page.getByRole('button', { name: 'Mark up' }).click()
     const g = document.querySelector('section [role="group"]')
     return { rest, peak: Math.max(...out) - rest, end: (g?.scrollLeft ?? -1) - rest, mask: g ? getComputedStyle(g).webkitMaskImage || getComputedStyle(g).maskImage : '' }
   })
-  check('the tool row nudges along to show it scrolls', trace.peak > 20, json(trace))
-  check('…and comes back to where it rests', Math.abs(trace.end) <= 1, json(trace))
+  check('the tool row does not nudge', trace.peak <= 1, json(trace))
   check('…and fades where there is more', /gradient/.test(trace.mask), json(trace.mask))
 }
 {

@@ -201,46 +201,50 @@ export default function DocumentScreen() {
         <PlacementHint />
       </main>
 
-      {!markingUp && (
-        <nav
-          aria-label={t('phone.tools_aria')}
-          className="absolute left-3.5 right-3.5 grid grid-cols-4 px-1.5 py-2 rounded-3xl z-[60]"
-          style={{
-            bottom: 'calc(env(safe-area-inset-bottom) + 18px)',
-            background: 'var(--np-sheet)',
-            boxShadow: '0 10px 26px rgba(60,45,20,0.2)',
-          }}
-        >
-          {tools.map((b) => {
-            const on = active === b.id
-            return (
-              <button
-                key={b.id}
-                type="button"
-                aria-pressed={b.id === 'fill' || b.id === 'markup' ? on : undefined}
-                onClick={() => onBar(b.id)}
-                className="flex flex-col items-center justify-center gap-1.5 min-h-[58px]"
-                style={{ color: on ? 'var(--np-cobalt-deep)' : 'var(--np-ink-2)' }}
+      {/* The bar stays under the Mark up sheet rather than going away, so
+          pulling the sheet down uncovers it as the sheet comes down (James,
+          2026-10-19: "reveal the main toolbar instead of only showing it when
+          fully hidden"). Out of reach while it's covered. */}
+      <nav
+        aria-label={t('phone.tools_aria')}
+        aria-hidden={markingUp || undefined}
+        {...(markingUp ? { inert: '' } : {})}
+        className={`absolute left-3.5 right-3.5 grid grid-cols-4 px-1.5 py-2 rounded-3xl ${markingUp ? 'z-[50]' : 'z-[60]'}`}
+        style={{
+          bottom: 'calc(env(safe-area-inset-bottom) + 18px)',
+          background: 'var(--np-sheet)',
+          boxShadow: '0 10px 26px rgba(60,45,20,0.2)',
+        }}
+      >
+        {tools.map((b) => {
+          const on = active === b.id
+          return (
+            <button
+              key={b.id}
+              type="button"
+              aria-pressed={b.id === 'fill' || b.id === 'markup' ? on : undefined}
+              onClick={() => onBar(b.id)}
+              className="flex flex-col items-center justify-center gap-1.5 min-h-[58px]"
+              style={{ color: on ? 'var(--np-cobalt-deep)' : 'var(--np-ink-2)' }}
+            >
+              <span
+                className="relative w-[50px] h-8 rounded-xl flex items-center justify-center"
+                style={{ background: on ? 'var(--np-cobalt)' : 'transparent' }}
               >
-                <span
-                  className="relative w-[50px] h-8 rounded-xl flex items-center justify-center"
-                  style={{ background: on ? 'var(--np-cobalt)' : 'transparent' }}
-                >
-                  <Icon d={b.icon} size={22} stroke={on ? '#ffffff' : 'var(--np-ink-2)'} />
-                  {on && (
-                    <span
-                      aria-hidden="true"
-                      className="absolute left-[9px] right-[9px] -bottom-1.5 h-1 rounded-[2px_4px_3px_2px]"
-                      style={{ background: 'var(--np-orange)', transform: 'rotate(-3deg)' }}
-                    />
-                  )}
-                </span>
-                <span className="text-[12px] font-bold">{b.label}</span>
-              </button>
-            )
-          })}
-        </nav>
-      )}
+                <Icon d={b.icon} size={22} stroke={on ? '#ffffff' : 'var(--np-ink-2)'} />
+                {on && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute left-[9px] right-[9px] -bottom-1.5 h-1 rounded-[2px_4px_3px_2px]"
+                    style={{ background: 'var(--np-orange)', transform: 'rotate(-3deg)' }}
+                  />
+                )}
+              </span>
+              <span className="text-[12px] font-bold">{b.label}</span>
+            </button>
+          )
+        })}
+      </nav>
 
       {markingUp && <MarkupSheet />}
     </div>

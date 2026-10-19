@@ -233,13 +233,11 @@ export function Card({ children }: { children: ReactNode }) {
  * A row that scrolls sideways shows that it does (James, 2026-10-18: "needs to
  * be obvious you can scroll … make it a global rule — maybe it could nudge
  * slightly on page load"; Docs_UNI_SIM/BRANDING.md → "A row that scrolls shows
- * it scrolls"). Two signs, both only while there IS more to see:
- *
- *   • a nudge — shortly after it appears the row slides a little way along
- *     and back, once, so the hidden part peeks out. Not with reduced motion,
- *     and given up the moment a finger lands on it;
- *   • a fade at each edge that has more beyond it (`style`, a CSS mask), so
- *     a cut-off item reads as "continues" rather than "clipped".
+ * it scrolls"): a fade at each edge that has more beyond it (`style`, a CSS
+ * mask), so the cut-off item reads as "continues" rather than "clipped". It
+ * also nudged along and back as it appeared until James dropped that
+ * (2026-10-19: "doesn't need the peek anymore, the fade on the last item works
+ * well").
  *
  * Spread `style` onto the scroller and give it `ref`. ⚠️ The scroller must be
  * mounted with the component that calls this (the effect runs once): a row
@@ -261,48 +259,8 @@ export function useScrollHint<T extends HTMLElement>(): { ref: React.RefObject<T
     const ro = new ResizeObserver(measure)
     ro.observe(el)
 
-    let frame = 0
-    let stopped = false
-    const stop = () => {
-      stopped = true
-      cancelAnimationFrame(frame)
-      el.style.scrollSnapType = ''
-    }
-    el.addEventListener('pointerdown', stop, { passive: true })
-    el.addEventListener('wheel', stop, { passive: true })
-    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    const timer = window.setTimeout(() => {
-      const max = el.scrollWidth - el.clientWidth
-      // From where it rests — a snapping row can rest a few pixels in — and
-      // with the snapping off meanwhile, or it pulls every step back.
-      const base = el.scrollLeft
-      if (reduced || stopped || max - base < 8 || base > 24) return
-      const reach = Math.min(56, max - base)
-      const snap = el.style.scrollSnapType
-      el.style.scrollSnapType = 'none'
-      const start = performance.now()
-      const OUT = 420
-      const HOLD = 160
-      const BACK = 460
-      const ease = (p: number) => 1 - Math.pow(1 - p, 3)
-      const step = (now: number) => {
-        if (stopped) return
-        const t = now - start
-        const x =
-          t < OUT ? reach * ease(t / OUT) : t < OUT + HOLD ? reach : reach * (1 - ease(Math.min(1, (t - OUT - HOLD) / BACK)))
-        el.scrollLeft = base + x
-        if (t < OUT + HOLD + BACK) frame = requestAnimationFrame(step)
-        else el.style.scrollSnapType = snap
-      }
-      frame = requestAnimationFrame(step)
-    }, 450)
-
     return () => {
-      window.clearTimeout(timer)
-      stop()
       el.removeEventListener('scroll', measure)
-      el.removeEventListener('pointerdown', stop)
-      el.removeEventListener('wheel', stop)
       ro.disconnect()
     }
   }, [])
