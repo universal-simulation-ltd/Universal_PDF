@@ -124,7 +124,7 @@ const pdf = await testPdf()
 // phone-width window starts with the pages in a row (2026-10-12), and the
 // checks below were written for the column: the anchor holding up and down,
 // the sideways re-centre. The row's own case is at the end of the pinches.
-async function openViewer(options, scroll = 'vertical') {
+async function openViewer(options, scroll = 'vertical', { example = false } = {}) {
   const context = await browser.newContext(options)
   await context.addInitScript((v) => {
     try { localStorage.setItem('unisim:default-view:pdf:page-scroll', v) } catch { /* no storage */ }
@@ -138,7 +138,16 @@ async function openViewer(options, scroll = 'vertical') {
     await browser.close()
     process.exit(2)
   }
-  await page.setInputFiles('input[type=file]', { name: 'pinch.pdf', mimeType: 'application/pdf', buffer: pdf })
+  // The app's own example — form fields, an annotation layer — makes React's
+  // commit of a new page size slow enough for a paint to land before it, which
+  // the bare test PDF never does. Built in the page, from the dev server.
+  const buffer = example
+    ? Buffer.from(await page.evaluate(async () => {
+      const m = await import('/src/lib/examplePdf.ts')
+      return Array.from(await m.createExamplePdfBytes())
+    }))
+    : pdf
+  await page.setInputFiles('input[type=file]', { name: 'pinch.pdf', mimeType: 'application/pdf', buffer })
   await page.waitForSelector('[data-page-index="0"] canvas', { timeout: 30000 })
   await page.waitForTimeout(1200)
   const cdp = await context.newCDPSession(page)
@@ -606,7 +615,7 @@ console.log(`\nreleasing a trackpad pinch — the frame nobody could see (${scro
   // still wearing the gesture's transform, and the observer said so a frame
   // late. Captured at 1.716x too big for one frame, which is the gesture's own
   // scale sitting on a layout that had already grown to match it.
-  const { context, page } = await openViewer({ viewport: { width: 1200, height: 900 } }, scroll)
+  const { context, page } = await openViewer({ viewport: { width: 1200, height: 900 } }, scroll, { example: true })
 
   await page.evaluate(() => {
     window.__frames = []
@@ -614,7 +623,10 @@ console.log(`\nreleasing a trackpad pinch — the frame nobody could see (${scro
       const p = document.querySelector('[data-page-index="0"]')
       // getBoundingClientRect INCLUDES the transform — this is what the eye sees.
       // Its left edge too, and whether the gesture's transform is still on.
-      const r = p?.getBoundingClientRect()
+      // ⚠️ THE CANVAS, NOT THE PAGE BOX: the canvas used to take its new size
+      // a commit ahead of the box, so the box looked right through the very
+      // frame the picture was drawn 1.2x too big (2026-10-19).
+      const r = p?.querySelector('canvas').getBoundingClientRect()
       const held = document.querySelector('.overflow-auto').firstElementChild.style.transform !== ''
       if (p) window.__frames.push([Math.round(r.height), r.left, held])
       window.__raf = requestAnimationFrame(tick)

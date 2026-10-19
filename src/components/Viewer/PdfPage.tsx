@@ -125,9 +125,8 @@ function PdfPage({ doc, pageIndex, scale, isXfa, active, onSized }: Props) {
 
       // Layout takes the page's new size straight away (a committed zoom waits
       // on exactly that); the old bitmap stretches into it until the new one
-      // is ready.
-      canvas.style.width = `${cssViewport.width}px`
-      canvas.style.height = `${cssViewport.height}px`
+      // is ready. The canvas's own CSS size goes on in the layout effect below,
+      // in the same commit as the page box — never here (see there).
       setSize({ width: cssViewport.width, height: cssViewport.height })
 
       // ⚠️ A page outside the band around the reader HOLDS NO BITMAP. Dropping
@@ -265,11 +264,29 @@ function PdfPage({ doc, pageIndex, scale, isXfa, active, onSized }: Props) {
 
   // Layout effect, not effect: this has to run in the same commit that wrote
   // the new width/height, before the paint. See `onSized`.
+  //
+  // ⚠️ THE CANVAS TAKES ITS NEW SIZE HERE TOO, NOT WHERE THE SIZE IS WORKED OUT
+  // (James, 2026-10-19, screen recordings of the Windows app: "all
+  // manipulations except one glitched"). `render()` used to write
+  // `canvas.style.width/height` itself and then `setSize` — and React commits
+  // that state later, often after a paint when the page carries form fields
+  // and an annotation layer. In between, the canvas was at the new zoom while
+  // the page box, and the zoom gesture's transform, were still at the old one:
+  // one frame painted at the gesture's scale on top of the new size (×1.22
+  // zooming in, ×0.78 zooming out, in the recordings), the same flash
+  // `commitZoom` exists to prevent, and invisible to it because no size report
+  // had happened yet. Written here, the canvas, the box, and the transform
+  // coming off all land before one paint.
   const sized = useRef<string>('')
   useLayoutEffect(() => {
     const key = size ? `${size.width}x${size.height}` : ''
     if (key === sized.current) return
     sized.current = key
+    const canvas = canvasRef.current
+    if (size && canvas) {
+      canvas.style.width = `${size.width}px`
+      canvas.style.height = `${size.height}px`
+    }
     if (size) onSized?.(pageIndex, size.width)
   })
 
