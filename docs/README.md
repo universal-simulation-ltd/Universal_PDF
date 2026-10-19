@@ -626,6 +626,20 @@ that already has the same picture in the same place. The copies are separate
 marks, added with `addMany` as ONE undo step; the original stays selected, and
 "Added to N more pages" shows beside the button for a moment.
 
+**Once it's on every page, the same button takes the copies off** (James,
+2026-10-19, `e3e71a9`: "turn the button to the no-go symbol on top to show you
+can then remove it off all (bar the selected one)"). The button gets a no-entry
+sign over its icon, turns red like the bin and reads "Take off the other pages";
+a tap removes every copy except the selected one as ONE undo step, keeps it
+selected, says "Taken off N other pages", and the button is "Put on every page"
+again. `copiesOnOtherPages()` sits beside `copiesForEveryPage()` and both use
+one `isCopyAt()` test, so "the copy" means exactly what the add would have
+made: a copy moved by hand, or a different picture in the same spot, is not a
+copy and stays. The button needs its state before it's tapped, so
+`AnnotationLayer` fetches the page sizes once per document (`pageSizesOf`,
+cached on the doc and its page count). Tests: `scripts/everyPage.test.mjs`,
+`e2e/every-page.e2e.mjs`.
+
 ## Text boxes: the size pill, the handles, and where the lines break
 
 **The pill is two rows** (James, 2026-10-18: "put it on two lines; 1 size 2
@@ -1829,6 +1843,17 @@ pinch along the row jumped sideways as it landed):
   `PresentMode` already worked this way), and a real, non-cancelled failure
   retries once after 500 ms. A catch{} that assumes "cancelled" also eats
   real failures — discriminate before swallowing.
+- ⚠️ **The canvas's CSS size goes on with the page size, in one layout
+  effect** (`63d3824`, James, 2026-10-19: every ctrl+wheel and trackpad zoom
+  on Windows flashed the page for one frame at the gesture's own scale, x1.22 /
+  x1.31 in, x0.78 out). `render()` used to write `canvas.style.width/height`
+  itself and then call `setSize`; React committed that later, often after a
+  paint when form fields and an annotation layer were on the page, so for a
+  frame the canvas was at the new zoom while the page box and the gesture's
+  transform were still at the old one. Never size the canvas outside the
+  effect that reports the page size. `test:pinch`'s trackpad-release case opens
+  the app's example document and samples the CANVAS, not the page box (the box
+  looked right through the bad frame); it fails on the old code at 1.716x.
 
 Still open here: no windowed rendering for very long documents —
 `renderBudget`'s `MIN_MAX_ZOOM` comment notes it.
