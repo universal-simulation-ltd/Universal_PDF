@@ -1790,8 +1790,9 @@ implementation, `Browser.open` rejects, and the handler's fallback puts the old
 
 ## Zoom and page rendering
 
-Two rules from a 2026-08-26 bug (a page rendered blank white with only its
-AcroForm field boxes visible, after a touchpad zoom):
+Rules from two bugs: 2026-08-26 (a page rendered blank white with only its
+AcroForm field boxes visible, after a touchpad zoom) and 2026-10-19 (a trackpad
+pinch along the row jumped sideways as it landed):
 
 - ⚠️ **On Windows a touchpad pinch IS ctrl+wheel** — a stream of dozens of
   events per second, not a mouse notch. Committing a full zoom (re-rasterizing
@@ -1801,6 +1802,23 @@ AcroForm field boxes visible, after a touchpad zoom):
   touch-pinch machinery in `PdfViewer.tsx`: CSS transform while ticks arrive,
   ONE `commitZoom` when they go quiet (120 ms settle), anchored under the
   cursor.
+- ⚠️ **Both gestures draw through one `gestureTransform()`** (`PdfViewer.tsx`,
+  `388a87c`, James, 2026-10-19). The ctrl+wheel preview used to be a copy of the
+  touch pinch's anchor arithmetic, so the row-end clamps the touch pinch gained
+  (up/down 2026-10-12, sideways `2c3c80e`) never reached it, and a trackpad
+  pinch on page 1 or the last page jumped up to 92px on release. A new clamp
+  goes in `gestureTransform()`, never in one caller. The transform is cleared
+  only through `clearContentTransform`.
+- ⚠️ **On Windows a scrollbar appearing mid-gesture moves the row.** The preview
+  grows the page taller than the window, a classic vertical scrollbar takes
+  17px, and the row's percentage end padding slides every page 8.5px. The
+  padding is held in pixels for the length of a gesture and released as the
+  zoom lands. Headless Chromium's scrollbars overlay, so `test:pinch` cannot
+  see this half; it was checked with a per-frame probe in a real Electron window
+  (page held and landed at 958px; the old code held it at 949).
+- **Still open:** the page next to the pinched one can move ~3px on landing,
+  because the preview scales the gap between pages and the real layout
+  doesn't.
 - ⚠️ **Never clear a visible canvas before its replacement has finished.**
   `PdfPage.tsx` used to clear up front, re-use the same canvas for the next
   pdf.js render before the cancelled task had released it (pdf.js's
