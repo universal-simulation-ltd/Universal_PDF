@@ -370,6 +370,131 @@ export default function PdfViewer() {
     }
   }
 
+  interface RowLayout {
+    width: number
+    pad: number
+    gap: number
+    pages: number
+    firstPageWidth: number
+    // The anchored page: its position in the row, and its left edge from
+    // the row's own left edge.
+    anchorIndex: number
+    anchorLeft: number
+  }
+  // How the row is laid out right now, untransformed. Null when the pages
+  // run down the screen, or there is no anchor page to measure from.
+  function measureRow(content: HTMLDivElement, anchor: ZoomAnchor | null): RowLayout | null {
+    if (!horizontalRef.current || !anchor) return null
+    const pages = content.querySelectorAll<HTMLElement>('[data-page-index]')
+    const page = content.querySelector<HTMLElement>(`[data-page-index="${anchor.pageIndex}"]`)
+    if (!pages.length || !page) return null
+    const style = getComputedStyle(content)
+    return {
+      width: content.offsetWidth,
+      pad: parseFloat(style.paddingLeft) || 0,
+      gap: parseFloat(style.columnGap) || 0,
+      pages: pages.length,
+      firstPageWidth: pages[0].offsetWidth,
+      anchorIndex: anchor.pageIndex,
+      anchorLeft: page.getBoundingClientRect().left - content.getBoundingClientRect().left
+    }
+  }
+
+  // Where a gesture's transform holds the document: scaled by `g.ratio` about
+  // the point it began on and, with the pages in a row, kept where the commit
+  // will be able to put them. Shared by the touch pinch and the trackpad's
+  // ctrl+wheel. ⚠️ The trackpad once kept its own copy of the anchor
+  // arithmetic without the two row clamps below, so a desktop pinch on page 1
+  // (or the last page) jumped sideways when it landed — 92px in
+  // pinch-zoom.e2e (James, 2026-10-19, a screen recording of Universal PDF
+  // on Windows). One function, so the two cannot drift apart again.
+  interface GestureHold {
+    anchorX: number
+    anchorY: number
+    scrollLeft: number
+    scrollTop: number
+    ratio: number
+    row: RowLayout | null
+  }
+  function gestureTransform(el: HTMLDivElement, content: HTMLDivElement, g: GestureHold): string {
+    // Read back what the container would actually accept, and let the
+    // translation absorb the difference: whatever the scroll ends up being,
+    // the anchored point stays exactly under the fingers.
+    //
+    // Scaling about the anchor, with the transform origin at the content's
+    // top-left: the anchored point is (scroll at the start + anchor), less
+    // where the content box itself starts, in content coordinates — and this
+    // translation is what holds it in place.
+    //
+    // ⚠️ `offsetTop`/`offsetLeft` are NOT always 0. The content is centred in
+    // the viewport with auto margins whenever it is smaller than the viewport
+    // (see the wrapper's own comment), which is exactly the case a pinch on a
+    // phone starts from. Dropping them scales about a point the margin's
+    // height away from the fingers, so the document slides out from under
+    // them as it grows.
+    const anchoredX = g.scrollLeft + g.anchorX - content.offsetLeft
+    const anchoredY = g.scrollTop + g.anchorY - content.offsetTop
+    let tx = g.anchorX + el.scrollLeft - content.offsetLeft - g.ratio * anchoredX
+    let ty = g.anchorY + el.scrollTop - content.offsetTop - g.ratio * anchoredY
+    // ⚠️ PAGES IN A ROW: KEEP THE ROW WHERE THE COMMIT WILL PUT IT, UP AND
+    // DOWN (2026-10-12). Across the row there is only one page's height of
+    // document, so the anchor can ask for a place no scroll reaches: pinched
+    // smaller than the window, the committed row is centred by its auto
+    // margins; pinched just taller, it can only scroll so far. Held at the
+    // anchor, the row then jumped (59px in pinch-zoom.e2e) the moment the
+    // fingers lifted. So the content's top edge, as the commit will lay it
+    // out, is clamped into what that layout can show — centred when it fits,
+    // inside the scroll range when it doesn't — and the row eases there as
+    // the fingers move. Phones open in a row by default now, so this is the
+    // ordinary pinch on a phone. The padding (py-6) doesn't scale on commit
+    // but does under the transform, hence the two `pad` terms.
+    if (horizontalRef.current) {
+      const pad = 24
+      const viewH = el.clientHeight
+      const committedH = (content.offsetHeight - 2 * pad) * g.ratio + 2 * pad
+      const anchoredTop = content.offsetTop - el.scrollTop + ty + pad * g.ratio - pad
+      const top = committedH <= viewH
+        ? (viewH - committedH) / 2
+        : Math.min(0, Math.max(viewH - committedH, anchoredTop))
+      ty += top - anchoredTop
+    }
+    // ⚠️ …AND ACROSS, AT EITHER END OF THE ROW (James, 2026-10-19: "When
+    // zooming in and out the page jumps to the right for some reason"). The
+    // same trap sideways: page 1 can never sit right of the middle of the
+    // window (the row's padding is what centres it, and there is no scroll
+    // left of 0), and the last page can never sit left of it. Pinched about a
+    // point that asks for either, the gesture held the page there and the
+    // commit then scrolled as far as it could and stopped short — the page
+    // jumped on release, to the RIGHT on the last page (and on a one-page
+    // document), to the left on page 1; 21px for a pinch left of centre on
+    // the example's last page. So, as up and down: where the commit will be
+    // able to put the anchored page is worked out from the row as it was
+    // laid out when the fingers landed, and the page is held inside that.
+    //
+    // The arithmetic mirrors the row's layout rather than scaling it: the
+    // pages scale, but the gaps between them do not, and the end padding is
+    // re-derived from the new width of page 1 (see the content's style).
+    const row = g.row
+    if (row) {
+      const r = g.ratio
+      const viewW = el.clientWidth
+      const gaps = row.gap * (row.pages - 1)
+      const pad = Math.max(ROW_END_MIN_PAD, viewW / 2 - (row.firstPageWidth * r) / 2)
+      const committedW = 2 * pad + r * (row.width - 2 * row.pad - gaps) + gaps
+      const before = row.gap * row.anchorIndex
+      const committedLeft = pad + r * (row.anchorLeft - row.pad - before) + before
+      // A row narrower than the window is centred by its auto margins and
+      // cannot scroll; a wider one starts at 0 and scrolls this far.
+      const offset = committedW < viewW ? (viewW - committedW) / 2 : 0
+      const maxScroll = Math.max(0, committedW - viewW)
+      const heldLeft = content.offsetLeft - el.scrollLeft + tx + r * row.anchorLeft
+      const lo = offset + committedLeft - maxScroll
+      const hi = offset + committedLeft
+      tx += Math.min(hi, Math.max(lo, heldLeft)) - heldLeft
+    }
+    return `translate(${tx}px, ${ty}px) scale(${g.ratio})`
+  }
+
   function restoreAnchor(el: HTMLDivElement, a: ZoomAnchor) {
     const page = el.querySelector<HTMLElement>(`[data-page-index="${a.pageIndex}"]`)
     if (!page) return
@@ -560,6 +685,30 @@ export default function PdfViewer() {
     content.style.transform = ''
     content.style.transformOrigin = ''
     content.style.willChange = ''
+    releaseRowPadding(content)
+  }
+
+  // ⚠️ A GESTURE MUST NOT MOVE THE ROW UNDER ITS OWN TRANSFORM (James's Windows
+  // recording, 2026-10-19). The row's end padding is a percentage of the
+  // scroller's width, and on Windows a scrollbar TAKES width: the preview,
+  // growing the page taller than the window, makes a vertical scrollbar
+  // appear, the scroller loses 17px, and the padding — so every page — slides
+  // 8.5px left, under the cursor, mid-pinch. Headless Chromium has overlay
+  // scrollbars and never sees it; a real Electron window does. So for the
+  // length of a gesture the padding is held at the pixels it resolved to when
+  // the gesture began, and handed back to its percentage once the zoom has
+  // landed (`clearContentTransform`), in the frame the transform comes off.
+  const heldRowPadding = useRef<string | null>(null)
+  function holdRowPadding(content: HTMLDivElement) {
+    if (!horizontalRef.current || heldRowPadding.current !== null) return
+    const style = getComputedStyle(content)
+    heldRowPadding.current = content.style.paddingInline
+    content.style.paddingInline = `${style.paddingLeft} ${style.paddingRight}`
+  }
+  function releaseRowPadding(content: HTMLDivElement) {
+    if (heldRowPadding.current === null) return
+    content.style.paddingInline = heldRowPadding.current
+    heldRowPadding.current = null
   }
 
   // A zoom from the − / + / % buttons, the presets and the keyboard, anchored
@@ -659,17 +808,6 @@ export default function PdfViewer() {
       // put the row at any scale — see the sideways clamp there.
       row: RowLayout | null
     }
-    interface RowLayout {
-      width: number
-      pad: number
-      gap: number
-      pages: number
-      firstPageWidth: number
-      // The anchored page: its position in the row, and its left edge from
-      // the row's own left edge.
-      anchorIndex: number
-      anchorLeft: number
-    }
     let pinch: Pinch | null = null
     // Set when two fingers come down, cleared only when the LAST one lifts.
     // Lifting one finger ends the zoom, but the other is still on the glass
@@ -683,36 +821,11 @@ export default function PdfViewer() {
     let fingersFromPinch = false
     let frame = 0
 
-    // How the row is laid out right now, untransformed. Null when the pages
-    // run down the screen, or there is no anchor page to measure from.
-    function measureRow(content: HTMLDivElement, anchor: ZoomAnchor | null): RowLayout | null {
-      if (!horizontalRef.current || !anchor) return null
-      const pages = content.querySelectorAll<HTMLElement>('[data-page-index]')
-      const page = content.querySelector<HTMLElement>(`[data-page-index="${anchor.pageIndex}"]`)
-      if (!pages.length || !page) return null
-      const style = getComputedStyle(content)
-      return {
-        width: content.offsetWidth,
-        pad: parseFloat(style.paddingLeft) || 0,
-        gap: parseFloat(style.columnGap) || 0,
-        pages: pages.length,
-        firstPageWidth: pages[0].offsetWidth,
-        anchorIndex: anchor.pageIndex,
-        anchorLeft: page.getBoundingClientRect().left - content.getBoundingClientRect().left
-      }
-    }
-
     function dist(t1: Touch, t2: Touch) {
       return Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY)
     }
 
-    function clearTransform() {
-      const content = contentRef.current
-      if (!content) return
-      content.style.transform = ''
-      content.style.transformOrigin = ''
-      content.style.willChange = ''
-    }
+    const clearTransform = clearContentTransform
 
     function draw() {
       frame = 0
@@ -726,82 +839,7 @@ export default function PdfViewer() {
       // wander while it is being scaled.
       if (el.scrollLeft !== pinch.scrollLeft) el.scrollLeft = pinch.scrollLeft
       if (el.scrollTop !== pinch.scrollTop) el.scrollTop = pinch.scrollTop
-      // Read back what the container would actually accept, and let the
-      // translation absorb the difference: whatever the scroll ends up being,
-      // the anchored point stays exactly under the fingers.
-      //
-      // Scaling about the anchor, with the transform origin at the content's
-      // top-left: the anchored point is (scroll at the start + anchor), less
-      // where the content box itself starts, in content coordinates — and this
-      // translation is what holds it in place.
-      //
-      // ⚠️ `offsetTop`/`offsetLeft` are NOT always 0. The content is centred in
-      // the viewport with auto margins whenever it is smaller than the viewport
-      // (see the wrapper's own comment), which is exactly the case a pinch on a
-      // phone starts from. Dropping them scales about a point the margin's
-      // height away from the fingers, so the document slides out from under
-      // them as it grows.
-      const anchoredX = pinch.scrollLeft + pinch.anchorX - content.offsetLeft
-      const anchoredY = pinch.scrollTop + pinch.anchorY - content.offsetTop
-      let tx = pinch.anchorX + el.scrollLeft - content.offsetLeft - pinch.ratio * anchoredX
-      let ty = pinch.anchorY + el.scrollTop - content.offsetTop - pinch.ratio * anchoredY
-      // ⚠️ PAGES IN A ROW: KEEP THE ROW WHERE THE COMMIT WILL PUT IT, UP AND
-      // DOWN (2026-10-12). Across the row there is only one page's height of
-      // document, so the anchor can ask for a place no scroll reaches: pinched
-      // smaller than the window, the committed row is centred by its auto
-      // margins; pinched just taller, it can only scroll so far. Held at the
-      // anchor, the row then jumped (59px in pinch-zoom.e2e) the moment the
-      // fingers lifted. So the content's top edge, as the commit will lay it
-      // out, is clamped into what that layout can show — centred when it fits,
-      // inside the scroll range when it doesn't — and the row eases there as
-      // the fingers move. Phones open in a row by default now, so this is the
-      // ordinary pinch on a phone. The padding (py-6) doesn't scale on commit
-      // but does under the transform, hence the two `pad` terms.
-      if (horizontalRef.current) {
-        const pad = 24
-        const viewH = el.clientHeight
-        const committedH = (content.offsetHeight - 2 * pad) * pinch.ratio + 2 * pad
-        const anchoredTop = content.offsetTop - el.scrollTop + ty + pad * pinch.ratio - pad
-        const top = committedH <= viewH
-          ? (viewH - committedH) / 2
-          : Math.min(0, Math.max(viewH - committedH, anchoredTop))
-        ty += top - anchoredTop
-      }
-      // ⚠️ …AND ACROSS, AT EITHER END OF THE ROW (James, 2026-10-19: "When
-      // zooming in and out the page jumps to the right for some reason"). The
-      // same trap sideways: page 1 can never sit right of the middle of the
-      // window (the row's padding is what centres it, and there is no scroll
-      // left of 0), and the last page can never sit left of it. Pinched about a
-      // point that asks for either, the gesture held the page there and the
-      // commit then scrolled as far as it could and stopped short — the page
-      // jumped on release, to the RIGHT on the last page (and on a one-page
-      // document), to the left on page 1; 21px for a pinch left of centre on
-      // the example's last page. So, as up and down: where the commit will be
-      // able to put the anchored page is worked out from the row as it was
-      // laid out when the fingers landed, and the page is held inside that.
-      //
-      // The arithmetic mirrors the row's layout rather than scaling it: the
-      // pages scale, but the gaps between them do not, and the end padding is
-      // re-derived from the new width of page 1 (see the content's style).
-      const row = pinch.row
-      if (row) {
-        const r = pinch.ratio
-        const viewW = el.clientWidth
-        const gaps = row.gap * (row.pages - 1)
-        const pad = Math.max(ROW_END_MIN_PAD, viewW / 2 - (row.firstPageWidth * r) / 2)
-        const committedW = 2 * pad + r * (row.width - 2 * row.pad - gaps) + gaps
-        const before = row.gap * row.anchorIndex
-        const committedLeft = pad + r * (row.anchorLeft - row.pad - before) + before
-        // A row narrower than the window is centred by its auto margins and
-        // cannot scroll; a wider one starts at 0 and scrolls this far.
-        const offset = committedW < viewW ? (viewW - committedW) / 2 : 0
-        const maxScroll = Math.max(0, committedW - viewW)
-        const heldLeft = content.offsetLeft - el.scrollLeft + tx + r * row.anchorLeft
-        const lo = offset + committedLeft - maxScroll
-        const hi = offset + committedLeft
-        tx += Math.min(hi, Math.max(lo, heldLeft)) - heldLeft
-      }
-      content.style.transform = `translate(${tx}px, ${ty}px) scale(${pinch.ratio})`
+      content.style.transform = gestureTransform(el, content, pinch)
     }
 
     function onStart(e: TouchEvent) {
@@ -836,6 +874,7 @@ export default function PdfViewer() {
         row: content ? measureRow(content, anchor) : null
       }
       if (content) {
+        holdRowPadding(content)
         content.style.transformOrigin = '0 0'
         content.style.willChange = 'transform'
       }
@@ -926,6 +965,7 @@ export default function PdfViewer() {
       anchor: ZoomAnchor | null
       scrollLeft: number
       scrollTop: number
+      row: RowLayout | null
     }
     let gesture: WheelGesture | null = null
     let frame = 0
@@ -936,27 +976,18 @@ export default function PdfViewer() {
     // mouse still feels immediate.
     const SETTLE_MS = 120
 
-    function clearTransform() {
-      const content = contentRef.current
-      if (!content) return
-      content.style.transform = ''
-      content.style.transformOrigin = ''
-      content.style.willChange = ''
-    }
+    const clearTransform = clearContentTransform
 
-    // Same transform arithmetic as the pinch's draw(): pin the scroll where
-    // the gesture found it and hold the anchored point under the cursor.
+    // The pinch's draw(), cursor for fingers: pin the scroll where the gesture
+    // found it and hold the anchored point under the cursor, inside what the
+    // commit can reach (`gestureTransform`).
     function draw() {
       frame = 0
       const content = contentRef.current
       if (!gesture || !el || !content) return
       if (el.scrollLeft !== gesture.scrollLeft) el.scrollLeft = gesture.scrollLeft
       if (el.scrollTop !== gesture.scrollTop) el.scrollTop = gesture.scrollTop
-      const anchoredX = gesture.scrollLeft + gesture.anchorX - content.offsetLeft
-      const anchoredY = gesture.scrollTop + gesture.anchorY - content.offsetTop
-      const tx = gesture.anchorX + el.scrollLeft - content.offsetLeft - gesture.ratio * anchoredX
-      const ty = gesture.anchorY + el.scrollTop - content.offsetTop - gesture.ratio * anchoredY
-      content.style.transform = `translate(${tx}px, ${ty}px) scale(${gesture.ratio})`
+      content.style.transform = gestureTransform(el, content, gesture)
     }
 
     function commit() {
@@ -1008,17 +1039,20 @@ export default function PdfViewer() {
         const rect = el.getBoundingClientRect()
         const anchorX = e.clientX - rect.left
         const anchorY = e.clientY - rect.top
+        const anchor = captureAnchor(el, anchorX, anchorY)
+        const content = contentRef.current
         gesture = {
           initialZoom: zoomRef.current,
           ratio: 1,
           anchorX,
           anchorY,
-          anchor: captureAnchor(el, anchorX, anchorY),
+          anchor,
           scrollLeft: el.scrollLeft,
-          scrollTop: el.scrollTop
+          scrollTop: el.scrollTop,
+          row: content ? measureRow(content, anchor) : null
         }
-        const content = contentRef.current
         if (content) {
+          holdRowPadding(content)
           content.style.transformOrigin = '0 0'
           content.style.willChange = 'transform'
         }

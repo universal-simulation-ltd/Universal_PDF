@@ -593,7 +593,8 @@ console.log('\nctrl+wheel, the desktop zoom on the same machinery')
   await context.close()
 }
 
-console.log('\nreleasing a trackpad pinch — the frame nobody could see')
+for (const scroll of ['vertical', 'horizontal']) {
+console.log(`\nreleasing a trackpad pinch — the frame nobody could see (${scroll})`)
 {
   // ⚠️ THIS ONE CANNOT BE CHECKED BY POLLING. The bug was a single frame, and
   // reading state from Playwright every 25–40 ms steps straight over it and
@@ -605,14 +606,17 @@ console.log('\nreleasing a trackpad pinch — the frame nobody could see')
   // still wearing the gesture's transform, and the observer said so a frame
   // late. Captured at 1.716x too big for one frame, which is the gesture's own
   // scale sitting on a layout that had already grown to match it.
-  const { context, page } = await openViewer({ viewport: { width: 1200, height: 900 } })
+  const { context, page } = await openViewer({ viewport: { width: 1200, height: 900 } }, scroll)
 
   await page.evaluate(() => {
     window.__frames = []
     const tick = () => {
       const p = document.querySelector('[data-page-index="0"]')
       // getBoundingClientRect INCLUDES the transform — this is what the eye sees.
-      if (p) window.__frames.push(Math.round(p.getBoundingClientRect().height))
+      // Its left edge too, and whether the gesture's transform is still on.
+      const r = p?.getBoundingClientRect()
+      const held = document.querySelector('.overflow-auto').firstElementChild.style.transform !== ''
+      if (p) window.__frames.push([Math.round(r.height), r.left, held])
       window.__raf = requestAnimationFrame(tick)
     }
     window.__raf = requestAnimationFrame(tick)
@@ -620,10 +624,14 @@ console.log('\nreleasing a trackpad pinch — the frame nobody could see')
 
   // A trackpad pinch arrives as a burst of ctrl+wheel ticks, not one notch.
   const cdp = await context.newCDPSession(page)
-  const at = await page.evaluate(() => {
+  // In the row, left of page 1's middle — page 1 opens centred and can never
+  // sit right of that, so a zoom about this point is one the commit cannot
+  // simply follow (James's Windows recording, 2026-10-19).
+  const at = await page.evaluate((row) => {
     const r = document.querySelector('.overflow-auto').getBoundingClientRect()
-    return { x: r.left + 600, y: r.top + 400 }
-  })
+    const p = document.querySelector('[data-page-index="0"]').getBoundingClientRect()
+    return { x: row ? p.left + p.width / 4 : r.left + 600, y: r.top + 400 }
+  }, scroll === 'horizontal')
   for (let i = 0; i < 18; i++) {
     await cdp.send('Input.dispatchMouseEvent', {
       type: 'mouseWheel', x: at.x, y: at.y, deltaX: 0, deltaY: -30, modifiers: 2
@@ -632,10 +640,11 @@ console.log('\nreleasing a trackpad pinch — the frame nobody could see')
   }
   await page.waitForTimeout(1400)
 
-  const frames = await page.evaluate(() => {
+  const samples = await page.evaluate(() => {
     cancelAnimationFrame(window.__raf)
     return window.__frames
   })
+  const frames = samples.map(([height]) => height)
   const settled = frames[frames.length - 1]
   const peak = Math.max(...frames)
   // The release must never paint the page BIGGER than where it settles. The
@@ -656,7 +665,18 @@ console.log('\nreleasing a trackpad pinch — the frame nobody could see')
     trough >= settled - 2,
     `trough ${trough}px vs settled ${settled}px`
   )
+  // …nor sideways. The last frame the gesture painted is where the page must
+  // stay: the trackpad's draw() once held the page wherever the cursor asked,
+  // and the commit then put page 1 back in the middle — a jump on release.
+  const lastHeld = samples.filter(([, , held]) => held).pop()
+  const settledLeft = samples[samples.length - 1][1]
+  check(
+    'and the page lands where the gesture left it, not beside it',
+    lastHeld && Math.abs(lastHeld[1] - settledLeft) < 2,
+    lastHeld ? `left ${lastHeld[1].toFixed(1)} while held, ${settledLeft.toFixed(1)} once landed` : 'no held frame'
+  )
   await context.close()
+}
 }
 
 await browser.close()
