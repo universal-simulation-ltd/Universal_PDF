@@ -31,7 +31,10 @@ export const MOBILE_WELCOME_KEY = 'universal-pdf-mobile-welcome-dismissed'
 /** hooks/useDefaultPdfApp — the desktop "make this your PDF app?" offer. */
 export const DEFAULT_APP_ASKED_KEY = 'unipdf:default-app-asked'
 
-const DISMISSAL_KEYS = [FILL_WARNING_KEY, MOBILE_WELCOME_KEY, DEFAULT_APP_ASKED_KEY]
+/** native/MarkupSheet — the phone's one-time "pull down to close" hint. */
+export const SHEET_PULL_HINT_KEY = 'unipdf:sheet-pull-hinted'
+
+const DISMISSAL_KEYS = [FILL_WARNING_KEY, MOBILE_WELCOME_KEY, DEFAULT_APP_ASKED_KEY, SHEET_PULL_HINT_KEY]
 
 /** Bring back every app-owned dismissed prompt. Takes effect the next time each prompt would show. */
 export function clearDismissedPrompts(): void {

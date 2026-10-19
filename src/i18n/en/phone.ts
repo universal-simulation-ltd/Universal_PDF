@@ -88,6 +88,7 @@ export default {
   // Mark up (a sheet under the page)
   'markup_title': 'Mark up',
   'markup_tools_aria': 'Mark-up tools',
+  'pull_to_close': 'Pull down to close',
   'mk_pen': 'Pen',
   'mk_highlight': 'Highlight',
   'mk_text': 'Text',

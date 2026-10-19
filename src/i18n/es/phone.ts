@@ -85,6 +85,7 @@ const phone: Messages['phone'] = {
   // Mark up (a sheet under the page)
   'markup_title': 'Anotar',
   'markup_tools_aria': 'Herramientas de anotación',
+  'pull_to_close': 'Desliza hacia abajo para cerrar',
   'mk_pen': 'Bolígrafo',
   'mk_highlight': 'Resaltar',
   'mk_text': 'Texto',

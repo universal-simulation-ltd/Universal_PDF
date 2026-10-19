@@ -1851,7 +1851,12 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       setMarquee({ x1: m.startX, y1: m.startY, x2: pos.x, y2: pos.y })
       return
     }
-    if ((tool === 'signature' && activeSignature) || (tool === 'image' && uploadedImageSrc)) {
+    // The ghost of an armed payload is a HOVER preview — a mouse, or a pencil
+    // above the glass. A finger only moves while it is down, so on a phone the
+    // ghost followed every swipe and stayed behind, full size, on each page the
+    // swipe crossed (James, 2026-10-19). PlacementHint is the touch feedback.
+    const hovering = e.evt.pointerType === 'mouse' || (e.evt.pointerType === 'pen' && e.evt.buttons === 0)
+    if (hovering && ((tool === 'signature' && activeSignature) || (tool === 'image' && uploadedImageSrc))) {
       setHoverPos({ x: pos.x, y: pos.y })
     } else if (hoverPos) {
       setHoverPos(null)

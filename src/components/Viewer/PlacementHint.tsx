@@ -48,23 +48,21 @@ export const PLACEMENT_HINT_DISMISSED = 'placementHintDismissed'
 // is bought back with a white text halo instead of an opaque plate, so the text
 // survives a dark region of the page without the card having to hide it.
 //
-// ⚠️ It sits in the MIDDLE of the document area, not under the toolbar (James,
-// 2026-09-05: "the tooltip that appears at the top for signature placement etc
-// needs to be more prominent - maybe in the centre of the screen, with a don't
-// show again option"). A pill tucked against the top edge is exactly where a
-// browser puts its own chrome, and it was being read as decoration by the
-// people it was written for. Covering the page is affordable *because* the
-// thing it announces ends the moment the page is tapped — the card is never up
-// for longer than one gesture — and the whole overlay stays
-// `pointer-events-none` but for its buttons, so that gesture still lands.
+// ⚠️ It sits at the TOP of the document area again, small and solid (James,
+// 2026-10-19, on the phone: "the window is too imposing, maybe it should be at
+// the top without the signature preview"). It had moved to the middle on
+// 2026-09-05 ("needs to be more prominent") as a see-through card with the
+// payload's thumbnail in it; on a phone that card covered a third of the page,
+// its text fought the page's text through it, and the thumbnail looked like a
+// signature already placed. The orange ring and the pulsing dot are what keep
+// it from reading as browser chrome now. Solid is fine up there: it no longer
+// sits over the spot being aimed at.
 
 type Prompt = {
   /** The instruction itself. */
   label: string
   /** Secondary line — what specifically is about to land. */
   detail?: string
-  /** Thumbnail of the thing being placed, when there is an image of it. */
-  preview?: string
   /** Undo the armed state. Named so the button can say what it abandons. */
   cancel: () => void
 }
@@ -135,14 +133,12 @@ export default function PlacementHint() {
       const isStamp = activeSignature.name.endsWith(' Stamp')
       return {
         label: t(`viewer.placement.${verb}_${isStamp ? 'stamp' : 'signature'}`),
-        preview: activeSignature.dataUrl,
         cancel: () => useAnnotationStore.getState().setTool('select'),
       }
     }
     if (tool === 'image' && uploadedImageSrc) {
       return {
         label: t(`viewer.placement.${verb}_${uploadedImageQr ? 'qr_code' : 'image'}`),
-        preview: uploadedImageSrc,
         cancel: () => {
           useAnnotationStore.getState().setUploadedImageSrc(null)
           useAnnotationStore.getState().setTool('select')
@@ -176,70 +172,40 @@ export default function PlacementHint() {
     // ⚠️ pointer-events-none on everything but the buttons. This floats over the
     // page, and the whole point of the state it announces is that the next tap
     // on the page places something — an overlay that ate that tap would be
-    // worse than no overlay at all. It spans the whole document area only to
-    // centre the card; nothing but the two buttons is clickable.
+    // worse than no overlay at all.
     <div
       role="status"
       aria-live="polite"
-      className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center p-4"
+      className="pointer-events-none absolute inset-x-0 top-0 z-30 flex justify-center px-3 pt-2"
     >
       {/* data-placement-hint is how the toolbar's floating option panels find
           this card: they drop below it rather than covering the one bit of
-          feedback telling the user a tap is armed. Centred, they rarely have to
-          — but the panel is measured, not assumed, so the rule still holds if a
-          tall one ever reaches this far down. */}
+          feedback telling the user a tap is armed. */}
+      {/* ⚠️ No `backdrop-blur`: it smears the page under it whatever the alpha. */}
       <div
         data-placement-hint
-        // ⚠️ No `backdrop-blur` here, and don't reintroduce one: a blur hides
-        // what is behind the card whatever the background alpha is, which is
-        // the thing this card is not allowed to do. The orange ring and the
-        // drop shadow are what keep it prominent (James, 2026-09-05) now that
-        // the fill no longer is.
-        className="flex w-max max-w-full flex-col items-center gap-3 rounded-2xl bg-white/45 px-6 py-5 text-center shadow-xl ring-2 ring-orange-400"
+        className="flex w-max max-w-full flex-col items-center gap-2 rounded-2xl bg-white/95 px-4 py-2.5 text-center shadow-lg ring-2 ring-orange-400"
       >
-        <span className="flex items-center gap-2.5">
+        <span className="flex items-center gap-2">
           <span
             aria-hidden="true"
-            className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-orange-500 motion-reduce:animate-none"
+            className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-orange-500 motion-reduce:animate-none"
           />
           {/* ⚠️ `w-max max-w-full` on the card, and the label allowed to wrap
               inside it: the card is content-sized, so a label merely allowed to
               wrap collapses to MIN-content — "Tap the page to place your QR
-              code" came out one word per line, seven lines tall, on a 390px
-              screen. Asking for the single-line width first and clamping it
-              means it wraps only when it genuinely has to. */}
-          {/* The white halo is what replaces the opaque plate the card used to
-              be — it keeps the sentence readable over a dark photo or a filled
-              table cell without putting anything solid between the reader and
-              the page they are being told to tap. */}
-          <span className="text-[15px] font-semibold leading-snug text-slate-900 [text-shadow:0_0_3px_#fff,0_0_9px_#fff]">
-            {prompt.label}
-          </span>
+              code" came out one word per line on a 390px screen. Asking for the
+              single-line width first and clamping it means it wraps only when
+              it genuinely has to. */}
+          <span className="text-[14px] font-semibold leading-snug text-slate-900">{prompt.label}</span>
         </span>
-        {prompt.preview && (
-          <img
-            src={prompt.preview}
-            alt=""
-            aria-hidden="true"
-            className="max-h-14 w-auto max-w-[180px] object-contain"
-          />
-        )}
-        {prompt.detail && (
-          <span className="max-w-[260px] truncate text-[13px] text-slate-600 [text-shadow:0_0_3px_#fff,0_0_8px_#fff]">
-            {prompt.detail}
-          </span>
-        )}
-        {/* ⚠️ The ONLY part of the card that takes a pointer, and therefore the
-            only part that can eat the tap the card is asking for — so the two
-            buttons keep a solid fill while the card around them does not. That
-            reads as the honest thing it is: the opaque strip is where a tap
-            hits a button, the transparent everything-else is where it goes
-            through to the page. */}
+        {prompt.detail && <span className="max-w-[260px] truncate text-[12px] text-slate-600">{prompt.detail}</span>}
+        {/* The only part of the card that takes a pointer. */}
         <span className="pointer-events-auto flex items-center gap-2">
           <button
             type="button"
             onClick={prompt.cancel}
-            className="rounded-full bg-slate-100 px-4 py-1.5 text-[13px] font-semibold text-slate-700 shadow-sm hover:bg-slate-200"
+            className="rounded-full bg-slate-100 px-3.5 py-1 text-[13px] font-semibold text-slate-700 hover:bg-slate-200"
           >
             {t('viewer.common.cancel')}
           </button>
@@ -248,7 +214,7 @@ export default function PlacementHint() {
             onClick={() => setPref(PLACEMENT_HINT_DISMISSED, true)}
             // Hides the card and leaves the placement ARMED — it is a display
             // preference, not a way out of the state. Cancel is the way out.
-            className="rounded-full bg-white/80 px-3 py-1.5 text-[13px] font-medium text-slate-500 shadow-sm hover:bg-white hover:text-slate-700"
+            className="rounded-full px-3 py-1 text-[13px] font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700"
           >
             {t('viewer.placement.dont_show_again')}
           </button>

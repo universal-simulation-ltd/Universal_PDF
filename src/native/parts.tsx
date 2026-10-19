@@ -29,6 +29,7 @@ export function Sheet({
   scrim?: boolean
 }) {
   const ref = useRef<HTMLElement>(null)
+  const grip = useSheetPull(ref, onClose)
   useEffect(() => {
     const before = document.activeElement as HTMLElement | null
     ref.current?.focus({ preventScroll: true })
@@ -56,9 +57,80 @@ export function Sheet({
         className="np-sheet outline-none"
         style={{ background, pointerEvents: 'auto' }}
       >
-        <div className="np-grip" aria-hidden="true" />
+        <SheetGrip grip={grip} />
         <div className="min-h-0 overflow-y-auto overscroll-contain px-4 flex flex-col gap-3.5">{children}</div>
       </section>
+    </div>
+  )
+}
+
+type GripProps = Pick<
+  React.HTMLAttributes<HTMLDivElement>,
+  'onPointerDown' | 'onPointerMove' | 'onPointerUp' | 'onPointerCancel'
+>
+
+/**
+ * A sheet that comes down with the finger from its grip, like any phone's
+ * (James, 2026-10-19: "taking the drawer handle you should be able to drag it
+ * down and it takes the drawer with it"). Let go past a third of its height —
+ * or flick it — and it slides the rest of the way and closes; short of that it
+ * settles back. The sheet's own transform is written straight to the element,
+ * so a drag doesn't re-render the tools under it on every move.
+ */
+export function useSheetPull(ref: React.RefObject<HTMLElement | null>, onClose: () => void): GripProps {
+  const drag = useRef<{ y: number; dy: number; t: number; v: number } | null>(null)
+  const close = useRef(onClose)
+  close.current = onClose
+
+  function finish(cancelled: boolean) {
+    const d = drag.current
+    drag.current = null
+    const el = ref.current
+    if (!d || !el) return
+    const away = !cancelled && (d.dy > Math.min(140, el.offsetHeight / 3) || (d.v > 0.5 && d.dy > 16))
+    el.style.transition = 'transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1)'
+    if (away) {
+      el.style.transform = `translateY(${el.offsetHeight + 24}px)`
+      window.setTimeout(() => close.current(), 160)
+    } else {
+      el.style.transform = ''
+    }
+  }
+
+  return {
+    onPointerDown(e) {
+      const el = ref.current
+      if (!el) return
+      drag.current = { y: e.clientY, dy: 0, t: e.timeStamp, v: 0 }
+      e.currentTarget.setPointerCapture(e.pointerId)
+      // The rise-in (or Mark up's first-time dip) would otherwise hold the
+      // transform while it runs.
+      el.getAnimations?.().forEach((a) => a.cancel())
+      el.style.animation = 'none'
+      el.style.transition = 'none'
+    },
+    onPointerMove(e) {
+      const d = drag.current
+      const el = ref.current
+      if (!d || !el) return
+      // Down only: pulled up, it stays put.
+      const dy = Math.max(0, e.clientY - d.y)
+      const dt = e.timeStamp - d.t
+      if (dt > 0) d.v = (dy - d.dy) / dt
+      d.dy = dy
+      d.t = e.timeStamp
+      el.style.transform = dy ? `translateY(${dy}px)` : ''
+    },
+    onPointerUp: () => finish(false),
+    onPointerCancel: () => finish(true),
+  }
+}
+
+/** The grip, in a strip the width of the sheet so there's a finger's worth to take hold of. */
+export function SheetGrip({ grip }: { grip: GripProps }) {
+  return (
+    <div {...grip} className="flex-none self-stretch flex justify-center pt-1 pb-0.5 touch-none cursor-grab">
+      <div className="np-grip" aria-hidden="true" />
     </div>
   )
 }

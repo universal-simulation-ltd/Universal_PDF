@@ -193,7 +193,10 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
               style={{ borderBottom: '2px solid var(--np-line)' }}
             />
             <div className="h-[86px] flex items-end" style={{ borderBottom: '1.5px solid var(--np-ink)' }}>
-              <span className="np-hand text-[52px] leading-none truncate" style={{ color: INK, fontWeight: 700 }}>
+              {/* Room either side: a handwriting face's last stroke reaches past
+                  its advance width, and truncate's overflow clip cut the tail of
+                  a final k (James, 2026-10-19). */}
+              <span className="np-hand text-[52px] leading-none truncate px-[0.12em]" style={{ color: INK, fontWeight: 700 }}>
                 {typed.trim() || ' '}
               </span>
             </div>
@@ -415,7 +418,12 @@ async function renderTyped(name: string): Promise<{ dataUrl: string; width: numb
   const probe = document.createElement('canvas').getContext('2d')
   if (!probe) return null
   probe.font = font
-  const w = Math.ceil(probe.measureText(name).width) + 16
+  // The ink, not the advance width: Caveat's last stroke (a k, an f) reaches
+  // past the advance and was cut off at the canvas edge.
+  const m = probe.measureText(name)
+  const inkLeft = Math.max(0, m.actualBoundingBoxLeft || 0)
+  const inkRight = Math.max(m.width, m.actualBoundingBoxRight || 0)
+  const w = Math.ceil(inkLeft + inkRight) + 16
   const h = Math.ceil(size * 1.3)
   const scale = 2
   const canvas = document.createElement('canvas')
@@ -427,6 +435,6 @@ async function renderTyped(name: string): Promise<{ dataUrl: string; width: numb
   ctx.font = font
   ctx.fillStyle = INK
   ctx.textBaseline = 'middle'
-  ctx.fillText(name, 8, h / 2)
+  ctx.fillText(name, 8 + inkLeft, h / 2)
   return { dataUrl: canvas.toDataURL('image/png'), width: w, height: h }
 }

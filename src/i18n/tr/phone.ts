@@ -85,6 +85,7 @@ const phone: Messages['phone'] = {
   // Mark up (a sheet under the page)
   'markup_title': 'İşaretle',
   'markup_tools_aria': 'İşaretleme araçları',
+  'pull_to_close': 'Kapatmak için aşağı çekin',
   'mk_pen': 'Kalem',
   'mk_highlight': 'Vurgula',
   'mk_text': 'Metin',

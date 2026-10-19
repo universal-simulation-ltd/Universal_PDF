@@ -21,9 +21,9 @@
 // And since 2026-09-05 (owner: "needs to be more prominent - maybe in the
 // centre of the screen, with a don't show again option"):
 //
-//   • It is a card in the MIDDLE of the document area, not a pill at the top.
-//     The click-through assertion above matters far more now that the card sits
-//     exactly where the user is aiming.
+//   • It was a card in the MIDDLE of the document area until 2026-10-19, when
+//     it went back to the top, smaller and without its thumbnail (James: "too
+//     imposing"). The click-through assertion above still holds.
 //   • "Don't show again" hides it for good (localStorage) and, unlike Cancel,
 //     leaves the placement ARMED — it is a display preference, not a way out.
 //
@@ -203,10 +203,12 @@ const qrText = await bannerText()
 check('a banner appears', qrText.length > 0, 'nothing with a Cancel button on screen')
 check('it says a QR code is what lands', /QR code/.test(qrText), qrText)
 check('it names the gesture', /click|tap/i.test(qrText), qrText)
+// No thumbnail since 2026-10-19 (James: "at the top without the signature
+// preview") — on a phone it read as a signature already placed.
 check(
-  'and shows what is about to be placed',
-  (await page.locator('[role="status"] img').count()) === 1,
-  'no thumbnail in the banner',
+  'and carries no thumbnail of it',
+  (await page.locator('[role="status"] img').count()) === 0,
+  'a thumbnail is back in the banner',
 )
 
 // ── Cancel really disarms ───────────────────────────────────────────────────
@@ -270,16 +272,20 @@ const shell = await page.locator('[role="status"]').first().boundingBox()
 check(
   'the card floats over the document, not beside it',
   bannerBox.x > pageBox.x &&
-    bannerBox.x + bannerBox.width < pageBox.x + pageBox.width &&
-    bannerBox.y > pageBox.y,
+    bannerBox.x + bannerBox.width < pageBox.x + pageBox.width,
   `card at ${Math.round(bannerBox.x)},${Math.round(bannerBox.y)} vs page ${Math.round(pageBox.x)},${Math.round(pageBox.y)}`,
 )
+// Back at the top since 2026-10-19 (James: "too imposing, maybe it should be
+// at the top"): the middle card covered a third of a phone's page.
 check(
-  'and sits in the middle of it rather than tucked against the top edge',
-  Math.abs((bannerBox.y + bannerBox.height / 2) - (shell.y + shell.height / 2)) < 8,
-  `card centre ${Math.round(bannerBox.y + bannerBox.height / 2)} vs area centre ${Math.round(shell.y + shell.height / 2)}`,
+  'and sits at the top of it, not in the middle',
+  bannerBox.y - shell.y < 24,
+  `card top ${Math.round(bannerBox.y)} vs area top ${Math.round(shell.y)}`,
 )
-await page.mouse.click(bannerBox.x + bannerBox.width * 0.5, bannerBox.y + bannerBox.height * 0.5)
+// Through the card's own padding beside the buttons: at the top its middle is
+// the gap just over Cancel, and its label row hangs over the margin above the
+// page, so this is the part of the card that lies over the page itself.
+await page.mouse.click(bannerBox.x + 6, bannerBox.y + bannerBox.height - 16)
 await page.waitForTimeout(600)
 
 const afterDrop = await bannerText()

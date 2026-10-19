@@ -1,4 +1,4 @@
-import { useId, useRef, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useT } from '../i18n'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { usePdfStore } from '../stores/pdfStore'
@@ -6,7 +6,8 @@ import { useToolPrefs } from '../stores/toolPrefsStore'
 import type { Annotation, Tool } from '../types/annotations'
 import { FONT_DEFS } from '../lib/fonts'
 import { useNav } from './nav'
-import { useScrollHint } from './parts'
+import { SheetGrip, useScrollHint, useSheetPull } from './parts'
+import { SHEET_PULL_HINT_KEY } from '../lib/resetDefaults'
 
 // Board 3 · Mark up: a sheet under the page (the page stays usable above it),
 // the tools standing in a row as the things they are — pens, a pad of notes, a
@@ -86,7 +87,12 @@ export default function MarkupSheet() {
   const selected = useAnnotationStore((s) => s.annotations.find((a) => a.id === s.selectedId))
   const widthId = useId()
   const pictureRef = useRef<HTMLInputElement>(null)
-  const gripRef = useRef<{ y: number } | null>(null)
+  const sheetRef = useRef<HTMLElement>(null)
+  const grip = useSheetPull(sheetRef, () => {
+    useNav.getState().closeSheet()
+    useAnnotationStore.getState().setTool('select')
+  })
+  const pullHint = usePullHint(sheetRef)
   const rowHint = useScrollHint<HTMLDivElement>()
   // The tool in hand; with nothing in hand, the one the selected mark was made with.
   const current = tool === 'select' && selected ? markupOfMark(selected) : markupOf(tool, armedQr)
@@ -176,32 +182,26 @@ export default function MarkupSheet() {
 
   return (
     <section
+      ref={sheetRef}
       aria-label={t('phone.markup_tools_aria')}
-      className="flex-none relative z-[60] rounded-t-[26px] pt-2 flex flex-col gap-3.5"
+      className="flex-none relative z-[60] rounded-t-[26px] pt-1 flex flex-col gap-3.5"
       style={{
         background: 'var(--np-sheet)',
         boxShadow: '0 -10px 30px rgba(60,45,20,0.2)',
         paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)',
       }}
     >
-      {/* Pull the grip down to put the sheet away, as the chevron does. */}
-      <div
-        className="self-stretch flex justify-center touch-none"
-        onPointerDown={(e) => {
-          gripRef.current = { y: e.clientY }
-          e.currentTarget.setPointerCapture(e.pointerId)
-        }}
-        onPointerUp={(e) => {
-          const start = gripRef.current
-          gripRef.current = null
-          if (start && e.clientY - start.y > 30) {
-            useNav.getState().closeSheet()
-            useAnnotationStore.getState().setTool('select')
-          }
-        }}
-      >
-        <div className="np-grip" aria-hidden="true" />
-      </div>
+      {/* Pull the grip down and the sheet comes with it (useSheetPull). */}
+      <SheetGrip grip={grip} />
+      {pullHint && (
+        <span
+          aria-hidden="true"
+          className="absolute left-1/2 bottom-full mb-2.5 -translate-x-1/2 px-3.5 py-1.5 rounded-full text-[13px] font-semibold text-white whitespace-nowrap pointer-events-none"
+          style={{ background: 'rgba(27,29,34,0.86)', opacity: pullHint === 'on' ? 1 : 0, transition: 'opacity 400ms ease' }}
+        >
+          ↓ {t('phone.pull_to_close')}
+        </span>
+      )}
 
       <div
         ref={rowHint.ref}
@@ -328,6 +328,46 @@ export default function MarkupSheet() {
       </div>
     </section>
   )
+}
+
+/**
+ * The first time Mark up opens, it shows that it pulls down: the sheet dips and
+ * comes back, under a label saying so. Done in the header is the other way out,
+ * so there's no ✕ as well (James, 2026-10-19: "an X to close it or a onetime
+ * hint to drag the drawer down"). Tune's Reset to defaults brings it back.
+ */
+function usePullHint(ref: React.RefObject<HTMLElement | null>): 'on' | 'fading' | null {
+  const [hint, setHint] = useState<'on' | 'fading' | null>(() => {
+    try {
+      return localStorage.getItem(SHEET_PULL_HINT_KEY) ? null : 'on'
+    } catch {
+      return null
+    }
+  })
+  const shown = hint !== null
+  useEffect(() => {
+    if (!shown) return
+    try {
+      localStorage.setItem(SHEET_PULL_HINT_KEY, '1')
+    } catch {
+      // Not remembered, so it shows again next time — harmless.
+    }
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    const dip = reduced
+      ? undefined
+      : ref.current?.animate(
+          [{ transform: 'translateY(0)' }, { transform: 'translateY(28px)' }, { transform: 'translateY(0)' }],
+          { duration: 900, delay: 500, easing: 'ease-in-out' }
+        )
+    const fade = window.setTimeout(() => setHint('fading'), 3600)
+    const gone = window.setTimeout(() => setHint(null), 4000)
+    return () => {
+      dip?.cancel()
+      window.clearTimeout(fade)
+      window.clearTimeout(gone)
+    }
+  }, [shown, ref])
+  return hint
 }
 
 /** Box · Circle · Line · Tick · Cross, under Shape. Its own component so its
