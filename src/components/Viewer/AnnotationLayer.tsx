@@ -304,30 +304,74 @@ function ellipseInBox(ctx: Konva.Context, shape: Konva.Shape) {
  * left edge and is moved in when that would take it past the page's right
  * edge. One wider than the page wraps onto a second row rather than running
  * off the screen (a phone: James, 2026-10-18).
+ *
+ * It flips ABOVE the mark when below would run past the page's bottom or end
+ * up under something covering the page, such as the phone's tool bar or the
+ * Mark up sheet (James, 2026-10-19: "you can't access toolbar if too low").
+ * Above, it clears the Delete / ✓ buttons, which sit just above the mark's
+ * top corner. If above doesn't fit either, it stays below.
  */
-function PagePill({ left, top, pageWidth, className, children }: {
+function PagePill({ left, top, markTop, pageWidth, pageHeight, className, children }: {
   left: number
+  /** Where the pill goes under the mark. */
   top: number
+  /** The mark's top edge, for the flip above it. */
+  markTop: number
   pageWidth: number
+  pageHeight: number
   className: string
   children: React.ReactNode
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [x, setX] = useState(left)
+  const [y, setY] = useState(top)
   useLayoutEffect(() => {
-    const w = ref.current?.offsetWidth ?? 0
-    setX(Math.max(4, Math.min(left, pageWidth - w - 4)))
+    const el = ref.current
+    if (!el) return
+    const w = el.offsetWidth
+    const h = el.offsetHeight
+    const nx = Math.max(4, Math.min(left, pageWidth - w - 4))
+    setX(nx)
+    const above = markTop - PILL_CLEAR_OF_BUTTONS - h
+    setY(above >= 4 && pillBelowIsBlocked(el, nx, top, w, h, pageHeight) ? above : top)
   })
   return (
     <div
       ref={ref}
       onMouseDown={(e) => e.stopPropagation()}
-      style={{ position: 'absolute', left: x, top, zIndex: 21, maxWidth: Math.max(160, pageWidth - 8) }}
+      style={{ position: 'absolute', left: x, top: y, zIndex: 21, maxWidth: Math.max(160, pageWidth - 8) }}
       className={`inline-flex flex-wrap rounded-[20px] whitespace-nowrap ${className}`}
     >
       {children}
     </div>
   )
+}
+
+// Delete / ✓ sit from 8px above the mark's top to a button's height below it
+// (`top = bbox.y * scale - 8`); a pill flipped above ends this far over the
+// mark's top so it doesn't cover them.
+const PILL_CLEAR_OF_BUTTONS = 14
+
+/**
+ * True when a pill at (x, top) under its mark would run past the page's bottom,
+ * off the bottom of the screen, or under something that isn't the page's own
+ * scroller (the tool bar, a sheet). It tests the BELOW spot whichever spot the
+ * pill is in now, so the answer doesn't flip-flop as the pill moves.
+ */
+function pillBelowIsBlocked(el: HTMLElement, x: number, top: number, w: number, h: number, pageHeight: number): boolean {
+  if (top + h > pageHeight - 4) return true
+  const layer = el.offsetParent as HTMLElement | null
+  if (!layer) return false
+  let scroller: HTMLElement | null = layer
+  while (scroller && !/(auto|scroll)/.test(getComputedStyle(scroller).overflowY)) scroller = scroller.parentElement
+  const box = layer.getBoundingClientRect()
+  const bottom = box.top + top + h - 2
+  if (bottom > window.innerHeight) return true
+  if (!scroller || typeof document.elementFromPoint !== 'function') return false
+  return [box.left + x + 6, box.left + x + w / 2, box.left + x + w - 6].some((px) => {
+    const hit = document.elementFromPoint(px, bottom)
+    return !!hit && !scroller.contains(hit)
+  })
 }
 
 // A freehand redaction ('stroke'): its path, stored as fractions of the box,
@@ -4541,7 +4585,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           <PagePill
             left={bbox.x * scale}
             top={(bbox.y + bbox.height) * scale + 10}
+            markTop={bbox.y * scale}
             pageWidth={width}
+            pageHeight={height}
             className="items-center gap-2 bg-white shadow-lg border border-slate-300 px-3 py-1.5"
           >
             <span className="text-xs text-slate-500 font-medium">{t('annotate.line.stroke')}</span>
@@ -4605,7 +4651,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           <PagePill
             left={bbox.x * scale}
             top={(bbox.y + bbox.height) * scale + 10}
+            markTop={bbox.y * scale}
             pageWidth={width}
+            pageHeight={height}
             className="items-center gap-2 bg-white shadow-lg border border-slate-300 pl-3 pr-2 py-1.5"
           >
             <span className="text-xs text-slate-500 font-medium">{t('annotate.shape.colour')}</span>
@@ -4620,25 +4668,30 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               // here on the stroke, not in the main toolbar (James,
               // 2026-10-13). The size repaints this stroke and is the next
               // one's, as the colour does.
+              //
+              // Size gets a row of its own under the colours, labelled just
+              // "Size" (James, 2026-10-19: on a phone the label stayed on the
+              // colour row and only the slider wrapped, which looked odd).
               <>
                 <ColorCluster color={selected.color} setColor={setColor} swatches={highlightColours} />
-                <span className="w-px h-5 bg-slate-200" />
-                <span className="text-xs text-slate-500 font-medium">{t('viewer.toolbar.highlight_size')}</span>
-                <input
-                  type="range"
-                  min={HIGHLIGHT_MIN_PX}
-                  max={HIGHLIGHT_MAX_PX}
-                  step={2}
-                  value={Math.round(selected.strokeWidth * scale)}
-                  onChange={(e) => {
-                    const px = parseFloat(e.target.value)
-                    // Repaints this stroke too (the store converts to page units).
-                    setHighlightWidth(px)
-                  }}
-                  aria-label={t('viewer.toolbar.highlight_size')}
-                  title={t('viewer.toolbar.highlight_size_value', { size: Math.round(selected.strokeWidth * scale) })}
-                  className="w-20 accent-amber-500"
-                />
+                <span className="basis-full flex items-center gap-2">
+                  <span className="text-xs text-slate-500 font-medium">{t('annotate.sig_pill.size')}</span>
+                  <input
+                    type="range"
+                    min={HIGHLIGHT_MIN_PX}
+                    max={HIGHLIGHT_MAX_PX}
+                    step={2}
+                    value={Math.round(selected.strokeWidth * scale)}
+                    onChange={(e) => {
+                      const px = parseFloat(e.target.value)
+                      // Repaints this stroke too (the store converts to page units).
+                      setHighlightWidth(px)
+                    }}
+                    aria-label={t('viewer.toolbar.highlight_size')}
+                    title={t('viewer.toolbar.highlight_size_value', { size: Math.round(selected.strokeWidth * scale) })}
+                    className="flex-1 min-w-20 accent-amber-500"
+                  />
+                </span>
               </>
             ) : (
               <ColorCluster color={selected.color} setColor={setColor} />
