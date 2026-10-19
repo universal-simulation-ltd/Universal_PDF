@@ -25,6 +25,8 @@ const phone: Messages['phone'] = {
   'headline_hl': 'dert değil.',
   'search_aria': 'Belgelerinizde arayın',
   'search_placeholder': 'Masanızda bir belge bulun',
+  'pull_to_search': 'Aramak için aşağı çekin',
+  'search_close': 'Aramayı kapat',
   'choose_aria': 'Başlamak için birini seçin',
   'swipe_hint': 'Başlamak için birini seçin ya da daha fazlası için kaydırın →', // handwritten note under the cards
   'open_files': 'Dosyalar’dan aç',

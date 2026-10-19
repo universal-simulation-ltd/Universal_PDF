@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { PullDrawer, insideScrolledChild, modalIsOpen, openThenFocus, usePullHint, useSearchRequests } from '@unisim/sdk'
 import { useT, intlLocale } from '../i18n'
+import { DESK_PULL_HINT_KEY } from '../lib/resetDefaults'
 import { usePdfStore } from '../stores/pdfStore'
 import type { RecentMeta } from '../lib/recents'
 import { formatSize } from '../components/Export/formatSize'
@@ -63,17 +65,93 @@ export default function DeskScreen() {
   const recents = usePdfStore((s) => s.recents)
   const refreshRecents = usePdfStore((s) => s.refreshRecents)
   const [at, setAt] = useState(0)
-  const [searching, setSearching] = useState(false)
   const [query, setQuery] = useState('')
   const [options, setOptions] = useState<RecentMeta | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
+
+  // The search, folded away above "On your desk" until you pull down (BRANDING.md
+  // ▸ "Pull down for search, pull again for the keyboard"; James, 2026-10-19:
+  // "where appropriate swipe down to reveal search bar and swipe again to open
+  // keyboard. As we do in jukebox"). It replaced a search button in the header.
+  // The gesture is the SDK's PullDrawer, the one Jukebox and BlackBook use.
+  //
+  // The desk itself never scrolls (the window's scrollY is always 0, which is
+  // all the SDK asks of "the top of the page"); the list under it does. So the
+  // drawer is the first thing INSIDE the list, and a pull counts only while
+  // that list is at its top — `notAPull` below.
+  //
+  // Other ways in, so nobody needs the gesture: tapping Desk while on it, a
+  // search button that is invisible until it takes keyboard focus (where the
+  // old button was), and the first-run hint, which is a button too.
+  const [pulled, setPulled] = useState(false)
+  const searchShown = pulled || query !== ''
+  const canSearch = recents.length > 0
+  const { learnt, learn } = usePullHint(DESK_PULL_HINT_KEY)
 
   useEffect(() => {
     void refreshRecents()
   }, [refreshRecents])
-  useEffect(() => {
-    if (searching) searchRef.current?.focus()
-  }, [searching])
+
+  const openDrawer = useCallback(() => {
+    setPulled(true)
+    learn()
+  }, [learn])
+  // A second pull while it's open: into the box, keyboard up. Called from
+  // inside the touch's release, which is what iOS needs to raise the keyboard.
+  const typeIntoSearch = useCallback(() => searchRef.current?.focus({ preventScroll: true }), [])
+  // Open AND focus inside the same tap. `openThenFocus` renders the drawer open
+  // first: shut, it is inert, and focusing an inert box does nothing.
+  const openAndFocus = useCallback(() => {
+    const list = listRef.current
+    if (list && list.scrollTop > 0) list.scrollTop = 0
+    openThenFocus(() => setPulled(true), searchRef)
+    learn()
+  }, [learn])
+  const clearAndClose = useCallback(() => {
+    setQuery('')
+    setPulled(false)
+    searchRef.current?.blur()
+  }, [])
+  // The tab bar's `requestSearch` (NativeApp's TabBar): Desk tapped while on it.
+  useSearchRequests({ onOpen: openAndFocus }, canSearch)
+
+  /**
+   * A touch that is never a pull, on top of the SDK's own (the sideways
+   * carousel is `data-swipe-x`): one made outside the desk (the tab bar, a
+   * dialog or the options sheet over it), or while the list is scrolled down —
+   * then a drag down is the list scrolling back up, and a pull on the cobalt
+   * desk above would open a box scrolled out of sight.
+   */
+  const notAPull = useCallback((e: TouchEvent) => {
+    const root = rootRef.current
+    if (!root || !(e.target instanceof Node) || !root.contains(e.target)) return true
+    return modalIsOpen() || (listRef.current?.scrollTop ?? 0) > 0 || insideScrolledChild(e.target)
+  }, [])
+
+  /**
+   * Scrolled out of sight, the box folds away again, unless a search is typed
+   * in, and the list stays still on screen. The SDK does this for a page that
+   * scrolls the window; this list scrolls itself, so it is done here, the way
+   * PullDrawer does it: shut at once (no slide off screen), then measure what
+   * moved rather than assume (Chromium anchors the scroll, WebKit doesn't).
+   */
+  function foldIfScrolledAway(e: React.UIEvent<HTMLDivElement>) {
+    if (!pulled || query) return
+    const list = e.currentTarget
+    const drawer = list.querySelector<HTMLElement>(':scope > [data-pull-drawer]')
+    if (!drawer || drawer.offsetHeight === 0) return
+    if (drawer.getBoundingClientRect().bottom > list.getBoundingClientRect().top) return
+    const below = drawer.nextElementSibling
+    const before = below?.getBoundingClientRect().top ?? 0
+    drawer.style.transition = 'none'
+    drawer.style.height = '0px'
+    drawer.style.opacity = '0'
+    const after = below?.getBoundingClientRect().top ?? 0
+    if (after !== before) list.scrollTop += after - before
+    setPulled(false)
+  }
 
   const shown = useMemo(() => {
     const q = query.trim().toLocaleLowerCase()
@@ -89,7 +167,7 @@ export default function DeskScreen() {
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col" style={{ background: 'var(--np-desk)' }}>
+    <div ref={rootRef} className="flex-1 min-h-0 flex flex-col" style={{ background: 'var(--np-desk)' }}>
       <div
         className="flex-none px-5 pb-[30px] flex flex-col gap-4 text-white"
         style={{ paddingTop: 'calc(env(safe-area-inset-top) + 14px)' }}
@@ -99,19 +177,19 @@ export default function DeskScreen() {
             <AppMark size={26} />
             <span className="text-[15px] font-bold tracking-[-0.01em]">{t('phone.app_name')}</span>
           </div>
-          <button
-            type="button"
-            aria-label={t('phone.search_aria')}
-            aria-expanded={searching}
-            onClick={() => {
-              setSearching((v) => !v)
-              setQuery('')
-            }}
-            className="w-11 h-11 rounded-full flex items-center justify-center"
-            style={{ background: 'rgba(255,255,255,0.14)' }}
-          >
-            <Icon d={searching ? PATHS.close : PATHS.search} size={20} stroke="#ffffff" />
-          </button>
+          {/* The keyboard and screen-reader way in: it takes no room until it
+              is focused, and then looks like the button that used to be here. */}
+          {canSearch && !searchShown && (
+            <button
+              type="button"
+              aria-label={t('phone.search_aria')}
+              onClick={openAndFocus}
+              className="sr-only focus:not-sr-only focus:w-11 focus:h-11 focus:rounded-full focus:flex focus:items-center focus:justify-center"
+              style={{ background: 'rgba(255,255,255,0.14)' }}
+            >
+              <Icon d={PATHS.search} size={20} stroke="#ffffff" />
+            </button>
+          )}
         </div>
 
         <h1 className="np-serif m-0 text-[38px] leading-[1.06] font-bold tracking-[-0.015em]">
@@ -123,6 +201,7 @@ export default function DeskScreen() {
           <div
             className="np-jobs -mx-5 -mt-1 px-5 pt-3.5 pb-[18px] flex gap-3 overflow-x-auto"
             style={{ scrollSnapType: 'x mandatory', scrollPaddingLeft: 20 }}
+            data-swipe-x
             onScroll={onScroll}
           >
             {cards.map((c, i) => {
@@ -189,19 +268,57 @@ export default function DeskScreen() {
           <h2 className="np-serif m-0 text-[22px] font-bold">{t('phone.desk_title')}</h2>
           <span className="text-[13px] text-[color:var(--np-muted)]">{t('phone.desk_only_here')}</span>
         </div>
-        {searching && (
-          <input
-            ref={searchRef}
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t('phone.search_placeholder')}
-            aria-label={t('phone.search_aria')}
-            className="w-full h-11 px-3.5 rounded-xl text-[16px] outline-none"
-            style={{ background: 'var(--np-slip)', border: '1px solid var(--np-line)' }}
-          />
+        {canSearch && !searchShown && !learnt && (
+          // First run: nothing else on screen says the search is there. A tap
+          // opens it too. Tune ▸ Reset to defaults brings it back.
+          <button
+            type="button"
+            onClick={openDrawer}
+            className="np-hand np-pull-hint self-center -mt-1 -mb-1 px-3 min-h-[36px] flex items-center gap-1 text-[21px] leading-none"
+            style={{ color: 'var(--np-cobalt)' }}
+          >
+            <span aria-hidden="true">↓</span> {t('phone.pull_to_search')}
+          </button>
         )}
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain -mx-5 px-5 pb-4">
+        <div ref={listRef} onScroll={foldIfScrolledAway} className="flex-1 min-h-0 overflow-y-auto overscroll-contain -mx-5 px-5 pb-4">
+          {/* No pull-to-refresh while it can be pulled (containOverscroll):
+              Chrome on Android starts it on the same gesture. */}
+          <PullDrawer
+            shown={searchShown}
+            onOpen={openDrawer}
+            onPullAgain={typeIntoSearch}
+            pullable={canSearch}
+            ignoreTouch={notAPull}
+            containOverscroll
+            innerClassName="pb-2.5"
+          >
+            <div role="search" className="relative">
+              <input
+                ref={searchRef}
+                type="search"
+                enterKeyHint="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') clearAndClose()
+                  else if (e.key === 'Enter') e.currentTarget.blur()
+                }}
+                placeholder={t('phone.search_placeholder')}
+                aria-label={t('phone.search_aria')}
+                className="np-kb-search w-full h-11 pl-3.5 pr-11 rounded-xl text-[16px] outline-none"
+                style={{ background: 'var(--np-slip)', border: '1px solid var(--np-line)' }}
+              />
+              <button
+                type="button"
+                aria-label={t('phone.search_close')}
+                onClick={clearAndClose}
+                className="absolute right-0 top-0 w-11 h-11 flex items-center justify-center text-[color:var(--np-muted)]"
+              >
+                <Icon d={PATHS.close} size={16} width={2.4} />
+              </button>
+            </div>
+          </PullDrawer>
+          <div>
           {shown.length === 0 && recents.length === 0 ? (
             // Nothing on the desk at all (not a search that matched nothing):
             // the example lies there instead, drawn like any desk entry.
@@ -242,6 +359,7 @@ export default function DeskScreen() {
               ))}
             </ul>
           )}
+          </div>
         </div>
       </div>
 

@@ -2316,6 +2316,39 @@ was (`ToolbarUserProfile`, the landing navbar).
 - `npm run test:phone-knowledge` (WebKit, iPhone size) pins all of the above,
   and checks that the website still opens the SDK dialog.
 
+## The phone desk's search pulls down (2026-10-19)
+
+James: "where appropriate swipe down to reveal search bar and swipe again to
+open keyboard. As we do in jukebox" (the suite rule, BRANDING.md ▸ "Pull down
+for search, pull again for the keyboard"). The search button over "On your
+desk" is gone. The search box is folded away above the list, in the SDK's
+`PullDrawer` (@unisim/sdk ≥ 0.197), the gesture Jukebox and BlackBook use.
+
+- **The gesture:** pull down on the desk and the box comes out (it follows the
+  finger, opens past 64px, springs shut short of it). Pull again and the box
+  is focused from inside the touch's release, so iOS raises the keyboard.
+  Tapping **Desk** while on it does the same (`requestSearch()` in
+  `NativeApp`'s `TabBar`). The first time, a handwritten "↓ Pull down to
+  search" shows under the title and opens it on a tap. Its key
+  (`DESK_PULL_HINT_KEY`) is in `resetDefaults.ts`, so Reset to defaults brings
+  it back. For the keyboard and screen readers there is a search button where
+  the old one was, invisible until it is focused.
+- ⚠️ **The desk doesn't scroll; its list does.** The SDK reads "the top of the
+  page" from `window.scrollY`, which is always 0 here. So the drawer is the
+  first thing inside the list's scroller, and `notAPull` refuses a touch made
+  outside the desk (the tab bar, a dialog, the options sheet), or while the
+  list is scrolled down. The carousel of cards is `data-swipe-x`.
+- **Folding away:** the SDK folds the drawer when the WINDOW scrolls it out of
+  sight, which never happens here. `foldIfScrolledAway` does the same on the
+  list's own scroll: shut at once, then put the list back by what it measured.
+  A search typed in stays. The × clears the box and folds it.
+- Only with something on the desk: an empty desk has nothing to search, so no
+  pull and no hint. `containOverscroll` keeps Chrome on Android from starting
+  a pull-to-refresh on the same gesture.
+- `npm run test:desk-search` (Chromium, iPhone size, real CDP touches) pins all
+  of the above, including that the options sheet's own pull-to-close still
+  works. With the drawer's `pullable={false}` it fails every pull check.
+
 ## The example PDF — a feature tour
 
 `lib/examplePdf.ts` makes the example on the device with pdf-lib (James,

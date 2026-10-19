@@ -25,6 +25,8 @@ const phone: Messages['phone'] = {
   'headline_hl': 'einfach funktionieren.',
   'search_aria': 'Deine Dokumente durchsuchen',
   'search_placeholder': 'Ein Dokument auf deinem Schreibtisch finden',
+  'pull_to_search': 'Zum Suchen nach unten ziehen',
+  'search_close': 'Suche schließen',
   'choose_aria': 'Wähl etwas aus, um loszulegen',
   'swipe_hint': 'Wähl etwas aus, um loszulegen, oder wisch für mehr →', // handwritten note under the cards
   'open_files': 'Aus Dateien öffnen',

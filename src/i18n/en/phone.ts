@@ -28,6 +28,8 @@ export default {
   'headline_hl': 'just work.',
   'search_aria': 'Search your documents',
   'search_placeholder': 'Find a document on your desk',
+  'pull_to_search': 'Pull down to search',
+  'search_close': 'Close the search',
   'choose_aria': 'Choose one to begin',
   'swipe_hint': 'Choose one to begin, or swipe for more →', // handwritten note under the cards
   'open_files': 'Open from Files',

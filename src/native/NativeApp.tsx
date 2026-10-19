@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef } from 'react'
+import { requestSearch } from '@unisim/sdk'
 import { useT } from '../i18n'
 import { usePdfStore } from '../stores/pdfStore'
 import { useSignatureStore } from '../stores/signatureStore'
@@ -168,7 +169,12 @@ function TabBar() {
             key={it.id}
             type="button"
             aria-current={on ? 'page' : undefined}
-            onClick={() => useNav.getState().setTab(it.id)}
+            onClick={() => {
+              // Desk tapped while on it opens the desk's search, keyboard up:
+              // requestSearch is synchronous, so the focus lands inside this tap.
+              if (on && it.id === 'desk') requestSearch()
+              useNav.getState().setTab(it.id)
+            }}
             className="flex flex-col items-center gap-1.5 min-h-[48px]"
             style={{ color: on ? 'var(--np-cobalt-deep)' : 'var(--np-muted)' }}
           >

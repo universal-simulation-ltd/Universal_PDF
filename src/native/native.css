@@ -171,6 +171,18 @@
   .np-scrim, .np-sheet, .np-page-enter, .np-moment-enter { animation: none; }
 }
 
+/* The desk's first-run "Pull down to search": it bobs the way the pull goes. */
+.np-pull-hint {
+  animation: np-bob 1.6s ease-in-out infinite;
+}
+@keyframes np-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(4px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .np-pull-hint { animation: none; }
+}
+
 /* The document viewer's own shell is slate-100; on the phone the pages lie on
    the warm grey desk instead. Scoped to the phone's document screen. */
 .np-doc .bg-slate-100,
@@ -213,7 +225,7 @@
   opacity: 0.5;
 }
 
-/* The knowledge base's search box draws its own × (KnowledgeScreen). */
+/* The knowledge base's and the desk's search boxes draw their own × (KnowledgeScreen, DeskScreen). */
 .np-kb-search::-webkit-search-cancel-button,
 .np-kb-search::-webkit-search-decoration {
   -webkit-appearance: none;
