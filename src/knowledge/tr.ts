@@ -223,6 +223,33 @@ Bir belge açıkken Yatay’a geçerseniz belge mevcut yakınlaştırma düzeyin
 Ayar yalnızca bu cihazda, tarayıcınızın depolama alanında hatırlanır; bu yüzden her cihazınızın kendi ayarı olabilir. Hesabınıza kaydedilmez. Bu uygulamayı ayarla’nın en altındaki **Varsayılanlara sıfırla**, ayarı cihazın başlangıç değerine döndürür: telefonda Yatay, bilgisayarda Dikey.`,
   },
   {
+    id: 'select-several',
+    title: 'Birden çok notu aynı anda seçmek',
+    summary: 'Birkaç notun çevresine bir kutu çizin, sonra hepsini birlikte taşıyın ya da silin.',
+    group: 'Nasıl çalışır',
+    body: `Birden çok notu (kutular, onay işaretleri, vurgular, metin ve diğerleri) aynı anda seçip hepsini birlikte taşıyabilir ya da silebilirsiniz.
+
+## Telefonda veya tablette
+
+1. Elinizde bir çizim aracı olmadığından emin olun. Telefon uygulamasında **İşaretle**'yi kapatmak için **Bitti**'ye ya da **Doldur**'a dokunun.
+2. Sayfanın boş bir yerine basılı tutun. Bir an sonra parmağınızın altında küçük turuncu bir nokta belirir.
+3. Parmağınızı kaldırmadan sürükleyin. Bir kutu parmağınızı izler.
+4. Bırakın. Kutunun değdiği her not seçilir.
+
+Hızlı bir kaydırma yine sayfalar arasında gezinir, sayfanın boş bir yerine dokunmak da seçimi kaldırır.
+
+## Bilgisayarda
+
+**Seç** aracıyla sayfanın boş bir yerinde sürükleyin. Bir notu seçime eklemek ya da seçimden çıkarmak için Shift'e basılı tutarak tıklayın.
+
+## Seçtikten sonra
+
+- Hepsini taşımak için herhangi birini sürükleyin.
+- Hepsini silmek için yanlarındaki kırmızı çöp kutusuna dokunun. **Geri al** hepsini tek adımda geri getirir.
+
+Bilgisayarda kutu, vurgulayıcı çizgilerini dışarıda bırakır; böylece çerçevelediğiniz metnin altındaki vurguyu almaz. Bir vurguyu tek başına seçmek için üzerine tıklayın. Telefonda veya tablette kutu vurguları da alır, çünkü **İşaretle** vurgulayıcıyla başlar.`,
+  },
+  {
     id: 'send-to-sign-security',
     title: 'Onaylı imza ne kadar güvenli?',
     summary: 'Nelerin şifrelendiği, sunucumuzun neleri görebildiği ve denetim kaydının nasıl işlediği.',

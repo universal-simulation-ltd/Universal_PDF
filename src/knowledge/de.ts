@@ -223,6 +223,33 @@ Wechseln Sie bei einem bereits geöffneten Dokument zu Horizontal, behält es se
 Die Einstellung wird im Speicher Ihres Browsers gespeichert, nur auf diesem Gerät. Jedes Ihrer Geräte kann also seine eigene haben. In Ihrem Konto wird sie nicht gespeichert. **Auf Standard zurücksetzen**, unten in Diese App anpassen, stellt sie wieder auf den Ausgangswert des Geräts: Horizontal auf einem Smartphone, Vertikal auf einem Computer.`,
   },
   {
+    id: 'select-several',
+    title: 'Mehrere Kommentare auf einmal auswählen',
+    summary: 'Ziehen Sie einen Rahmen um mehrere Kommentare und verschieben oder löschen Sie sie gemeinsam.',
+    group: 'So funktioniert es',
+    body: `Sie können mehrere Kommentare auf einmal auswählen (Rechtecke, Häkchen, Markierungen, Text und alles Weitere) und sie dann gemeinsam verschieben oder löschen.
+
+## Auf dem Smartphone oder Tablet
+
+1. Achten Sie darauf, dass kein Zeichenwerkzeug aktiv ist. Tippen Sie in der Smartphone-App auf **Fertig**, um **Kommentieren** zu schließen, oder tippen Sie auf **Ausfüllen**.
+2. Halten Sie eine leere Stelle der Seite gedrückt. Nach einem Moment erscheint unter Ihrem Finger ein kleiner oranger Punkt.
+3. Ziehen Sie, ohne den Finger anzuheben. Ein Rahmen folgt ihm.
+4. Lassen Sie los. Alle Kommentare, die der Rahmen berührt, sind ausgewählt.
+
+Ein schnelles Wischen blättert weiterhin durch die Seiten, und ein Tippen auf eine leere Stelle der Seite hebt die Auswahl auf.
+
+## Auf dem Computer
+
+Ziehen Sie mit dem Werkzeug **Auswählen** über eine leere Stelle der Seite. Klicken Sie mit gedrückter Umschalttaste auf einen Kommentar, um ihn zur Auswahl hinzuzufügen oder daraus zu entfernen.
+
+## Wenn sie ausgewählt sind
+
+- Ziehen Sie einen davon, um alle zu verschieben.
+- Tippen Sie auf den roten Papierkorb daneben, um alle zu löschen. **Rückgängig** holt sie alle in einem Schritt zurück.
+
+Auf dem Computer lässt der Rahmen Textmarker-Striche aus, damit er nicht die Markierung unter dem Text erfasst, den Sie einrahmen. Klicken Sie eine Markierung an, um sie allein auszuwählen. Auf dem Smartphone oder Tablet erfasst der Rahmen auch Markierungen, denn **Kommentieren** beginnt mit dem Textmarker.`,
+  },
+  {
     id: 'send-to-sign-security',
     title: 'Wie sicher ist eine zertifizierte Unterschrift?',
     summary: 'Was verschlüsselt ist, was unser Server sehen kann und wie das Prüfprotokoll funktioniert.',

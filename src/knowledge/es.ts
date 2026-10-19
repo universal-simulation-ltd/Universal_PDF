@@ -223,6 +223,33 @@ Si cambia a Horizontal con un documento ya abierto, este conserva el zoom que te
 El ajuste se recuerda en el almacenamiento de su navegador, solo en este dispositivo, así que cada uno de sus dispositivos puede tener el suyo. No se guarda en su cuenta. **Restablecer valores predeterminados**, al pie de Ajustar esta app, lo devuelve a lo que el dispositivo trae de inicio: Horizontal en un teléfono, Vertical en un ordenador.`,
   },
   {
+    id: 'select-several',
+    title: 'Seleccionar varias anotaciones a la vez',
+    summary: 'Dibuja un recuadro alrededor de varias anotaciones y muévelas o elimínalas juntas.',
+    group: 'Cómo funciona',
+    body: `Puedes seleccionar varias anotaciones a la vez (rectángulos, marcas de verificación, resaltados, texto y demás) y luego moverlas o eliminarlas juntas.
+
+## En un teléfono o una tableta
+
+1. Comprueba que no tienes ninguna herramienta de dibujo activa. En la app para teléfono, toca **Listo** para cerrar **Anotar**, o toca **Rellenar**.
+2. Mantén pulsada una parte vacía de la página. Al cabo de un momento aparece un pequeño punto naranja bajo tu dedo.
+3. Sin levantar el dedo, arrastra. Un recuadro lo sigue.
+4. Suelta. Quedan seleccionadas todas las anotaciones que toca el recuadro.
+
+Un deslizamiento rápido sigue pasando las páginas, y un toque en una parte vacía de la página borra la selección.
+
+## En un ordenador
+
+Con la herramienta **Seleccionar**, arrastra por una parte vacía de la página. Haz clic en una anotación con Mayús pulsada para añadirla a la selección o quitarla.
+
+## Una vez seleccionadas
+
+- Arrastra cualquiera de ellas para moverlas todas.
+- Toca la papelera roja que hay a su lado para eliminarlas todas. **Deshacer** las recupera todas en un solo paso.
+
+En un ordenador, el recuadro deja fuera los trazos de resaltador, para no coger el resaltado que hay bajo el texto que estás enmarcando. Haz clic en un resaltado para seleccionarlo solo. En un teléfono o una tableta, el recuadro también coge los resaltados, porque **Anotar** empieza con el resaltador.`,
+  },
+  {
     id: 'send-to-sign-security',
     title: '¿Qué seguridad ofrece una firma certificada?',
     summary: 'Qué se cifra, qué puede ver nuestro servidor y cómo funciona el registro de auditoría.',

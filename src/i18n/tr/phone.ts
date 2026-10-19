@@ -83,6 +83,7 @@ const phone: Messages['phone'] = {
   'tool_pages': 'Sayfalar',
   'tool_share': 'Paylaş',
   'fill_hint': 'Yazmak için bir kutuya, yazı eklemek için başka herhangi bir yere dokunun.',
+  'select_several_hint': 'Birden çok notu aynı anda seçmek için sayfanın boş bir yerine basılı tutun, sonra üzerlerinden sürükleyin.',
 
   // Mark up (a sheet under the page)
   'markup_title': 'İşaretle',

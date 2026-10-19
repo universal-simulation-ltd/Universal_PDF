@@ -37,7 +37,10 @@ export const SHEET_PULL_HINT_KEY = 'unipdf:sheet-pull-hinted'
 /** native/DeskScreen — the phone desk's first-run "pull down to search" (the SDK's usePullHint). */
 export const DESK_PULL_HINT_KEY = 'unipdf:desk-pull-learnt'
 
-const DISMISSAL_KEYS = [FILL_WARNING_KEY, MOBILE_WELCOME_KEY, DEFAULT_APP_ASKED_KEY, SHEET_PULL_HINT_KEY, DESK_PULL_HINT_KEY]
+/** native/DocumentScreen — the phone's one-time "press and hold, then drag, to select several marks". */
+export const SELECT_SEVERAL_HINT_KEY = 'unipdf:select-several-hinted'
+
+const DISMISSAL_KEYS = [FILL_WARNING_KEY, MOBILE_WELCOME_KEY, DEFAULT_APP_ASKED_KEY, SHEET_PULL_HINT_KEY, DESK_PULL_HINT_KEY, SELECT_SEVERAL_HINT_KEY]
 
 /** Bring back every app-owned dismissed prompt. Takes effect the next time each prompt would show. */
 export function clearDismissedPrompts(): void {

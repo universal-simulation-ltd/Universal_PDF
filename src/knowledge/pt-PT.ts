@@ -223,6 +223,33 @@ Ao mudar para Horizontal com um documento já aberto, este mantém o zoom atual.
 A definição fica guardada no armazenamento do browser, apenas neste dispositivo, pelo que cada dispositivo pode ter a sua. Não é guardada na conta. **Repor predefinições**, no fundo de Ajustar esta aplicação, volta a pô-la no valor inicial do dispositivo: Horizontal num telemóvel, Vertical num computador.`,
   },
   {
+    id: 'select-several',
+    title: 'Selecionar várias anotações de uma vez',
+    summary: 'Desenhe uma caixa à volta de várias anotações e mova-as ou elimine-as em conjunto.',
+    group: 'Como funciona',
+    body: `Pode selecionar várias anotações de uma vez (retângulos, vistos, destaques, texto e o resto) e depois movê-las ou eliminá-las em conjunto.
+
+## Num telemóvel ou tablet
+
+1. Confirme que não tem nenhuma ferramenta de desenho ativa. Na app para telemóvel, toque em **Concluído** para fechar **Anotar**, ou toque em **Preencher**.
+2. Toque sem soltar numa parte vazia da página. Passado um instante, aparece um pequeno ponto cor de laranja debaixo do seu dedo.
+3. Sem levantar o dedo, arraste. Uma caixa acompanha-o.
+4. Solte. Ficam selecionadas todas as anotações em que a caixa toca.
+
+Um deslize rápido continua a passar as páginas, e um toque numa parte vazia da página limpa a seleção.
+
+## Num computador
+
+Com a ferramenta **Selecionar**, arraste por uma parte vazia da página. Clique numa anotação com Shift premido para a juntar à seleção ou a retirar.
+
+## Depois de selecionadas
+
+- Arraste qualquer uma delas para as mover todas.
+- Toque no caixote do lixo vermelho ao lado delas para as eliminar todas. **Anular** volta a trazê-las todas num só passo.
+
+Num computador, a caixa deixa de fora os traços de marcador, para não apanhar o destaque debaixo do texto que está a enquadrar. Clique num destaque para o selecionar sozinho. Num telemóvel ou tablet, a caixa apanha também os destaques, porque **Anotar** começa com o marcador.`,
+  },
+  {
     id: 'send-to-sign-security',
     title: 'Qual é a segurança de uma assinatura certificada?',
     summary: 'O que é encriptado, o que o nosso servidor consegue ver e como funciona o registo de auditoria.',

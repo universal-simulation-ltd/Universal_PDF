@@ -223,6 +223,33 @@ Se você mudar para Horizontal com um documento já aberto, ele mantém o zoom a
 A configuração fica guardada no armazenamento do seu navegador, só neste aparelho, então cada um dos seus aparelhos pode ter a sua. Ela não é salva na sua conta. **Restaurar padrões**, no fim de Ajustar este app, volta para o que o aparelho usa de início: Horizontal no celular, Vertical no computador.`,
   },
   {
+    id: 'select-several',
+    title: 'Selecionar várias anotações de uma vez',
+    summary: 'Desenhe uma caixa em volta de várias anotações e mova ou exclua todas juntas.',
+    group: 'Como funciona',
+    body: `Você pode selecionar várias anotações de uma vez (retângulos, sinais de certo, destaques, texto e o resto) e depois mover ou excluir todas juntas.
+
+## Em um celular ou tablet
+
+1. Confira se nenhuma ferramenta de desenho está ativa. No app para celular, toque em **Concluído** para fechar **Anotar**, ou toque em **Preencher**.
+2. Toque e segure em uma parte vazia da página. Depois de um instante, um pequeno ponto laranja aparece sob o seu dedo.
+3. Sem tirar o dedo, arraste. Uma caixa acompanha o dedo.
+4. Solte. Todas as anotações que a caixa toca ficam selecionadas.
+
+Um deslize rápido continua passando as páginas, e um toque em uma parte vazia da página limpa a seleção.
+
+## Em um computador
+
+Com a ferramenta **Selecionar**, arraste por uma parte vazia da página. Clique em uma anotação segurando Shift para incluí-la na seleção ou tirá-la.
+
+## Depois de selecionadas
+
+- Arraste qualquer uma delas para mover todas.
+- Toque na lixeira vermelha ao lado delas para excluir todas. **Desfazer** traz todas de volta em uma só etapa.
+
+Em um computador, a caixa deixa de fora os traços de marca-texto, para não pegar o destaque embaixo do texto que você está enquadrando. Clique em um destaque para selecioná-lo sozinho. Em um celular ou tablet, a caixa pega os destaques também, porque **Anotar** começa com o marca-texto.`,
+  },
+  {
     id: 'send-to-sign-security',
     title: 'Quão segura é uma assinatura certificada?',
     summary: 'O que é criptografado, o que nosso servidor consegue ver e como funciona a trilha de auditoria.',

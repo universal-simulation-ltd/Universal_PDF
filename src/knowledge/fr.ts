@@ -223,6 +223,33 @@ Si vous passez en Horizontal avec un document déjà ouvert, celui-ci garde son 
 Le réglage est mémorisé dans le stockage de votre navigateur, sur cet appareil uniquement : chacun de vos appareils peut donc avoir le sien. Il n’est pas enregistré dans votre compte. **Rétablir les réglages par défaut**, en bas de Régler cette application, le remet sur la valeur de départ de l’appareil : Horizontal sur un téléphone, Vertical sur un ordinateur.`,
   },
   {
+    id: 'select-several',
+    title: 'Sélectionner plusieurs annotations à la fois',
+    summary: 'Tracez un cadre autour de plusieurs annotations, puis déplacez-les ou supprimez-les ensemble.',
+    group: 'Comment ça marche',
+    body: `Vous pouvez sélectionner plusieurs annotations à la fois (rectangles, coches, surlignages, texte, etc.), puis les déplacer ou les supprimer ensemble.
+
+## Sur un téléphone ou une tablette
+
+1. Vérifiez qu’aucun outil de dessin n’est actif. Dans l’app pour téléphone, touchez **Terminé** pour fermer **Annoter**, ou touchez **Remplir**.
+2. Maintenez le doigt sur une partie vide de la page. Au bout d’un instant, un petit point orange apparaît sous votre doigt.
+3. Sans lever le doigt, faites-le glisser. Un cadre le suit.
+4. Relâchez. Toutes les annotations que le cadre touche sont sélectionnées.
+
+Un glissement rapide fait toujours défiler les pages, et un toucher sur une partie vide de la page annule la sélection.
+
+## Sur un ordinateur
+
+Avec l’outil **Sélectionner**, faites glisser la souris sur une partie vide de la page. Cliquez sur une annotation en maintenant Maj pour l’ajouter à la sélection ou l’en retirer.
+
+## Une fois sélectionnées
+
+- Faites glisser l’une d’elles pour les déplacer toutes.
+- Touchez la corbeille rouge à côté d’elles pour toutes les supprimer. **Annuler** les fait toutes revenir en une seule étape.
+
+Sur un ordinateur, le cadre laisse de côté les traits de surligneur, pour ne pas prendre le surlignage sous le texte que vous encadrez. Cliquez sur un surlignage pour le sélectionner seul. Sur un téléphone ou une tablette, le cadre prend aussi les surlignages, car **Annoter** commence avec le surligneur.`,
+  },
+  {
     id: 'send-to-sign-security',
     title: 'Une signature certifiée est-elle sûre ?',
     summary: 'Ce qui est chiffré, ce que notre serveur peut voir, et comment fonctionne la piste d’audit.',

@@ -223,6 +223,33 @@ Se passi a Orizzontale con un documento già aperto, il documento mantiene lo zo
 L’impostazione viene memorizzata nello spazio di archiviazione del browser, solo su questo dispositivo, quindi ciascuno dei tuoi dispositivi può averne una diversa. Non viene salvata nel tuo account. **Ripristina impostazioni predefinite**, in fondo a Regola questa app, la riporta all’impostazione iniziale del dispositivo: Orizzontale su un telefono, Verticale su un computer.`,
   },
   {
+    id: 'select-several',
+    title: 'Selezionare più annotazioni insieme',
+    summary: 'Traccia un riquadro intorno a più annotazioni, poi spostale o eliminale insieme.',
+    group: 'Come funziona',
+    body: `Puoi selezionare più annotazioni insieme (rettangoli, segni di spunta, evidenziazioni, testo e così via), poi spostarle o eliminarle tutte in una volta.
+
+## Su un telefono o un tablet
+
+1. Assicurati che nessuno strumento di disegno sia attivo. Nell’app per telefono, tocca **Fine** per chiudere **Annota**, oppure tocca **Compila**.
+2. Tieni premuto su una parte vuota della pagina. Dopo un attimo compare un piccolo punto arancione sotto il dito.
+3. Senza sollevare il dito, trascina. Un riquadro lo segue.
+4. Rilascia. Tutte le annotazioni toccate dal riquadro vengono selezionate.
+
+Uno scorrimento rapido continua a sfogliare le pagine, e un tocco su una parte vuota della pagina annulla la selezione.
+
+## Su un computer
+
+Con lo strumento **Seleziona**, trascina su una parte vuota della pagina. Fai clic su un’annotazione tenendo premuto Maiusc per aggiungerla alla selezione o toglierla.
+
+## Una volta selezionate
+
+- Trascinane una qualsiasi per spostarle tutte.
+- Tocca il cestino rosso accanto a loro per eliminarle tutte. **Annulla** le riporta tutte indietro in un solo passaggio.
+
+Su un computer il riquadro lascia fuori i tratti dell’evidenziatore, così non prende l’evidenziazione sotto il testo che stai riquadrando. Fai clic su un’evidenziazione per selezionarla da sola. Su un telefono o un tablet il riquadro prende anche le evidenziazioni, perché **Annota** parte con l’evidenziatore.`,
+  },
+  {
     id: 'send-to-sign-security',
     title: 'Quanto è sicura una firma certificata?',
     summary: 'Che cosa è crittografato, che cosa può vedere il nostro server e come funziona la traccia di controllo.',

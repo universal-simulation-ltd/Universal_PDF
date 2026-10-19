@@ -83,6 +83,7 @@ const phone: Messages['phone'] = {
   'tool_pages': 'Seiten',
   'tool_share': 'Teilen',
   'fill_hint': 'Tippe auf ein Feld, um hineinzuschreiben, oder irgendwo anders, um Text hinzuzufügen.',
+  'select_several_hint': 'Um mehrere Kommentare auf einmal auszuwählen, halte eine leere Stelle der Seite gedrückt und ziehe dann darüber.',
 
   // Mark up (a sheet under the page)
   'markup_title': 'Kommentieren',

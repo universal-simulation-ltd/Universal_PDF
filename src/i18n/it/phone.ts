@@ -83,6 +83,7 @@ const phone: Messages['phone'] = {
   'tool_pages': 'Pagine',
   'tool_share': 'Condividi',
   'fill_hint': 'Tocca una casella per scriverci, o in un altro punto per aggiungere testo.',
+  'select_several_hint': 'Per selezionare più annotazioni insieme, tieni premuto su una parte vuota della pagina, poi trascina sopra di esse.',
 
   // Mark up (a sheet under the page)
   'markup_title': 'Annota',

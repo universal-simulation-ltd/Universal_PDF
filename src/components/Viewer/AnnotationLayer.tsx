@@ -214,6 +214,13 @@ const TAP_CIRCLE_SIZE_PX = 140
 // enough that the start of a flick never trips it, short enough not to feel
 // stuck. A hold that has fired is announced on the page (`marqueeAnchor`), so
 // the gesture is not invisible while it waits.
+//
+// The same hold works with the plain Select tool (and Text, which is what the
+// phone's Fill hands you) since 2026-10-19 — James on the iPhone: "On mobile
+// need a tap and drag to select multiple annotations". On a mouse, Select
+// already box-selected on a plain drag; a finger had no way to at all, short
+// of finding Select area, which the phone doesn't offer. A plain swipe still
+// scrolls and a tap still deselects, so nothing a finger did before changes.
 const MARQUEE_HOLD_MS = 350
 
 // Redact answers a tap too, since 2026-09-14 (James: "Tap drops a box") — it
@@ -1297,6 +1304,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     curX: number
     curY: number
     moved: boolean
+    /** Started by a finger's press-and-hold, so highlighter strokes count too (see onPointerUp). */
+    touch?: boolean
   } | null>(null)
   const [marquee, setMarquee] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null)
   // A finger down on the page with the Select-area tool, waiting to find out
@@ -1315,9 +1324,20 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // Same fact as a render trigger: it draws the anchor marker that tells the
   // user the hold landed and the box is now following their finger.
   const [marqueeAnchor, setMarqueeAnchor] = useState<{ x: number; y: number } | null>(null)
-  // While dragging a multi-selection, the dragged node's last position so we
-  // can apply the same delta to every other selected node each frame.
-  const groupDragLast = useRef<{ x: number; y: number } | null>(null)
+  // A multi-selection being dragged: the mark the finger or mouse took
+  // (`leader`), and whether its drop has been committed yet.
+  //
+  // ⚠️ KONVA MOVES THE OTHER MEMBERS, NOT US. Every member of a multi-selection
+  // is attached to the Transformer, and Konva's Transformer proxies a drag: on
+  // the leader's first dragmove it shifts every other attached node by the
+  // same amount and `startDrag`s it, so they all follow the pointer. This
+  // layer used to translate them by hand as well, and each member's own
+  // dragstart reset the shared "last position" — so the deltas fed each other
+  // and a group drag flung every mark to the same spot millions of points
+  // off the page, on a mouse and a finger alike (found 2026-10-19, testing the
+  // phone's multi-select). Now members only sync their own hints while they
+  // move, and the first dragend commits the whole group in one undo step.
+  const groupDrag = useRef<{ leader: string; done: boolean } | null>(null)
   // ⚠️ Dragging a shape ONTO ANOTHER PAGE (James, 2026-09-27: "was unable to
   // drag a signature placement from one page to another"). Every page is its
   // own Konva stage, so a dragged node can't leave its canvas: it vanished at
@@ -1482,6 +1502,26 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     setMarqueeAnchor(null)
   }
 
+  // Start counting a finger's press-and-hold towards a selection box at page
+  // point `p`. If it is still down and still within TAP_SLOP_PX when
+  // MARQUEE_HOLD_MS is up, the box starts there and follows the finger.
+  function startMarqueeHold(evt: PointerEvent, p: { x: number; y: number }) {
+    clearMarqueeHold()
+    const { pointerId, clientX, clientY } = evt
+    marqueeHoldRef.current = {
+      pointerId,
+      clientX,
+      clientY,
+      timer: setTimeout(() => {
+        marqueeHoldRef.current = null
+        marqueeTouchRef.current = true
+        marqueeRef.current = { startX: p.x, startY: p.y, curX: p.x, curY: p.y, moved: false, touch: true }
+        setMarquee({ x1: p.x, y1: p.y, x2: p.x, y2: p.y })
+        setMarqueeAnchor({ x: p.x, y: p.y })
+      }, MARQUEE_HOLD_MS)
+    }
+  }
+
   // Abandon every gesture in flight on this page and put anything mid-drag back
   // where it started. A pinch is a zoom and only a zoom, so the drag / stroke /
   // rubber-band the first finger began is discarded rather than half-committed.
@@ -1495,7 +1535,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     setMarquee(null)
     clearMarqueeHold()
     setLineDrag(null)
-    groupDragLast.current = null
+    // Every member fires its own dragend from stopDrag below; none may commit.
+    if (groupDrag.current) groupDrag.current.done = true
     clearDragGhost()
     // Tell the dragend handlers (Konva fires them from stopDrag, and line
     // anchors fire theirs whenever the finger finally lifts) to drop the move.
@@ -1507,8 +1548,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       const ann = annos.find((a) => a.id === id)
       if (ann) restoreNodeHome(node, ann)
     }
-    // Members of a group drag are moved directly by onShapeDragMove, so they
-    // are not "dragging" themselves and need putting back explicitly.
+    // Members of a group drag are dragging too (the Transformer started them,
+    // see groupDrag), so the loop above has them; put back any selected node
+    // it missed — one Konva had moved before its drag began.
     for (const id of useAnnotationStore.getState().selectedIds) {
       const node = shapeRefs.current.get(id)
       const ann = annos.find((a) => a.id === id)
@@ -1676,10 +1718,13 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         return
       }
     }
-    // Rubber-band (marquee) selection. With the plain Select tool it's a
-    // mouse/pen-only shortcut so finger panning on mobile is never hijacked.
+    // Rubber-band (marquee) selection. With the plain Select tool a mouse or
+    // pen drags it out straight away; a finger on a phone or tablet presses
+    // and holds first (below), so finger panning is never hijacked. A finger
+    // on a touch-screen LAPTOP (fine primary pointer) still just pans.
+    const touchHold = coarsePointer && e.evt.pointerType === 'touch'
     const canMarquee =
-      tool === 'marquee' || (tool === 'select' && e.evt.pointerType !== 'touch')
+      tool === 'marquee' || (tool === 'select' && (e.evt.pointerType !== 'touch' || coarsePointer))
     if (canMarquee) {
       const p = getPos(e)
       // A finger doesn't get the box for free — the document's swipe comes
@@ -1692,21 +1737,12 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       // devices this tool hands the swipe back to. On a touch-capable LAPTOP
       // (a fine primary pointer) the Stage still reserves the gesture and a
       // finger still draws the box on contact, exactly as it did before.
-      if (coarsePointer && e.evt.pointerType === 'touch') {
-        clearMarqueeHold()
-        const { pointerId, clientX, clientY } = e.evt
-        marqueeHoldRef.current = {
-          pointerId,
-          clientX,
-          clientY,
-          timer: setTimeout(() => {
-            marqueeHoldRef.current = null
-            marqueeTouchRef.current = true
-            marqueeRef.current = { startX: p.x, startY: p.y, curX: p.x, curY: p.y, moved: false }
-            setMarquee({ x1: p.x, y1: p.y, x2: p.x, y2: p.y })
-            setMarqueeAnchor({ x: p.x, y: p.y })
-          }, MARQUEE_HOLD_MS)
-        }
+      if (touchHold) {
+        // Select lets go of the selection on contact, as it always has (a
+        // swipe that moves the page on deselects too); a pinch puts it back
+        // (undoPress), and a box replaces it anyway.
+        if (tool === 'select') setSelected(null)
+        startMarqueeHold(e.evt, p)
         return
       }
       marqueeRef.current = { startX: p.x, startY: p.y, curX: p.x, curY: p.y, moved: false }
@@ -1730,6 +1766,11 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     } else {
       // Everything else is a one-shot placement. Arm it; onPointerUp decides.
       pendingTapRef.current = { x: pos.x, y: pos.y, clientX: e.evt.clientX, clientY: e.evt.clientY }
+      // Text is what the phone's Fill hands you, and Fill reads as "nothing
+      // in hand", so a press-and-hold-then-drag selects there too. The tap is
+      // still armed: a hold that lifts without moving places the text box, as
+      // a long tap always did; only a hold that then drags draws the box.
+      if (tool === 'text' && touchHold) startMarqueeHold(e.evt, pos)
     }
   }
 
@@ -2037,6 +2078,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     const tap = pendingTapRef.current
     pendingTapRef.current = null
     if (tap && !gestureCancelled.current) {
+      // A Text hold that fired but never travelled is still this tap.
+      clearMarqueeHold()
+      marqueeRef.current = null
+      setMarquee(null)
       commitTapPlacement({ x: tap.x, y: tap.y })
       return
     }
@@ -2062,9 +2107,13 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       const rw = Math.abs(m.curX - m.startX)
       const rh = Math.abs(m.curY - m.startY)
       const box = { x: rx, y: ry, width: rw, height: rh }
+      // ⚠️ Highlighter strokes are left out of a mouse's box (see
+      // isHighlighter) but NOT out of a finger's: on the phone, Mark up opens
+      // with the highlighter in hand, so most of what is on a phone's pages IS
+      // highlighting, and a box that skipped it would catch next to nothing.
       const hits = annotations.filter(
         (a) =>
-          !isHighlighter(a) &&
+          (m.touch || !isHighlighter(a)) &&
           !(a.type === 'sigfield' && a.locked) &&
           rectsIntersect(getAnnotationBBox(a), box)
       )
@@ -2072,8 +2121,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       // The marquee tool is a one-shot "draw the box" mode — once it has caught
       // something, drop into Select so the group can immediately be moved /
       // resized / rotated (touch included; group transforms aren't pointer-
-      // gated). An empty sweep leaves the tool armed for another try.
-      if (tool === 'marquee' && hits.length > 0) setTool('select')
+      // gated). An empty sweep leaves the tool armed for another try. A box
+      // drawn from Text does the same: only Select can drag what it caught.
+      if ((tool === 'marquee' || tool === 'text') && hits.length > 0) setTool('select')
       return
     }
     // The ref, not the state: a freehand stroke's points are only in the ref.
@@ -2541,48 +2591,33 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   }
 
   function onShapeDragStart(a: Annotation) {
+    // The other members of a group being dragged, started by the Transformer
+    // (see groupDrag): the leader's dragstart already set everything up.
+    if (groupDrag.current && !groupDrag.current.done) return
     gestureCancelled.current = false
     clearDragGhost()
     setDraggingId(a.id)
     const ids = useAnnotationStore.getState().selectedIds
-    if (ids.length > 1 && ids.includes(a.id)) {
-      const node = shapeRefs.current.get(a.id)
-      groupDragLast.current = node ? { x: node.x(), y: node.y() } : null
-    } else {
-      groupDragLast.current = null
-    }
+    groupDrag.current = ids.length > 1 && ids.includes(a.id) ? { leader: a.id, done: false } : null
   }
 
-  // While dragging one member of a multi-selection, translate every other
-  // selected node by the same delta so the group moves rigidly together.
+  // Each frame of a drag. In a multi-selection Konva's Transformer moves the
+  // other members with the leader (see groupDrag); each member still keeps
+  // its own redaction caption and signature pieces with it.
   function onShapeDragMove(a: Annotation, e: Konva.KonvaEventObject<DragEvent>) {
     if (gestureCancelled.current) return
-    if (useAnnotationStore.getState().selectedIds.length <= 1) snapToAlign(a, e.target)
+    const group = groupDrag.current
+    if (!group && useAnnotationStore.getState().selectedIds.length <= 1) snapToAlign(a, e.target)
     if (a.type === 'redact') syncRedactHint(a.id, e.target)
     if (a.type === 'sigfield') syncSigExtras(a.id, e.target)
+    if (group && group.leader !== a.id) return
     dragClient.current = clientPointOf(e.evt) ?? dragClient.current
     syncDragGhost(a, e.target)
     if (a.id === editingId && a.type === 'text') setEditDrag({ x: e.target.x(), y: e.target.y() })
-    const last = groupDragLast.current
-    if (!last) return
-    const ids = useAnnotationStore.getState().selectedIds
-    if (ids.length <= 1) return
-    const node = e.target
-    const dx = node.x() - last.x
-    const dy = node.y() - last.y
-    if (dx === 0 && dy === 0) return
-    for (const id of ids) {
-      if (id === a.id) continue
-      const n = shapeRefs.current.get(id)
-      if (!n) continue
-      n.position({ x: n.x() + dx, y: n.y() + dy })
-      // No-op unless this member is a redaction (nothing else registers a hint).
-      syncRedactHint(id, n)
-      syncSigExtras(id, n)
+    if (group) {
+      trRef.current?.forceUpdate()
+      e.target.getLayer()?.batchDraw()
     }
-    groupDragLast.current = { x: node.x(), y: node.y() }
-    trRef.current?.forceUpdate()
-    node.getLayer()?.batchDraw()
   }
 
   // Translate-only patch for a single node after a drag, branching on the
@@ -2649,6 +2684,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   }
 
   function onShapeDragEnd(a: Annotation, e: Konva.KonvaEventObject<DragEvent>) {
+    // A member of a group whose drop has already been committed (each member
+    // fires its own dragend), or a group drag a pinch called off.
+    const group = groupDrag.current
+    if (group?.done) return
     setDraggingId(null)
     setEditDrag(null)
     setGuides(null)
@@ -2658,7 +2697,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       // A pinch (or a browser pointercancel) took this gesture over.
       // cancelGesture already put the nodes back; commit nothing.
       gestureCancelled.current = false
-      groupDragLast.current = null
+      if (group) group.done = true
       return
     }
     // Dropped over another page: carry the shape (and the rest of a group) there.
@@ -2675,8 +2714,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       return { pageIndex: target.index }
     }
     const ids = useAnnotationStore.getState().selectedIds
-    if (groupDragLast.current && ids.length > 1) {
-      groupDragLast.current = null
+    if (group && ids.length > 1) {
+      group.done = true
       const annos = useAnnotationStore.getState().annotations
       const patches = ids
         .map((id) => {
@@ -3166,7 +3205,11 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           position: 'absolute',
           inset: 0,
           cursor,
-          touchAction
+          touchAction,
+          // A press-and-hold is a gesture here (the selection box), so iOS
+          // must not answer it with its own: the callout, or the text
+          // selection loupe reaching for the page's words underneath.
+          ...(coarsePointer ? { WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' } : {})
         }}
         onPointerDown={onPointerDown}
         onDblClick={onDblClick}
@@ -4713,6 +4756,14 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
           if (b.y + b.height > maxY) maxY = b.y + b.height
         }
         if (!isFinite(minX)) return null
+        // Off the top-right corner, unless that runs past the page's edge (a
+        // box drawn right across a phone's page), when it goes off the
+        // top-left corner, or failing that just inside the right edge — the
+        // single selection's rule, for a row one button wide.
+        const BTN_W = 32
+        const right = maxX * scale + 8
+        const leftOf = minX * scale - 8 - BTN_W
+        const left = right + BTN_W <= width ? right : leftOf >= 0 ? leftOf : Math.max(0, width - BTN_W - 4)
         return (
           <button
             type="button"
@@ -4722,7 +4773,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             onClick={(e) => { e.stopPropagation(); removeMany(selectedIds) }}
             style={{
               position: 'absolute',
-              left: maxX * scale + 8,
+              left,
               top: minY * scale - 8,
               zIndex: 21
             }}

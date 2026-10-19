@@ -2349,6 +2349,54 @@ desk" is gone. The search box is folded away above the list, in the SDK's
   of the above, including that the options sheet's own pull-to-close still
   works. With the drawer's `pullable={false}` it fails every pull check.
 
+## Selecting several marks on a phone (2026-10-19)
+
+James on the iPhone: "On mobile need a tap and drag to select multiple
+annotations". A mouse already box-selected with a plain drag on empty page.
+A finger could not, because a plain drag on the page scrolls the row of
+pages, and the phone does not offer Select area.
+
+- **The gesture:** with no drawing tool in hand (Select, or Text, which is
+  what Fill hands you), press and hold empty page for 350 ms, then drag. The
+  orange dot shows the hold landed; the box follows the finger, and every
+  mark it touches is selected. It is Select area's own hold
+  (`MARQUEE_HOLD_MS`, `startMarqueeHold` in `AnnotationLayer.tsx`), now
+  started by Select and Text too, on a coarse pointer only. A touch-screen
+  laptop's finger still just pans.
+- **What stays the same:** a plain swipe still scrolls (the hold is dropped
+  the moment the finger travels past `TAP_SLOP_PX`). A tap still deselects.
+  A second finger cancels the hold, so pinch is untouched. With Text, a long
+  tap that never moves still drops a text box; only a hold that drags draws
+  the box. A box caught from Text switches to Select, so the group can be
+  dragged.
+- **Highlights count on a finger.** A mouse's box still skips highlighter
+  strokes (`isHighlighter`). A finger's box takes them, because the phone's
+  Mark up opens with the highlighter, so most phone marks are highlights.
+- **Moving and deleting together:** drag any member to move the group. The
+  red bin deletes them all (`removeMany`, one undo step). The bin now flips
+  inside the page edge like the single selection's, so a box drawn right
+  across a phone's page doesn't push it off screen. There is no group
+  recolour: the website has none either.
+- ⚠️ **Group drag was broken everywhere, mouse too.** Konva's Transformer
+  already moves every attached node with the one being dragged
+  (`_proxyDrag`). This layer moved them by hand as well, and each member's
+  own dragstart reset the shared last position. The deltas fed each other,
+  and every mark landed on the same spot millions of points off the page,
+  in four undo steps. Now Konva moves the members, each member syncs only its
+  own hints, and the first dragend commits the whole group once
+  (`groupDrag`).
+- iOS must not answer the hold itself: the Stage has
+  `-webkit-touch-callout: none` and `user-select: none` on a coarse pointer.
+- **First-run hint:** the first time a mark that was already there is tapped,
+  on a page with others, a toast says how
+  (`phone.select_several_hint`). Using the box counts as having learnt it.
+  Its key (`SELECT_SEVERAL_HINT_KEY`) is in `resetDefaults.ts`. The knowledge
+  base has a "Selecting several marks at once" article in all 8 languages.
+- `npm run test:select-several` (Chromium, 393×852, real CDP touches) pins
+  all of it: 23 checks, including a mouse group drag. Negative control: with
+  the old `AnnotationLayer.tsx` and `DocumentScreen.tsx` it fails 10 checks.
+  `E2E_EXPECT_OFF=1` flips the gesture checks to expect "off".
+
 ## The example PDF — a feature tour
 
 `lib/examplePdf.ts` makes the example on the device with pdf-lib (James,

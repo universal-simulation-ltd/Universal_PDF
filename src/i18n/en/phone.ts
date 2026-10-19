@@ -86,6 +86,7 @@ export default {
   'tool_pages': 'Pages',
   'tool_share': 'Share',
   'fill_hint': 'Tap a box to type in it, or anywhere else to add words.',
+  'select_several_hint': 'To select several marks at once, press and hold an empty part of the page, then drag across them.',
 
   // Mark up (a sheet under the page)
   'markup_title': 'Mark up',

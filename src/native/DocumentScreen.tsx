@@ -14,6 +14,7 @@ import { Dots, Icon, PATHS } from './icons'
 import { useNav } from './nav'
 import MarkupSheet, { MARKUP_TOOLS } from './MarkupSheet'
 import { BackLink } from './parts'
+import { SELECT_SEVERAL_HINT_KEY } from '../lib/resetDefaults'
 
 // Board 2 · A document open: the pages lie on the warm grey desk, a back
 // chevron and the name at the top with ⋯, and four tools floating
@@ -93,6 +94,50 @@ export default function DocumentScreen() {
         }
       }),
     []
+  )
+
+  // Selecting several marks is a press-and-hold then a drag on empty page
+  // (James, 2026-10-19: "On mobile need a tap and drag to select multiple
+  // annotations"), which nothing on screen shows. So the first time a mark is
+  // tapped on a page that has others, a line says how, once. Using the
+  // gesture counts as having learnt it. Tune's Reset to defaults brings it
+  // back (SELECT_SEVERAL_HINT_KEY in lib/resetDefaults).
+  useEffect(
+    () =>
+      useAnnotationStore.subscribe((s, prev) => {
+        if (s.selectedIds === prev.selectedIds) return
+        let known: string | null
+        try {
+          known = localStorage.getItem(SELECT_SEVERAL_HINT_KEY)
+        } catch {
+          return
+        }
+        if (known) return
+        const remember = () => {
+          try {
+            localStorage.setItem(SELECT_SEVERAL_HINT_KEY, '1')
+          } catch {
+            // Not remembered, so it may show again — harmless.
+          }
+        }
+        // Several marks that were already there, selected together: only the
+        // box does that (several put down at once, by a paste or "on every
+        // page", arrive selected too, and teach nothing).
+        if (s.selectedIds.length > 1) {
+          if (s.selectedIds.every((id) => prev.annotations.some((a) => a.id === id))) remember()
+          return
+        }
+        if (s.selectedIds.length !== 1 || prev.selectedIds.length !== 0) return
+        // A tap on a mark that was already there — not one just put down,
+        // which `add` selects too.
+        const id = s.selectedIds[0]
+        const mark = prev.annotations.find((a) => a.id === id)
+        if (!mark) return
+        if (s.annotations.filter((a) => a.pageIndex === mark.pageIndex).length < 2) return
+        remember()
+        useNav.getState().say(t('phone.select_several_hint'))
+      }),
+    [t]
   )
 
   // While the sheet is open it carries the selected mark's colour and width,

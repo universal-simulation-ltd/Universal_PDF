@@ -223,6 +223,33 @@ If you switch to Horizontal with a document already open, it keeps its current z
 The setting is remembered in your browser's storage on this device only, so each of your devices can have its own. It is not saved to your account. **Reset to defaults**, at the foot of Tune this app, puts it back to what this device starts with: Horizontal on a phone, Vertical on a computer.`,
   },
   {
+    id: 'select-several',
+    title: 'Selecting several marks at once',
+    summary: 'Draw a box round several marks, then move or delete them together.',
+    group: 'How it works',
+    body: `You can select several marks at once (boxes, ticks, highlights, text and the rest), then move them or delete them together.
+
+## On a phone or tablet
+
+1. Make sure no drawing tool is in hand. In the phone app, tap **Done** to put **Mark up** away, or tap **Fill**.
+2. Press and hold an empty part of the page. After a moment a small orange dot shows under your finger.
+3. Without lifting your finger, drag. A box follows it.
+4. Let go. Every mark the box touches is selected.
+
+A quick swipe still moves through the pages, and a tap on an empty part of the page clears the selection.
+
+## On a computer
+
+With the **Select** tool, drag across an empty part of the page. Shift-click a mark to add it to the selection or take it out.
+
+## Once they are selected
+
+- Drag any one of them to move them all.
+- Tap the red bin beside them to delete them all. **Undo** brings them all back in one step.
+
+On a computer the box leaves highlighter strokes out, so it does not pick up the highlighting under the text you are boxing. Click a highlight to select it on its own. On a phone or tablet the box takes highlights too, because **Mark up** starts with the highlighter.`,
+  },
+  {
     id: 'send-to-sign-security',
     title: 'How secure is a certified signature?',
     summary: 'What is encrypted, what our server can see, and how the audit trail works.',
