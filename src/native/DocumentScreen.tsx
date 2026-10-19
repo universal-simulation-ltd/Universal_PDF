@@ -109,6 +109,11 @@ export default function DocumentScreen() {
   }, [])
 
   const active: BarTool | null = markingUp || MARKUP_TOOLS.includes(tool as Tool) ? 'markup' : tool === 'text' || tool === 'select' ? 'fill' : null
+  // Under the Mark up sheet the bar is only ever seen while the sheet is pulled
+  // away, and putting it away leaves Select in hand: so it already shows Fill
+  // lit, as it will be, rather than switching from Mark up as the sheet goes
+  // (James, 2026-10-19).
+  const barActive: BarTool | null = markingUp ? 'fill' : active
 
   function onBar(id: BarTool) {
     if (id === 'fill') {
@@ -217,7 +222,7 @@ export default function DocumentScreen() {
         }}
       >
         {tools.map((b) => {
-          const on = active === b.id
+          const on = barActive === b.id
           return (
             <button
               key={b.id}
