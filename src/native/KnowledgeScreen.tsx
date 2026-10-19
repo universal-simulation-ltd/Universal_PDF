@@ -147,6 +147,7 @@ function ListPage({
 
   return (
     <div
+      data-edge-under
       className="flex-1 min-h-0 flex flex-col"
       aria-hidden={hidden || undefined}
       style={hidden ? { visibility: 'hidden' } : undefined}
@@ -260,7 +261,7 @@ function ArticlePage({ article, list, hue }: { article: Article; list: Article[]
   const sources = article.sources ?? []
 
   return (
-    <div className="np-page-enter absolute inset-0 z-10 flex flex-col" style={{ background: 'var(--np-paper)' }}>
+    <div data-edge-page className="np-page-enter absolute inset-0 z-10 flex flex-col" style={{ background: 'var(--np-paper)' }}>
       <header className="flex-none px-1.5" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 6px)' }}>
         <BackLink label={t('phone.kb_all')} onClick={() => useNav.getState().pop()} />
       </header>

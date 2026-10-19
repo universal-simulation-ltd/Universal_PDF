@@ -124,6 +124,7 @@
     "test:cross-page-drag": "node e2e/cross-page-drag.e2e.mjs",
     "test:phone-markup": "node e2e/phone-markup.e2e.mjs",
     "test:phone-knowledge": "node e2e/phone-knowledge.e2e.mjs",
+    "test:edge-swipe": "node e2e/edge-swipe.e2e.mjs",
     "test:snap-align": "node e2e/snap-align.e2e.mjs"
   },
   "dependencies": {

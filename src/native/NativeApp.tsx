@@ -11,7 +11,8 @@ import SignatureImport from '../components/Signature/SignatureImport'
 import UnsavedChangesDialog from '../components/Exit/UnsavedChangesDialog'
 import LockedFilePrompt from '../components/Lock/LockedFilePrompt'
 import { Icon, PATHS } from './icons'
-import { isKnowledge, topScreen, useNav, type Tab } from './nav'
+import { isKnowledge, topScreen, useNav, type Screen, type Tab } from './nav'
+import { useEdgeSwipeBack } from './edgeSwipe'
 import { useJobs } from './jobs'
 import { usePhonePrefs } from './prefs'
 import DeskScreen from './DeskScreen'
@@ -86,14 +87,14 @@ export default function NativeApp({ launching }: { launching: boolean }) {
         <div className="flex-1 min-h-0 flex flex-col relative">
           {doc && <DocumentScreen />}
           {top && (
-            <div className="absolute inset-0 z-[150] flex flex-col">
+            <PageLayer swipeBack={hasBackLink(top) && !sheet}>
               {top === 'sign' && <SignScreen onDone={() => useNav.getState().pop()} />}
               {top === 'share' && <ShareScreen />}
               {top === 'signed' && <SignedMoment />}
               {top === 'smaller' && <SmallerMoment />}
               {top === 'qr' && <QrScreen />}
               {isKnowledge(top) && <KnowledgeScreen />}
-            </div>
+            </PageLayer>
           )}
           {doc && sheet === 'more' && !top && <MoreSheet />}
           {(loading || (doc && !firstPaint)) && (
@@ -111,9 +112,9 @@ export default function NativeApp({ launching }: { launching: boolean }) {
           {tab === 'tune' && <TuneScreen />}
           <TabBar />
           {overTabs && (
-            <div className="absolute inset-0 z-[150] flex flex-col">
+            <PageLayer swipeBack>
               <KnowledgeScreen />
-            </div>
+            </PageLayer>
           )}
         </>
       )}
@@ -122,6 +123,28 @@ export default function NativeApp({ launching }: { launching: boolean }) {
       <SharedDialogs />
     </div>
   )
+}
+
+/**
+ * A page over the document (or the knowledge base over the tabs). One with a
+ * back link also goes back on a swipe in from the left edge, the way an
+ * iPhone's pages do (James, 2026-10-19) — set up here, once, rather than on
+ * each page. The Signed and Smaller moments have no way back, so no swipe;
+ * nor while a sheet is open over the page.
+ */
+function PageLayer({ swipeBack, children }: { swipeBack: boolean; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEdgeSwipeBack(ref, swipeBack, () => useNav.getState().pop())
+  return (
+    <div ref={ref} className="absolute inset-0 z-[150] flex flex-col">
+      {children}
+    </div>
+  )
+}
+
+/** The pages whose back link is `pop()`: every page but the two moments. */
+function hasBackLink(screen: Screen): boolean {
+  return screen !== 'signed' && screen !== 'smaller'
 }
 
 function TabBar() {
