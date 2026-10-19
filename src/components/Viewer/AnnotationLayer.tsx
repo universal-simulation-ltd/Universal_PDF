@@ -3407,13 +3407,19 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
             }
           })}
 
+          {/* ⚠️ Widths over `scale`, as the stroke is saved (onPointerUp) and as
+              the redact stroke below already was: the stage is scaled, so a
+              bare display-pixel width drew the live stroke `scale` times too
+              wide or too thin, and it jumped to its real size on release
+              (James, 2026-10-19: "the highlighter preview doesn't match its
+              size"). */}
           {currentLine && tool === 'draw' && (
             <Line
               ref={liveStrokeRef}
               listening={false}
               points={currentLine}
               stroke={color}
-              strokeWidth={strokeWidth}
+              strokeWidth={strokeWidth / scale}
               lineCap="round"
               lineJoin="round"
               tension={0.4}
@@ -3425,7 +3431,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               listening={false}
               points={currentLine}
               stroke={color}
-              strokeWidth={highlightWidth}
+              strokeWidth={highlightWidth / scale}
               opacity={HIGHLIGHT_OPACITY}
               lineCap="round"
               lineJoin="round"
@@ -3437,7 +3443,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               listening={false}
               points={currentLine}
               stroke={color}
-              strokeWidth={strokeWidth}
+              strokeWidth={strokeWidth / scale}
               lineCap="round"
               lineJoin="round"
             />

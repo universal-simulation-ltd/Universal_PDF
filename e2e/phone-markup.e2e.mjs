@@ -293,7 +293,12 @@ console.log('\nthe Sign page puts a name and the date under the signature')
   await page.waitForTimeout(500)
   await page.getByRole('tab', { name: 'Type' }).click()
   await page.getByPlaceholder('Type your name').first().fill('Jo')
+  // The name under follows the typed signature until it's changed by hand
+  // (James, 2026-10-19).
+  check('the name under fills in from the typed signature', (await page.getByLabel('Your name (optional)').inputValue()) === 'Jo')
   await page.getByLabel('Your name (optional)').fill('Jo Bloggs')
+  await page.getByPlaceholder('Type your name').first().fill('JB')
+  check('…and stops following once it is changed', (await page.getByLabel('Your name (optional)').inputValue()) === 'Jo Bloggs')
   const dateBox = page.getByLabel(/^Add the date/)
   check('the date starts unticked', !(await dateBox.isChecked()))
   await dateBox.check()

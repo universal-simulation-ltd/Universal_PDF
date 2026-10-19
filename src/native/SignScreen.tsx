@@ -41,6 +41,11 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
   // lined up beneath it — one thing to place, not three — and stay editable
   // on the page (double-tap) like any signature's labels.
   const [nameUnder, setNameUnder] = useState('')
+  // A typed signature fills the name under it as you type, until you change
+  // that name yourself — usually they are the same name, and two boxes asking
+  // for it felt clumsy (James, 2026-10-19: "the name field should autofill from
+  // their signature name and then they can change it if needed").
+  const [nameOwn, setNameOwn] = useState(false)
   const [dateUnder, setDateUnder] = useState(false)
   const nameId = useId()
   const dateId = useId()
@@ -186,7 +191,10 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
             <input
               id={typeId}
               value={typed}
-              onChange={(e) => setTyped(e.target.value)}
+              onChange={(e) => {
+                setTyped(e.target.value)
+                if (!nameOwn) setNameUnder(e.target.value)
+              }}
               placeholder={t('phone.type_placeholder')}
               autoComplete="name"
               className="w-full text-[17px] py-1.5 bg-transparent outline-none"
@@ -224,7 +232,10 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
             <input
               id={nameId}
               value={nameUnder}
-              onChange={(e) => setNameUnder(e.target.value)}
+              onChange={(e) => {
+                setNameUnder(e.target.value)
+                setNameOwn(true)
+              }}
               placeholder={t('phone.type_placeholder')}
               autoComplete="name"
               className="w-full text-[17px] px-3 py-2.5 rounded-xl bg-white outline-none"
