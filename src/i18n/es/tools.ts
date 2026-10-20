@@ -209,6 +209,7 @@ const tools: Messages['tools'] = {
   'ocr.failed_fallback': 'Error de OCR',
   'ocr.title': 'Permitir búsquedas (OCR)',
   'ocr.intro': 'Se ejecuta por completo en tu dispositivo: no se sube nada. La primera vez descarga el modelo de OCR (~15 MB) una sola vez y después funciona sin conexión.',
+  'ocr.intro_offline': 'Se ejecuta por completo en tu dispositivo: no se sube nada y funciona sin conexión.',
   'ocr.language': 'Idioma del documento escaneado',
   'ocr.language_hint': 'Cada idioma descarga su propio modelo de OCR (hasta 3 MB) la primera vez que se usa.',
   'ocr.start': 'Permitir búsquedas',

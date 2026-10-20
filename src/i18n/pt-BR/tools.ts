@@ -209,6 +209,7 @@ const tools: Messages['tools'] = {
   'ocr.failed_fallback': 'Falha no OCR',
   'ocr.title': 'Tornar pesquisável (OCR)',
   'ocr.intro': 'Funciona inteiramente no seu aparelho — nada é enviado pela internet. Na primeira vez, o modelo de OCR (~15 MB) é baixado uma única vez; depois funciona off-line.',
+  'ocr.intro_offline': 'Funciona inteiramente no seu aparelho — nada é enviado pela internet, e funciona off-line.',
   'ocr.language': 'Idioma do documento escaneado',
   'ocr.language_hint': 'Cada idioma baixa seu próprio modelo de OCR (até 3 MB) na primeira vez que é usado.',
   'ocr.start': 'Tornar pesquisável',

@@ -8,6 +8,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import pkg from './package.json' with { type: 'json' }
 import { checkBuildEnv, buildEnvError } from './scripts/buildEnv.ts'
+import { OCR_LANGUAGES } from './src/lib/ocrLanguages.ts'
 
 // Universal PDF is served at opensource.unisim.co.uk/pdf in production. `base`
 // controls where built assets resolve from; in local dev it stays `/`. The
@@ -16,10 +17,10 @@ import { checkBuildEnv, buildEnvError } from './scripts/buildEnv.ts'
 // `mode` so the config needs no Node `process` typings.
 //
 // ⚠️ `desktop` mode is ALSO what the Capacitor (Android + iOS) builds use, and
-// the name is now a misnomer — see the `build:mobile` script, which is an alias
-// for `build:desktop`. Both need exactly the same two things: a relative `base`
-// (Capacitor serves the bundle from a `capacitor://` / `https://localhost`
-// origin) and no service worker. Don't add anything Electron-specific behind
+// the name is now a misnomer — see the `build:mobile` script, which is
+// `build:desktop` plus the bundled OCR models (`ocrModels()` below). Both need
+// exactly the same two things: a relative `base` (Capacitor serves the bundle
+// from a `capacitor://` / `https://localhost` origin) and no service worker. Don't add anything Electron-specific behind
 // `isDesktop` without splitting the mode first.
 // Build-version marker: prefer the Cloudflare Pages commit SHA baked in at build
 // time, fall back to the local git short SHA, then 'dev'. Surfaced as a
@@ -122,6 +123,35 @@ function ocrRuntime(): Plugin {
     generateBundle() {
       for (const [name, file] of Object.entries(OCR_RUNTIME_FILES)) {
         this.emitFile({ type: 'asset', fileName: `${OCR_RUNTIME_DIR}${name}`, source: readFileSync(file) })
+      }
+    },
+  }
+}
+
+// ── OCR language models, phone apps only ─────────────────────────────────────
+// The phone apps work fully offline (James, 2026-10-20: "fully offline on the
+// mobile apps so no account is needed"), so they ship every OCR language's
+// model instead of fetching it from tesseract's CDN on first use. ~19 MB for
+// all eleven, which is why the website, the desktop app and the extension
+// still fetch on demand (see the comment over `langPath` in lib/ocr.ts).
+//
+// Switched on by `PDF_OCR_MODELS=bundle`, which `npm run build:mobile`
+// (scripts/build-mobile.mjs) sets; `npm run check:mobile-bundle` fails a copied
+// phone bundle that lacks any of them. The files are the `4.0.0_best_int`
+// models from the `@tesseract.js-data/*` dev dependencies: the exact files the
+// CDN serves an LSTM-only worker (OEM 1), so a phone reads a scan exactly as
+// the website does. Versioned folder for the same reason as the runtime above.
+const OCR_MODELS_BUNDLED = process.env.PDF_OCR_MODELS === 'bundle'
+const OCR_MODELS_DIR = 'ocr/models-4.0.0_best_int/'
+
+function ocrModels(): Plugin {
+  return {
+    name: 'ocr-models',
+    generateBundle() {
+      if (!OCR_MODELS_BUNDLED) return
+      for (const { code: lang } of OCR_LANGUAGES) {
+        const file = join(dirname(requireFromHere.resolve(`@tesseract.js-data/${lang}/package.json`)), '4.0.0_best_int', `${lang}.traineddata.gz`)
+        this.emitFile({ type: 'asset', fileName: `${OCR_MODELS_DIR}${lang}.traineddata.gz`, source: readFileSync(file) })
       }
     },
   }
@@ -257,6 +287,9 @@ export default defineConfig(({ command, mode }) => {
       'import.meta.env.VITE_BUILD_SHA': JSON.stringify(BUILD_SHA),
       // Where `ocrRuntime()` put the OCR worker + core, relative to BASE_URL.
       'import.meta.env.VITE_OCR_RUNTIME_DIR': JSON.stringify(OCR_RUNTIME_DIR),
+      // Where `ocrModels()` put the OCR language models; '' when they are
+      // fetched from the CDN instead (every build but the phone apps').
+      'import.meta.env.VITE_OCR_MODELS_DIR': JSON.stringify(OCR_MODELS_BUNDLED ? OCR_MODELS_DIR : ''),
       // Where `pdfjsData()` put pdf.js's CMaps and standard fonts.
       'import.meta.env.VITE_PDFJS_DATA_DIR': JSON.stringify(PDFJS_DATA_DIR)
     },
@@ -272,6 +305,7 @@ export default defineConfig(({ command, mode }) => {
       react(),
       tailwindcss(),
       ocrRuntime(),
+      ocrModels(),
       pdfjsData(),
       cspDev(),
       // The PWA service worker is for the hosted web app only — under Electron's

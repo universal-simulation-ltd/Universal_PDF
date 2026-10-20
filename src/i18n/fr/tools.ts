@@ -209,6 +209,7 @@ const tools: Messages['tools'] = {
   'ocr.failed_fallback': 'Échec de l’OCR',
   'ocr.title': 'Rendre interrogeable (OCR)',
   'ocr.intro': 'Fonctionne entièrement sur votre appareil — rien n’est envoyé en ligne. La première utilisation télécharge une seule fois le modèle OCR (~15 Mo), qui fonctionne ensuite hors ligne.',
+  'ocr.intro_offline': 'Fonctionne entièrement sur votre appareil — rien n’est envoyé en ligne, et cela marche hors ligne.',
   'ocr.language': 'Langue du document numérisé',
   'ocr.language_hint': 'Chaque langue télécharge son propre modèle d’OCR (3 Mo au maximum) la première fois qu’elle est utilisée.',
   'ocr.start': 'Rendre interrogeable',

@@ -53,12 +53,21 @@ const TEXTUAL_PAGE_MIN_CHARS = 16
 // on. Naming one file here would hand the SIMD build to a browser that cannot
 // run it, or the slow build to every one that can.
 //
-// ⚠️ The language models are NOT self-hosted. `langPath` is left unset, so
-// each comes from tesseract's own CDN (cdn.jsdelivr.net/npm/@tesseract.js-data)
-// — 0.7–3 MB of data rather than code per language, fetched once and cached,
-// and shipping all eleven would add ~19 MB to every install for a tool most
-// people never open.
+// ⚠️ On the website, in the desktop app and in the extension the language
+// models are NOT self-hosted. `langPath` is left unset, so each comes from
+// tesseract's own CDN (cdn.jsdelivr.net/npm/@tesseract.js-data) — 0.7–3 MB of
+// data rather than code per language, fetched once and cached, and shipping
+// all eleven would add ~19 MB to every install for a tool most people never
+// open. The PHONE apps ship them (`ocrModels()` in vite.config.ts, set by
+// `npm run build:mobile`), because they work fully offline (James, 2026-10-20);
+// there `OCR_MODELS_URL` is their folder.
 const OCR_RUNTIME_URL = `${import.meta.env.BASE_URL}${import.meta.env.VITE_OCR_RUNTIME_DIR}`
+const OCR_MODELS_URL = import.meta.env.VITE_OCR_MODELS_DIR
+  ? `${import.meta.env.BASE_URL}${import.meta.env.VITE_OCR_MODELS_DIR}`
+  : undefined
+
+/** True where every OCR model ships with the app (the phone apps): nothing to download. */
+export const ocrModelsBundled = !!OCR_MODELS_URL
 
 export interface OcrProgress {
   phase: 'load' | 'recognize' | 'build'
@@ -269,6 +278,8 @@ export async function makeSearchablePdf(
   const worker = await createWorker(lang, 1, {
     workerPath: `${OCR_RUNTIME_URL}worker.min.js`,
     corePath: OCR_RUNTIME_URL,
+    // Undefined (tesseract's CDN) except in the phone apps — see above.
+    ...(OCR_MODELS_URL ? { langPath: OCR_MODELS_URL } : {}),
     // ⚠️ Off because the worker is now same-origin. The blob: wrapper exists to
     // load a CROSS-origin worker script, and a blob: worker is exactly what the
     // extension's CSP (`script-src 'self'`) refuses — the same way pdf.js's
@@ -287,7 +298,7 @@ export async function makeSearchablePdf(
       } else if (!modelLoaded && m.status) {
         // Before the first page's recognition, surface the model download so the
         // one-time fetch (core + model, ~7 MB) isn't a dead-looking bar.
-        const label = /download|load|initializ|initialis/i.test(m.status)
+        const label = !OCR_MODELS_URL && /download|load|initializ|initialis/i.test(m.status)
           ? getT()('lib.ocr_downloading_model')
           : getT()('lib.ocr_preparing')
         onProgress?.({ phase: 'load', fraction: LOAD_WEIGHT * (m.progress || 0), message: label })

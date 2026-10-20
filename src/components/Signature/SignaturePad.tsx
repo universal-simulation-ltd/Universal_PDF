@@ -28,6 +28,7 @@ import {
 } from '../../lib/mobileSign'
 import { useT } from '../../i18n'
 import { SIGN_PAD_MODES, SIGN_PAD_VIEW, type SignPadMode } from '../../lib/defaultViews'
+import { isNativeShell } from '../../lib/nativeOpen'
 
 const PAD_W = 600
 const PAD_H = 240
@@ -140,10 +141,15 @@ export default function SignaturePad() {
   // 2026-09-30); a single tap only switches, as before. Read through a ref by
   // the open effect below, so changing the default never re-runs it (that
   // would mint a fresh QR under someone mid-scan).
+  //
+  // ⚠️ Not in the phone apps, which work fully offline (James, 2026-10-20):
+  // the handoff is a Supabase Realtime channel, and the person is already
+  // holding a phone. There the pad is Draw only, whatever default was stored.
+  const phoneHandoff = !isNativeShell()
   const dv = useDefaultView<SignPadMode>(SIGN_PAD_VIEW, 'draw', { views: SIGN_PAD_MODES })
-  const defaultModeRef = useRef(dv.defaultView)
-  defaultModeRef.current = dv.defaultView
-  const [mode, setMode] = useState<SignPadMode>(dv.defaultView)
+  const defaultModeRef = useRef<SignPadMode>(phoneHandoff ? dv.defaultView : 'draw')
+  defaultModeRef.current = phoneHandoff ? dv.defaultView : 'draw'
+  const [mode, setMode] = useState<SignPadMode>(defaultModeRef.current)
   // ⚠️ The two modes are different heights and the card is centred, so
   // switching used to move the toggle under the pointer (19px on a desktop,
   // 46px at 390 wide) and the second tap of a double tap landed off it — the
@@ -589,6 +595,8 @@ export default function SignaturePad() {
             {mode === 'phone' ? t('sign.send_to_sign') : t('sign.pad_title_draw')}
           </h2>
           <div className="flex shrink-0 items-center gap-2">
+            {/* Draw on its own is no choice, so the phone apps show no toggle. */}
+            {phoneHandoff && (
             <div className="flex whitespace-nowrap rounded-lg bg-slate-100 p-0.5 text-xs">
               {/* The mode the pad opens on is orange: the suite's gradient
                   while you are on it, an orange ring while not. */}
@@ -632,6 +640,7 @@ export default function SignaturePad() {
                 {t('sign.send_to_sign')}
               </button>
             </div>
+            )}
             <button
               onClick={cancel}
               className="text-slate-400 hover:text-slate-700 text-2xl leading-none w-8 h-8 flex items-center justify-center"

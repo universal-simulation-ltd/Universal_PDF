@@ -209,6 +209,7 @@ const tools: Messages['tools'] = {
   'ocr.failed_fallback': 'OCR non riuscito',
   'ocr.title': 'Rendi ricercabile (OCR)',
   'ocr.intro': 'Funziona interamente sul tuo dispositivo: nulla viene caricato. Alla prima esecuzione scarica una sola volta il modello OCR (~15 MB), poi funziona offline.',
+  'ocr.intro_offline': 'Funziona interamente sul tuo dispositivo: nulla viene caricato e funziona offline.',
   'ocr.language': 'Lingua del documento scansionato',
   'ocr.language_hint': 'Ogni lingua scarica il proprio modello OCR (fino a 3 MB) la prima volta che viene usata.',
   'ocr.start': 'Rendi ricercabile',

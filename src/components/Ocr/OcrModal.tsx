@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLanguage } from '@unisim/sdk'
-import { documentLanguage, makeSearchablePdf, type OcrProgress, type OcrResult } from '../../lib/ocr'
+import { documentLanguage, makeSearchablePdf, ocrModelsBundled, type OcrProgress, type OcrResult } from '../../lib/ocr'
 import { OCR_LANGUAGES, defaultOcrLanguage } from '../../lib/ocrLanguages'
 import { downloadPdfBytes } from '../../lib/download'
 import { getT, useT } from '../../i18n'
@@ -133,7 +133,7 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
         <div className="-mx-5 min-h-0 flex-1 overflow-y-auto px-5">
 
         <p className="text-xs text-slate-500 mb-4 leading-relaxed">
-          {t('tools.ocr.intro')}
+          {t(ocrModelsBundled ? 'tools.ocr.intro_offline' : 'tools.ocr.intro')}
         </p>
 
         {phase === 'choose' && (
@@ -157,7 +157,7 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
                 </option>
               ))}
             </select>
-            <p className="mt-1.5 text-[11px] leading-snug text-slate-500">{t('tools.ocr.language_hint')}</p>
+            {!ocrModelsBundled && <p className="mt-1.5 text-[11px] leading-snug text-slate-500">{t('tools.ocr.language_hint')}</p>}
             <div className="mt-4 flex items-center gap-2 justify-end">
               <button
                 onClick={onClose}

@@ -112,6 +112,19 @@ cache) so it works offline afterwards.
   PDF's own `/Lang`, else the app's language. Each model (0.7–3 MB) comes on
   demand from jsDelivr's `@tesseract.js-data`, like English always did.
   `npm run test:ocr-languages` OCRs real image-only scans in each script.
+- **Phone apps: every model on board (2026-10-20).** The phone apps work fully
+  offline (James: "fully offline on the mobile apps so no account is needed"),
+  so `npm run build:mobile` (`scripts/build-mobile.mjs`) sets
+  `PDF_OCR_MODELS=bundle`, and `ocrModels()` in `vite.config.ts` copies each
+  language's `4.0.0_best_int` model (the exact file the CDN serves an LSTM-only
+  worker) from the `@tesseract.js-data/*` dev dependencies into
+  `ocr/models-4.0.0_best_int/`, about 18 MB for all eleven. `lib/ocr.ts` then
+  passes that folder as `langPath`, and the dialog drops its "downloads once"
+  wording (`ocrModelsBundled`). The website, the desktop app and the extension
+  are unchanged. `npm run check:mobile-bundle` fails a copied phone bundle that
+  is missing any model (i.e. one built with plain `build:desktop`). A new OCR
+  language is two edits: `src/lib/ocrLanguages.ts` and a
+  `@tesseract.js-data/<code>` dev dependency.
 - **`auto` mode** (default) skips pages that already have selectable text, so a
   mixed PDF only OCRs its image pages; **`all`** forces every page.
 - **UI:** `src/components/Ocr/OcrModal.tsx` shows a determinate progress bar
@@ -432,6 +445,9 @@ alternative, one-line server fix — a member UPDATE policy on `hosted_uploads`
 mode (formerly "Sign on phone" — the phone draws a signature and sends it back
 to the desktop) and this one, which sends the whole *document* out to a named
 recipient. The rename was directed; keep any future copy distinguishing them.
+The phone apps have neither: their pad (opened by tapping a "Sign here" box)
+is Draw only, because the QR handoff is a Supabase Realtime channel and the
+phone apps work fully offline (2026-10-20, `phoneHandoff` in `SignaturePad.tsx`).
 
 **Sign → Request → "Send to sign"** stores the flattened PDF online against a
 Universal ID and mints a signing link (`SendToSignDialog`; recipient side is

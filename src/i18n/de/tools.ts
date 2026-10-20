@@ -209,6 +209,7 @@ const tools: Messages['tools'] = {
   'ocr.failed_fallback': 'OCR fehlgeschlagen',
   'ocr.title': 'Durchsuchbar machen (OCR)',
   'ocr.intro': 'Läuft vollständig auf deinem Gerät – es wird nichts hochgeladen. Beim ersten Mal wird das OCR-Modell (ca. 15 MB) einmalig heruntergeladen, danach funktioniert es offline.',
+  'ocr.intro_offline': 'Läuft vollständig auf deinem Gerät – es wird nichts hochgeladen, und es funktioniert offline.',
   'ocr.language': 'Sprache des gescannten Dokuments',
   'ocr.language_hint': 'Jede Sprache lädt beim ersten Mal ihr eigenes OCR-Modell herunter (bis zu 3 MB).',
   'ocr.start': 'Durchsuchbar machen',

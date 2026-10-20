@@ -209,6 +209,7 @@ export default {
   'ocr.failed_fallback': 'OCR failed',
   'ocr.title': 'Make searchable (OCR)',
   'ocr.intro': 'Runs entirely on your device — nothing is uploaded. The first run downloads the OCR model (~15 MB) once, then works offline.',
+  'ocr.intro_offline': 'Runs entirely on your device — nothing is uploaded, and it works offline.', // the phone apps, which ship every OCR model
   'ocr.language': 'Language of the scan', // label over a list of languages to read a scanned document in
   'ocr.language_hint': 'Each language downloads its own OCR model (up to 3 MB) the first time it is used.',
   'ocr.start': 'Make searchable', // button that starts OCR

@@ -48,6 +48,12 @@
 //
 // This file is the suite's reference copy of the check — the other apps' guards
 // are ports of it. Keep it that way: fix the rule here first.
+//
+// One check is Universal PDF's own, not the suite's: **the OCR language
+// models.** The phone apps work fully offline (2026-10-20), so every model in
+// the `@tesseract.js-data/*` dev dependencies has to be in the bundle. Only
+// `npm run build:mobile` puts them there; a bare `build:desktop` copied in
+// would pass everything else and then fetch from a CDN on the phone.
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -57,6 +63,13 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 // The path the app is served under on the web. Named only so the error message
 // can tell you WHICH wrong build you copied; the check does not depend on it.
 const WEB_BASE = '/pdf/'
+
+// Universal PDF only (see above): where `ocrModels()` in vite.config.ts puts
+// the models, and which languages package.json says there are.
+const OCR_MODELS_DIR = 'ocr/models-4.0.0_best_int'
+const OCR_LANGS = Object.keys(JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).devDependencies ?? {})
+  .filter((name) => name.startsWith('@tesseract.js-data/'))
+  .map((name) => name.slice('@tesseract.js-data/'.length))
 
 const TARGETS = [
   ['iOS', 'ios/App/App/public'],
@@ -104,10 +117,12 @@ for (const [platform, dir] of TARGETS) {
     (m) => /type="module"/.test(m[0]) && /\bsrc="/.test(m[0]),
   )
 
-  if (missing.length === 0 && sw.length === 0 && modules.length > 0) {
+  const noModel = OCR_LANGS.filter((lang) => !existsSync(join(bundle, OCR_MODELS_DIR, `${lang}.traineddata.gz`)))
+
+  if (missing.length === 0 && sw.length === 0 && modules.length > 0 && noModel.length === 0) {
     console.log(
       `${platform}: ${urls.length} local URLs all resolve inside ${dir}, ` +
-        `${modules.length} module script(s), no service worker. OK`,
+        `${modules.length} module script(s), no service worker, ${OCR_LANGS.length} OCR models. OK`,
     )
     continue
   }
@@ -125,6 +140,9 @@ for (const [platform, dir] of TARGETS) {
   }
   if (modules.length === 0) {
     console.error('  index.html loads no module script at all — nothing would run')
+  }
+  if (noModel.length) {
+    console.error(`  no OCR model for ${noModel.join(', ')} in ${OCR_MODELS_DIR}/ — OCR would go online (build with npm run build:mobile)`)
   }
 }
 

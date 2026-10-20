@@ -209,6 +209,7 @@ const tools: Messages['tools'] = {
   'ocr.failed_fallback': 'OCR başarısız oldu',
   'ocr.title': 'Aranabilir hale getir (OCR)',
   'ocr.intro': 'Tamamen cihazınızda çalışır — hiçbir şey yüklenmez. İlk çalıştırmada OCR modeli (~15 MB) bir kez indirilir, sonra çevrimdışı çalışır.',
+  'ocr.intro_offline': 'Tamamen cihazınızda çalışır — hiçbir şey yüklenmez ve çevrimdışı çalışır.',
   'ocr.language': 'Taranmış belgenin dili',
   'ocr.language_hint': 'Her dil, ilk kullanıldığında kendi OCR modelini (en fazla 3 MB) indirir.',
   'ocr.start': 'Aranabilir hale getir',

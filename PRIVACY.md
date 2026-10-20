@@ -126,7 +126,15 @@ like a lie.
   phone (the QR code in the signature pad), the drawing travels from the phone
   to the app as a short-lived message through our server. It is not stored, and
   the app accepts it only with the PIN it shows you. No account is involved.
-  See [`src/lib/mobileSign.ts`](src/lib/mobileSign.ts).
+  See [`src/lib/mobileSign.ts`](src/lib/mobileSign.ts). The phone apps don't
+  offer this: you are already holding a phone, so you draw on it.
+- **Reading a scan (OCR): the language model, once.** On the website, in the
+  desktop app and in the browser extension, the first time you read a scan in
+  a language, the app downloads that language's model (0.7–3 MB of data) from
+  jsDelivr, a public file server, and keeps it. jsDelivr sees the request (your
+  IP address and which language), never your document. **The iPhone, iPad and
+  Android apps download nothing:** every model ships inside the app. See
+  `langPath` in [`src/lib/ocr.ts`](src/lib/ocr.ts).
 - **Google's scanner diagnostics (Android only, only when you scan).** The
   Scan button on Android uses Google's ML Kit document scanner, which comes
   with Google Play services. Your scanned pages stay on your phone, but Google
@@ -150,6 +158,10 @@ like a lie.
   [`src/components/Landing/DownloadRow.tsx`](src/components/Landing/DownloadRow.tsx).
 - **The changelog and update notice**, which is just fetching a list of
   releases.
+
+**The iPhone, iPad and Android apps work fully offline.** No sign-in, no
+open count, and every OCR model on board: nothing in them needs a connection.
+Only links you choose to follow (help guides, this page) open the web.
 
 **There is no third-party analytics, no tracking pixel, and no advertising
 script.** You can check that without reading any code: view the page source of

@@ -8,7 +8,10 @@
 // Every model is DATA, fetched on demand from the same place as the English one
 // always was — tesseract.js's default, jsDelivr's `@tesseract.js-data/<code>`
 // packages (the "best_int" LSTM models, 0.7–3 MB each) — then cached by
-// tesseract (IndexedDB) and the service worker. Nothing ships in the app.
+// tesseract (IndexedDB) and the service worker. Nothing ships in the website,
+// the desktop app or the extension; the phone apps ship every model listed
+// here, so they read scans offline (`ocrModels()` in vite.config.ts, which
+// reads this list — keep it in step with `@tesseract.js-data/*` in package.json).
 //
 // ⚠️ This file imports NOTHING, so `scripts/ocrLanguages.test.mjs` can load it
 // under Node's type-stripping.
