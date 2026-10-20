@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import Konva from 'konva'
 import { usePdfStore } from '../../stores/pdfStore'
 import { registerViewProvider, takeRestoredView } from '../../lib/viewMemory'
 import { useAnnotationStore } from '../../stores/annotationStore'
@@ -1076,6 +1077,127 @@ export default function PdfViewer() {
       // Anything mid-gesture commits now, so the transform never outlives the
       // handler that owns it.
       commit()
+    }
+  }, [])
+
+  // The wheel's rule above, for a finger: pages in a row, an up-and-down swipe
+  // with no more room to go that way carries on along the row — swipe up for
+  // the next page, down for the one before, as two fingers do on a trackpad
+  // (James, 2026-10-20). Sideways swipes stay the browser's own.
+  //
+  // Decided once per swipe, on its first real move, the way the swipe back
+  // does it (native/edgeSwipe.ts): a touchmove can only be cancelled before the
+  // browser starts scrolling, so a swipe that began scrolling the page down
+  // stays a scroll down even when it reaches the bottom — the next one walks
+  // the row, as the wheel does. Let go mid-swipe and the row coasts on, so it
+  // feels like the sideways scroll it stands in for.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const SLOP = 6
+    // Per millisecond, iOS's own scroll deceleration.
+    const FRICTION = 0.998
+
+    let swipe: {
+      id: number
+      y: number
+      x: number
+      left: number
+      ours: boolean | null
+      v: number
+      lastY: number
+      t: number
+    } | null = null
+    let coast = 0
+
+    function stopCoast() {
+      if (coast) cancelAnimationFrame(coast)
+      coast = 0
+    }
+
+    // Something under the finger does its own dragging: a drawing tool or
+    // anything else that turned panning off, or an annotation Konva is about
+    // to move (it registers the drag on touchstart).
+    function ownsTheGesture(target: EventTarget | null): boolean {
+      if (Konva.DD._dragElements.size > 0) return true
+      for (let n = target instanceof Element ? target : null; n && n !== el; n = n.parentElement) {
+        if (getComputedStyle(n).touchAction === 'none') return true
+      }
+      return false
+    }
+
+    function onStart(e: TouchEvent) {
+      stopCoast()
+      swipe = null
+      if (e.touches.length !== 1 || !horizontalRef.current) return
+      if (useAnnotationStore.getState().tool === 'hand') return // pans both ways itself
+      const t = e.touches[0]
+      swipe = { id: t.identifier, x: t.clientX, y: t.clientY, left: 0, ours: null, v: 0, lastY: t.clientY, t: e.timeStamp }
+    }
+
+    function onMove(e: TouchEvent) {
+      const s = swipe
+      if (!s || !el) return
+      if (e.touches.length !== 1 || usePdfStore.getState().pinching) {
+        swipe = null
+        return
+      }
+      const t = e.touches[0]
+      if (t.identifier !== s.id) return
+      const dx = t.clientX - s.x
+      const dy = t.clientY - s.y
+      if (s.ours === null) {
+        if (Math.hypot(dx, dy) < SLOP) return
+        const roomDown = el.scrollHeight - el.clientHeight - el.scrollTop
+        // Finger up is the wheel turning down.
+        const atEdge = dy < 0 ? roomDown <= 1 : el.scrollTop <= 0
+        if (Math.abs(dy) <= Math.abs(dx) || !atEdge || !e.cancelable || e.defaultPrevented || ownsTheGesture(e.target)) {
+          swipe = null
+          return
+        }
+        s.ours = true
+        s.left = el.scrollLeft
+      }
+      e.preventDefault()
+      el.scrollLeft = s.left - dy
+      const dt = e.timeStamp - s.t
+      if (dt > 0) s.v = 0.8 * ((s.lastY - t.clientY) / dt) + 0.2 * s.v
+      s.lastY = t.clientY
+      s.t = e.timeStamp
+    }
+
+    function onEnd(e: TouchEvent) {
+      const s = swipe
+      if (!s) return
+      let lifted = false
+      for (let i = 0; i < e.changedTouches.length; i++) if (e.changedTouches[i].identifier === s.id) lifted = true
+      if (!lifted) return
+      swipe = null
+      // A finger that stopped before lifting doesn't fling.
+      if (!s.ours || e.type !== 'touchend' || e.timeStamp - s.t > 80) return
+      let v = s.v
+      let last = performance.now()
+      const step = (now: number) => {
+        const dt = now - last
+        last = now
+        const before = el!.scrollLeft
+        el!.scrollLeft = before + v * dt
+        v *= Math.pow(FRICTION, dt)
+        coast = Math.abs(v) > 0.02 && el!.scrollLeft !== before ? requestAnimationFrame(step) : 0
+      }
+      if (Math.abs(v) > 0.1) coast = requestAnimationFrame(step)
+    }
+
+    el.addEventListener('touchstart', onStart, { passive: true })
+    el.addEventListener('touchmove', onMove, { passive: false })
+    el.addEventListener('touchend', onEnd)
+    el.addEventListener('touchcancel', onEnd)
+    return () => {
+      el.removeEventListener('touchstart', onStart)
+      el.removeEventListener('touchmove', onMove)
+      el.removeEventListener('touchend', onEnd)
+      el.removeEventListener('touchcancel', onEnd)
+      stopCoast()
     }
   }, [])
 
