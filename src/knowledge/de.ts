@@ -232,7 +232,7 @@ Die Einstellung wird im Speicher Ihres Browsers gespeichert, nur auf diesem Ger�
 ## Auf dem Smartphone oder Tablet
 
 1. Achten Sie darauf, dass kein Zeichenwerkzeug aktiv ist. Tippen Sie in der Smartphone-App auf **Fertig**, um **Kommentieren** zu schließen, oder tippen Sie auf **Ausfüllen**.
-2. Halten Sie eine leere Stelle der Seite gedrückt. Nach einem Moment erscheint unter Ihrem Finger ein kleiner oranger Punkt.
+2. Halten Sie eine leere Stelle der Seite gedrückt. Nach einem Moment erscheint unter Ihrem Finger ein kleiner oranger Punkt. (Wenn Sie ein Wort gedrückt halten, wird stattdessen das Wort markiert, mit einer Schaltfläche **Kopieren** darüber.)
 3. Ziehen Sie, ohne den Finger anzuheben. Ein Rahmen folgt ihm.
 4. Lassen Sie los. Alle Kommentare, die der Rahmen berührt, sind ausgewählt.
 

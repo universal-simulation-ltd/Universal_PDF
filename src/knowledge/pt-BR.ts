@@ -232,7 +232,7 @@ A configuração fica guardada no armazenamento do seu navegador, só neste apar
 ## Em um celular ou tablet
 
 1. Confira se nenhuma ferramenta de desenho está ativa. No app para celular, toque em **Concluído** para fechar **Anotar**, ou toque em **Preencher**.
-2. Toque e segure em uma parte vazia da página. Depois de um instante, um pequeno ponto laranja aparece sob o seu dedo.
+2. Toque e segure em uma parte vazia da página. Depois de um instante, um pequeno ponto laranja aparece sob o seu dedo. (Tocar e segurar em uma palavra seleciona a palavra, com um botão **Copiar** em cima.)
 3. Sem tirar o dedo, arraste. Uma caixa acompanha o dedo.
 4. Solte. Todas as anotações que a caixa toca ficam selecionadas.
 

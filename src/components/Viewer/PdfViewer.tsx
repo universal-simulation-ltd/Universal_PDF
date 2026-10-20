@@ -6,6 +6,7 @@ import { useAnnotationStore } from '../../stores/annotationStore'
 import { useSearchStore } from '../../stores/searchStore'
 import FileNameEditor from '../Header/FileNameEditor'
 import FindBar from './FindBar'
+import TextCopyPill from './TextCopyPill'
 import PdfPage from './PdfPage'
 import { budgetedPageCount, maxZoomForDocument, MAX_RETAINED_PAGES } from '../../lib/renderBudget'
 import { setAnchorPage } from '../../lib/renderQueue'
@@ -76,6 +77,8 @@ export default function PdfViewer() {
   const horizontal = usePageScroll() === 'horizontal'
   const horizontalRef = useRef(horizontal)
   horizontalRef.current = horizontal
+  // The box the pages scroll in, which the Copy pill is placed against.
+  const viewerBoxRef = useRef<HTMLDivElement>(null)
   // The page the reader is on, as the band last measured it — what a switch of
   // Page scrolling keeps them on. Down the screen that is the LEADING page (the
   // first whose middle has not scrolled past the top), not the one nearest the
@@ -1544,7 +1547,7 @@ export default function PdfViewer() {
           {t('viewer.bar.xfa_notice')}
         </div>
       )}
-      <div className="relative flex-1 min-h-0">
+      <div ref={viewerBoxRef} className="relative flex-1 min-h-0">
         <div
           ref={scrollRef}
           className="absolute inset-0 overflow-auto bg-slate-200 flex flex-col"
@@ -1592,6 +1595,7 @@ export default function PdfViewer() {
           </div>
         </div>
         {searchOpen && <FindBar />}
+        <TextCopyPill host={viewerBoxRef} />
       </div>
     </div>
   )

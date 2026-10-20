@@ -232,7 +232,7 @@ Ayar yalnızca bu cihazda, tarayıcınızın depolama alanında hatırlanır; bu
 ## Telefonda veya tablette
 
 1. Elinizde bir çizim aracı olmadığından emin olun. Telefon uygulamasında **İşaretle**'yi kapatmak için **Bitti**'ye ya da **Doldur**'a dokunun.
-2. Sayfanın boş bir yerine basılı tutun. Bir an sonra parmağınızın altında küçük turuncu bir nokta belirir.
+2. Sayfanın boş bir yerine basılı tutun. Bir an sonra parmağınızın altında küçük turuncu bir nokta belirir. (Bir kelimeye basılı tutarsanız bunun yerine o kelime seçilir ve üstünde bir **Kopyala** düğmesi çıkar.)
 3. Parmağınızı kaldırmadan sürükleyin. Bir kutu parmağınızı izler.
 4. Bırakın. Kutunun değdiği her not seçilir.
 

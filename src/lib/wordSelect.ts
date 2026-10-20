@@ -13,6 +13,8 @@
 // the request and hit-test against spans that are not there yet.
 
 import type { Tool } from '../types/annotations'
+import type { PDFDocumentProxy } from './pdfjs'
+import { extractPageText, type PageText } from './pdfText'
 
 export type WordSelectRequest = {
   pageIndex: number
@@ -27,6 +29,15 @@ export type WordSelectRequest = {
 
 let pending: WordSelectRequest | null = null
 
+// Where a finger's word selection hands back to. On a touch screen Select text
+// is never picked by hand (the phone has no button for it): a press-and-hold
+// or a double-tap on a word switches to it, and letting go of the selection
+// (a tap off it, or Copy) switches back — see TextCopyPill. Null while Select
+// text was chosen from the toolbar, which stays chosen.
+let returnTo: Tool | null = null
+export const wordSelectReturnTo = () => returnTo
+export const clearWordSelectReturn = () => { returnTo = null }
+
 export function requestWordSelect(
   pageIndex: number,
   clientX: number,
@@ -34,6 +45,7 @@ export function requestWordSelect(
   fromTool: Tool
 ) {
   pending = { pageIndex, clientX, clientY, fromTool, at: Date.now() }
+  returnTo = fromTool
 }
 
 export function clearWordSelect() {
@@ -143,4 +155,84 @@ export function selectWordAtPoint(clientX: number, clientY: number): string | nu
   selection.removeAllRanges()
   selection.addRange(range)
   return text.slice(start, end)
+}
+
+// ── Is there text under a finger? ─────────────────────────────────────────
+// A press-and-hold on a phone means two things: on a word, select it (James,
+// 2026-10-20: "tap and hold doesn't consistently highlight text"); on empty
+// page, start the box that selects several marks. The text layer is empty
+// until Select text is on, so the hold asks the page's text runs instead —
+// fetched when the finger lands, well before the hold is up.
+
+const pageTexts = new WeakMap<PDFDocumentProxy, Map<number, Promise<PageText | null>>>()
+const settledTexts = new WeakMap<PDFDocumentProxy, Map<number, PageText | null>>()
+
+/** The page's text runs, extracted once per document. Null when there are none to be had. */
+export function pageTextFor(doc: PDFDocumentProxy, pageIndex: number): Promise<PageText | null> {
+  let docs = pageTexts.get(doc)
+  if (!docs) pageTexts.set(doc, (docs = new Map()))
+  let p = docs.get(pageIndex)
+  if (!p) {
+    p = doc
+      .getPage(pageIndex + 1)
+      .then((page) => extractPageText(page, pageIndex))
+      .catch(() => null)
+      .then((t) => {
+        let done = settledTexts.get(doc)
+        if (!done) settledTexts.set(doc, (done = new Map()))
+        done.set(pageIndex, t)
+        return t
+      })
+    docs.set(pageIndex, p)
+  }
+  return p
+}
+
+/**
+ * Whether a run of the page's own text lies under page point (x, y), in PDF
+ * points. Undefined while the page's text is still being fetched.
+ */
+export function textUnder(doc: PDFDocumentProxy, pageIndex: number, x: number, y: number): boolean | undefined {
+  const done = settledTexts.get(doc)
+  if (!done || !done.has(pageIndex)) return undefined
+  const t = done.get(pageIndex)
+  if (!t) return false
+  // A fingertip is not a pointer: a little grace round each run.
+  const pad = 2
+  return t.items.some(
+    (it) =>
+      x >= it.x - pad && x <= it.x + it.w + pad && y >= it.y - pad && y <= it.y + it.h + pad &&
+      t.text.slice(it.start, it.start + it.len).trim() !== ''
+  )
+}
+
+/**
+ * Drag on from a word a hold selected: the selection runs from that word to
+ * the character under the finger, either way, as iOS's own does. Does nothing
+ * until the word is selected, or over a point with no text.
+ */
+export function extendWordSelectionTo(clientX: number, clientY: number) {
+  const selection = window.getSelection()
+  if (!selection || selection.rangeCount === 0) return
+  if (!word) {
+    const r = selection.getRangeAt(0)
+    if (r.collapsed || !(r.startContainer.parentElement?.closest('.textLayer'))) return
+    word = r.cloneRange()
+  }
+  const hit = caretFromPoint(clientX, clientY)
+  if (!hit || hit.node.nodeType !== Node.TEXT_NODE || !hit.node.parentElement?.closest('.textLayer')) return
+  const side = word.comparePoint(hit.node, hit.offset)
+  if (side < 0) {
+    selection.setBaseAndExtent(word.endContainer, word.endOffset, hit.node, hit.offset)
+  } else if (side > 0) {
+    selection.setBaseAndExtent(word.startContainer, word.startOffset, hit.node, hit.offset)
+  } else {
+    selection.removeAllRanges()
+    selection.addRange(word)
+  }
+}
+// The word the hold selected, which a drag extends from. Forgotten on lift.
+let word: Range | null = null
+export function endWordSelectionDrag() {
+  word = null
 }

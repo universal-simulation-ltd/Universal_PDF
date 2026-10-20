@@ -232,7 +232,7 @@ Le réglage est mémorisé dans le stockage de votre navigateur, sur cet apparei
 ## Sur un téléphone ou une tablette
 
 1. Vérifiez qu’aucun outil de dessin n’est actif. Dans l’app pour téléphone, touchez **Terminé** pour fermer **Annoter**, ou touchez **Remplir**.
-2. Maintenez le doigt sur une partie vide de la page. Au bout d’un instant, un petit point orange apparaît sous votre doigt.
+2. Maintenez le doigt sur une partie vide de la page. Au bout d’un instant, un petit point orange apparaît sous votre doigt. (Maintenir le doigt sur un mot sélectionne plutôt ce mot, avec un bouton **Copier** au-dessus.)
 3. Sans lever le doigt, faites-le glisser. Un cadre le suit.
 4. Relâchez. Toutes les annotations que le cadre touche sont sélectionnées.
 

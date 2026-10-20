@@ -181,6 +181,8 @@ const viewer: Messages['viewer'] = {
   'scroll.label': 'Sayfa kaydırma',
   'scroll.vertical': 'Dikey',
   'scroll.horizontal': 'Yatay',
+  'textcopy.copy': 'Kopyala',
+  'textcopy.copied': '✓ Kopyalandı',
 }
 
 export default viewer

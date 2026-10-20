@@ -181,6 +181,8 @@ const viewer: Messages['viewer'] = {
   'scroll.label': 'Blätterrichtung',
   'scroll.vertical': 'Vertikal',
   'scroll.horizontal': 'Horizontal',
+  'textcopy.copy': 'Kopieren',
+  'textcopy.copied': '✓ Kopiert',
 }
 
 export default viewer

@@ -232,7 +232,7 @@ El ajuste se recuerda en el almacenamiento de su navegador, solo en este disposi
 ## En un teléfono o una tableta
 
 1. Comprueba que no tienes ninguna herramienta de dibujo activa. En la app para teléfono, toca **Listo** para cerrar **Anotar**, o toca **Rellenar**.
-2. Mantén pulsada una parte vacía de la página. Al cabo de un momento aparece un pequeño punto naranja bajo tu dedo.
+2. Mantén pulsada una parte vacía de la página. Al cabo de un momento aparece un pequeño punto naranja bajo tu dedo. (Si mantienes pulsada una palabra, se selecciona la palabra, con un botón **Copiar** encima.)
 3. Sin levantar el dedo, arrastra. Un recuadro lo sigue.
 4. Suelta. Quedan seleccionadas todas las anotaciones que toca el recuadro.
 

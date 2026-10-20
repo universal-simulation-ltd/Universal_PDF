@@ -232,7 +232,7 @@ L’impostazione viene memorizzata nello spazio di archiviazione del browser, so
 ## Su un telefono o un tablet
 
 1. Assicurati che nessuno strumento di disegno sia attivo. Nell’app per telefono, tocca **Fine** per chiudere **Annota**, oppure tocca **Compila**.
-2. Tieni premuto su una parte vuota della pagina. Dopo un attimo compare un piccolo punto arancione sotto il dito.
+2. Tieni premuto su una parte vuota della pagina. Dopo un attimo compare un piccolo punto arancione sotto il dito. (Tenendo premuto su una parola, si seleziona invece la parola, con un pulsante **Copia** sopra.)
 3. Senza sollevare il dito, trascina. Un riquadro lo segue.
 4. Rilascia. Tutte le annotazioni toccate dal riquadro vengono selezionate.
 

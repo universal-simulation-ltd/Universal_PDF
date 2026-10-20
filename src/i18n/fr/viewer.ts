@@ -181,6 +181,8 @@ const viewer: Messages['viewer'] = {
   'scroll.label': 'Défilement des pages',
   'scroll.vertical': 'Vertical',
   'scroll.horizontal': 'Horizontal',
+  'textcopy.copy': 'Copier',
+  'textcopy.copied': '✓ Copié',
 }
 
 export default viewer

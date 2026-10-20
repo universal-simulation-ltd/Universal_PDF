@@ -232,7 +232,7 @@ A definição fica guardada no armazenamento do browser, apenas neste dispositiv
 ## Num telemóvel ou tablet
 
 1. Confirme que não tem nenhuma ferramenta de desenho ativa. Na app para telemóvel, toque em **Concluído** para fechar **Anotar**, ou toque em **Preencher**.
-2. Toque sem soltar numa parte vazia da página. Passado um instante, aparece um pequeno ponto cor de laranja debaixo do seu dedo.
+2. Toque sem soltar numa parte vazia da página. Passado um instante, aparece um pequeno ponto cor de laranja debaixo do seu dedo. (Tocar sem soltar numa palavra seleciona antes a palavra, com um botão **Copiar** por cima.)
 3. Sem levantar o dedo, arraste. Uma caixa acompanha-o.
 4. Solte. Ficam selecionadas todas as anotações em que a caixa toca.
 

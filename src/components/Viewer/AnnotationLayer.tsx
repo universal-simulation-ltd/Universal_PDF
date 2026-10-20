@@ -34,7 +34,7 @@ import {
   dateLineSeed
 } from '../../lib/composeSignature'
 import { inkColorFor, renderInkSignature } from '../../lib/renderInk'
-import { requestWordSelect } from '../../lib/wordSelect'
+import { requestWordSelect, pageTextFor, textUnder, extendWordSelectionTo, endWordSelectionDrag } from '../../lib/wordSelect'
 import { isPaleFill, redactFillHex } from '../../lib/redactGate'
 import { FONT_CSS } from '../../lib/fonts'
 import { effectiveRuns, runFontStyle, runHasStyle, runUnderlined, runsToPlainText, runsToHtml, parseRunsFromDom, mergeRuns } from '../../lib/textRuns'
@@ -1321,6 +1321,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // True once a hold has fired and this layer owns the finger. Read by the
   // native touchmove listener, which must answer synchronously.
   const marqueeTouchRef = useRef(false)
+  // True once a hold has landed on a word and selected it: until the finger
+  // lifts it drags the selection on, and the page doesn't scroll under it.
+  const wordHoldRef = useRef(false)
   // Same fact as a render trigger: it draws the anchor marker that tells the
   // user the hold landed and the box is now following their finger.
   const [marqueeAnchor, setMarqueeAnchor] = useState<{ x: number; y: number } | null>(null)
@@ -1505,21 +1508,43 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // Start counting a finger's press-and-hold towards a selection box at page
   // point `p`. If it is still down and still within TAP_SLOP_PX when
   // MARQUEE_HOLD_MS is up, the box starts there and follows the finger.
+  //
+  // A hold that lands on the page's own text selects the word there instead,
+  // the way a hold on a word does everywhere else on a phone (James,
+  // 2026-10-20): Select text takes over with that word selected, a drag carries
+  // the selection on, and TextCopyPill offers Copy and hands back to `tool`.
+  // The page's text is fetched as the finger lands; if it is somehow not in by
+  // the time the hold is up, the hold waits for it.
   function startMarqueeHold(evt: PointerEvent, p: { x: number; y: number }) {
     clearMarqueeHold()
     const { pointerId, clientX, clientY } = evt
-    marqueeHoldRef.current = {
-      pointerId,
-      clientX,
-      clientY,
-      timer: setTimeout(() => {
-        marqueeHoldRef.current = null
-        marqueeTouchRef.current = true
-        marqueeRef.current = { startX: p.x, startY: p.y, curX: p.x, curY: p.y, moved: false, touch: true }
-        setMarquee({ x1: p.x, y1: p.y, x2: p.x, y2: p.y })
-        setMarqueeAnchor({ x: p.x, y: p.y })
-      }, MARQUEE_HOLD_MS)
+    const doc = pdfDoc
+    if (doc) void pageTextFor(doc, pageIndex)
+    const fromTool = tool
+    const fire = () => {
+      if (marqueeHoldRef.current !== hold) return
+      // Select area, picked on purpose, always draws its box.
+      const over = doc && fromTool !== 'marquee' ? textUnder(doc, pageIndex, p.x, p.y) : false
+      if (over === undefined) {
+        void pageTextFor(doc!, pageIndex).then(fire)
+        return
+      }
+      marqueeHoldRef.current = null
+      if (over) {
+        pendingTapRef.current = null
+        wordHoldRef.current = true
+        requestWordSelect(pageIndex, clientX, clientY, fromTool)
+        setSelected(null)
+        setTool('selecttext')
+        return
+      }
+      marqueeTouchRef.current = true
+      marqueeRef.current = { startX: p.x, startY: p.y, curX: p.x, curY: p.y, moved: false, touch: true }
+      setMarquee({ x1: p.x, y1: p.y, x2: p.x, y2: p.y })
+      setMarqueeAnchor({ x: p.x, y: p.y })
     }
+    const hold = { pointerId, clientX, clientY, timer: setTimeout(fire, MARQUEE_HOLD_MS) }
+    marqueeHoldRef.current = hold
   }
 
   // Abandon every gesture in flight on this page and put anything mid-drag back
@@ -1601,7 +1626,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     const container = stageRef.current?.container()
     if (!container) return
     function onTouchMove(e: TouchEvent) {
-      if (!marqueeTouchRef.current) return
+      if (!marqueeTouchRef.current && !wordHoldRef.current) return
       if (e.cancelable) e.preventDefault()
       else cancelGesture()
     }
@@ -1638,6 +1663,7 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     // A clean single-pointer gesture is starting — whatever a previous pinch
     // cancelled is behind us.
     gestureCancelled.current = false
+    wordHoldRef.current = false
     pressBecamePinch.current = false
     {
       const st = useAnnotationStore.getState()
@@ -1973,6 +1999,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
 
   function onPointerMove(e: Konva.KonvaEventObject<PointerEvent>) {
     if (pinching) return
+    if (wordHoldRef.current) {
+      extendWordSelectionTo(e.evt.clientX, e.evt.clientY)
+      return
+    }
     const tap = pendingTapRef.current
     if (tap) {
       const dx = e.evt.clientX - tap.clientX
@@ -2055,6 +2085,8 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // sticks in the set and makes the next single-finger touch look like
   // multi-touch — and abandon whatever it had started.
   function onPointerCancel(e: Konva.KonvaEventObject<PointerEvent>) {
+    wordHoldRef.current = false
+    endWordSelectionDrag()
     activePointerIds.current.delete(e.evt.pointerId)
     pressBefore.current = null
     setHoverPos(null)
@@ -2073,6 +2105,12 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   function onPointerUp(e?: Konva.KonvaEventObject<PointerEvent>) {
     if (e) activePointerIds.current.delete(e.evt.pointerId)
     pressBefore.current = null
+    if (wordHoldRef.current) {
+      // The word (or the run dragged out from it) stays selected for Copy.
+      wordHoldRef.current = false
+      endWordSelectionDrag()
+      return
+    }
     // A one-shot placement armed on pointerdown and never disarmed by travel,
     // a pinch or a browser-owned scroll: the finger stayed put, so it was a tap.
     const tap = pendingTapRef.current

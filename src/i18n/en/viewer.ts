@@ -181,4 +181,7 @@ export default {
   'scroll.label': 'Page scrolling',
   'scroll.vertical': 'Vertical',
   'scroll.horizontal': 'Horizontal',
+  // A finger's word selection on a touch screen: the button over the words
+  'textcopy.copy': 'Copy',
+  'textcopy.copied': '✓ Copied',
 }

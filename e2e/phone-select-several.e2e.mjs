@@ -168,10 +168,13 @@ const at = async (fx, fy) => {
 }
 const ALL = ['box-a', 'box-b', 'box-c', 'hl-d']
 
-// Hold on empty page above-left of the cluster, drag to below-right of it.
+// Hold on empty page above-right of the cluster, drag to below-left of it.
+// ⚠️ EMPTY PAGE, clear of the example's words: a hold on a word selects the
+// word instead (2026-10-20, word-hold.e2e). It started at (0.24, 0.38) until
+// then, which is on the line "Phone app: Mark up ›".
 async function holdAndBox() {
-  const from = await at(0.24, 0.38)
-  const to = await at(0.68, 0.66)
+  const from = await at(0.96, 0.40)
+  const to = await at(0.26, 0.68)
   await finger({ x: from.x, y: from.y, dx: to.x - from.x, dy: to.y - from.y, holdMs: 500 })
 }
 

@@ -232,7 +232,7 @@ The setting is remembered in your browser's storage on this device only, so each
 ## On a phone or tablet
 
 1. Make sure no drawing tool is in hand. In the phone app, tap **Done** to put **Mark up** away, or tap **Fill**.
-2. Press and hold an empty part of the page. After a moment a small orange dot shows under your finger.
+2. Press and hold an empty part of the page. After a moment a small orange dot shows under your finger. (Pressing and holding a word selects the word instead, with a **Copy** button over it.)
 3. Without lifting your finger, drag. A box follows it.
 4. Let go. Every mark the box touches is selected.
 

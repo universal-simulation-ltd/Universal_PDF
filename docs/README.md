@@ -1915,6 +1915,19 @@ side in a row. Added 2026-10-07.
   with the viewer reverted. Plus 3 fit-height checks on 2026-10-08; 2 went red
   against the old fit). Never run on a touch device or in the
   Electron/Capacitor shells; Chromium at 1440x900 only.
+- **A finger walks the row too** (James, 2026-10-20: "swiping up and down as
+  if to scroll up down then scroll right and left — similar to how desktop
+  works with trackpad"). The wheel's rule, in a touch handler beside it in
+  `PdfViewer.tsx`: pages in a row, an up-and-down swipe with no more room to
+  go that way moves along the row instead (swipe up = next page), and coasts
+  when flicked (iOS's 0.998/ms deceleration). It is decided on the swipe's
+  first move, because a touchmove can't be cancelled once the browser is
+  scrolling: a swipe that started scrolling down the page stays a scroll, and
+  the next one walks on. Left alone: sideways swipes, the column layout,
+  Hand, anything with `touch-action: none` under the finger (the drawing
+  tools), and an annotation Konva is about to drag (`Konva.DD._dragElements`,
+  filled on touchstart). `node e2e/row-swipe.e2e.mjs` (9 checks; 3 go red
+  with the handler taken out). Not yet tried on an iPhone.
 
 ## Undo covers two histories, and only one order works
 
@@ -2412,6 +2425,43 @@ pages, and the phone does not offer Select area.
   all of it: 23 checks, including a mouse group drag. Negative control: with
   the old `AnnotationLayer.tsx` and `DocumentScreen.tsx` it fails 10 checks.
   `E2E_EXPECT_OFF=1` flips the gesture checks to expect "off".
+
+## Holding a word on a phone selects it (2026-10-20)
+
+James on the iPhone, with a Bipolar Bear report: "Tap and hold doesn't seem
+to consistently highlight text." The phone had no way to select the PDF's
+own text. Select text has no button there; only a double-tap on a word
+reached it, and then nothing led back out.
+
+- **The gesture:** with Select or Text in hand, on a coarse pointer, a hold
+  that lands on the page's own text selects the word under the finger
+  (`startMarqueeHold` in `AnnotationLayer.tsx`). A hold on empty page is
+  still the select-several box above. Select area, picked on purpose,
+  always draws its box. Dragging on before lifting carries the selection
+  word by word, either way (`extendWordSelectionTo`); the page doesn't
+  scroll under it (`wordHoldRef` in the Stage's touchmove listener).
+- **How the hold knows it's on a word:** the text layer is empty until
+  Select text is on, so the hold asks the page's text runs instead
+  (`pageTextFor` / `textUnder` in `lib/wordSelect.ts`, cached per document
+  and fetched as the finger lands, with 2 pt of grace round each run). Then
+  it takes the double-click's own path: `requestWordSelect`, switch to Select
+  text, and `TextSelectLayer` selects the word once its spans exist.
+- **Copy, and the way back:** `TextCopyPill.tsx` (touch screens only) puts a
+  **Copy** button over the selection. Copy, a tap off the words, or a tap
+  anywhere else puts back the tool that was in hand
+  (`wordSelectReturnTo`). Select text picked from the desktop toolbar has no
+  way-back tool, so it stays put as before. A double-tap on a word, on a touch
+  screen, now gets the pill and the way back too.
+- **With Text in hand** (the phone's Fill), a hold on a word now selects the
+  word and drops no text box. A hold on empty page still drops one.
+- `node e2e/word-hold.e2e.mjs` (Chromium, 390×844, CDP touches; `PHONE=1` for
+  the phone screens; `PDF=<file>` also holds a word of that file's page 1):
+  9 checks. Negative control: with the text check taken out of
+  `startMarqueeHold`, 5 go red, and the empty-page and hand-back checks stay
+  green. `phone-select-several` now starts its box on empty page: its old
+  start point was on a line of the example's text. Never run on an iPhone:
+  whether iOS also shows its own selection handles and menu over the word is
+  untested.
 
 ## The example PDF — a feature tour
 
