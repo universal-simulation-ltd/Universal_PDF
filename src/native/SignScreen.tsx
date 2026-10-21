@@ -3,7 +3,7 @@ import { useT } from '../i18n'
 import { usePdfStore } from '../stores/pdfStore'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useSignatureStore } from '../stores/signatureStore'
-import { renderInkSignature } from '../lib/renderInk'
+import { inkColorFor, renderInkSignature } from '../lib/renderInk'
 import { composeSignature, dateLineSeed, DEFAULT_LABEL_SCALE, DEFAULT_SIG_ALIGN } from '../lib/composeSignature'
 import type { SignatureData } from '../types/annotations'
 import { BackLink, Hl } from './parts'
@@ -70,7 +70,12 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
       let made: { dataUrl: string; width: number; height: number } | null = null
       let sig: SignatureData | undefined
       if (how === 'draw') {
-        made = renderInkSignature(lines, INK, false, pressures)
+        // Drawn signatures start with the realistic look (blue ink, uneven
+        // pressure, a hand wobble: James, 2026-10-22). The strokes are kept, so
+        // the placed signature's "Make it look more realistic" switch can
+        // still turn it into a plain line.
+        const ink = inkColorFor(true)
+        made = renderInkSignature(lines, ink, true, pressures)
         if (made) {
           sig = {
             ink: made.dataUrl,
@@ -78,10 +83,10 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
             inkHeight: made.height,
             align: DEFAULT_SIG_ALIGN,
             labelScale: DEFAULT_LABEL_SCALE,
-            color: INK,
+            color: ink,
             strokes: lines,
             pressures: pressures.some((p) => p.length > 0) ? pressures : undefined,
-            realistic: false,
+            realistic: true,
           }
         }
       } else {
