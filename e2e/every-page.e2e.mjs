@@ -13,6 +13,7 @@
 //   • The original stays selected; once it is on every page the button
 //     becomes "Take off the other pages" (a no-entry sign over it, James,
 //     2026-10-19), which takes every copy but this one off — in one undo step.
+//     It still does after the original is moved (2026-10-22).
 //   • ONE undo takes every copy away.
 //   • Export: the stamp is on every page of the file.
 
@@ -127,6 +128,14 @@ check('the original stays selected', (await store('return s.selectedId')) === 's
 await page.screenshot({ path: join(process.env.SHOTS ?? tmpdir(), 'every-page.png') })
 const off = page.getByRole('button', { name: 'Take off the other pages' })
 check('once on every page, the button offers to take them off instead', (await off.count()) === 1 && (await btn.count()) === 0)
+
+// James, 2026-10-22: moving the original must not lose the "take off" button.
+console.log('\nmoving the original')
+await store('s.update("st", { x: 60, y: 120 })')
+await page.waitForTimeout(300)
+check('moved, it still offers to take the copies off', (await off.count()) === 1 && (await btn.count()) === 0)
+await store('s.undo(); s.setSelected("st")')
+await page.waitForTimeout(200)
 
 console.log('\nexport')
 const out = await page.evaluate(

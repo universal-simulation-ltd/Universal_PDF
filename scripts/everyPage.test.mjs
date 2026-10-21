@@ -65,12 +65,42 @@ test('a one-page document has nowhere to copy to', () => {
 test('taking it off the other pages finds every copy, and only the copies', () => {
   const sizes = [A4, LETTER, A4]
   const copies = copiesForEveryPage(stamp, sizes, [stamp], id)
-  // Moved by hand on page 3: no longer where the button put it, so it stays.
-  const moved = { ...copies[1], id: 'moved', x: copies[1].x + 50 }
+  // A copy moved by hand on page 3 is still one of the copies (2026-10-22).
+  const moved = { ...copies[1], x: copies[1].x + 50 }
   // Another picture in the same spot is not this one.
-  const other = { ...copies[0], id: 'other', src: 'data:image/png;base64,BBB' }
+  const other = { ...copies[0], id: 'other', src: 'data:image/png;base64,BBB', everyPageOf: undefined }
   const ids = copiesOnOtherPages(stamp, sizes, [stamp, copies[0], moved, other])
-  assert.deepEqual(ids, [copies[0].id])
+  assert.deepEqual(ids.sort(), [copies[0].id, moved.id].sort())
   // Selected on another page, it is the original on page 1 that goes.
   assert.deepEqual(copiesOnOtherPages(copies[0], sizes, [stamp, ...copies]).sort(), [stamp.id, copies[1].id].sort())
+})
+
+// James, 2026-10-22: "applying signature to every page then moving the
+// original one, it should still have the remove from all pages icon".
+test('moving the original keeps it on every page, and Take off still finds the copies', () => {
+  const sizes = [A4, A4, A4]
+  const copies = copiesForEveryPage(stamp, sizes, [stamp], id)
+  assert.ok(copies.every((c) => c.everyPageOf === stamp.id))
+  const movedOriginal = { ...stamp, x: stamp.x + 120, y: stamp.y + 300 }
+  const all = [movedOriginal, ...copies]
+  // Nothing more to add, so the button offers to take them off…
+  assert.equal(copiesForEveryPage(movedOriginal, sizes, all, id).length, 0)
+  // …and taking them off finds both copies.
+  assert.deepEqual(copiesOnOtherPages(movedOriginal, sizes, all).sort(), copies.map((c) => c.id).sort())
+})
+
+test('a page whose copy was deleted gets one again, and only that page', () => {
+  const sizes = [A4, A4, A4]
+  const copies = copiesForEveryPage(stamp, sizes, [stamp], id)
+  const movedOriginal = { ...stamp, x: stamp.x + 80 }
+  const again = copiesForEveryPage(movedOriginal, sizes, [movedOriginal, copies[0]], id)
+  assert.deepEqual(again.map((c) => c.pageIndex), [2])
+  assert.equal(again[0].everyPageOf, stamp.id)
+})
+
+test('copies made from a copy join the same set', () => {
+  const sizes = [A4, A4, A4]
+  const [c1] = copiesForEveryPage(stamp, sizes, [stamp], id)
+  const fromCopy = copiesForEveryPage(c1, sizes, [c1], id)
+  assert.ok(fromCopy.every((c) => c.everyPageOf === stamp.id))
 })

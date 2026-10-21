@@ -276,6 +276,11 @@ export type ImageAnnotation = Base & {
   // width 0 — an image with no `border` key draws exactly as it always did,
   // which is what keeps existing documents byte-identical on re-export.
   border?: ImageBorder
+  // Set on each copy "Put on every page" makes: the id of the mark it was
+  // copied from, so the set stays a set when any of them is moved (James,
+  // 2026-10-22: move the original and the button must still take the copies
+  // off). The original itself has none; its own id names the set.
+  everyPageOf?: string
 }
 
 export type ImageBorderStyle = 'solid' | 'dashed'
