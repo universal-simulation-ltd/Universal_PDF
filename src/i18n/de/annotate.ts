@@ -117,6 +117,7 @@ const annotate: Messages['annotate'] = {
   // SignatureOptionsModal
   'sig_options.title': 'Unterschriftsoptionen',
   'sig_options.intro_restyle': 'Ändert die Beschriftung und den Stiftstil – deine gezeichneten Striche bleiben genau so, wie du sie gezeichnet hast. Mit der Leiste an der Unterschrift kannst du die Beschriftung skalieren oder ausrichten.',
+  'sig_options.intro_typed': "Ändert die Beschriftung und den Tintenstil. Dein getippter Name bleibt so, wie du ihn getippt hast. Mit der Leiste an der Unterschrift kannst du die Beschriftung skalieren oder ausrichten.",
   'sig_options.intro': 'Ändert nur Name und Datum – deine Unterschrift selbst bleibt genau so, wie du sie gezeichnet hast. Mit der Leiste an der Unterschrift kannst du die Beschriftung skalieren oder ausrichten.',
   'sig_options.add_details': 'Deine Angaben hinzufügen',
   'sig_options.details_aria': 'Angaben, die unter der Unterschrift stehen',

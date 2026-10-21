@@ -117,6 +117,7 @@ const annotate: Messages['annotate'] = {
   // SignatureOptionsModal
   'sig_options.title': 'İmza seçenekleri',
   'sig_options.intro_restyle': 'Etiketleri ve kalem stilini değiştirir — çizdiğiniz çizgiler tam olarak çizildiği gibi kalır. Etiketleri yeniden boyutlandırmak veya hizalamak için imzanın üzerindeki kontrolü kullanın.',
+  'sig_options.intro_typed': "Etiketleri ve mürekkep stilini değiştirir. Yazdığınız ad yazdığınız gibi kalır. Etiketleri yeniden boyutlandırmak veya hizalamak için imzanın üzerindeki kontrolü kullanın.",
   'sig_options.intro': 'Yalnızca adı ve tarihi değiştirir — imzanızın kendisi tam olarak çizildiği gibi kalır. Etiketleri yeniden boyutlandırmak veya hizalamak için imzanın üzerindeki kontrolü kullanın.',
   'sig_options.add_details': 'Bilgilerinizi ekleyin',
   'sig_options.details_aria': 'İmzanın altında gösterilecek bilgiler',

@@ -117,6 +117,7 @@ const annotate: Messages['annotate'] = {
   // SignatureOptionsModal
   'sig_options.title': 'Options de signature',
   'sig_options.intro_restyle': 'Modifie les libellés et le style du stylo — les traits que vous avez dessinés restent exactement tels quels. Utilisez la pastille sur la signature pour redimensionner ou aligner les libellés.',
+  'sig_options.intro_typed': "Modifie les libellés et le style de l’encre. Le nom saisi reste tel que vous l’avez tapé. Utilisez la pastille sur la signature pour redimensionner ou aligner les libellés.",
   'sig_options.intro': 'Modifie uniquement le nom et la date — votre signature elle-même reste exactement telle que dessinée. Utilisez la pastille sur la signature pour redimensionner ou aligner les libellés.',
   'sig_options.add_details': 'Ajouter vos coordonnées',
   'sig_options.details_aria': 'Coordonnées à afficher sous la signature',

@@ -4,6 +4,7 @@ import { usePdfStore } from '../stores/pdfStore'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useSignatureStore } from '../stores/signatureStore'
 import { inkColorFor, renderInkSignature } from '../lib/renderInk'
+import { renderTypedSignature } from '../lib/renderTyped'
 import { composeSignature, dateLineSeed, DEFAULT_LABEL_SCALE, DEFAULT_SIG_ALIGN } from '../lib/composeSignature'
 import type { SignatureData } from '../types/annotations'
 import { BackLink, Hl } from './parts'
@@ -90,8 +91,12 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
           }
         }
       } else {
-        made = await renderTyped(typed.trim())
-        if (made) sig = { ink: made.dataUrl, inkWidth: made.width, inkHeight: made.height, align: DEFAULT_SIG_ALIGN, labelScale: DEFAULT_LABEL_SCALE, color: INK }
+        // Typed ones start realistic too, and keep the name so the placed
+        // signature's switch can set it plain again (James, 2026-10-22).
+        const name = typed.trim()
+        const ink = inkColorFor(true)
+        made = await renderTypedSignature(name, ink, true)
+        if (made) sig = { ink: made.dataUrl, inkWidth: made.width, inkHeight: made.height, align: DEFAULT_SIG_ALIGN, labelScale: DEFAULT_LABEL_SCALE, color: ink, typed: name, realistic: true }
       }
       if (!made) return
       if (sig && (nameUnder.trim() || dateUnder)) {
@@ -420,37 +425,4 @@ function strokePath(ctx: CanvasRenderingContext2D, pts: number[]) {
   ctx.moveTo(pts[0], pts[1])
   for (let i = 2; i + 1 < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1])
   ctx.stroke()
-}
-
-/** A typed name in the handwriting face, cropped to the ink, as a PNG. */
-async function renderTyped(name: string): Promise<{ dataUrl: string; width: number; height: number } | null> {
-  const size = 72
-  const font = `700 ${size}px Caveat, cursive`
-  try {
-    await document.fonts.load(font, name)
-  } catch {
-    // The fallback face still makes a usable signature.
-  }
-  const probe = document.createElement('canvas').getContext('2d')
-  if (!probe) return null
-  probe.font = font
-  // The ink, not the advance width: Caveat's last stroke (a k, an f) reaches
-  // past the advance and was cut off at the canvas edge.
-  const m = probe.measureText(name)
-  const inkLeft = Math.max(0, m.actualBoundingBoxLeft || 0)
-  const inkRight = Math.max(m.width, m.actualBoundingBoxRight || 0)
-  const w = Math.ceil(inkLeft + inkRight) + 16
-  const h = Math.ceil(size * 1.3)
-  const scale = 2
-  const canvas = document.createElement('canvas')
-  canvas.width = w * scale
-  canvas.height = h * scale
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return null
-  ctx.scale(scale, scale)
-  ctx.font = font
-  ctx.fillStyle = INK
-  ctx.textBaseline = 'middle'
-  ctx.fillText(name, 8 + inkLeft, h / 2)
-  return { dataUrl: canvas.toDataURL('image/png'), width: w, height: h }
 }

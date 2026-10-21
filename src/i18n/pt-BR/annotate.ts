@@ -117,6 +117,7 @@ const annotate: Messages['annotate'] = {
   // SignatureOptionsModal
   'sig_options.title': 'Opções da assinatura',
   'sig_options.intro_restyle': 'Altera os rótulos e o estilo da caneta — os traços que você desenhou ficam exatamente como estão. Use a barra na assinatura para redimensionar ou alinhar os rótulos.',
+  'sig_options.intro_typed': "Altera os rótulos e o estilo da tinta. O nome digitado fica exatamente como você o digitou. Use a barra na assinatura para redimensionar ou alinhar os rótulos.",
   'sig_options.intro': 'Altera só o nome e a data — sua assinatura fica exatamente como foi desenhada. Use a barra na assinatura para redimensionar ou alinhar os rótulos.',
   'sig_options.add_details': 'Adicionar seus dados',
   'sig_options.details_aria': 'Dados a mostrar abaixo da assinatura',

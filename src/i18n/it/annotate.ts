@@ -117,6 +117,7 @@ const annotate: Messages['annotate'] = {
   // SignatureOptionsModal
   'sig_options.title': 'Opzioni della firma',
   'sig_options.intro_restyle': 'Modifica le etichette e lo stile della penna: i tratti che hai disegnato restano esattamente come sono. Usa il pannello sulla firma per ridimensionare o allineare le etichette.',
+  'sig_options.intro_typed': "Modifica le etichette e lo stile dell'inchiostro. Il nome digitato resta come l'hai scritto. Usa il pannello sulla firma per ridimensionare o allineare le etichette.",
   'sig_options.intro': 'Modifica solo il nome e la data: la firma resta esattamente come l’hai disegnata. Usa il pannello sulla firma per ridimensionare o allineare le etichette.',
   'sig_options.add_details': 'Aggiungi i tuoi dati',
   'sig_options.details_aria': 'Dati da mostrare sotto la firma',

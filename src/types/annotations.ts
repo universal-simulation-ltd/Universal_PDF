@@ -249,8 +249,14 @@ export type SignatureData = SignatureLabelOptions & {
   // array per stroke, empty for a stroke drawn with a finger or mouse. Absent
   // on signatures drawn before 2026-10-12 and on anything not drawn with a pen.
   pressures?: number[][]
+  // The name a typed signature (the phone's "Type it") was set from, so its
+  // ink can be re-rendered with or without the realistic look, as `strokes`
+  // allow for a drawn one (James, 2026-10-22). Absent on drawn signatures and
+  // on typed ones made before then.
+  typed?: string
   // Whether `ink` was rendered with the realistic pen treatment. Only
-  // meaningful alongside `strokes` — without them the look can't be changed.
+  // meaningful alongside `strokes` or `typed` — without them the look can't
+  // be changed.
   realistic?: boolean
 }
 

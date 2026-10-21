@@ -117,6 +117,7 @@ export default {
   // SignatureOptionsModal
   'sig_options.title': 'Signature options',
   'sig_options.intro_restyle': 'Changes the labels and the pen style — the strokes you drew stay exactly as drawn. Use the pill on the signature to resize or align the labels.',
+  'sig_options.intro_typed': "Changes the labels and the ink style. Your typed name stays as you typed it. Use the pill on the signature to resize or align the labels.",
   'sig_options.intro': 'Changes the name and date only — your signature itself stays exactly as drawn. Use the pill on the signature to resize or align the labels.',
   'sig_options.add_details': 'Add your details',
   'sig_options.details_aria': 'Details to show under the signature',

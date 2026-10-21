@@ -34,6 +34,7 @@ import {
   dateLineSeed
 } from '../../lib/composeSignature'
 import { inkColorFor, renderInkSignature } from '../../lib/renderInk'
+import { renderTypedSignature } from '../../lib/renderTyped'
 import { requestWordSelect, pageTextFor, textUnder, extendWordSelectionTo, endWordSelectionDrag } from '../../lib/wordSelect'
 import { isPaleFill, redactFillHex } from '../../lib/redactGate'
 import { FONT_CSS } from '../../lib/fonts'
@@ -5297,7 +5298,9 @@ function SignatureOptionsModal({
   // pixels — there is nothing to re-render, so the option stays hidden rather
   // than pretending to do something.
   const strokes = data.strokes
-  const canRestyle = !!strokes && strokes.length > 0
+  // A typed signature can be re-set from its name, as a drawn one from its strokes.
+  const typedName = data.typed?.trim() || ''
+  const canRestyle = (!!strokes && strokes.length > 0) || !!typedName
 
   // Every applier sends the whole label set, so changing one field never drops
   // another that is only held in this draft state. The full name and date lines
@@ -5360,10 +5363,13 @@ function SignatureOptionsModal({
   // swap it in — the labels are then re-composited over it by applySigData.
   // The ink colour follows the toggle exactly as it does in the pad, and the
   // labels pick up the same colour so the two never drift apart.
-  const toggleRealistic = (v: boolean) => {
-    if (!strokes) return
+  const toggleRealistic = async (v: boolean) => {
     const color = inkColorFor(v)
-    const ink = renderInkSignature(strokes, color, v, dataRef.current.pressures)
+    const ink = strokes?.length
+      ? renderInkSignature(strokes, color, v, dataRef.current.pressures)
+      : typedName
+        ? await renderTypedSignature(typedName, color, v)
+        : null
     if (!ink) return
     setRealistic(v)
     onApply({
@@ -5404,7 +5410,7 @@ function SignatureOptionsModal({
         <div className="px-5 pb-4 space-y-3">
           <p className="text-xs text-slate-500">
             {canRestyle
-              ? t('annotate.sig_options.intro_restyle')
+              ? t(strokes?.length ? 'annotate.sig_options.intro_restyle' : 'annotate.sig_options.intro_typed')
               : t('annotate.sig_options.intro')}
           </p>
           {/* One box for every line under the signature — the first is set
