@@ -93,7 +93,7 @@ const tools: Messages['tools'] = {
   'export.failed_fallback': 'Export fehlgeschlagen',
   'export.compression_failed_fallback': 'Komprimieren fehlgeschlagen',
   // ExportModal
-  'export.try_advanced': 'Bereits optimiert – mit „Erweiterter Export“ kannst du bildlastige Seiten in Bilder umwandeln.',
+  'export.already_small': 'Schon so klein wie sinnvoll – Komprimieren oder Umwandeln in Bilder würde kaum etwas ändern.',
   'export.title': 'PDF exportieren',
   'export.xfa_body': 'Deine Eingaben werden im Formular gespeichert. Komprimierung und eingebettete Kommentare sind für XFA-Dokumente nicht verfügbar.',
   'export.building_short': 'Wird erstellt…',
@@ -104,6 +104,9 @@ const tools: Messages['tools'] = {
   'export.no_images': 'Kleiner geht es nicht – hier gibt es keine Bilder zum Komprimieren.',
   'export.object_stream': 'Neu gespeichert mit Objekt-Streams',
   'export.download_compressed': 'Komprimiert herunterladen',
+  'export.flattened': 'Als Bilder',
+  'export.flattened_note': 'Seiten in Bilder umgewandelt – Text lässt sich nicht mehr markieren oder durchsuchen',
+  'export.download_flattened': 'Als Bilder herunterladen',
   'export.preview': 'Vorschau',
   'export.need_advanced': 'Seiten zu Bildern reduzieren oder mit einem Passwort schützen?',
 

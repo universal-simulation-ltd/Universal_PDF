@@ -93,7 +93,7 @@ export default {
   'export.failed_fallback': 'Export failed',
   'export.compression_failed_fallback': 'Compression failed',
   // ExportModal
-  'export.try_advanced': 'Already optimised — try Advanced export to turn image-heavy pages into pictures.',
+  'export.already_small': 'Already as small as it sensibly goes — compressing or flattening would barely change it.',
   'export.title': 'Export PDF',
   'export.xfa_body': "Your entries are saved into the form. Compression and baked-in annotations aren't available for XFA documents.",
   'export.building_short': 'Building…',
@@ -104,6 +104,9 @@ export default {
   'export.no_images': 'Already as small as it goes — there are no images here to compress.',
   'export.object_stream': 'object-stream re-save', // technical description of the lossless compression
   'export.download_compressed': 'Download Compressed',
+  'export.flattened': 'Flattened', // tab: every page turned into a picture
+  'export.flattened_note': 'pages turned into images — text can no longer be selected or searched',
+  'export.download_flattened': 'Download Flattened',
   'export.preview': 'Preview', // button: open print preview
   'export.need_advanced': 'Need to flatten the pages or lock it with a password?',
 

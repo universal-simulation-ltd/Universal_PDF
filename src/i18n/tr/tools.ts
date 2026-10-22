@@ -93,7 +93,7 @@ const tools: Messages['tools'] = {
   'export.failed_fallback': 'Dışa aktarma başarısız oldu',
   'export.compression_failed_fallback': 'Sıkıştırma başarısız oldu',
   // ExportModal
-  'export.try_advanced': 'Zaten optimize edilmiş — görsel ağırlıklı sayfaları resimlere dönüştürmek için Gelişmiş dışa aktarmayı deneyin.',
+  'export.already_small': 'Zaten olabildiğince küçük — sıkıştırmak ya da düzleştirmek neredeyse hiçbir şey değiştirmez.',
   'export.title': 'PDF’i dışa aktar',
   'export.xfa_body': 'Girdiğiniz bilgiler forma kaydedilir. XFA belgelerinde sıkıştırma ve sayfaya işlenmiş notlar kullanılamaz.',
   'export.building_short': 'Hazırlanıyor…',
@@ -104,6 +104,9 @@ const tools: Messages['tools'] = {
   'export.no_images': 'Zaten olabilecek en küçük boyutta — burada sıkıştırılacak görsel yok.',
   'export.object_stream': 'nesne akışıyla yeniden kaydetme',
   'export.download_compressed': 'Sıkıştırılmışı indir',
+  'export.flattened': 'Düzleştirilmiş',
+  'export.flattened_note': 'sayfalar görsele dönüştürüldü — metin artık seçilemez ve aranamaz',
+  'export.download_flattened': 'Düzleştirilmişi indir',
   'export.preview': 'Önizleme',
   'export.need_advanced': 'Sayfaları düzleştirmeniz veya parolayla kilitlemeniz mi gerekiyor?',
 

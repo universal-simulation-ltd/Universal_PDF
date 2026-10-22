@@ -12,6 +12,7 @@ import LockFields, { EMPTY_LOCK, lockIncomplete, lockPasswordOf, type LockState 
 import { markSaved } from '../../lib/unsavedChanges'
 import { RedactIcon } from '../icons/RedactIcon'
 import { useExportBuild } from './useExportBuild'
+import { FLATTEN_BAR, worthOffering } from './worthOffering'
 import { useT, type Translator } from '../../i18n'
 import { formatSize } from './formatSize'
 
@@ -145,12 +146,6 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
   // Measured Maximum against Balanced, because Balanced is what ticking the box
   // already gives you. A level that would shave 3% more off does not earn a
   // second button — one button is not a choice.
-  const RASTER_WORTH_IT = 0.2 // ≥20% smaller...
-  const RASTER_MIN_BYTES = 100 * 1024 // ...and ≥100 KB, so tiny files don't qualify on ratio alone
-  function worthOffering(estimated: number, against: number): boolean {
-    const savedVs = against - estimated
-    return savedVs >= against * RASTER_WORTH_IT && savedVs >= RASTER_MIN_BYTES
-  }
   const FLATTEN_OPTIONS = flattenOptions(t)
   const offeredQualities = FLATTEN_OPTIONS.filter((opt) => {
     if (opt.value === 'balanced') return true
@@ -160,7 +155,7 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
     // Never hide the level currently in use — a button vanishing from under
     // the user's own selection is worse than one that turns out not to help.
     if (opt.value === quality) return true
-    return worthOffering(rasterEstimate.strong, rasterEstimate.balanced)
+    return worthOffering(rasterEstimate.strong, rasterEstimate.balanced, FLATTEN_BAR)
   })
   const showStrength = flatten && offeredQualities.length > 1
 
@@ -170,7 +165,7 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
   // and "· 240 KB bigger" beside a checkbox reads as a warning against ticking
   // it when size is not what it is for.
   const flattenSaving =
-    rasterEstimate && annotated && origSize - rasterEstimate.balanced >= RASTER_MIN_BYTES
+    rasterEstimate && annotated && origSize - rasterEstimate.balanced >= FLATTEN_BAR.minBytes
       ? origSize - rasterEstimate.balanced
       : null
 

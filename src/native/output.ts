@@ -56,6 +56,12 @@ export async function makeSmaller(
   return compressPdf(bytes.slice().buffer as ArrayBuffer, fileName, quality, onProgress)
 }
 
+/** What turning every page into a picture would weigh, from one sampled page. */
+export async function estimateFlattened(bytes: Uint8Array): Promise<number> {
+  const { estimateRasterSizes } = await import('../lib/export')
+  return (await estimateRasterSizes(bytes.slice().buffer as ArrayBuffer)).balanced
+}
+
 /** Hand the file to the phone: the share sheet, which carries Save to Files too. */
 export async function handOver(bytes: Uint8Array, fileName: string): Promise<void> {
   const { downloadPdfBytes } = await import('../lib/download')

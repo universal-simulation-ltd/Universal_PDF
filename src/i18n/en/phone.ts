@@ -211,11 +211,13 @@ export default {
   'stamp_ready': 'READY TO SEND',
   'call_it': 'call it…', // handwritten label above the file name
   'share_meta': '.pdf · {pages}',
-  'how_big': 'how big?', // handwritten legend above the two size choices
+  'how_big': 'how big?', // handwritten legend above the size choices
   'as_is': 'As it is',
   'as_is_note': '{size}, crisp',
   'smaller': 'Smaller',
   'smaller_size_note': '{size}, fits any form',
+  'flattened': 'Flattened', // a third size choice: every page turned into a picture
+  'flattened_note': '{size}, pages as pictures',
   'sizing': 'weighing it…',
   'ink_answers': 'Set the answers in ink',
   'ink_answers_note': 'Nobody can change them after you send it',

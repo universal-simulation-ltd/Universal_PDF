@@ -211,6 +211,8 @@ const phone: Messages['phone'] = {
   'as_is_note': '{size}, net',
   'smaller': 'Daha küçük',
   'smaller_size_note': '{size}, her forma sığar',
+  'flattened': 'Düzleştirilmiş',
+  'flattened_note': '{size}, sayfalar görsel olur',
   'sizing': 'tartılıyor…',
   'ink_answers': 'Cevapları mürekkeple sabitle',
   'ink_answers_note': 'Gönderdikten sonra kimse değiştiremez',

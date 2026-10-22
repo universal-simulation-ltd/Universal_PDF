@@ -3,20 +3,28 @@ import { useT } from '../i18n'
 import { usePdfStore } from '../stores/pdfStore'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { formatSize } from '../components/Export/formatSize'
+import { FLATTEN_BAR, LOSSLESS_BAR, worthOffering } from '../components/Export/worthOffering'
 import { countRedactions, isRedactConfirmed, REDACT_CONFIRM_WORD } from '../lib/redactGate'
 import { MIN_PASSWORD } from '../lib/lockPassword'
 import { SQUIGGLE } from './icons'
 import { BackLink, Hl } from './parts'
 import { useNav } from './nav'
-import { baseName, buildAnnotated, handOver, inkTheAnswers, lockWithPassword, makeSmaller } from './output'
+import { baseName, buildAnnotated, estimateFlattened, handOver, inkTheAnswers, lockWithPassword, makeSmaller } from './output'
 
 // Board 7 · Send it on its way, round 4: a tilted page with a READY TO SEND
 // stamp, the name written on a form line, the two sizes as paper slips, the
 // switches on a slip with a sticky note on it, and Save to Files / Share… at
 // the foot. Both buttons hand the file to the phone; on a phone the share
 // sheet is where "Save to Files" lives too, so they differ only in intent.
+//
+// Up to three size slips, the same three copies as the website's Export
+// dialog (James, 2026-10-22: "show default, compressed and flatten images —
+// hide if the difference is too small"): As it is, Smaller (the lossless
+// re-save, text kept) and Flattened (every page a picture). A slip is on the
+// page only when it is meaningfully smaller than the one before it; the bars
+// are in `worthOffering.ts`.
 
-type Size = 'as-is' | 'smaller'
+type Size = 'as-is' | 'smaller' | 'flattened'
 
 export default function ShareScreen() {
   const t = useT()
@@ -28,10 +36,14 @@ export default function ShareScreen() {
   const startPassword = useNav((s) => s.sharePassword)
   const fromMoment = useNav((s) => s.smaller)
   const [name, setName] = useState(() => baseName(fileName))
-  const [size, setSize] = useState<Size>(startSmaller ? 'smaller' : 'as-is')
+  // The Smaller moment makes its copy by turning the pages into pictures, so
+  // arriving from it lands on Flattened, with that very file.
+  const [size, setSize] = useState<Size>(startSmaller ? 'flattened' : 'as-is')
   const [annotated, setAnnotated] = useState<Uint8Array | null>(null)
   const [hasForm, setHasForm] = useState(false)
-  const [smaller, setSmaller] = useState<Uint8Array | null>(startSmaller && fromMoment ? fromMoment.bytes : null)
+  const [smaller, setSmaller] = useState<Uint8Array | null>(null)
+  const [flattened, setFlattened] = useState<Uint8Array | null>(startSmaller && fromMoment ? fromMoment.bytes : null)
+  const [flattening, setFlattening] = useState(false)
   const [ink, setInk] = useState(false)
   const [lock, setLock] = useState(startPassword)
   const [password, setPassword] = useState('')
@@ -53,7 +65,7 @@ export default function ShareScreen() {
     }
   }, [])
 
-  // Weigh the file both ways as soon as the page opens.
+  // Weigh every copy as soon as the page opens.
   useEffect(() => {
     live.current = true
     ;(async () => {
@@ -68,9 +80,27 @@ export default function ShareScreen() {
         } catch {
           /* no form to speak of */
         }
-        if (!smaller) {
+        const lossless = (await makeSmaller(bytes, fileName ?? 'document.pdf', 'light')).bytes
+        if (!live.current) return
+        setSmaller(lossless)
+        if (flattened) return
+        // ⚠️ The full pass only when one sampled page says it will clear the
+        // bar: drawing every page is minutes on a long document, and on a
+        // text document it only ever makes the file bigger.
+        const best = worthOffering(lossless.byteLength, bytes.byteLength, LOSSLESS_BAR) ? lossless.byteLength : bytes.byteLength
+        let estimate: number
+        try {
+          estimate = await estimateFlattened(bytes)
+        } catch {
+          return
+        }
+        if (!live.current || !worthOffering(estimate, best, FLATTEN_BAR)) return
+        setFlattening(true)
+        try {
           const r = await makeSmaller(bytes, fileName ?? 'document.pdf', 'balanced')
-          if (live.current) setSmaller(r.bytes)
+          if (live.current && !r.fellBackToLossless) setFlattened(r.bytes)
+        } finally {
+          if (live.current) setFlattening(false)
         }
       } catch (err) {
         if (live.current) setError(String((err as Error).message || err))
@@ -83,9 +113,25 @@ export default function ShareScreen() {
   const redactions = isXfa ? 0 : countRedactions(annotations)
   const redactOk = redactions === 0 || isRedactConfirmed(redactTyped)
   const passwordOk = !lock || password.length >= MIN_PASSWORD
-  const sizeKnown = size === 'as-is' ? !!annotated : !!smaller
+  const offerSmaller = !!annotated && !!smaller && worthOffering(smaller.byteLength, annotated.byteLength, LOSSLESS_BAR)
+  const bestLossless = offerSmaller ? smaller!.byteLength : annotated?.byteLength ?? 0
+  // On the page while the pass runs (the estimate said it is worth it). The
+  // Smaller moment's copy was asked for in so many words, so it only has to
+  // be smaller at all — not clear the flatten bar — to keep its slip.
+  const offerFlattened = flattening || (!!flattened && (
+    !annotated || !smaller ||
+    worthOffering(flattened.byteLength, bestLossless, startSmaller && flattened === fromMoment?.bytes ? LOSSLESS_BAR : FLATTEN_BAR)
+  ))
+  // A slip that is not on the page hands its choice to the next one down.
+  const pick: Size =
+    size === 'flattened' && !offerFlattened
+      ? offerSmaller ? 'smaller' : 'as-is'
+      : size === 'smaller' && !offerSmaller
+        ? 'as-is'
+        : size
+  const sizeKnown = pick === 'as-is' ? !!annotated : pick === 'smaller' ? !!smaller : !!flattened && !!annotated
   const canSend = sizeKnown && redactOk && passwordOk && !busy && name.trim().length > 0
-  const smallerHelps = !!annotated && !!smaller && smaller.byteLength < annotated.byteLength * 0.95
+  const slips = 1 + (offerSmaller ? 1 : 0) + (offerFlattened ? 1 : 0)
 
   async function send() {
     if (!canSend || !annotated) return
@@ -93,9 +139,13 @@ export default function ShareScreen() {
     setError(null)
     try {
       let bytes: Uint8Array = annotated
-      if (ink && hasForm) bytes = await inkTheAnswers(bytes)
-      if (size === 'smaller') {
-        bytes = ink && hasForm ? (await makeSmaller(bytes, fileName ?? 'document.pdf', 'balanced')).bytes : smaller!
+      if (ink && hasForm) {
+        bytes = await inkTheAnswers(bytes)
+        if (pick !== 'as-is') bytes = (await makeSmaller(bytes, fileName ?? 'document.pdf', pick === 'smaller' ? 'light' : 'balanced')).bytes
+      } else if (pick === 'smaller') {
+        bytes = smaller!
+      } else if (pick === 'flattened') {
+        bytes = flattened!
       }
       if (lock) bytes = await lockWithPassword(bytes, password)
       await handOver(bytes, `${name.trim()}.pdf`)
@@ -151,23 +201,35 @@ export default function ShareScreen() {
 
         <fieldset className="border-0 m-0 p-0">
           <legend className="np-hand text-[22px] leading-none text-[color:var(--np-cobalt-deep)] p-0 mb-2.5">{t('phone.how_big')}</legend>
-          <div className="grid grid-cols-2 gap-3.5">
+          <div className="grid gap-3.5" style={{ gridTemplateColumns: `repeat(${slips}, minmax(0, 1fr))` }}>
             <SizeSlip
-              checked={size === 'as-is'}
+              checked={pick === 'as-is'}
               onPick={() => setSize('as-is')}
               title={t('phone.as_is')}
               note={annotated ? t('phone.as_is_note', { size: formatSize(t, annotated.byteLength) }) : t('phone.sizing')}
               tilt="-1.2deg"
-              stack
+              art="stack"
             />
-            <SizeSlip
-              checked={size === 'smaller'}
-              onPick={() => setSize('smaller')}
-              title={t('phone.smaller')}
-              note={smaller ? t('phone.smaller_size_note', { size: formatSize(t, smaller.byteLength) }) : t('phone.sizing')}
-              tilt="1.4deg"
-              dim={!!smaller && !smallerHelps}
-            />
+            {offerSmaller && (
+              <SizeSlip
+                checked={pick === 'smaller'}
+                onPick={() => setSize('smaller')}
+                title={t('phone.smaller')}
+                note={t('phone.smaller_size_note', { size: formatSize(t, smaller!.byteLength) })}
+                tilt="1.4deg"
+                art="sheet"
+              />
+            )}
+            {offerFlattened && (
+              <SizeSlip
+                checked={pick === 'flattened'}
+                onPick={() => setSize('flattened')}
+                title={t('phone.flattened')}
+                note={flattened ? t('phone.flattened_note', { size: formatSize(t, flattened.byteLength) }) : t('phone.sizing')}
+                tilt="-0.8deg"
+                art="picture"
+              />
+            )}
           </div>
         </fieldset>
 
@@ -200,7 +262,7 @@ export default function ShareScreen() {
               <span className="text-[12px] text-[color:var(--np-muted)]">{t('phone.password_note')}</span>
             </div>
           )}
-          {smallerHelps && size === 'as-is' && (
+          {offerSmaller && pick === 'as-is' && (
             <div
               aria-hidden="true"
               className="np-hand np-tilt absolute -right-1.5 -top-[30px] w-[116px] px-[9px] pt-2 pb-2.5 text-[19px] leading-none"
@@ -264,16 +326,15 @@ function SizeSlip({
   title,
   note,
   tilt,
-  stack,
-  dim,
+  art,
 }: {
   checked: boolean
   onPick: () => void
   title: string
   note: string
   tilt: string
-  stack?: boolean
-  dim?: boolean
+  /** A stack of pages, one lighter sheet, or one sheet that is all picture. */
+  art: 'stack' | 'sheet' | 'picture'
 }) {
   return (
     <label
@@ -282,7 +343,6 @@ function SizeSlip({
         background: checked ? '#ffffff' : 'var(--np-slip)',
         transform: `rotate(${tilt})`,
         boxShadow: checked ? '0 8px 18px rgba(60,45,20,0.2)' : '0 4px 10px rgba(60,45,20,0.14)',
-        opacity: dim ? 0.7 : 1,
       }}
     >
       <input
@@ -294,14 +354,18 @@ function SizeSlip({
         style={{ accentColor: 'var(--np-cobalt)' }}
       />
       <span aria-hidden="true" className="relative h-[54px]">
-        {stack ? (
+        {art === 'stack' ? (
           <>
             <span className="absolute left-1 top-0 w-[38px] h-[50px]" style={{ background: '#f6f2e8', boxShadow: '0 2px 5px rgba(23,30,50,0.2)', transform: 'rotate(-6deg)' }} />
             <span className="absolute left-3 top-0.5 w-[38px] h-[50px]" style={{ background: '#f6f2e8', boxShadow: '0 2px 5px rgba(23,30,50,0.2)', transform: 'rotate(3deg)' }} />
             <span className="absolute left-5 top-1 w-[38px] h-[50px] bg-white" style={{ boxShadow: '0 2px 5px rgba(23,30,50,0.2)' }} />
           </>
-        ) : (
+        ) : art === 'sheet' ? (
           <span className="absolute left-2.5 top-3.5 w-7 h-9 bg-white" style={{ boxShadow: '0 2px 5px rgba(23,30,50,0.2)', transform: 'rotate(-3deg)' }} />
+        ) : (
+          <span className="absolute left-2.5 top-3.5 w-7 h-9 bg-white p-[3px]" style={{ boxShadow: '0 2px 5px rgba(23,30,50,0.2)', transform: 'rotate(2deg)' }}>
+            <span className="block w-full h-full" style={{ background: 'linear-gradient(160deg, #9fb7e6 0%, #d5d9e2 100%)' }} />
+          </span>
         )}
       </span>
       <span className="flex flex-col gap-0.5">

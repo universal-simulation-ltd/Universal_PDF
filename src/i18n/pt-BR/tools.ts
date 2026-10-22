@@ -93,7 +93,7 @@ const tools: Messages['tools'] = {
   'export.failed_fallback': 'Falha na exportação',
   'export.compression_failed_fallback': 'Falha na compressão',
   // ExportModal
-  'export.try_advanced': 'Já otimizado — tente a Exportação avançada para transformar páginas com muitas imagens em figuras.',
+  'export.already_small': 'Já está o menor possível — comprimir ou achatar quase não mudaria nada.',
   'export.title': 'Exportar PDF',
   'export.xfa_body': 'Suas respostas são salvas no formulário. Compressão e anotações incorporadas não estão disponíveis para documentos XFA.',
   'export.building_short': 'Gerando…',
@@ -104,6 +104,9 @@ const tools: Messages['tools'] = {
   'export.no_images': 'Já está o menor possível — não há imagens aqui para comprimir.',
   'export.object_stream': 'regravação com fluxos de objetos',
   'export.download_compressed': 'Baixar comprimido',
+  'export.flattened': 'Achatado',
+  'export.flattened_note': 'páginas transformadas em imagens — o texto não pode mais ser selecionado nem pesquisado',
+  'export.download_flattened': 'Baixar achatado',
   'export.preview': 'Visualizar',
   'export.need_advanced': 'Precisa transformar as páginas em imagens ou proteger com senha?',
 

@@ -7,20 +7,28 @@ import { countRedactions, isRedactConfirmed, REDACT_CONFIRM_WORD } from '../../l
 import { markSaved } from '../../lib/unsavedChanges'
 import { RedactIcon } from '../icons/RedactIcon'
 import { useExportBuild } from './useExportBuild'
+import { useFlattenedCopy } from './useFlattenedCopy'
+import { FLATTEN_BAR, LOSSLESS_BAR, worthOffering } from './worthOffering'
 import { useT } from '../../i18n'
 import { formatNumber, formatSize } from './formatSize'
 import LockedOriginNote from '../Lock/LockedOriginNote'
 
 // The plain export: here is your document, here is what it weighs, take it.
 //
-// ⚠️ FLATTENING AND LOCKING ARE NOT HERE — they moved to Actions ▸ Advanced ▸
-// Advanced export on 2026-09-01 (`AdvancedExportDialog`). Both change what the
-// file IS rather than how big it is, both are wanted by a minority of exports,
-// and between them they filled a phone screen above the size panel, the
-// filename and the Download button. ⚠️ Do not add a "quick" checkbox for
-// either back into this dialog: two places to flatten, disagreeing about which
-// one the Download button honours, is the failure that arrangement invites.
-type Variant = 'original' | 'compressed'
+// Up to three copies, as tabs (James, 2026-10-22: "show default, compressed
+// and flatten images — hide if the difference is too small"): the file as it
+// is, the lossless re-save, and every page turned into a picture. A copy is a
+// tab only when it is meaningfully smaller than the one before it — the bars
+// are in `worthOffering.ts` — so on most text documents there is one file and
+// no tab strip at all.
+//
+// ⚠️ The Flattened tab is a SIZE choice and only ever appears when it saves a
+// lot. Flattening so the text cannot be copied, whatever the size, and locking
+// stay in Actions ▸ Advanced ▸ Advanced export (`AdvancedExportDialog`). Do
+// not add a checkbox for either here: the Download button honours the tab
+// that is selected and nothing else, and a second control that could also
+// change the file is how the two would come to disagree.
+type Variant = 'original' | 'compressed' | 'flattened'
 
 function printBytes(bytes: Uint8Array) {
   const blob = new Blob([bytes.slice() as BlobPart], { type: 'application/pdf' })
@@ -69,8 +77,35 @@ export default function ExportModal({ open, onClose }: Props) {
   // without ever asking the user to give something up for it. The rasterising
   // levels live in the advanced dialog, behind a checkbox that says what they
   // cost.
-  const { annotated, compressed, hasImages, building, compressing, compressPct, error, ready } =
+  const { annotated, compressed, hasImages, rasterEstimate, building, compressing, compressPct, error, ready } =
     useExportBuild(open, 'light')
+
+  const origSize = annotated?.byteLength ?? 0
+  const compSize = compressed?.compressedSize ?? 0
+  const saved = origSize - compSize
+  const pct = origSize > 0 ? (saved / origSize) * 100 : 0
+  // A saving too small to name is not a choice worth offering — a tab
+  // promising "−1%" is just a second button that does nothing.
+  const didShrink = ready && worthOffering(compSize, origSize, LOSSLESS_BAR)
+
+  // Flattening has to beat the best copy that keeps the text, not the file as
+  // it is: a tab that is only smaller than the original, and no smaller than
+  // Compressed, costs the text layer for nothing.
+  const bestLossless = didShrink ? compSize : origSize
+  const { flattened, promising, flattening, flattenPct } = useFlattenedCopy(
+    open && !isXfa && hasImages !== false,
+    ready ? annotated : null,
+    ready ? bestLossless : null,
+    rasterEstimate
+  )
+  const flatSize = flattened?.compressedSize ?? 0
+  const flatSaved = origSize - flatSize
+  const flatPct = origSize > 0 ? (flatSaved / origSize) * 100 : 0
+  // On screen while the pass runs (the estimate said it will be worth it), and
+  // kept only if the measured size bears that out.
+  const offerFlattened =
+    promising &&
+    (flattening || (!!flattened && !flattened.fellBackToLossless && worthOffering(flatSize, bestLossless, FLATTEN_BAR)))
 
   const [tab, setTab] = useState<Variant>('compressed')
 
@@ -102,33 +137,30 @@ export default function ExportModal({ open, onClose }: Props) {
 
   if (!open) return null
 
-  const origSize = annotated?.byteLength ?? 0
-  const compSize = compressed?.compressedSize ?? 0
-  const saved = origSize - compSize
-  const pct = origSize > 0 ? (saved / origSize) * 100 : 0
-  // A saving too small to name is not a choice worth offering. Under half a
-  // percent AND under 20 KB rounds to "the same size" in the panel below, so a
-  // tab promising "−0%" is just a second button that does nothing.
-  const didShrink = saved > 0 && (pct >= 0.5 || saved >= 20 * 1024)
-
   // Nothing worth saving, so there is only one file to download and the tab
   // strip has nothing to offer — hidden, not a greyed-out "no savings" tab
   // (James, 2026-10-07: "Don't show the compressed tab if there's no
   // compression"). Why it could not shrink is said under the size instead.
-  const compressionPointless = ready && !didShrink
+  const compressionPointless = ready && !didShrink && !offerFlattened
   // ⚠️ Only once the answer is in: shown while building, the strip would
   // appear and then vanish under the cursor whenever there was nothing saved.
-  const showVariantTabs = ready && didShrink
-  const effectiveTab: Variant = ready && tab === 'compressed' && !didShrink ? 'original' : tab
+  const showVariantTabs = ready && (didShrink || offerFlattened)
+  // A tab that is no longer offered hands its selection to the next copy
+  // down: Flattened to Compressed, Compressed to the file as it is.
+  const effectiveTab: Variant = !ready
+    ? tab
+    : tab === 'flattened' && !offerFlattened
+      ? didShrink ? 'compressed' : 'original'
+      : tab === 'compressed' && !didShrink
+        ? 'original'
+        : tab
 
   // Why there is no smaller copy. With no images, it is as small as it goes;
-  // with images, it is usually a scan whose bulk is pictures — which is what
-  // flattening is for — so say so rather than leave no way forward.
+  // with images, neither the re-save nor turning the pages into pictures
+  // would change it enough to be worth a second file.
   const noGainNote = hasImages === false
     ? t('tools.export.no_images')
-    : compressed?.fellBackToLossless
-      ? t('tools.compress.kept_lossless')
-      : t('tools.export.try_advanced')
+    : t('tools.export.already_small')
 
   // ⚠️ The name is claimed at DOWNLOAD time, not here. `nextExportName`
   // increments a per-document counter, so working it out during render would
@@ -138,7 +170,7 @@ export default function ExportModal({ open, onClose }: Props) {
 
   function download(which: Variant) {
     if (!annotated) return
-    const source = which === 'original' ? annotated : compressed?.bytes
+    const source = which === 'original' ? annotated : which === 'flattened' ? flattened?.bytes : compressed?.bytes
     if (!source) return
     const name = nextExportName(fileName)
     downloadPdfBytes(source.slice(), name)
@@ -233,50 +265,31 @@ export default function ExportModal({ open, onClose }: Props) {
         ) : (
           <>
             <div className="rounded-lg border border-slate-200 overflow-hidden">
-              {/* Two tabs are a choice. With compression ruled out there is only
-                  one file to download, so a tab strip with a permanently
-                  disabled half is chrome that asks a question it already knows
+              {/* Tabs are a choice. With every smaller copy ruled out there is
+                  only one file to download, so a tab strip with permanently
+                  disabled tabs is chrome that asks a question it already knows
                   the answer to. */}
               {showVariantTabs && (
               <div className="flex bg-slate-50 border-b border-slate-200" role="tablist">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={effectiveTab === 'original'}
-                  onClick={() => setTab('original')}
-                  className={[
-                    'flex-1 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
-                    effectiveTab === 'original'
-                      ? 'border-orange-600 text-slate-900 bg-white'
-                      : 'border-transparent text-slate-500 hover:text-slate-700'
-                  ].join(' ')}
-                >
-                  {t('tools.compress.original')}
-                  {ready && (
-                    <span className="ml-2 text-[11px] text-slate-400 tabular-nums font-normal">
-                      {formatSize(t, origSize)}
-                    </span>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={effectiveTab === 'compressed'}
-                  onClick={() => setTab('compressed')}
-                  className={[
-                    'flex-1 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
-                    effectiveTab === 'compressed'
-                      ? 'border-orange-600 text-slate-900 bg-white'
-                      : 'border-transparent text-slate-500 hover:text-slate-700'
-                  ].join(' ')}
-                >
-                  {t('tools.compress.compressed')}
-                  {ready && didShrink && (
-                    <span className="ml-2 text-[11px] font-medium tabular-nums text-emerald-700">
+                <VariantTab selected={effectiveTab === 'original'} onSelect={() => setTab('original')} label={t('tools.compress.original')}>
+                  <span className="text-[11px] text-slate-400 tabular-nums font-normal">{formatSize(t, origSize)}</span>
+                </VariantTab>
+                {didShrink && (
+                  <VariantTab selected={effectiveTab === 'compressed'} onSelect={() => setTab('compressed')} label={t('tools.compress.compressed')}>
+                    <span className="text-[11px] font-medium tabular-nums text-emerald-700">
                       {t('tools.export.percent_less', { pct: formatNumber(t, pct, 0) })}
                     </span>
-                  )}
-                </button>
+                  </VariantTab>
+                )}
+                {offerFlattened && (
+                  <VariantTab selected={effectiveTab === 'flattened'} onSelect={() => setTab('flattened')} label={t('tools.export.flattened')}>
+                    {flattened && (
+                      <span className="text-[11px] font-medium tabular-nums text-emerald-700">
+                        {t('tools.export.percent_less', { pct: formatNumber(t, flatPct, 0) })}
+                      </span>
+                    )}
+                  </VariantTab>
+                )}
               </div>
               )}
 
@@ -309,6 +322,30 @@ export default function ExportModal({ open, onClose }: Props) {
                       </div>
                     )}
                   </>
+                ) : effectiveTab === 'flattened' ? (
+                  !flattened ? (
+                    <>
+                      <div className="text-sm text-slate-500">{t('tools.advanced.flattening')}</div>
+                      <div className="mt-2 h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                        <div
+                          className="h-full bg-orange-600 transition-[width] duration-200"
+                          style={{ width: `${Math.round(flattenPct * 100)}%` }}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-baseline gap-3 flex-wrap">
+                        <div className="text-2xl font-semibold text-slate-900 tabular-nums">
+                          {formatSize(t, flatSize)}
+                        </div>
+                        <div className="text-xs font-medium text-emerald-700">
+                          {t('tools.compress.saved', { size: formatSize(t, flatSaved), pct: formatNumber(t, flatPct, 1) })}
+                        </div>
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">{t('tools.export.flattened_note')}</div>
+                    </>
+                  )
                 ) : (
                   <>
                     <div className="flex items-baseline gap-3 flex-wrap">
@@ -370,7 +407,7 @@ export default function ExportModal({ open, onClose }: Props) {
               <div className="col-span-2 sm:col-span-1 flex min-w-0">
               <button
                 onClick={() => download(effectiveTab)}
-                disabled={!ready || !redactConfirmed}
+                disabled={!ready || !redactConfirmed || (effectiveTab === 'flattened' && !flattened)}
                 className="flex-1 min-w-0 px-4 py-2.5 bg-orange-700 hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-l-lg text-sm font-medium flex items-center justify-center gap-2"
               >
                 <DownloadGlyph />
@@ -379,7 +416,9 @@ export default function ExportModal({ open, onClose }: Props) {
                     their changes would be thrown away. */}
                 {showVariantTabs && effectiveTab === 'compressed'
                   ? t('tools.export.download_compressed')
-                  : t('tools.export.download')}
+                  : showVariantTabs && effectiveTab === 'flattened'
+                    ? t('tools.export.download_flattened')
+                    : t('tools.export.download')}
               </button>
               <button
                 type="button"
@@ -424,6 +463,36 @@ export default function ExportModal({ open, onClose }: Props) {
         </div>
       </div>
     </div>
+  )
+}
+
+// One copy in the tab strip. The size or saving sits under the label, so three
+// tabs still fit a phone-width dialog without the labels being cut off.
+function VariantTab({
+  selected,
+  onSelect,
+  label,
+  children
+}: {
+  selected: boolean
+  onSelect: () => void
+  label: string
+  children?: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={selected}
+      onClick={onSelect}
+      className={[
+        'flex-1 min-w-0 px-2 py-2 text-sm font-medium border-b-2 -mb-px transition-colors flex flex-col items-center leading-tight',
+        selected ? 'border-orange-600 text-slate-900 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'
+      ].join(' ')}
+    >
+      {label}
+      {children}
+    </button>
   )
 }
 

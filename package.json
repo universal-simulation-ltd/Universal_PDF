@@ -132,7 +132,8 @@
     "test:snap-align": "node e2e/snap-align.e2e.mjs",
     "test:select-several": "node e2e/phone-select-several.e2e.mjs",
     "test:word-hold": "node e2e/word-hold.e2e.mjs",
-    "test:row-swipe": "node e2e/row-swipe.e2e.mjs"
+    "test:row-swipe": "node e2e/row-swipe.e2e.mjs",
+    "test:export-variants": "node e2e/export-variants.e2e.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",

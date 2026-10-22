@@ -211,6 +211,8 @@ const phone: Messages['phone'] = {
   'as_is_note': '{size}, nitido',
   'smaller': 'Più leggero',
   'smaller_size_note': '{size}, va bene per ogni modulo',
+  'flattened': 'Appiattito',
+  'flattened_note': '{size}, pagine come immagini',
   'sizing': 'lo sto pesando…',
   'ink_answers': 'Fissa le risposte a inchiostro',
   'ink_answers_note': 'Nessuno potrà cambiarle dopo l’invio',

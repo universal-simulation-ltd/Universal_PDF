@@ -93,7 +93,7 @@ const tools: Messages['tools'] = {
   'export.failed_fallback': 'Échec de l’exportation',
   'export.compression_failed_fallback': 'Échec de la compression',
   // ExportModal
-  'export.try_advanced': 'Déjà optimisé — essayez l’exportation avancée pour convertir en images les pages riches en images.',
+  'export.already_small': 'Déjà aussi léger que possible — compresser ou aplatir ne changerait presque rien.',
   'export.title': 'Exporter le PDF',
   'export.xfa_body': 'Vos saisies sont enregistrées dans le formulaire. La compression et l’intégration des annotations ne sont pas disponibles pour les documents XFA.',
   'export.building_short': 'Préparation…',
@@ -104,6 +104,9 @@ const tools: Messages['tools'] = {
   'export.no_images': 'Déjà aussi léger que possible — il n’y a aucune image à compresser.',
   'export.object_stream': 'réenregistrement en flux d’objets',
   'export.download_compressed': 'Télécharger la version compressée',
+  'export.flattened': 'Aplati',
+  'export.flattened_note': 'pages converties en images — le texte ne peut plus être sélectionné ni recherché',
+  'export.download_flattened': 'Télécharger la version aplatie',
   'export.preview': 'Aperçu',
   'export.need_advanced': 'Besoin d’aplatir les pages ou de verrouiller le fichier par mot de passe ?',
 

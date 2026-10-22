@@ -93,7 +93,7 @@ const tools: Messages['tools'] = {
   'export.failed_fallback': 'Error al exportar',
   'export.compression_failed_fallback': 'Error al comprimir',
   // ExportModal
-  'export.try_advanced': 'Ya está optimizado; prueba Exportación avanzada para convertir en imágenes las páginas con muchas imágenes.',
+  'export.already_small': 'Ya es todo lo ligero que puede ser: comprimir o acoplar apenas lo cambiaría.',
   'export.title': 'Exportar PDF',
   'export.xfa_body': 'Tus datos se guardan en el formulario. La compresión y las anotaciones incrustadas no están disponibles para documentos XFA.',
   'export.building_short': 'Preparando…',
@@ -104,6 +104,9 @@ const tools: Messages['tools'] = {
   'export.no_images': 'Ya no puede ser más pequeño: no hay imágenes que comprimir.',
   'export.object_stream': 'guardado con flujos de objetos',
   'export.download_compressed': 'Descargar comprimido',
+  'export.flattened': 'Acoplado',
+  'export.flattened_note': 'páginas convertidas en imágenes: el texto ya no se puede seleccionar ni buscar',
+  'export.download_flattened': 'Descargar acoplado',
   'export.preview': 'Vista previa',
   'export.need_advanced': '¿Necesitas acoplar las páginas o bloquearlo con contraseña?',
 
