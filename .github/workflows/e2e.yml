@@ -25,9 +25,12 @@ on:
   pull_request:
   workflow_dispatch:
 
+# A newer push to a branch or PR cancels the older run, but not on main: main
+# moves often (several sessions push to it), and every commit there should
+# get its own result.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
