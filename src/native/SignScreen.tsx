@@ -7,7 +7,7 @@ import { inkColorFor, renderInkSignature } from '../lib/renderInk'
 import { renderTypedSignature } from '../lib/renderTyped'
 import { dateLineSeed, DEFAULT_LABEL_SCALE, DEFAULT_SIG_ALIGN } from '../lib/composeSignature'
 import type { SignatureData } from '../types/annotations'
-import { BackLink, Hl } from './parts'
+import { BackLink, Hl, useScrollHint } from './parts'
 import { useNav } from './nav'
 
 // Board 4 · Sign, a page of its own: "Make your mark", Draw / Type / Photo of
@@ -154,6 +154,11 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
       </header>
 
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pt-1 pb-3 flex flex-col gap-4">
+        {/* The drawer first, as one sideways row, so the pad sits mid-screen
+            where a thumb reaches it (James, 2026-10-22: "can the drawer be at
+            the top (carousel don't stack) so the signing pad is more central").
+            Left out while empty: "Keep it in my drawer" below says what it is. */}
+        {mode === 'document' && saved.length > 0 && <SavedRow saved={saved} onPick={placeSaved} />}
         <h1 className="np-serif m-0 text-[34px] leading-[1.05] font-bold">
           {t('phone.sign_lead')} <Hl>{t('phone.sign_hl')}</Hl>
         </h1>
@@ -262,29 +267,6 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
           </div>
         )}
 
-        {mode === 'document' && (
-          <div className="flex flex-col gap-2.5 mt-1">
-            <h2 className="np-serif m-0 text-[19px] font-bold">{t('phone.drawer')}</h2>
-            {saved.length === 0 ? (
-              <p className="m-0 text-[14px] text-[color:var(--np-muted)]">{t('phone.drawer_empty')}</p>
-            ) : (
-              <div className="grid grid-cols-3 gap-3">
-                {saved.map((s, i) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    aria-label={t('phone.use_saved_aria', { name: s.name })}
-                    onClick={() => placeSaved(s.id)}
-                    className="np-tilt bg-white rounded-[3px] h-[66px] flex items-center justify-center p-2"
-                    style={{ boxShadow: '0 4px 10px rgba(23,30,50,0.12)', transform: `rotate(${['-2deg', '1.5deg', '-1deg'][i % 3]})` }}
-                  >
-                    <img src={s.dataUrl} alt="" className="max-w-full max-h-full object-contain" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {how !== 'photo' && (
@@ -314,6 +296,40 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * The signatures in the drawer, one sideways row: a tap puts that one in hand
+ * to place. Its own component so `useScrollHint` (the cut-off card and the
+ * faded edge that say "there's more") is mounted with the row.
+ */
+function SavedRow({ saved, onPick }: { saved: { id: string; name: string; dataUrl: string }[]; onPick: (id: string) => void }) {
+  const t = useT()
+  const hint = useScrollHint<HTMLDivElement>()
+  return (
+    <section aria-label={t('phone.drawer')} className="flex flex-col gap-2">
+      <h2 className="np-serif m-0 text-[17px] font-bold">{t('phone.drawer')}</h2>
+      <div
+        ref={hint.ref}
+        data-swipe-x
+        className="-mx-5 px-5 pt-1 pb-2 flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-px-5"
+        style={{ ...hint.style, scrollbarWidth: 'none' }}
+      >
+        {saved.map((s, i) => (
+          <button
+            key={s.id}
+            type="button"
+            aria-label={t('phone.use_saved_aria', { name: s.name })}
+            onClick={() => onPick(s.id)}
+            className="np-tilt flex-none snap-start bg-white rounded-[3px] w-[100px] h-[62px] flex items-center justify-center p-2"
+            style={{ boxShadow: '0 4px 10px rgba(23,30,50,0.12)', transform: `rotate(${['-2deg', '1.5deg', '-1deg'][i % 3]})` }}
+          >
+            <img src={s.dataUrl} alt="" className="max-w-full max-h-full object-contain" />
+          </button>
+        ))}
+      </div>
+    </section>
   )
 }
 

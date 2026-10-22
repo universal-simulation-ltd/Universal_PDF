@@ -133,7 +133,6 @@ export default {
   'photo_note': 'Sign a sheet of white paper, then take a photo of it. The paper goes and only the ink is kept.',
   'photo_button': 'Take or choose a photo',
   'drawer': 'In your drawer',
-  'drawer_empty': 'Signatures you keep wait here for next time.',
   'use_saved_aria': 'Use {name}',
   'sign_under': 'Under the signature',
   'sign_name_label': 'Your name (optional)',

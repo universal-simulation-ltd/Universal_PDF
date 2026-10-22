@@ -130,7 +130,6 @@ const phone: Messages['phone'] = {
   'photo_note': 'Beyaz bir kâğıda imzanızı atın, sonra fotoğrafını çekin. Kâğıt gider, yalnızca mürekkep kalır.',
   'photo_button': 'Fotoğraf çek veya seç',
   'drawer': 'Çekmecenizde',
-  'drawer_empty': 'Sakladığınız imzalar bir dahaki sefere burada bekler.',
   'use_saved_aria': 'Kullan: {name}',
   'sign_under': 'İmzanın altına',
   'sign_name_label': 'Adınız (isteğe bağlı)',

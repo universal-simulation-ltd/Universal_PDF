@@ -130,7 +130,6 @@ const phone: Messages['phone'] = {
   'photo_note': 'Assine uma folha de papel branco e tire-lhe uma fotografia. O papel desaparece e só fica a tinta.',
   'photo_button': 'Tirar ou escolher uma fotografia',
   'drawer': 'Na gaveta',
-  'drawer_empty': 'As assinaturas guardadas ficam aqui à espera da próxima vez.',
   'use_saved_aria': 'Usar {name}',
   'sign_under': 'Por baixo da assinatura',
   'sign_name_label': 'O seu nome (opcional)',

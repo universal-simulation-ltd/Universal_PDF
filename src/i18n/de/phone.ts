@@ -130,7 +130,6 @@ const phone: Messages['phone'] = {
   'photo_note': 'Unterschreib auf einem weißen Blatt Papier und fotografiere es. Das Papier verschwindet, nur die Tinte bleibt.',
   'photo_button': 'Foto aufnehmen oder auswählen',
   'drawer': 'In deiner Schublade',
-  'drawer_empty': 'Unterschriften, die du behältst, warten hier auf das nächste Mal.',
   'use_saved_aria': '{name} verwenden',
   'sign_under': 'Unter der Unterschrift',
   'sign_name_label': 'Dein Name (optional)',
