@@ -240,7 +240,7 @@ const phone: Messages['phone'] = {
   'reset': 'Standardwerte wiederherstellen',
   'reset_done': 'Alles wieder wie am Anfang.',
   'tune_card': 'Kostenlos, Open Source, keine Werbung. Deine Dokumente bleiben auf diesem Handy und laufen nie über uns.',
-  'credit': 'James Markey MBE & das UNI·SIM-Team', // handwritten credit; keep the names as they are
+  'credit': '{james} & {team}', // handwritten credit; {james} is a link reading "James Markey MBE" (keep it), {team} one reading credit_team
 
   // The signature drawer (a tab). The heading is split so "drawer" can carry the highlighter.
   'sigs_lead': 'Deine',
@@ -260,6 +260,60 @@ const phone: Messages['phone'] = {
   'kb_clear': 'Suche löschen',
   'kb_no_match': 'Keine Anleitung passt dazu.',
   'kb_all': 'Alle Anleitungen',
+  // Added 2026-10-22: the job pages, the Blacked out and Sent moments, Send to sign's sheet.
+  'credit_team': 'das UNI·SIM-Team', // a link inside `credit` (to unisim.co.uk)
+  'tune_how': 'wie es sich verhält…', // handwritten word above the first slip in Tune
+  'put_in_box': 'In das Feld setzen',
+  'ocr_lead': 'Mach den Text', // heading, split so the second part carries the highlighter
+  'ocr_hl': 'durchsuchbar',
+  'ocr_written_in': 'geschrieben auf…', // handwritten label above the language choice
+  'ocr_opened': 'Die durchsuchbare Kopie ist offen.',
+  'merge_lead': 'Füg sie',
+  'merge_hl': 'zusammen',
+  'merge_note': 'Wähl die PDFs aus, bring sie in die richtige Reihenfolge, und sie werden eins. Nichts verlässt dieses Handy.',
+  'merge_order': 'In dieser Reihenfolge',
+  'merge_add': 'PDF hinzufügen',
+  'merge_need_two': 'zwei oder mehr, in der richtigen Reihenfolge',
+  'photos_lead': 'Fotos als',
+  'photos_hl': 'PDF',
+  'pictures_lead': 'Seiten als',
+  'pictures_hl': 'Bilder',
+  'pictures_save': 'Bilder speichern',
+  'photos_add_more': 'Weitere Fotos hinzufügen',
+  'compare_lead': 'Finde den',
+  'compare_hl': 'Unterschied',
+  'compare_first': 'die erste Fassung',
+  'scan_lead': 'Papier',
+  'scan_hl': 'scannen',
+  'scan_pages': 'Die Seiten',
+  'crop_lead': 'Finde die',
+  'crop_hl': 'Ecken',
+  'scan_keep': 'Weiter scannen',
+  'scan_discard': 'Verwerfen',
+  'scan_paper': 'Papierformat?', // handwritten label above the A4 / Letter choice
+  'pages_lead': 'Deine',
+  'pages_hl': 'Seiten',
+  'pages_note': 'Tipp auf eine Seite, um hinzuspringen. Verschieb sie mit den Pfeilen oder nimm sie heraus.',
+  'pages_pending': 'Verschoben, noch nicht gespeichert: Übernimm die Reihenfolge, wenn alles passt.',
+  'pages_put_back': 'Zurücksetzen', // undoes the moves not yet applied on the Pages page
+  'pages_reordered': 'Die Seiten sind neu geordnet. „Rückgängig“ stellt sie zurück.',
+  'page_removed': 'Seite {page} ist raus. „Rückgängig“ holt sie zurück.',
+  'page_remove_yes': 'Herausnehmen',
+  'blacked_title': 'Geschwärzt.',
+  'blacked_note': 'für immer weg, sobald es raus ist', // handwritten, under "Blacked out."
+  'blacked_count_one': '{count} Schwärzung auf den Seiten',
+  'blacked_count_other': '{count} Schwärzungen auf den Seiten',
+  'stamp_blacked': 'GESCHWÄRZT', // a rubber stamp on the Blacked out moment
+  'sent_title': 'Verschickt.',
+  'sent_note': 'unterschreiben geht in jeder PDF-App', // handwritten, under "Sent."
+  'stamp_sent': 'ZUR UNTERSCHRIFT', // a rubber stamp on the Sent moment
+  'sign_here_box': 'HIER UNTERSCHREIBEN', // the label inside the empty signature box drawn on the Sent moment
+  'sendsign_title': 'Zur Unterschrift',
+  'sendsign_box_tool': 'Unterschriftsfeld',
+  'sendsign_boxes_one': '{count} Feld „Hier unterschreiben“',
+  'sendsign_boxes_other': '{count} Felder „Hier unterschreiben“',
+  'sendsign_no_box': 'Noch kein Feld. Tipp auf die Stelle, wo unterschrieben werden soll, oder schick es so: Unterschreiben geht überall.', // handwritten; sharing works without a box
+  'sendsign_share': 'Zum Unterschreiben teilen…',
 }
 
 export default phone

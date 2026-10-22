@@ -240,7 +240,7 @@ const phone: Messages['phone'] = {
   'reset': 'Varsayılanlara sıfırla',
   'reset_done': 'İlk günkü haline döndü.',
   'tune_card': 'Ücretsiz, açık kaynak, reklam yok. Belgeleriniz bu telefonda kalır, asla bizden geçmez.',
-  'credit': 'James Markey MBE ve UNI·SIM ekibi', // handwritten credit; keep the names as they are
+  'credit': '{james} ve {team}', // handwritten credit; {james} is a link reading "James Markey MBE" (keep it), {team} one reading credit_team
 
   // The signature drawer (a tab). The heading is split so "drawer" can carry the highlighter.
   'sigs_lead': 'İmza',
@@ -260,6 +260,60 @@ const phone: Messages['phone'] = {
   'kb_clear': 'Aramayı temizle',
   'kb_no_match': 'Buna uyan rehber yok.',
   'kb_all': 'Tüm rehberler',
+  // Added 2026-10-22: the job pages, the Blacked out and Sent moments, Send to sign's sheet.
+  'credit_team': 'UNI·SIM ekibi', // a link inside `credit` (to unisim.co.uk)
+  'tune_how': 'nasıl davrandığı…', // handwritten word above the first slip in Tune
+  'put_in_box': 'Kutuya yerleştir',
+  'ocr_lead': 'Metni', // heading, split so the second part carries the highlighter
+  'ocr_hl': 'aranabilir yapın',
+  'ocr_written_in': 'yazıldığı dil…', // handwritten label above the language choice
+  'ocr_opened': 'Aranabilir kopya açık.',
+  'merge_lead': 'Hepsini',
+  'merge_hl': 'birleştirin',
+  'merge_note': 'PDF’leri seçin, sıraya koyun, tek bir dosya olsunlar. Hiçbir şey bu telefondan çıkmaz.',
+  'merge_order': 'Bu sırayla',
+  'merge_add': 'PDF ekle',
+  'merge_need_two': 'iki veya daha fazla, sırasıyla',
+  'photos_lead': 'Fotoğraftan',
+  'photos_hl': 'PDF’e',
+  'pictures_lead': 'Sayfalardan',
+  'pictures_hl': 'resimlere',
+  'pictures_save': 'Resimleri kaydet',
+  'photos_add_more': 'Daha fazla fotoğraf ekle',
+  'compare_lead': 'Farkı',
+  'compare_hl': 'bulun',
+  'compare_first': 'ilk sürüm',
+  'scan_lead': 'Kâğıdı',
+  'scan_hl': 'tarayın',
+  'scan_pages': 'Sayfalar',
+  'crop_lead': 'Köşeleri',
+  'crop_hl': 'bulun',
+  'scan_keep': 'Taramaya devam et',
+  'scan_discard': 'Atın gitsin',
+  'scan_paper': 'kâğıt boyutu?', // handwritten label above the A4 / Letter choice
+  'pages_lead': 'Sayfalarınız',
+  'pages_hl': 'burada',
+  'pages_note': 'Gitmek için bir sayfaya dokunun. Oklarla taşıyın ya da çıkarın.',
+  'pages_pending': 'Taşındı, henüz kaydedilmedi: memnun kalınca bu sırayı uygulayın.',
+  'pages_put_back': 'Geri koy', // undoes the moves not yet applied on the Pages page
+  'pages_reordered': 'Sayfalar yeni sırasında. Geri al eskiye döndürür.',
+  'page_removed': '{page}. sayfa çıkarıldı. Geri al geri getirir.',
+  'page_remove_yes': 'Çıkar',
+  'blacked_title': 'Karartıldı.',
+  'blacked_note': 'gönderildiğinde tamamen gider', // handwritten, under "Blacked out."
+  'blacked_count_one': 'sayfalarda {count} karartma',
+  'blacked_count_other': 'sayfalarda {count} karartma',
+  'stamp_blacked': 'KARARTILDI', // a rubber stamp on the Blacked out moment
+  'sent_title': 'Gönderildi.',
+  'sent_note': 'herhangi bir PDF uygulamasında imzalanabilir', // handwritten, under "Sent."
+  'stamp_sent': 'İMZAYA GİTTİ', // a rubber stamp on the Sent moment
+  'sign_here_box': 'BURAYI İMZALAYIN', // the label inside the empty signature box drawn on the Sent moment
+  'sendsign_title': 'İmzaya gönderin',
+  'sendsign_box_tool': '“Burayı imzalayın” kutusu',
+  'sendsign_boxes_one': '{count} “Burayı imzalayın” kutusu',
+  'sendsign_boxes_other': '{count} “Burayı imzalayın” kutusu',
+  'sendsign_no_box': 'Henüz kutu yok. İmzalanacak yere dokunun ya da olduğu gibi gönderin: her yere imza atılabilir.', // handwritten; sharing works without a box
+  'sendsign_share': 'İmza için paylaş…',
 }
 
 export default phone

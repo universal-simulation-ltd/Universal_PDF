@@ -398,9 +398,10 @@ console.log('\nthe bar is Navigate · Mark up · Sign · Share, and Pages is in 
   await page.waitForTimeout(400)
   await page.getByRole('button', { name: 'Split or reorder pages' }).click()
   await page.waitForTimeout(400)
-  check('What else ▸ Split or reorder pages opens the pages', await mod('/src/stores/pdfStore.ts', 'return m.usePdfStore.getState().pageNavOpen'))
-  await mod('/src/stores/pdfStore.ts', 'm.usePdfStore.getState().setPageNavOpen(false)')
-  await page.waitForTimeout(300)
+  // A page of its own since 2026-10-22, not the website's sliding pane.
+  check('What else ▸ Split or reorder pages opens the Pages page', (await mod('/src/native/nav.ts', 'return m.useNav.getState().screens')).includes('pages'))
+  await mod('/src/native/nav.ts', 'm.useNav.getState().pop()')
+  await page.waitForTimeout(400)
   await bar.getByRole('button', { name: 'Share' }).click()
   await page.waitForTimeout(400)
   const screens = await mod('/src/native/nav.ts', 'return m.useNav.getState().screens')

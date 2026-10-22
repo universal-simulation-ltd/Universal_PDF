@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { Icon, PATHS } from './icons'
 
 /**
@@ -32,13 +32,19 @@ export function Sheet({
   const bodyRef = useRef<HTMLDivElement>(null)
   const grip = useSheetPull(ref, onClose)
   useSheetBodyPull(ref, bodyRef, onClose)
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
+  // ⚠️ Once, for the life of the sheet — not on each new `onClose`. Callers
+  // pass an inline arrow, and re-running this on every render put the focus
+  // back on the sheet (and the opener) under a box being typed in, so each
+  // keystroke in a sheet's text box lost the keyboard.
   useEffect(() => {
     const before = document.activeElement as HTMLElement | null
     ref.current?.focus({ preventScroll: true })
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         e.preventDefault()
-        onClose()
+        closeRef.current()
       }
     }
     document.addEventListener('keydown', onKey)
@@ -46,7 +52,7 @@ export function Sheet({
       document.removeEventListener('keydown', onKey)
       before?.focus?.({ preventScroll: true })
     }
-  }, [onClose])
+  }, [])
   return (
     <div className="absolute inset-0 z-[200]" style={scrim ? undefined : { pointerEvents: 'none' }}>
       {scrim && <div className="np-scrim" onClick={onClose} aria-hidden="true" />}
@@ -329,6 +335,12 @@ export function BackLink({ label, onClick }: { label: string; onClick: () => voi
   )
 }
 
+/**
+ * The line between two rows: a hairline in a Card, a pencilled dash on a
+ * paper Slip (which sets `--np-row-rule`).
+ */
+export const ROW_RULE = 'var(--np-row-rule, 1px solid var(--np-rule))'
+
 /** One row of a white list card: a label, an optional note, and a switch. */
 export function SwitchRow({
   label,
@@ -350,7 +362,7 @@ export function SwitchRow({
     <label
       htmlFor={id}
       className="flex items-center gap-3 min-h-[56px] px-3.5 py-2"
-      style={{ borderTop: first ? 0 : '1px solid var(--np-rule)' }}
+      style={{ borderTop: first ? 0 : ROW_RULE }}
     >
       <span className="flex-1 flex flex-col gap-0.5 min-w-0">
         <span className="text-[16px]">{label}</span>
@@ -390,13 +402,191 @@ export function LinkRow({
       type="button"
       onClick={onClick}
       className="w-full flex items-center gap-3 min-h-[52px] px-3.5 text-left"
-      style={{ borderTop: first ? 0 : '1px solid var(--np-rule)' }}
+      style={{ borderTop: first ? 0 : ROW_RULE }}
     >
       {icon && <Icon d={icon} size={22} stroke={danger ? '#b42318' : 'var(--np-cobalt)'} />}
       <span className={`flex-1 text-[16px] ${danger ? 'text-[#b42318]' : ''}`}>{label}</span>
       {value && <span className="text-[15px] text-[color:var(--np-muted)]">{value}</span>}
       <Icon d={PATHS.chevron} size={16} stroke="#9a9ca3" width={2.4} />
     </button>
+  )
+}
+
+/**
+ * A slip of paper lying on the page, the Share page's look (round 4): white,
+ * square-cornered, a soft shadow and a slight tilt, with pencilled dashes
+ * between its rows. Tune and What else are made of these (James, "go ahead" on
+ * round 4). Plain paper in Tune takes the tilt off.
+ */
+export function Slip({
+  children,
+  tilt = '-0.6deg',
+  label,
+}: {
+  children: ReactNode
+  tilt?: string
+  /** A handwritten word on the slip's top edge, like the Share page's "how big?". */
+  label?: string
+}) {
+  return (
+    // ⚠️ A little room above and below: the tilted slip's corners reach past
+    // its box, and that counts as overflow — a sheet's card that overflows
+    // reads as one cut short (e2e/phone-clear-all).
+    <div className="flex flex-col gap-2 py-1">
+      {label && <span className="np-hand text-[22px] leading-none text-[color:var(--np-cobalt-deep)] px-1">{label}</span>}
+      <div
+        className="np-tilt bg-white rounded-[3px] overflow-hidden"
+        style={{
+          transform: `rotate(${tilt})`,
+          boxShadow: '0 8px 18px rgba(60,45,20,0.16)',
+          ['--np-row-rule' as string]: '1.5px dashed #ddd6c8',
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * A job's page (Scan, Merge, Photos, OCR, Compare, Pages): the back chevron
+ * with where it goes, the heading with one word on the highlighter, an
+ * optional line under it, the page's own paper, and its buttons pinned at the
+ * foot. The way every page here is built (Sign, Share, QR).
+ */
+export function JobPage({
+  backLabel,
+  onBack,
+  lead,
+  hl,
+  note,
+  children,
+  footer,
+  background = 'var(--np-paper)',
+  bodyClass = 'gap-[18px]',
+}: {
+  backLabel: string
+  onBack: () => void
+  lead: string
+  hl: string
+  note?: ReactNode
+  children: ReactNode
+  footer?: ReactNode
+  background?: string
+  bodyClass?: string
+}) {
+  return (
+    <div className="np-page-enter flex-1 min-h-0 flex flex-col" style={{ background }}>
+      <header className="flex-none px-1.5" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 6px)' }}>
+        <BackLink label={backLabel} onClick={onBack} />
+      </header>
+      <div className={`flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pt-1 pb-4 flex flex-col ${bodyClass}`}>
+        <div className="flex flex-col gap-1.5">
+          <h1 className="np-serif m-0 text-[34px] leading-[1.05] font-bold">
+            {lead} <Hl>{hl}</Hl>
+          </h1>
+          {note && <p className="m-0 text-[14px] leading-[1.45] text-[color:var(--np-ink-2)]">{note}</p>}
+        </div>
+        {children}
+      </div>
+      {footer && (
+        <div className="flex-none px-5 pt-3 flex flex-col gap-2.5" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 18px)' }}>
+          {footer}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** The page's main button: cobalt, full width, thumb height. */
+export const BTN_PRIMARY = 'min-h-[56px] rounded-[18px] text-white text-[17px] font-bold disabled:opacity-50'
+export const BTN_PRIMARY_STYLE = { background: 'var(--np-cobalt)' } as const
+/** The quieter one beside or under it: a paper slip with cobalt words. */
+export const BTN_SECOND = 'min-h-[52px] rounded-[16px] text-[16px] font-bold disabled:opacity-50'
+export const BTN_SECOND_STYLE = { background: 'var(--np-slip)', color: 'var(--np-cobalt-deep)', boxShadow: '0 2px 6px rgba(60,45,20,0.12)' } as const
+
+/** A two-way choice drawn as the Sign page's segmented control. */
+export function Segmented<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+  disabled,
+}: {
+  label: string
+  value: T
+  options: { id: T; label: string }[]
+  onChange: (v: T) => void
+  disabled?: boolean
+}) {
+  return (
+    <div role="radiogroup" aria-label={label} className="grid rounded-xl p-[3px]" style={{ background: '#e8e3d8', gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+      {options.map((o) => (
+        <button
+          key={o.id}
+          type="button"
+          role="radio"
+          aria-checked={value === o.id}
+          disabled={disabled}
+          onClick={() => onChange(o.id)}
+          className="min-h-[40px] rounded-[10px] text-[14px] leading-tight px-1 disabled:opacity-60"
+          style={
+            value === o.id
+              ? { background: 'var(--np-slip)', fontWeight: 700, boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }
+              : { fontWeight: 600, color: 'var(--np-ink-2)' }
+          }
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** A progress bar drawn as the orange highlighter filling a pencil line. */
+export function Progress({ fraction, label }: { fraction: number; label: string }) {
+  const pct = Math.round(Math.max(0, Math.min(1, fraction)) * 100)
+  return (
+    <div className="flex flex-col gap-1.5" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={label}>
+      <div className="h-3 rounded-[3px_8px_5px_3px] overflow-hidden" style={{ background: '#e8e3d8' }}>
+        <div className="h-full transition-[width] duration-300 ease-out" style={{ width: `${Math.max(4, pct)}%`, background: 'rgba(249,115,22,0.85)' }} />
+      </div>
+      <div className="flex justify-between text-[13px] text-[color:var(--np-muted)]">
+        <span className="min-w-0 truncate">{label}</span>
+        <span className="tabular-nums">{pct}%</span>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * A one-line label that shrinks to fit its cell rather than running into the
+ * next one: the tool bar's and the tab bar's words. German's "Unterschreiben"
+ * and "Kommentieren" (the glossary keeps them, not "Signieren") are wider than
+ * a quarter of a 360 px phone at 12 px; they are set a little smaller there,
+ * and at full size wherever they fit.
+ */
+export function FitLabel({ children, size, min = 9, className = '' }: { children: string; size: number; min?: number; className?: string }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    const box = el?.parentElement
+    if (!el || !box) return
+    const fit = () => {
+      el.style.fontSize = `${size}px`
+      const room = box.clientWidth - 4
+      const need = el.scrollWidth
+      if (need > room && room > 0) el.style.fontSize = `${Math.max(min, Math.floor((size * room * 10) / need) / 10)}px`
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(box)
+    return () => ro.disconnect()
+  }, [children, size, min])
+  return (
+    <span ref={ref} className={`whitespace-nowrap max-w-full ${className}`} style={{ fontSize: size }}>
+      {children}
+    </span>
   )
 }
 

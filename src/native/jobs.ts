@@ -4,24 +4,24 @@ import { usePdfStore } from '../stores/pdfStore'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useToolPrefs } from '../stores/toolPrefsStore'
 import { PDF_OR_OFFICE_ACCEPT } from '../lib/officeFiles'
-import { getT } from '../i18n'
+import { getT, useT } from '../i18n'
 import type { ScanPage } from '../lib/scan'
 import type { ConvertMode } from '../components/Convert/ConvertDialog'
-import { useNav } from './nav'
+import { topScreen, useNav, type Screen } from './nav'
 import { PATHS } from './icons'
 
 // The Desk's carousel: three ways in, then twelve jobs. Tapping a job picks a
 // file (where the job needs one), opens it, and puts the right tool in hand —
 // the same doors the website's landing page has, on cards rather than in a
-// menu. The jobs the phone has no page of its own for yet open the website's
-// dialog for it (`useJobDialog`), which NativeApp renders.
+// menu. The jobs that make a new PDF (Scan, Merge, Photos, OCR, Compare) have a
+// page of their own (`openJob`); what the page starts with rides on `dialog`.
 
 export type JobId =
   | 'open' | 'scan' | 'example'
   | 'compress' | 'sign' | 'send-sign' | 'fill' | 'merge' | 'blackout'
   | 'pages' | 'photos' | 'lock' | 'ocr' | 'compare' | 'markup'
 
-/** A dialog borrowed from the website until the phone has a page for it. */
+/** What a job page starts with: the pages scanned, the file picked… */
 export type JobDialog =
   | { kind: 'scan'; source: 'camera' | 'photo'; pages?: ScanPage[] }
   | { kind: 'merge'; initialFile?: File | null }
@@ -42,6 +42,41 @@ export const useJobs = create<JobState>((set) => ({
   setDialog: (dialog) => set({ dialog }),
   setBusy: (busy) => set({ busy }),
 }))
+
+const PAGE_FOR: Record<JobDialog['kind'], Screen> = {
+  scan: 'scan',
+  merge: 'merge',
+  convert: 'photos',
+  ocr: 'ocr',
+  compare: 'compare',
+}
+
+/**
+ * Open a job's page with what it starts with. The page takes `dialog` off
+ * again as it closes. A second Scan (the Shortcut, say) over an open Scan page
+ * replaces it rather than stacking another.
+ */
+export function openJob(d: JobDialog): void {
+  useJobs.getState().setDialog(d)
+  const nav = useNav.getState()
+  const screen = PAGE_FOR[d.kind]
+  if (topScreen(nav.screens) === screen) nav.replaceTop(screen)
+  else nav.push(screen)
+}
+
+/** Where a job page's back chevron goes: the open document, or the Desk. */
+export function useJobBackLabel(): string {
+  const t = useT()
+  const doc = usePdfStore((s) => s.doc)
+  const fileName = usePdfStore((s) => s.fileName)
+  return doc && fileName ? fileName.replace(/\.pdf$/i, '') : t('phone.tab_desk')
+}
+
+/** The open document as a File, for a job started from What else. */
+export function currentFile(): File | null {
+  const { sourceBytes, fileName } = usePdfStore.getState()
+  return sourceBytes && fileName ? new File([sourceBytes.slice(0)], fileName, { type: 'application/pdf' }) : null
+}
 
 export interface JobCard {
   id: JobId
@@ -139,13 +174,13 @@ export async function runJob(id: JobId): Promise<void> {
         if (!(await isDocumentScanAvailable())) {
           // No scanner on this phone (or in a browser): the photo road, one
           // photo at a time through the corner editor.
-          jobs.setDialog({ kind: 'scan', source: 'photo' })
+          openJob({ kind: 'scan', source: 'photo' })
           return
         }
         const jpegs = await scanWithCamera()
         if (!jpegs) return
         const { pageFromJpeg } = await import('../lib/scan')
-        jobs.setDialog({ kind: 'scan', source: 'camera', pages: await Promise.all(jpegs.map(pageFromJpeg)) })
+        openJob({ kind: 'scan', source: 'camera', pages: await Promise.all(jpegs.map(pageFromJpeg)) })
         return
       }
       case 'example': {
@@ -163,14 +198,14 @@ export async function runJob(id: JobId): Promise<void> {
       case 'send-sign':
         if (await pickAndOpen()) {
           arm('sigfield')
-          usePdfStore.getState().setSendForSignatureOpen(true)
+          nav.openSheet('send-sign')
         }
         return
       case 'fill':
         if (await pickAndOpen()) arm('select')
         return
       case 'merge':
-        jobs.setDialog({ kind: 'merge' })
+        openJob({ kind: 'merge' })
         return
       case 'blackout':
         if (await pickAndOpen()) {
@@ -179,10 +214,10 @@ export async function runJob(id: JobId): Promise<void> {
         }
         return
       case 'pages':
-        if (await pickAndOpen()) usePdfStore.getState().setPageNavOpen(true)
+        if (await pickAndOpen()) nav.push('pages')
         return
       case 'photos':
-        jobs.setDialog({ kind: 'convert', mode: 'images-to-pdf' })
+        openJob({ kind: 'convert', mode: 'images-to-pdf' })
         return
       case 'lock':
         if (await pickAndOpen()) {
@@ -194,7 +229,7 @@ export async function runJob(id: JobId): Promise<void> {
       case 'compare': {
         const [file] = await pickFiles(PDF_ONLY)
         if (!file) return
-        jobs.setDialog({ kind: id, bytes: await file.arrayBuffer(), name: file.name })
+        openJob({ kind: id, bytes: await file.arrayBuffer(), name: file.name })
         return
       }
       case 'markup':

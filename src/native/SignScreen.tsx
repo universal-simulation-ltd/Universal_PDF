@@ -3,12 +3,16 @@ import { useT } from '../i18n'
 import { usePdfStore } from '../stores/pdfStore'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useSignatureStore } from '../stores/signatureStore'
-import { inkColorFor, renderInkSignature } from '../lib/renderInk'
+import { inkColorFor, pressureWidth, renderInkSignature } from '../lib/renderInk'
 import { renderTypedSignature } from '../lib/renderTyped'
-import { dateLineSeed, DEFAULT_LABEL_SCALE, DEFAULT_SIG_ALIGN } from '../lib/composeSignature'
+import { composeSignatureWithLabels, dateLineSeed, DEFAULT_LABEL_SCALE, DEFAULT_SIG_ALIGN, labelsForOptions } from '../lib/composeSignature'
+import { importImageAsSignature, type ImportedSignature } from '../lib/imageSignature'
+import { unlockSignatures } from '../lib/signatureLock'
+import { useVaultStore } from '../lib/signatureVault'
 import type { SignatureData } from '../types/annotations'
-import { BackLink, Hl, useScrollHint } from './parts'
+import { BackLink, Hl, SwitchRow, useScrollHint } from './parts'
 import { useNav } from './nav'
+import { pickFiles } from './jobs'
 
 // Board 4 · Sign, a page of its own: "Make your mark", Draw / Type / Photo of
 // paper, a white slip to sign on with a line and an ×, the drawer of saved
@@ -29,6 +33,11 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
   const t = useT()
   const fileName = usePdfStore((s) => s.fileName)
   const signatures = useSignatureStore((s) => s.signatures)
+  const locked = useVaultStore((s) => s.enabled && s.locked)
+  // Signing a "Sign here" box someone left (a tap on the box): what is made
+  // here fills that box, rather than going in hand to be placed. Read once —
+  // the page belongs to that box for as long as it is open.
+  const [fieldId] = useState(() => (mode === 'document' ? useSignatureStore.getState().signingFieldId : null))
   const [how, setHow] = useState<How>('draw')
   const [lines, setLines] = useState<number[][]>([])
   const [pressures, setPressures] = useState<number[][]>([])
@@ -47,14 +56,84 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
   // for it felt clumsy (James, 2026-10-19: "the name field should autofill from
   // their signature name and then they can change it if needed").
   const [nameOwn, setNameOwn] = useState(false)
-  const [dateUnder, setDateUnder] = useState(false)
+  // A box that asked for the date starts with it on (still a choice).
+  const [dateUnder, setDateUnder] = useState(() => {
+    const box = fieldId ? useAnnotationStore.getState().annotations.find((a) => a.id === fieldId) : null
+    return box?.type === 'sigfield' && !!box.requireDate
+  })
   const nameId = useId()
   const dateId = useId()
+  // Photo of paper, on this page (was the website's importer dialog): the ink
+  // is lifted off the paper and shown on the slip before it is used.
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoInk, setPhotoInk] = useState<ImportedSignature | null>(null)
+  const [keepWhite, setKeepWhite] = useState(false)
+  const [photoBusy, setPhotoBusy] = useState(false)
+  const [photoError, setPhotoError] = useState<string | null>(null)
 
-  const ready = how === 'draw' ? lines.length > 0 : how === 'type' ? typed.trim().length > 0 : false
+  // Leaving by any road puts the website's pad request down (a tap on a box
+  // raises it; NativeApp turned it into this page).
+  useEffect(() => () => {
+    if (useSignatureStore.getState().padOpen) useSignatureStore.getState().closePad()
+  }, [])
 
-  /** Put a library signature in hand and go back to the page to place it. */
+  useEffect(() => {
+    if (!photoFile) return
+    let live = true
+    setPhotoBusy(true)
+    setPhotoError(null)
+    importImageAsSignature(photoFile, { removeBg: !keepWhite })
+      .then((r) => { if (live) setPhotoInk(r) })
+      .catch((e: Error) => {
+        if (!live) return
+        setPhotoInk(null)
+        setPhotoError(e.message || t('sign.import_could_not'))
+      })
+      .finally(() => { if (live) setPhotoBusy(false) })
+    return () => { live = false }
+  }, [photoFile, keepWhite, t])
+
+  const ready = how === 'draw' ? lines.length > 0 : how === 'type' ? typed.trim().length > 0 : !!photoInk && !photoBusy
+
+  /**
+   * Fill the "Sign here" box this page was opened for, with the name and date
+   * under the ink when asked for, as the website's pad does (`fillField`).
+   */
+  async function fillBox(id: string, made: { dataUrl: string; width: number; height: number }, base?: SignatureData) {
+    const name = nameUnder.trim()
+    const dateText = dateUnder ? dateLineSeed() : undefined
+    const color = base?.color ?? INK
+    const labels = labelsForOptions({ name, showName: !!name, showDate: dateUnder, dateText })
+    let src = made.dataUrl
+    let w = made.width
+    let h = made.height
+    if (labels.length) {
+      const c = await composeSignatureWithLabels(made.dataUrl, made.width, made.height, labels, color)
+      src = c.dataUrl
+      w = c.width
+      h = c.height
+    }
+    const data: SignatureData = {
+      ...(base ?? { ink: made.dataUrl, inkWidth: made.width, inkHeight: made.height, align: DEFAULT_SIG_ALIGN, labelScale: DEFAULT_LABEL_SCALE, color }),
+      name: name || undefined,
+      showName: !!name,
+      showDate: dateUnder,
+      dateText,
+    }
+    useAnnotationStore.getState().update(id, { signed: { src, width: w, height: h, data } })
+    useSignatureStore.getState().closePad()
+    useAnnotationStore.getState().setTool('select')
+    // Straight to the moment: the box is already where it belongs.
+    useNav.getState().replaceTop('signed')
+  }
+
+  /** Put a library signature in hand and go back to the page to place it (or fill the box). */
   function placeSaved(id: string) {
+    if (fieldId) {
+      const saved = useSignatureStore.getState().signatures.find((s) => s.id === id)
+      if (saved) void fillBox(fieldId, { dataUrl: saved.dataUrl, width: saved.width, height: saved.height }, saved.sig)
+      return
+    }
     useSignatureStore.getState().setActive(id)
     const a = useAnnotationStore.getState()
     a.setSelected(null)
@@ -90,6 +169,8 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
             realistic: true,
           }
         }
+      } else if (how === 'photo') {
+        if (photoInk) made = { dataUrl: photoInk.dataUrl, width: photoInk.width, height: photoInk.height }
       } else {
         // Typed ones start realistic too, and keep the name so the placed
         // signature's switch can set it plain again (James, 2026-10-22).
@@ -99,6 +180,15 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
         if (made) sig = { ink: made.dataUrl, inkWidth: made.width, inkHeight: made.height, align: DEFAULT_SIG_ALIGN, labelScale: DEFAULT_LABEL_SCALE, color: ink, typed: name, realistic: true }
       }
       if (!made) return
+      if (fieldId) {
+        // Into the box, and kept in the drawer only when asked.
+        if (keep) {
+          const store = useSignatureStore.getState()
+          store.add({ name: t('sign.default_signature_name', { n: store.signatures.length + 1 }), dataUrl: made.dataUrl, width: made.width, height: made.height, sig })
+        }
+        await fillBox(fieldId, made, sig)
+        return
+      }
       // The name and date go under the signature as their own lines when it
       // lands, so each can be dragged on its own (James, 2026-10-22). They are
       // no longer baked into the picture. The date is worked out on the day
@@ -107,7 +197,7 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
         ? { name: nameUnder.trim() || undefined, date: dateUnder, color: sig?.color ?? INK }
         : undefined
       const store = useSignatureStore.getState()
-      const name = how === 'type' ? typed.trim() : t('sign.default_signature_name', { n: store.signatures.length + 1 })
+      const name = how === 'type' ? typed.trim() : how === 'photo' && photoFile ? photoFile.name.replace(/\.[^.]+$/, '').trim() || t('sign.default_signature_name', { n: store.signatures.length + 1 }) : t('sign.default_signature_name', { n: store.signatures.length + 1 })
       const id = store.add({ name, dataUrl: made.dataUrl, width: made.width, height: made.height, sig, extras })
       if (mode === 'drawer') {
         onDone()
@@ -129,11 +219,16 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
   }
 
   function photo() {
-    // The website's own photo importer: it lifts the ink off the paper and
-    // puts the signature in hand, ready to place on the page.
-    if (mode === 'document') useNav.getState().setAwaitingSignature(true)
-    onDone()
-    useSignatureStore.getState().openImport('signature')
+    // Straight from the tap: iOS only opens a picker inside the gesture.
+    void pickFiles('image/*,.heic,.heif').then(([f]) => {
+      if (!f) return
+      if (f.type && !/^image\//.test(f.type) && !/\.hei[cf]$/i.test(f.name)) {
+        setPhotoError(t('sign.import_not_image'))
+        return
+      }
+      setPhotoInk(null)
+      setPhotoFile(f)
+    })
   }
 
   const tabs: { id: How; label: string }[] = [
@@ -158,7 +253,8 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
             where a thumb reaches it (James, 2026-10-22: "can the drawer be at
             the top (carousel don't stack) so the signing pad is more central").
             Left out while empty: "Keep it in my drawer" below says what it is. */}
-        {mode === 'document' && saved.length > 0 && <SavedRow saved={saved} onPick={placeSaved} />}
+        {mode === 'document' && locked && <LockedRow />}
+        {mode === 'document' && !locked && saved.length > 0 && <SavedRow saved={saved} onPick={placeSaved} />}
         <h1 className="np-serif m-0 text-[34px] leading-[1.05] font-bold">
           {t('phone.sign_lead')} <Hl>{t('phone.sign_hl')}</Hl>
         </h1>
@@ -186,6 +282,7 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
         {how === 'draw' && (
           <DrawPad
             lines={lines}
+            pressures={pressures}
             onStroke={(pts, ps) => {
               setLines((l) => [...l, pts])
               setPressures((p) => [...p, ps])
@@ -225,19 +322,38 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
 
         {how === 'photo' && (
           <div className="np-tilt bg-white rounded-[3px] px-5 py-5 flex flex-col gap-4" style={{ boxShadow: '0 10px 24px rgba(23,30,50,0.14)', transform: 'rotate(-1deg)' }}>
-            <p className="m-0 text-[15px] leading-[1.45] text-[color:var(--np-ink-2)]">{t('phone.photo_note')}</p>
+            {photoFile ? (
+              <div
+                className="h-[120px] rounded-[2px] flex items-center justify-center p-2"
+                style={{ background: keepWhite ? '#ffffff' : 'repeating-conic-gradient(#f3efe6 0% 25%, #ffffff 0% 50%) 50% / 14px 14px' }}
+              >
+                {photoBusy ? (
+                  <span className="text-[14px] text-[color:var(--np-muted)]">{t('sign.import_processing')}</span>
+                ) : photoInk ? (
+                  <img src={photoInk.dataUrl} alt={t('sign.import_preview_alt')} className="max-w-full max-h-full object-contain" />
+                ) : null}
+              </div>
+            ) : (
+              <p className="m-0 text-[15px] leading-[1.45] text-[color:var(--np-ink-2)]">{t('phone.photo_note')}</p>
+            )}
+            {photoError && <p className="m-0 text-[14px] text-[#b42318]">{photoError}</p>}
             <button
               type="button"
               onClick={photo}
               className="min-h-[50px] rounded-2xl text-[16px] font-bold"
               style={{ background: 'var(--np-slip)', border: '1.5px solid var(--np-cobalt)', color: 'var(--np-cobalt-deep)' }}
             >
-              {t('phone.photo_button')}
+              {photoFile ? t('sign.import_choose_different') : t('phone.photo_button')}
             </button>
+            {photoFile && (
+              <div className="-mx-3.5 -mb-2">
+                <SwitchRow first label={t('sign.import_keep_bg')} checked={keepWhite} onChange={setKeepWhite} />
+              </div>
+            )}
           </div>
         )}
 
-        {how !== 'photo' && (
+        {(how !== 'photo' || photoInk) && (
           <div className="flex flex-col gap-2.5">
             <h2 className="np-serif m-0 text-[19px] font-bold">{t('phone.sign_under')}</h2>
             <label htmlFor={nameId} className="text-[13px] text-[color:var(--np-muted)]">{t('phone.sign_name_label')}</label>
@@ -269,7 +385,7 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
 
       </div>
 
-      {how !== 'photo' && (
+      {(how !== 'photo' || photoFile) && (
         <div className="flex-none px-5 pt-3 flex flex-col gap-2" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 18px)' }}>
           {mode === 'document' && (
             <label htmlFor={keepId} className="flex items-center gap-2.5 text-[15px] min-h-[44px]">
@@ -291,7 +407,7 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
             className="min-h-[56px] rounded-[18px] text-white text-[17px] font-bold disabled:opacity-50"
             style={{ background: 'var(--np-cobalt)' }}
           >
-            {mode === 'drawer' ? t('phone.keep_it') : t('phone.put_on_page')}
+            {mode === 'drawer' ? t('phone.keep_it') : fieldId ? t('phone.put_in_box') : t('phone.put_on_page')}
           </button>
         </div>
       )}
@@ -336,16 +452,22 @@ function SavedRow({ saved, onPick }: { saved: { id: string; name: string; dataUr
 /** The white slip you sign on: a line, an ×, and your finger or a pencil. */
 function DrawPad({
   lines,
+  pressures,
   onStroke,
   onClear,
 }: {
   lines: number[][]
+  /** Apple Pencil pressure per point, one array per stroke (empty for a finger). */
+  pressures: number[][]
   onStroke: (points: number[], pressures: number[]) => void
   onClear: () => void
 }) {
   const t = useT()
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const live = useRef<{ pts: number[]; ps: number[]; pen: boolean } | null>(null)
+  const live = useRef<{ pts: number[]; ps: number[]; pen: boolean; id: number } | null>(null)
+  // Palm rejection: once the Pencil has touched the pad, a hand resting on
+  // the glass is not ink (the website's pad does the same).
+  const penSeen = useRef(false)
 
   // Redraw everything whenever the strokes change (and on size changes).
   useEffect(() => {
@@ -363,13 +485,13 @@ function DrawPad({
       ctx.lineJoin = 'round'
       ctx.strokeStyle = INK
       ctx.lineWidth = 3
-      for (const pts of lines) strokePath(ctx, pts)
+      lines.forEach((pts, i) => strokePath(ctx, pts, pressures[i]))
     }
     draw()
     const ro = new ResizeObserver(draw)
     ro.observe(canvas)
     return () => ro.disconnect()
-  }, [lines])
+  }, [lines, pressures])
 
   function point(e: React.PointerEvent<HTMLCanvasElement>): [number, number] {
     const r = e.currentTarget.getBoundingClientRect()
@@ -377,28 +499,35 @@ function DrawPad({
   }
 
   function onDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    const pen = e.pointerType === 'pen'
+    if (pen) penSeen.current = true
+    else if (penSeen.current && e.pointerType === 'touch') return
+    if (live.current) return
     e.currentTarget.setPointerCapture(e.pointerId)
     const [x, y] = point(e)
-    const pen = e.pointerType === 'pen'
-    live.current = { pts: [x, y], ps: pen ? [e.pressure] : [], pen }
+    live.current = { pts: [x, y], ps: pen ? [e.pressure] : [], pen, id: e.pointerId }
   }
   function onMove(e: React.PointerEvent<HTMLCanvasElement>) {
     const cur = live.current
-    if (!cur) return
+    if (!cur || e.pointerId !== cur.id) return
     const [x, y] = point(e)
     cur.pts.push(x, y)
     if (cur.pen) cur.ps.push(e.pressure)
     const ctx = e.currentTarget.getContext('2d')
     if (ctx) {
       const n = cur.pts.length
+      // The Pencil's pressure shows as it is drawn, not only once placed.
+      if (cur.pen) ctx.lineWidth = 3 * pressureWidth(e.pressure)
       ctx.beginPath()
       ctx.moveTo(cur.pts[n - 4], cur.pts[n - 3])
       ctx.lineTo(x, y)
       ctx.stroke()
+      ctx.lineWidth = 3
     }
   }
-  function onUp() {
+  function onUp(e: React.PointerEvent<HTMLCanvasElement>) {
     const cur = live.current
+    if (cur && e.pointerId !== cur.id) return
     live.current = null
     if (!cur) return
     // A tap with no movement still leaves a dot.
@@ -432,10 +561,40 @@ function DrawPad({
   )
 }
 
-function strokePath(ctx: CanvasRenderingContext2D, pts: number[]) {
+function strokePath(ctx: CanvasRenderingContext2D, pts: number[], ps?: number[]) {
   if (pts.length < 2) return
+  if (ps && ps.length) {
+    // Pencil strokes segment by segment, each as wide as its pressure.
+    for (let i = 2; i + 1 < pts.length; i += 2) {
+      ctx.lineWidth = 3 * pressureWidth(ps[i / 2] ?? ps[ps.length - 1])
+      ctx.beginPath()
+      ctx.moveTo(pts[i - 2], pts[i - 1])
+      ctx.lineTo(pts[i], pts[i + 1])
+      ctx.stroke()
+    }
+    ctx.lineWidth = 3
+    return
+  }
   ctx.beginPath()
   ctx.moveTo(pts[0], pts[1])
   for (let i = 2; i + 1 < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1])
   ctx.stroke()
+}
+
+/** The drawer while it is locked (Tune ▸ Lock saved signatures): unlock it here, with Face ID. */
+function LockedRow() {
+  const t = useT()
+  return (
+    <section aria-label={t('phone.drawer')} className="flex items-center gap-3 rounded-[3px] bg-white px-4 py-3" style={{ boxShadow: '0 4px 10px rgba(23,30,50,0.1)' }}>
+      <span className="flex-1 text-[14px] leading-snug text-[color:var(--np-ink-2)]">{t('phone.sigs_locked')}</span>
+      <button
+        type="button"
+        onClick={() => void unlockSignatures(t('sign.vault_reason_unlock')).catch(() => {})}
+        className="flex-none min-h-[44px] px-4 rounded-xl text-white text-[15px] font-bold"
+        style={{ background: 'var(--np-cobalt)' }}
+      >
+        {t('phone.sigs_unlock')}
+      </button>
+    </section>
+  )
 }

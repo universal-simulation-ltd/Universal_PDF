@@ -256,3 +256,105 @@ export function SmallerMoment() {
     </MomentFrame>
   )
 }
+
+/**
+ * "Blacked out." — the moment after Black out (James, round 4: "Blacked out."
+ * and "Sent." get their own moments). The page with its lines struck through
+ * by black bars and a REDACTED stamp, and the one thing worth knowing: the
+ * words go from the file for good when it is sent, not just hidden.
+ */
+export function BlackedMoment() {
+  const t = useT()
+  const count = useAnnotationStore((s) => s.annotations.filter((a) => a.type === 'redact').length)
+  return (
+    <MomentFrame>
+      <div className="flex-1 min-h-0 relative flex items-center justify-center" aria-hidden="true">
+        <div className="np-tilt absolute w-[238px] h-[320px] rounded-sm" style={{ background: '#e9e2d2', transform: 'rotate(-5deg) translate(-14px, 6px)', boxShadow: '0 10px 24px rgba(5,15,50,0.35)' }} />
+        <div
+          className="np-tilt relative w-[250px] h-[340px] bg-white rounded-sm px-5 pt-[22px] pb-[22px] box-border flex flex-col gap-[11px]"
+          style={{ transform: 'rotate(2.5deg)', boxShadow: '0 20px 44px rgba(5,15,50,0.5)' }}
+        >
+          <div className="h-[22px] -mx-5 -mt-[22px] mb-1.5" style={{ background: '#2f6b3a' }} />
+          {[
+            ['70%', null], ['40%', '36%'], ['85%', null], ['20%', '55%'], ['62%', null], ['50%', '28%'], ['75%', null],
+          ].map(([w, bar], i) => (
+            <div key={i} className="relative h-[7px]">
+              <div className="h-[5px] rounded-sm" style={{ width: w as string, background: '#d5d9e2' }} />
+              {bar && <div className="absolute top-[-4px] h-[13px] rounded-[2px]" style={{ left: '8%', width: bar, background: '#111317', transform: `rotate(${i % 2 ? -1 : 1.2}deg)` }} />}
+            </div>
+          ))}
+          <div
+            className="np-tilt absolute right-3 top-[150px] rounded-[10px] px-3 py-2 flex flex-col items-center"
+            style={{ border: '4px double #b42318', color: '#b42318', transform: 'rotate(-12deg)', background: 'rgba(255,255,255,0.8)' }}
+          >
+            <span className="text-[22px] font-black tracking-[0.12em]">{t('phone.stamp_blacked')}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5 text-center">
+        <h1 className="np-serif m-0 text-[40px] leading-none font-bold">{t('phone.blacked_title')}</h1>
+        <p className="np-hand np-tilt m-0 text-[26px]" style={{ color: 'var(--np-sticky)', transform: 'rotate(-1.5deg)' }}>{t('phone.blacked_note')}</p>
+        <p className="m-0 text-[14px] text-[#d4defa]">{t.plural('phone.blacked_count', count)}</p>
+      </div>
+
+      <div className="flex flex-col gap-2.5">
+        <button type="button" className={BTN_MAIN} onClick={() => useNav.getState().replaceTop('share')}>
+          {t('phone.send_on_its_way')}
+        </button>
+        <button type="button" className={BTN_LINE} style={LINE_STYLE} onClick={() => useNav.getState().pop()}>
+          {t('phone.keep_going')}
+        </button>
+      </div>
+    </MomentFrame>
+  )
+}
+
+/**
+ * "Sent." — the moment after Send to sign has handed the file over: the page
+ * with its empty Sign here box and a SENT TO SIGN stamp. They can sign it in
+ * any PDF app; nothing went through us.
+ */
+export function SentMoment() {
+  const t = useT()
+  return (
+    <MomentFrame>
+      <div className="flex-1 min-h-0 relative flex items-center justify-center" aria-hidden="true">
+        <svg width="90" height="60" viewBox="0 0 90 60" fill="none" stroke="#fde68a" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" className="absolute right-2 top-6">
+          <path d="M6 50c22-6 40-22 58-40M50 8l16 2-3 16" />
+        </svg>
+        <div
+          className="np-tilt relative w-[250px] h-[340px] bg-white rounded-sm px-5 pt-[22px] pb-[22px] box-border flex flex-col gap-[9px]"
+          style={{ transform: 'rotate(-4deg) translate(-6px, 10px)', boxShadow: '0 20px 44px rgba(5,15,50,0.5)' }}
+        >
+          <div className="h-[22px] -mx-5 -mt-[22px] mb-1.5" style={{ background: '#2f6b3a' }} />
+          <Lines widths={['70%', '85%', '60%', '80%', '50%']} />
+          <div className="mt-auto h-[54px] rounded-[4px] flex items-center px-3 gap-2" style={{ border: '2px dashed #2353c9', background: 'rgba(35,83,201,0.06)' }}>
+            <span className="np-hand text-[24px] text-[color:var(--np-orange-ink)]">×</span>
+            <span className="text-[12px] font-bold tracking-[0.08em] text-[#2353c9]">{t('phone.sign_here_box')}</span>
+          </div>
+          <div
+            className="np-tilt absolute right-3 top-[96px] rounded-[10px] px-3 py-2 flex flex-col items-center"
+            style={{ border: '4px double #f97316', color: '#c2410c', transform: 'rotate(-14deg)', background: 'rgba(255,255,255,0.88)' }}
+          >
+            <span className="text-[22px] font-black tracking-[0.12em] whitespace-nowrap">{t('phone.stamp_sent')}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5 text-center">
+        <h1 className="np-serif m-0 text-[40px] leading-none font-bold">{t('phone.sent_title')}</h1>
+        <p className="np-hand np-tilt m-0 text-[26px]" style={{ color: 'var(--np-sticky)', transform: 'rotate(-1.5deg)' }}>{t('phone.sent_note')}</p>
+      </div>
+
+      <div className="flex flex-col gap-2.5">
+        <button type="button" className={BTN_MAIN} onClick={leaveDocument}>
+          {t('phone.back_to_my_desk')}
+        </button>
+        <button type="button" className={BTN_LINE} style={LINE_STYLE} onClick={() => useNav.getState().pop()}>
+          {t('phone.keep_going')}
+        </button>
+      </div>
+    </MomentFrame>
+  )
+}

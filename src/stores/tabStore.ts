@@ -14,6 +14,7 @@ import {
 } from '../lib/unsavedChanges'
 import { captureView, restoreViewFor, type ViewState } from '../lib/viewMemory'
 import { OfficeImportError, toViewablePdf } from '../lib/officeFiles'
+import { notice } from '../lib/notice'
 import type { PDFDocumentProxy } from '../lib/pdfjs'
 import type { Annotation } from '../types/annotations'
 import { getT } from '../i18n'
@@ -456,9 +457,9 @@ export function openFiles(files: File[]): Promise<boolean> {
       }
     }
     if (failures.length === 1 && files.length === 1) {
-      alert(failures[0].message ?? getT()('lib.open_failed'))
+      notice(failures[0].message ?? getT()('lib.open_failed'))
     } else if (failures.length > 0) {
-      alert(
+      notice(
         `${getT()(failures.length === files.length ? 'lib.open_failed_all' : 'lib.open_failed_some')}\n\n` +
           failures.map((f) => `• ${f.name}${f.message ? ` — ${f.message}` : ''}`).join('\n')
       )
@@ -487,7 +488,7 @@ export function openHandedOver(file: File): Promise<void> {
       else await usePdfStore.getState().loadFile(pdf, { notice })
     } catch (err) {
       console.error(err)
-      alert(err instanceof OfficeImportError ? err.message : getT()('lib.open_failed'))
+      notice(err instanceof OfficeImportError ? err.message : getT()('lib.open_failed'))
     }
   })
 }

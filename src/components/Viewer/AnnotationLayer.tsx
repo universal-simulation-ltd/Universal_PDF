@@ -49,6 +49,7 @@ import { SIG_DETAIL_SIZE, SIG_LABEL_SIZE, estimateTextWidth, sigFieldLayout, sig
 import type { Annotation, DrawAnnotation, ImageAnnotation, ImageBorder, SignatureData, SignatureFieldAnnotation, SigAlign, TextAnnotation, Tool, TextRun } from '../../types/annotations'
 import type { QrPlacement } from '../../lib/qr/design'
 import { getT, useT } from '../../i18n'
+import { askText, notice } from '../../lib/notice'
 import type { PDFDocumentProxy } from '../../lib/pdfjs'
 
 // On-screen font stacks, keyed by family id (shared with the toolbar + export).
@@ -4346,20 +4347,22 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         const applyWhole = (kind: 'bold' | 'italic' | 'underline' | 'link') => {
           if (kind === 'link') {
             const cur = runs.find((r) => r.link)?.link ?? ''
-            const next = window.prompt(t('annotate.text.link_prompt'), cur || 'https://')
-            if (next === null) return
-            // Blank (or the untouched "https://" prefill) removes the link.
-            const typed = next.trim()
-            if (!typed || typed === 'https://') {
-              writeRuns(runs.map((r) => ({ ...r, link: undefined })))
-              return
-            }
-            const href = userLinkHref(typed)
-            if (!href) {
-              window.alert(t('annotate.text.link_invalid', { url: typed }))
-              return
-            }
-            writeRuns(runs.map((r) => ({ ...r, link: href })))
+            // `prompt()` on the website, a sheet on the phone (lib/notice).
+            void askText(t('annotate.text.link_prompt'), cur || 'https://').then((next) => {
+              if (next === null) return
+              // Blank (or the untouched "https://" prefill) removes the link.
+              const typed = next.trim()
+              if (!typed || typed === 'https://') {
+                writeRuns(runs.map((r) => ({ ...r, link: undefined })))
+                return
+              }
+              const href = userLinkHref(typed)
+              if (!href) {
+                notice(t('annotate.text.link_invalid', { url: typed }))
+                return
+              }
+              writeRuns(runs.map((r) => ({ ...r, link: href })))
+            })
             return
           }
           const on = !allHave(kind)
@@ -5776,21 +5779,28 @@ function TextEditor({
           const sel = window.getSelection()
           const saved = sel && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null
           formattingRef.current = true
-          const url = window.prompt(getT()('annotate.text.link_prompt_selection'), '')
-          // Checked while the prompt's blur guard is still up, so the alert
-          // can't commit the edit underneath it either.
-          const href = url && url.trim() ? userLinkHref(url) : null
-          if (url && url.trim() && !href) window.alert(getT()('annotate.text.link_invalid', { url: url.trim() }))
-          el.focus()
-          if (saved) {
-            const s = window.getSelection()
-            s?.removeAllRanges()
-            s?.addRange(saved)
-          }
-          formattingRef.current = false
-          if (url === null) return
-          if (!url.trim()) document.execCommand('unlink')
-          else if (href) document.execCommand('createLink', false, href)
+          // `prompt()` on the website; on the phone a sheet (lib/notice), so
+          // the answer comes later and the blur guard stays up until it does.
+          void askText(getT()('annotate.text.link_prompt_selection'), '').then((url) => {
+            // Checked while the prompt's blur guard is still up, so the alert
+            // can't commit the edit underneath it either.
+            const href = url && url.trim() ? userLinkHref(url) : null
+            if (url && url.trim() && !href) notice(getT()('annotate.text.link_invalid', { url: url.trim() }))
+            if (!el.isConnected) {
+              formattingRef.current = false
+              return
+            }
+            el.focus()
+            if (saved) {
+              const s = window.getSelection()
+              s?.removeAllRanges()
+              s?.addRange(saved)
+            }
+            formattingRef.current = false
+            if (url === null) return
+            if (!url.trim()) document.execCommand('unlink')
+            else if (href) document.execCommand('createLink', false, href)
+          })
           return
         }
         el.focus()

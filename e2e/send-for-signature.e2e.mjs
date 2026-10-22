@@ -410,33 +410,30 @@ await pp.evaluate(async () => {
 // The page itself may sit behind the loading hold (the faked bridge answers
 // no plugin), which does not matter to anything checked here.
 await pp.waitForSelector('[data-page-index="0"] canvas', { timeout: 30000 }).catch(() => {})
-// Opened from the store, and again if the shell's start-up (which closes a
-// tab's dialogs as it settles) shut it in the meantime.
-for (let i = 0; i < 10 && (await pp.locator('[data-send-for-signature]').count()) === 0; i++) {
+// The phone screens (src/native/) take the website's request — the ✏️ "Send"
+// beside a box — as Send to sign's own sheet (2026-10-22), not the dialog.
+for (let i = 0; i < 10 && (await pp.locator('.np-sheet [data-sfs-share]').count()) === 0; i++) {
   await pp.evaluate(async () => {
     const { usePdfStore } = await (globalThis.__appImport ?? ((p) => import(p)))('/src/stores/pdfStore.ts')
     usePdfStore.getState().setSendForSignatureOpen(true)
   })
-  await pp.waitForSelector('[data-send-for-signature]', { timeout: 2000 }).catch(() => {})
+  await pp.waitForSelector('.np-sheet [data-sfs-share]', { timeout: 2000 }).catch(() => {})
 }
-check('the dialog offers Share', (await pp.locator('[data-sfs-share]').count()) === 1)
-check('and no certified route, nor a link out', (await pp.locator('[data-sfs-certified], [data-send-for-signature] a[href]').count()) === 0)
+check('the sheet offers Share for signing', (await pp.locator('.np-sheet [data-sfs-share]').count()) === 1)
+check('and it works with or without a box (not disabled)', await pp.locator('.np-sheet [data-sfs-share]').isEnabled())
+check('no website dialog on the phone', (await pp.locator('[data-send-for-signature]').count()) === 0)
+check('and no certified route, nor a link out', (await pp.locator('[data-sfs-certified], .np-sheet a[href]').count()) === 0)
 check('the certified dialog cannot be mounted', await pp.evaluate(async () => {
   const { usePdfStore } = await (globalThis.__appImport ?? ((p) => import(p)))('/src/stores/pdfStore.ts')
-  usePdfStore.getState().setSendForSignatureOpen(false)
   usePdfStore.getState().setSendToSignOpen(true)
   await new Promise((r) => setTimeout(r, 500))
   return !document.body.textContent.includes('Certified signature')
 }))
-// The profile pill: no "Sign in" row.
 await pp.evaluate(async () => {
   const { usePdfStore } = await (globalThis.__appImport ?? ((p) => import(p)))('/src/stores/pdfStore.ts')
   usePdfStore.getState().setSendToSignOpen(false)
 })
-const pill = pp.getByRole('button', { name: /Actions/ }).first()
-await pill.click().catch(() => {})
-await pp.waitForTimeout(600)
-check('the Actions menu opens', (await pp.getByText(/Tune this app/).count()) > 0)
+// The phone screens have no Actions menu and no profile pill: nowhere to sign in.
 check('no sign-in row anywhere', (await pp.getByText(/Sign in/).count()) === 0)
 check('no Supabase auth call from the phone app', phoneAuth.length === 0, phoneAuth.join(', '))
 check('no Supabase request at all from the phone app', phoneRequests.length === 0, phoneRequests.join(', '))

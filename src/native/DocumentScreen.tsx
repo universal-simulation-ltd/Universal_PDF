@@ -11,7 +11,7 @@ import type { Annotation, Tool } from '../types/annotations'
 import { Dots, Icon, PATHS } from './icons'
 import { useNav } from './nav'
 import MarkupSheet, { MARKUP_TOOLS } from './MarkupSheet'
-import { BackLink } from './parts'
+import { BackLink, FitLabel } from './parts'
 import { SELECT_SEVERAL_HINT_KEY } from '../lib/resetDefaults'
 
 // Board 2 · A document open: the pages lie on the warm grey desk, a back
@@ -33,6 +33,11 @@ function signaturesOn(annotations: Annotation[]): number {
     else if (a.type === 'sigfield' && a.signed) n++
   }
   return n
+}
+
+/** How many black-outs are on the pages. */
+function redactions(): number {
+  return useAnnotationStore.getState().annotations.filter((a) => a.type === 'redact').length
 }
 
 /** Leave the document for the desk. Its edits stay on this phone. */
@@ -150,6 +155,12 @@ export default function DocumentScreen() {
     a.setToolSheetOpen(markingUp)
     return () => a.setToolSheetOpen(false)
   }, [markingUp])
+  // How many black-outs there were when Mark up opened, so Done can tell
+  // whether this visit added any.
+  const redactAtOpen = useRef(0)
+  useEffect(() => {
+    if (markingUp) redactAtOpen.current = redactions()
+  }, [markingUp])
   useEffect(() => {
     useAnnotationStore.getState().setRedactStroke(true)
     return () => useAnnotationStore.getState().setRedactStroke(false)
@@ -214,8 +225,12 @@ export default function DocumentScreen() {
             <BackLink
               label={t('phone.done')}
               onClick={() => {
-                closeSheet()
+                // Done after blacking something out is the "Blacked out."
+                // moment (round 4), which takes the sheet down with it.
+                const blacked = tool === 'redact' && redactions() > redactAtOpen.current
                 setTool('select')
+                if (blacked) push('blacked')
+                else closeSheet()
               }}
             />
             <span className="np-serif flex-1 text-center text-[17px] font-bold">{t('phone.markup_title')}</span>
@@ -278,7 +293,7 @@ export default function DocumentScreen() {
               type="button"
               aria-pressed={b.id === 'navigate' || b.id === 'markup' ? on : undefined}
               onClick={() => onBar(b.id)}
-              className="flex flex-col items-center justify-center gap-1.5 min-h-[58px]"
+              className="min-w-0 flex flex-col items-center justify-center gap-1.5 min-h-[58px]"
               style={{ color: on ? 'var(--np-cobalt-deep)' : 'var(--np-ink-2)' }}
             >
               <span
@@ -294,7 +309,7 @@ export default function DocumentScreen() {
                   />
                 )}
               </span>
-              <span className="text-[12px] font-bold">{b.label}</span>
+              <FitLabel size={12} className="font-bold">{b.label}</FitLabel>
             </button>
           )
         })}

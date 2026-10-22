@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { defaultQuad, fullQuad, isConvexQuad, type Quad } from '../../lib/scanGeometry'
 import { detectDocument, flattenPhoto, type ScanColour, type ScanPage } from '../../lib/scan'
 import { useT, type MessageKey } from '../../i18n'
+import { notice } from '../../lib/notice'
 
 interface Props {
   /** The decoded photo (see `decodePhoto`). */
@@ -151,7 +152,7 @@ export default function CropEditor({ photo, initialQuad, colour, onColourChange,
       onDone(await flattenPhoto(photo, quad, colour), quad)
     } catch (err) {
       console.error(err)
-      alert(t('tools.scan.failed', { message: (err as Error).message }))
+      notice(t('tools.scan.failed', { message: (err as Error).message }))
     } finally {
       setBusy(false)
     }

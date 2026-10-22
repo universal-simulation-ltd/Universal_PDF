@@ -6,16 +6,13 @@ import { useSignatureStore } from '../stores/signatureStore'
 import { useTabStore } from '../stores/tabStore'
 import { useShortcutStore } from '../stores/shortcutStore'
 import { setStatusBarOverDarkChrome } from '../lib/nativeOpen'
-import PageNavigator from '../components/Viewer/PageNavigator'
-import SignaturePad from '../components/Signature/SignaturePad'
-import SignatureImport from '../components/Signature/SignatureImport'
 import UnsavedChangesDialog from '../components/Exit/UnsavedChangesDialog'
-import LockedFilePrompt from '../components/Lock/LockedFilePrompt'
+import type { ScanPage } from '../lib/scan'
 import { Icon, PATHS } from './icons'
-import { isKnowledge, topScreen, useNav, type Screen, type Tab } from './nav'
+import { goBack, isJobPage, isKnowledge, overTabs as canStandOverTabs, topScreen, useNav, type Screen, type Tab } from './nav'
 import { useEdgeSwipeBack } from './edgeSwipe'
-import { usePagePullToType } from './parts'
-import { useJobs } from './jobs'
+import { FitLabel, usePagePullToType } from './parts'
+import { currentFile, openJob, useJobs } from './jobs'
 import { usePhonePrefs } from './prefs'
 import DeskScreen from './DeskScreen'
 import DocumentScreen, { leaveDocument } from './DocumentScreen'
@@ -26,7 +23,15 @@ import MoreSheet from './MoreSheet'
 import TuneScreen from './TuneScreen'
 import SignaturesScreen from './SignaturesScreen'
 import KnowledgeScreen, { useKnowledgeBaseRequests } from './KnowledgeScreen'
-import { SignedMoment, SmallerMoment } from './Moments'
+import ScanScreen from './ScanScreen'
+import MergeScreen from './MergeScreen'
+import PhotosScreen from './PhotosScreen'
+import OcrScreen from './OcrScreen'
+import CompareScreen from './CompareScreen'
+import PagesScreen from './PagesScreen'
+import SendSignSheet from './SendSignSheet'
+import { AskSheet, LockedSheet, usePhonePrompts } from './Prompts'
+import { BlackedMoment, SentMoment, SignedMoment, SmallerMoment } from './Moments'
 import './native.css'
 
 // The phone app's screens (see shell.ts for when they are used). Three tabs
@@ -34,18 +39,16 @@ import './native.css'
 // stacked over it. The document screen stays mounted under its pages so the
 // viewer keeps its place, zoom and work while Sign or Share is on top.
 //
-// The website's own dialogs that the phone still uses are mounted here too —
-// App.tsx returns this tree in place of its own, so nothing of App's render
-// reaches the phone.
+// No website dialog is left on the phone (the mobile-first pass, 2026-10-22):
+// Scan, Merge, Photos, OCR, Compare and the pages are pages of their own, Send
+// to sign and a locked file's password are sheets, and the shared code's
+// alert/prompt calls come here through lib/notice (Prompts.tsx). App.tsx
+// returns this tree in place of its own, so nothing of App's render reaches
+// the phone. Requests the shared code still makes through the website's store
+// flags (the ✏️ on a Sign here box, Siri's Scan…) are turned into pages here.
 
-const StampPicker = lazy(() => import('../components/Signature/StampPicker'))
-const SendForSignatureDialog = lazy(() => import('../components/Signature/SendForSignatureDialog'))
-const OcrModal = lazy(() => import('../components/Ocr/OcrModal'))
-const MergeDialog = lazy(() => import('../components/Convert/MergeDialog'))
-const ConvertDialog = lazy(() => import('../components/Convert/ConvertDialog'))
-const CompareDialog = lazy(() => import('../components/Compare/CompareDialog'))
-const ScanDialog = lazy(() => import('../components/Scan/ScanDialog'))
 const ShortcutRunner = lazy(() => import('../components/Shortcuts/ShortcutRunner'))
+const onShortcutScan = (pages: ScanPage[]) => openJob({ kind: 'scan', source: 'camera', pages })
 
 export default function NativeApp({ launching }: { launching: boolean }) {
   const t = useT()
@@ -61,9 +64,14 @@ export default function NativeApp({ launching }: { launching: boolean }) {
 
   const inDocument = !!doc || loading || hasTabs || !!lockedFile
   const top = inDocument ? topScreen(screens) : null
-  // The knowledge base over the tabs (opened from Tune with no document open).
-  const overTabs = !inDocument && isKnowledge(topScreen(screens))
+  // A page over the tabs: the knowledge base (from Tune) or a job's page (from
+  // the Desk), with no document open.
+  const tabTop = !inDocument ? topScreen(screens) : null
+  const overTabs = canStandOverTabs(tabTop)
 
+  usePhonePrompts()
+  useWebsiteRequests()
+  useJobHandOff()
   useDocumentChanges()
   useHistoryLayers(inDocument)
   useKeepAwake(!!doc)
@@ -74,7 +82,7 @@ export default function NativeApp({ launching }: { launching: boolean }) {
 
   // The clock and battery stay legible: light glyphs over the cobalt desk and
   // the moments, dark ones over paper.
-  const darkTop = inDocument ? top === 'signed' || top === 'smaller' : tab === 'desk' && !overTabs
+  const darkTop = inDocument ? isMoment(top) : tab === 'desk' && !overTabs
   useEffect(() => {
     void setStatusBarOverDarkChrome(darkTop)
   }, [darkTop])
@@ -82,7 +90,7 @@ export default function NativeApp({ launching }: { launching: boolean }) {
   return (
     <div className={`np${plainPaper ? ' np--plain' : ''}`} style={{ background: 'var(--np-paper)' }}>
       <Suspense fallback={null}>
-        <ShortcutRunner />
+        <ShortcutRunner onScan={onShortcutScan} />
       </Suspense>
 
       {inDocument ? (
@@ -94,11 +102,15 @@ export default function NativeApp({ launching }: { launching: boolean }) {
               {top === 'share' && <ShareScreen />}
               {top === 'signed' && <SignedMoment />}
               {top === 'smaller' && <SmallerMoment />}
+              {top === 'blacked' && <BlackedMoment />}
+              {top === 'sent' && <SentMoment />}
               {top === 'qr' && <QrScreen />}
-              {isKnowledge(top) && <KnowledgeScreen />}
+              {top === 'pages' && <PagesScreen />}
+              <JobPages top={top} />
             </PageLayer>
           )}
           {doc && sheet === 'more' && !top && <MoreSheet />}
+          {doc && sheet === 'send-sign' && !top && <SendSignSheet />}
           {(loading || (doc && !firstPaint)) && (
             <div className="absolute inset-0 z-[140] flex items-center justify-center text-[15px] text-[color:var(--np-muted)]" style={{ background: 'var(--np-grey-desk)' }}>
               {t('phone.opening')}
@@ -115,16 +127,39 @@ export default function NativeApp({ launching }: { launching: boolean }) {
           <TabBar />
           {overTabs && (
             <PageLayer swipeBack>
-              <KnowledgeScreen />
+              <JobPages top={tabTop} />
             </PageLayer>
           )}
         </>
       )}
 
       <Toast />
-      <SharedDialogs />
+      <LockedSheet />
+      <AskSheet />
+      {/* Kept in case anything still asks before leaving a document; nothing
+          on the phone does (leaving keeps the work, DocumentScreen). */}
+      <UnsavedChangesDialog />
     </div>
   )
+}
+
+/** The pages that can stand over the document or over the tabs. */
+function JobPages({ top }: { top: Screen | null }) {
+  return (
+    <>
+      {isKnowledge(top) && <KnowledgeScreen />}
+      {top === 'scan' && <ScanScreen />}
+      {top === 'merge' && <MergeScreen />}
+      {top === 'photos' && <PhotosScreen />}
+      {top === 'ocr' && <OcrScreen />}
+      {top === 'compare' && <CompareScreen />}
+    </>
+  )
+}
+
+/** The four moments: the cobalt desk, light status-bar glyphs, and no way back but their buttons. */
+function isMoment(screen: Screen | null): boolean {
+  return screen === 'signed' || screen === 'smaller' || screen === 'blacked' || screen === 'sent'
 }
 
 /**
@@ -136,7 +171,7 @@ export default function NativeApp({ launching }: { launching: boolean }) {
  */
 function PageLayer({ swipeBack, children }: { swipeBack: boolean; children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
-  useEdgeSwipeBack(ref, swipeBack, () => useNav.getState().pop())
+  useEdgeSwipeBack(ref, swipeBack, () => void goBack())
   usePagePullToType(ref, true)
   return (
     <div ref={ref} className="absolute inset-0 z-[150] flex flex-col">
@@ -145,9 +180,9 @@ function PageLayer({ swipeBack, children }: { swipeBack: boolean; children: Reac
   )
 }
 
-/** The pages whose back link is `pop()`: every page but the two moments. */
+/** The pages whose back link is `pop()`: every page but the moments. */
 function hasBackLink(screen: Screen): boolean {
-  return screen !== 'signed' && screen !== 'smaller'
+  return !isMoment(screen)
 }
 
 function TabBar() {
@@ -177,7 +212,7 @@ function TabBar() {
               if (on && it.id === 'desk') requestSearch()
               useNav.getState().setTab(it.id)
             }}
-            className="flex flex-col items-center gap-1.5 min-h-[48px]"
+            className="min-w-0 flex flex-col items-center gap-1.5 min-h-[48px]"
             style={{ color: on ? 'var(--np-cobalt-deep)' : 'var(--np-muted)' }}
           >
             <span className="relative w-[52px] h-[30px] rounded-xl flex items-center justify-center" style={{ background: on ? 'var(--np-cobalt)' : 'transparent' }}>
@@ -186,7 +221,7 @@ function TabBar() {
                 <span aria-hidden="true" className="absolute left-2.5 right-2.5 -bottom-1.5 h-1 rounded-[2px_4px_3px_2px]" style={{ background: 'var(--np-orange)', transform: 'rotate(-3deg)' }} />
               )}
             </span>
-            <span className="text-[11px]" style={{ fontWeight: on ? 700 : 600 }}>{it.label}</span>
+            <FitLabel size={11} className={on ? 'font-bold' : 'font-semibold'}>{it.label}</FitLabel>
           </button>
         )
       })}
@@ -216,62 +251,76 @@ function Toast() {
   )
 }
 
-/** The website's dialogs the phone still opens, plus the jobs' borrowed ones. */
-function SharedDialogs() {
-  const stampPickerOpen = useSignatureStore((s) => s.stampPickerOpen)
-  const sendForSignatureOpen = usePdfStore((s) => s.sendForSignatureOpen)
+/**
+ * The shared code (the viewer, the pages' own buttons, Siri) still asks for
+ * the website's dialogs through pdfStore and signatureStore flags. On the
+ * phone each becomes a page or a sheet, and the flag is put down again.
+ */
+function useWebsiteRequests() {
+  const pageNavOpen = usePdfStore((s) => s.pageNavOpen)
   const ocrOpen = usePdfStore((s) => s.ocrOpen)
   const mergeOpen = usePdfStore((s) => s.mergeOpen)
   const convertOpen = usePdfStore((s) => s.convertOpen)
   const compareOpen = usePdfStore((s) => s.compareOpen)
-  const sourceBytes = usePdfStore((s) => s.sourceBytes)
-  const fileName = usePdfStore((s) => s.fileName)
-  const dialog = useJobs((s) => s.dialog)
-  const pdf = usePdfStore.getState()
-  const closeJob = () => useJobs.getState().setDialog(null)
-  const currentFile = () =>
-    sourceBytes && fileName ? new File([sourceBytes.slice(0)], fileName, { type: 'application/pdf' }) : null
-  const openResult = (file: File) => {
-    void usePdfStore.getState().loadFile(file)
-  }
+  const sendForSignatureOpen = usePdfStore((s) => s.sendForSignatureOpen)
+  const padOpen = useSignatureStore((s) => s.padOpen)
+  const importOpen = useSignatureStore((s) => s.importOpen)
 
-  return (
-    <>
-      <PageNavigator />
-      <SignaturePad />
-      <SignatureImport />
-      <Suspense fallback={null}>
-        {stampPickerOpen && <StampPicker />}
-        {sendForSignatureOpen && <SendForSignatureDialog />}
-        {ocrOpen && sourceBytes && (
-          <OcrModal sourceBytes={sourceBytes} fileName={fileName ?? 'document.pdf'} onClose={() => pdf.setOcrOpen(false)} onOpen={openResult} />
-        )}
-        {mergeOpen && <MergeDialog initialFile={currentFile()} onClose={() => pdf.setMergeOpen(false)} />}
-        {convertOpen && <ConvertDialog initialMode="pdf-to-images" initialPdf={currentFile()} onClose={() => pdf.setConvertOpen(false)} />}
-        {compareOpen && sourceBytes && (
-          <CompareDialog firstBytes={sourceBytes} firstName={fileName ?? 'document.pdf'} onClose={() => pdf.setCompareOpen(false)} />
-        )}
+  useEffect(() => {
+    const pdf = usePdfStore.getState()
+    const nav = useNav.getState()
+    if (pageNavOpen) {
+      pdf.setPageNavOpen(false)
+      if (pdf.doc && topScreen(nav.screens) !== 'pages') nav.push('pages')
+    }
+    if (sendForSignatureOpen) {
+      // The ✏️ "Send" beside a Sign here box on the page.
+      pdf.setSendForSignatureOpen(false)
+      if (pdf.doc) nav.openSheet('send-sign')
+    }
+    const file = currentFile()
+    if (ocrOpen) {
+      pdf.setOcrOpen(false)
+      if (pdf.sourceBytes && file) openJob({ kind: 'ocr', bytes: pdf.sourceBytes.slice(0), name: file.name })
+    }
+    if (compareOpen) {
+      pdf.setCompareOpen(false)
+      if (pdf.sourceBytes && file) openJob({ kind: 'compare', bytes: pdf.sourceBytes.slice(0), name: file.name })
+    }
+    if (mergeOpen) {
+      pdf.setMergeOpen(false)
+      openJob({ kind: 'merge', initialFile: file })
+    }
+    if (convertOpen) {
+      pdf.setConvertOpen(false)
+      openJob({ kind: 'convert', mode: 'pdf-to-images', initialPdf: file })
+    }
+  }, [pageNavOpen, ocrOpen, mergeOpen, convertOpen, compareOpen, sendForSignatureOpen])
 
-        {dialog?.kind === 'scan' && <ScanDialog source={dialog.source} initialPages={dialog.pages} onClose={closeJob} />}
-        {dialog?.kind === 'merge' && <MergeDialog initialFile={dialog.initialFile ?? null} onClose={closeJob} />}
-        {dialog?.kind === 'convert' && <ConvertDialog initialMode={dialog.mode} initialPdf={dialog.initialPdf ?? null} onClose={closeJob} />}
-        {dialog?.kind === 'ocr' && (
-          <OcrModal
-            sourceBytes={dialog.bytes}
-            fileName={dialog.name}
-            onClose={closeJob}
-            onOpen={(file) => {
-              closeJob()
-              openResult(file)
-            }}
-          />
-        )}
-        {dialog?.kind === 'compare' && <CompareDialog firstBytes={dialog.bytes} firstName={dialog.name} onClose={closeJob} />}
-      </Suspense>
-      <UnsavedChangesDialog />
-      <LockedFilePrompt />
-    </>
-  )
+  // A tap on a Sign here box (startSigningField) asks for the website's pad:
+  // here it is the Sign page, which fills that box (SignScreen reads
+  // `signingFieldId`). The photo importer is the Sign page's own Photo tab.
+  useEffect(() => {
+    if (!padOpen && !importOpen) return
+    const sig = useSignatureStore.getState()
+    if (importOpen) sig.closeImport()
+    const nav = useNav.getState()
+    if (usePdfStore.getState().doc && topScreen(nav.screens) !== 'sign') nav.push('sign')
+    else if (!usePdfStore.getState().doc) sig.closePad()
+  }, [padOpen, importOpen])
+}
+
+/**
+ * A job page reads what it starts with from `useJobs.dialog`; once no job
+ * page is left on the stack (by any road: back, a swipe, Android's back, the
+ * result opening), that is put down. Done here rather than as each page
+ * unmounts, which development's double mount would trip over.
+ */
+function useJobHandOff() {
+  const anyJob = useNav((s) => s.screens.some(isJobPage))
+  useEffect(() => {
+    if (!anyJob) useJobs.getState().setDialog(null)
+  }, [anyJob])
 }
 
 /** Pages belong to the document they were opened on. */
@@ -305,8 +354,8 @@ function useHistoryLayers(inDocument: boolean) {
   const sheet = useNav((s) => s.sheet)
   const pushed = useRef(0)
   const ignore = useRef(0)
-  // With no document, only the knowledge base's pages stand over the tabs.
-  const wanted = inDocument ? 1 + screens.length + (sheet ? 1 : 0) : screens.filter(isKnowledge).length
+  // With no document, only the knowledge base's and the jobs' pages stand over the tabs.
+  const wanted = inDocument ? 1 + screens.length + (sheet ? 1 : 0) : screens.filter(canStandOverTabs).length
 
   useEffect(() => {
     if (wanted > pushed.current) {
@@ -331,7 +380,13 @@ function useHistoryLayers(inDocument: boolean) {
       pushed.current--
       const nav = useNav.getState()
       if (nav.sheet) nav.closeSheet()
-      else if (nav.screens.length) nav.pop()
+      else if (nav.screens.length) {
+        // A page that asks first (Scan) keeps its history entry.
+        if (!goBack()) {
+          history.pushState({ np: pushed.current + 1 }, '')
+          pushed.current++
+        }
+      }
       else if (usePdfStore.getState().doc || useTabStore.getState().tabs.length) {
         // Leaving asks first when there is unsaved work; if the answer is
         // "stay", the document's entry is pushed again by the effect above.

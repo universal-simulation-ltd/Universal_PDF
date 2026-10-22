@@ -6,6 +6,7 @@ import { scanWithCamera } from '../../lib/documentScanner'
 import { makeSearchablePdf } from '../../lib/ocr'
 import { openFiles } from '../../stores/tabStore'
 import { useT } from '../../i18n'
+import { notice } from '../../lib/notice'
 
 export type ScanSource = 'camera' | 'photo'
 
@@ -65,7 +66,12 @@ interface Cropping {
  * editor runs in the page, `scansToPdf` is pdf-lib, and "Make searchable" is
  * the same on-device Tesseract pass as the OCR tool.
  */
-export default function ScanDialog({ source, initialPages, onClose }: Props) {
+/**
+ * The scan in progress — the pages, the photo in the corner editor, the paper
+ * and the searchable switch — shared by the website's dialog and the phone's
+ * page (src/native/ScanScreen). `onMade` runs once the PDF is open.
+ */
+export function useScanSession(initialPages: ScanPage[] | undefined, onMade: () => void) {
   const t = useT()
   const [pages, setPages] = useState<Entry[]>(() => (initialPages ?? []).map(scannerEntry))
   // Photos picked but not yet cropped, and the one being cropped now.
@@ -76,7 +82,6 @@ export default function ScanDialog({ source, initialPages, onClose }: Props) {
   const [paper, setPaper] = useState<Paper>(() => paperForLocale(navigator.language))
   const [ocr, setOcr] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
   const pagesRef = useRef(pages)
   pagesRef.current = pages
 
@@ -92,7 +97,7 @@ export default function ScanDialog({ source, initialPages, onClose }: Props) {
       .then((canvas) => setPhoto({ key: nextId++, canvas, file }))
       .catch((err) => {
         console.error(err)
-        alert((err as Error).message)
+        notice((err as Error).message)
       })
       .finally(() => {
         setQueue(rest)
@@ -140,7 +145,7 @@ export default function ScanDialog({ source, initialPages, onClose }: Props) {
       })
     } catch (err) {
       console.error(err)
-      alert(t('tools.scan.failed', { message: (err as Error).message }))
+      notice(t('tools.scan.failed', { message: (err as Error).message }))
     } finally {
       setDecoding(false)
     }
@@ -177,14 +182,8 @@ export default function ScanDialog({ source, initialPages, onClose }: Props) {
       setPages((p) => [...p, ...more.map(scannerEntry)])
     } catch (err) {
       console.error(err)
-      alert(t('tools.scan.failed', { message: (err as Error).message }))
+      notice(t('tools.scan.failed', { message: (err as Error).message }))
     }
-  }
-
-  function close() {
-    if (working) return
-    if (pages.length > 0 && !confirm(t('tools.scan.discard_confirm'))) return
-    onClose()
   }
 
   async function create() {
@@ -211,13 +210,37 @@ export default function ScanDialog({ source, initialPages, onClose }: Props) {
       const file = new File([bytes as BlobPart], name, { type: 'application/pdf' })
       // A new tab when a document is already open, so a scan never replaces
       // (and never asks to discard) the one on screen.
-      if (await openFiles([file])) onClose()
+      if (await openFiles([file])) onMade()
     } catch (err) {
       console.error(err)
-      alert(t('tools.scan.failed', { message: (err as Error).message }))
+      notice(t('tools.scan.failed', { message: (err as Error).message }))
     } finally {
       setBusy(null)
     }
+  }
+
+  function addPhotos(files: File[]) {
+    if (files.length) setQueue((q) => [...q, ...files])
+  }
+
+  return {
+    pages, queue, photo, setPhoto, decoding, colour, setColour, paper, setPaper, ocr, setOcr, busy,
+    cropping, working, addPage, adjust, removePage, rotate, scanMore, create, addPhotos,
+  }
+}
+
+export default function ScanDialog({ source, initialPages, onClose }: Props) {
+  const t = useT()
+  const {
+    pages, queue, photo, setPhoto, decoding, colour, setColour, paper, setPaper, ocr, setOcr, busy,
+    cropping, working, addPage, adjust, removePage, rotate, scanMore, create, addPhotos,
+  } = useScanSession(initialPages, onClose)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  function close() {
+    if (working) return
+    if (pages.length > 0 && !confirm(t('tools.scan.discard_confirm'))) return
+    onClose()
   }
 
   return (
@@ -362,7 +385,7 @@ export default function ScanDialog({ source, initialPages, onClose }: Props) {
                     onChange={(e) => {
                       const files = Array.from(e.target.files ?? [])
                       e.target.value = ''
-                      if (files.length) setQueue((q) => [...q, ...files])
+                      addPhotos(files)
                     }}
                   />
                 </>

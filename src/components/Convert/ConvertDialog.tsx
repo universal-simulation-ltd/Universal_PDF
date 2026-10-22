@@ -7,6 +7,7 @@ import { useExitGuard } from '../../stores/exitGuard'
 import { saveBlob } from '@unisim/media/save'
 import { useT } from '../../i18n'
 import { formatSize } from '../Export/formatSize'
+import { notice } from '../../lib/notice'
 
 export type ConvertMode = 'pdf-to-images' | 'images-to-pdf'
 
@@ -63,7 +64,7 @@ export default function ConvertDialog({ initialMode, onClose, initialPdf }: Prop
       onClose()
     } catch (err) {
       console.error(err)
-      alert(t('tools.convert.failed', { message: (err as Error).message }))
+      notice(t('tools.convert.failed', { message: (err as Error).message }))
     } finally {
       setBusy(false)
       setProgress('')
@@ -93,7 +94,7 @@ export default function ConvertDialog({ initialMode, onClose, initialPdf }: Prop
       onClose()
     } catch (err) {
       console.error(err)
-      alert(t('tools.convert.failed', { message: (err as Error).message }))
+      notice(t('tools.convert.failed', { message: (err as Error).message }))
     } finally {
       setBusy(false)
     }

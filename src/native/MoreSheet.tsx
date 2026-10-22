@@ -6,14 +6,17 @@ import { useFormStore } from '../stores/formStore'
 import { getRecentOriginal } from '../lib/recents'
 import { formatSize } from '../components/Export/formatSize'
 import { Icon, PATHS } from './icons'
-import { Card, LinkRow, Sheet } from './parts'
+import { LinkRow, Sheet, Slip } from './parts'
 import { useNav } from './nav'
+import { currentFile, openJob } from './jobs'
 import { DocThumb } from './DeskScreen'
 
 // Board 6 · ⋯ What else: a sheet over the document in place of the website's
-// Actions menu. Four big jobs, then a short list. The tools the phone has no
-// page of its own for yet (searchable text, compare, merge, pictures) open the
-// website's dialog for them.
+// Actions menu. Four big jobs on coloured paper, as the Desk's carousel has
+// them, then the rest on a paper slip (round 4, James: "go ahead"). Every row
+// opens a page of the phone's own — none of the website's dialogs is left.
+
+const BIG_TILTS = ['-1.4deg', '1.1deg', '0.8deg', '-1deg']
 
 export default function MoreSheet() {
   const t = useT()
@@ -47,8 +50,14 @@ export default function MoreSheet() {
   const [newName, setNewName] = useState(() => (fileName ?? '').replace(/\.pdf$/i, ''))
   const renameId = useId()
   const nav = useNav.getState()
-  const pdf = usePdfStore.getState()
   const close = () => useNav.getState().closeSheet()
+
+  /** The open document, for a job that reads it (its bytes are copied, so the page can't spoil them). */
+  function withFile(run: (file: File, bytes: ArrayBuffer) => void) {
+    const file = currentFile()
+    const bytes = usePdfStore.getState().sourceBytes
+    if (file && bytes) run(file, bytes.slice(0))
+  }
 
   function arm(tool: 'sigfield' | 'redact', colour?: string) {
     const a = useAnnotationStore.getState()
@@ -72,13 +81,14 @@ export default function MoreSheet() {
     {
       label: t('phone.more_send_sign'), note: t('phone.more_send_sign_note'), tint: '#dcefd9', ink: '#2f6b3a', icon: PATHS.mail,
       run: () => {
-        close()
+        // The sheet changes in place: Send to sign's own, with "Sign here" in
+        // hand to put boxes down on the page above it.
         arm('sigfield')
-        pdf.setSendForSignatureOpen(true)
+        nav.openSheet('send-sign')
       },
     },
     {
-      label: t('phone.more_blackout'), note: t('phone.more_blackout_note'), tint: '#e4e2e8', ink: '#1b1d22', icon: PATHS.blackout,
+      label: t('phone.more_blackout'), note: t('phone.more_blackout_note'), tint: '#fde68a', ink: '#6b4f00', icon: PATHS.blackout,
       run: () => {
         arm('redact', '#000000')
         nav.openSheet('markup')
@@ -89,11 +99,11 @@ export default function MoreSheet() {
   const rows = [
     // Pages lives here, not in the bar (James, 2026-10-18: "fill mark up sign
     // share and pages in …").
-    { label: t('phone.job_pages'), icon: PATHS.pages, run: () => { close(); pdf.setPageNavOpen(true) } },
-    { label: t('phone.more_ocr'), icon: PATHS.search, run: () => { close(); pdf.setOcrOpen(true) } },
-    { label: t('phone.more_compare'), icon: PATHS.compare, run: () => { close(); pdf.setCompareOpen(true) } },
-    { label: t('phone.more_merge'), icon: PATHS.merge, run: () => { close(); pdf.setMergeOpen(true) } },
-    { label: t('phone.more_images'), icon: PATHS.images, run: () => { close(); pdf.setConvertOpen(true) } },
+    { label: t('phone.job_pages'), icon: PATHS.pages, run: () => nav.push('pages') },
+    { label: t('phone.more_ocr'), icon: PATHS.search, run: () => withFile((f, b) => openJob({ kind: 'ocr', bytes: b, name: f.name })) },
+    { label: t('phone.more_compare'), icon: PATHS.compare, run: () => withFile((f, b) => openJob({ kind: 'compare', bytes: b, name: f.name })) },
+    { label: t('phone.more_merge'), icon: PATHS.merge, run: () => openJob({ kind: 'merge', initialFile: currentFile() }) },
+    { label: t('phone.more_images'), icon: PATHS.images, run: () => openJob({ kind: 'convert', mode: 'pdf-to-images', initialPdf: currentFile() }) },
     { label: t('phone.more_rename'), icon: PATHS.rename, run: () => setRenaming(true) },
     { label: t('phone.more_howto'), icon: PATHS.help, run: () => nav.push('kb') },
     // "Put it away" went (James, 2026-10-22): the back arrow does the same.
@@ -130,21 +140,23 @@ export default function MoreSheet() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2.5">
-        {big.map((b) => (
+      <div className="grid grid-cols-2 gap-3 px-0.5 py-1.5">
+        {big.map((b, i) => (
           <button
             key={b.label}
             type="button"
             onClick={b.run}
-            className="rounded-[18px] p-3.5 min-h-[104px] flex flex-col justify-between text-left gap-2"
-            style={{ background: 'var(--np-slip)', border: '1px solid var(--np-line)' }}
+            className="np-tilt relative overflow-hidden rounded-md p-3.5 min-h-[108px] flex flex-col justify-between text-left gap-2"
+            style={{ background: b.tint, transform: `rotate(${BIG_TILTS[i % 4]})`, boxShadow: '0 6px 14px rgba(60,45,20,0.18), 0 1px 2px rgba(60,45,20,0.16)' }}
           >
-            <span className="w-[38px] h-[38px] rounded-xl flex items-center justify-center" style={{ background: b.tint }}>
+            <span aria-hidden="true" className="absolute top-0 right-0 w-[16px] h-[16px]" style={{ background: 'rgba(0,0,0,0.08)', clipPath: 'polygon(0 0, 100% 100%, 0 100%)' }} />
+            <span aria-hidden="true" className="absolute top-0 right-0 w-[16px] h-[16px]" style={{ background: 'var(--np-paper)', clipPath: 'polygon(0 0, 100% 0, 100% 100%)' }} />
+            <span className="w-[38px] h-[38px] rounded-xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.7)' }}>
               <Icon d={b.icon} size={22} stroke={b.ink} />
             </span>
             <span className="flex flex-col gap-0.5">
               <span className="text-[15px] font-bold">{b.label}</span>
-              <span className="text-[12px] text-[color:var(--np-muted)]">{b.note}</span>
+              <span className="text-[12px] text-[#45474e]">{b.note}</span>
             </span>
           </button>
         ))}
@@ -206,11 +218,11 @@ export default function MoreSheet() {
           </div>
         </form>
       ) : (
-        <Card>
+        <Slip tilt="0.5deg">
           {rows.map((r, i) => (
             <LinkRow key={r.label} label={r.label} icon={r.icon} onClick={r.run} first={i === 0} danger={'danger' in r && r.danger} />
           ))}
-        </Card>
+        </Slip>
       )}
       <div className="h-1" />
     </Sheet>

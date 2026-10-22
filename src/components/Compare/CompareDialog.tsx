@@ -20,9 +20,10 @@ import { useT } from '../../i18n'
 // The first document is the one open in the app, as it was last loaded or
 // saved; the second is picked here.
 
-type Mode = 'side' | 'overlay' | 'text'
+export type CompareMode = 'side' | 'overlay' | 'text'
+type Mode = CompareMode
 
-interface Side {
+export interface Side {
   name: string
   doc: PDFDocumentProxy
 }
@@ -82,15 +83,12 @@ async function documentText(doc: PDFDocumentProxy): Promise<string[]> {
   return pages
 }
 
-export default function CompareDialog({
-  firstBytes,
-  firstName,
-  onClose,
-}: {
-  firstBytes: ArrayBuffer
-  firstName: string
-  onClose: () => void
-}) {
+/**
+ * The pair of documents and the page summary, shared by the website's dialog
+ * and the phone's page (src/native/CompareScreen). The open document is
+ * opened through the shared worker as it starts; `pick` adds the second.
+ */
+export function useCompare(firstBytes: ArrayBuffer, firstName: string) {
   const t = useT()
   const [first, setFirst] = useState<Side | null>(null)
   const [second, setSecond] = useState<Side | null>(null)
@@ -100,7 +98,6 @@ export default function CompareDialog({
   const [pageNo, setPageNo] = useState(1)
   // Per page (1-based): the share of pixels that changed, filled in by the scan.
   const [scan, setScan] = useState<{ ratios: Map<number, number>; done: boolean }>({ ratios: new Map(), done: false })
-  const inputRef = useRef<HTMLInputElement>(null)
   const docsRef = useRef<PDFDocumentProxy[]>([])
 
   // The open document, through the shared worker.
@@ -126,15 +123,6 @@ export default function CompareDialog({
     },
     [],
   )
-
-  // Escape closes.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
 
   const pick = useCallback(
     async (file: File) => {
@@ -191,6 +179,31 @@ export default function CompareDialog({
     () => [...scan.ratios.entries()].filter(([, r]) => r > 0).map(([p]) => p),
     [scan],
   )
+
+  return { first, second, error, loading, mode, setMode, pageNo, setPageNo, scan, pick, total, changedPages }
+}
+
+export default function CompareDialog({
+  firstBytes,
+  firstName,
+  onClose,
+}: {
+  firstBytes: ArrayBuffer
+  firstName: string
+  onClose: () => void
+}) {
+  const t = useT()
+  const { first, second, error, loading, mode, setMode, pageNo, setPageNo, scan, pick, total, changedPages } = useCompare(firstBytes, firstName)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Escape closes.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
 
   return createPortal(
     <div
@@ -333,7 +346,7 @@ export default function CompareDialog({
   )
 }
 
-function NamesBar({ first, second, onChange }: { first: string; second: string; onChange: () => void }) {
+export function NamesBar({ first, second, onChange }: { first: string; second: string; onChange: () => void }) {
   const t = useT()
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 pt-3 text-xs text-slate-600">
@@ -353,7 +366,7 @@ function NamesBar({ first, second, onChange }: { first: string; second: string; 
 }
 
 /** The pages as pictures: side by side, or one overlay. */
-function VisualView({ mode, first, second, pageNo }: { mode: Mode; first: Side; second: Side; pageNo: number }) {
+export function VisualView({ mode, first, second, pageNo }: { mode: Mode; first: Side; second: Side; pageNo: number }) {
   const t = useT()
   const boxRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
@@ -452,7 +465,7 @@ function CanvasHost({ canvas }: { canvas: HTMLCanvasElement }) {
 }
 
 /** The word-by-word diff of the two documents' text. */
-function TextView({ first, second, onPage }: { first: PDFDocumentProxy; second: PDFDocumentProxy; onPage: (page: number) => void }) {
+export function TextView({ first, second, onPage }: { first: PDFDocumentProxy; second: PDFDocumentProxy; onPage: (page: number) => void }) {
   const t = useT()
   const [state, setState] = useState<
     | { kind: 'loading' }

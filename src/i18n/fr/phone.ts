@@ -240,7 +240,7 @@ const phone: Messages['phone'] = {
   'reset': 'Rétablir les valeurs par défaut',
   'reset_done': 'Tout est revenu comme au départ.',
   'tune_card': 'Gratuit, open source, sans publicité. Vos documents restent sur ce téléphone et ne passent jamais par nous.',
-  'credit': 'James Markey MBE et l’équipe UNI·SIM', // handwritten credit; keep the names as they are
+  'credit': '{james} et {team}', // handwritten credit; {james} is a link reading "James Markey MBE" (keep it), {team} one reading credit_team
 
   // The signature drawer (a tab). The heading is split so "drawer" can carry the highlighter.
   'sigs_lead': 'Votre',
@@ -260,6 +260,60 @@ const phone: Messages['phone'] = {
   'kb_clear': 'Effacer la recherche',
   'kb_no_match': 'Aucun guide ne correspond.',
   'kb_all': 'Tous les guides',
+  // Added 2026-10-22: the job pages, the Blacked out and Sent moments, Send to sign's sheet.
+  'credit_team': 'l’équipe UNI·SIM', // a link inside `credit` (to unisim.co.uk)
+  'tune_how': 'son comportement…', // handwritten word above the first slip in Tune
+  'put_in_box': 'La mettre dans la case',
+  'ocr_lead': 'Rendre le texte', // heading, split so the second part carries the highlighter
+  'ocr_hl': 'recherchable',
+  'ocr_written_in': 'écrit en…', // handwritten label above the language choice
+  'ocr_opened': 'La copie recherchable est ouverte.',
+  'merge_lead': 'Les',
+  'merge_hl': 'réunir',
+  'merge_note': 'Choisissez les PDF, mettez-les dans l’ordre, et ils n’en font plus qu’un. Rien ne quitte ce téléphone.',
+  'merge_order': 'Dans cet ordre',
+  'merge_add': 'Ajouter un PDF',
+  'merge_need_two': 'deux ou plus, dans l’ordre voulu',
+  'photos_lead': 'Des photos en',
+  'photos_hl': 'PDF',
+  'pictures_lead': 'Les pages en',
+  'pictures_hl': 'images',
+  'pictures_save': 'Enregistrer les images',
+  'photos_add_more': 'Ajouter des photos',
+  'compare_lead': 'Trouvez la',
+  'compare_hl': 'différence',
+  'compare_first': 'la première version',
+  'scan_lead': 'Numériser le',
+  'scan_hl': 'papier',
+  'scan_pages': 'Les pages',
+  'crop_lead': 'Trouvez les',
+  'crop_hl': 'coins',
+  'scan_keep': 'Continuer',
+  'scan_discard': 'Les jeter',
+  'scan_paper': 'format du papier ?', // handwritten label above the A4 / Letter choice
+  'pages_lead': 'Vos',
+  'pages_hl': 'pages',
+  'pages_note': 'Touchez une page pour y aller. Déplacez-la avec les flèches, ou retirez-la.',
+  'pages_pending': 'Déplacées, pas encore enregistrées : validez l’ordre quand il vous convient.',
+  'pages_put_back': 'Remettre', // undoes the moves not yet applied on the Pages page
+  'pages_reordered': 'Les pages sont dans leur nouvel ordre. Annuler les remet.',
+  'page_removed': 'La page {page} est retirée. Annuler la remet.',
+  'page_remove_yes': 'La retirer',
+  'blacked_title': 'Caviardé.',
+  'blacked_note': 'parti pour de bon une fois envoyé', // handwritten, under "Blacked out."
+  'blacked_count_one': '{count} passage caviardé',
+  'blacked_count_other': '{count} passages caviardés',
+  'stamp_blacked': 'CAVIARDÉ', // a rubber stamp on the Blacked out moment
+  'sent_title': 'Envoyé.',
+  'sent_note': 'on peut le signer dans n’importe quelle appli PDF', // handwritten, under "Sent."
+  'stamp_sent': 'À SIGNER', // a rubber stamp on the Sent moment
+  'sign_here_box': 'SIGNER ICI', // the label inside the empty signature box drawn on the Sent moment
+  'sendsign_title': 'Envoyer pour signature',
+  'sendsign_box_tool': 'Case « Signer ici »',
+  'sendsign_boxes_one': '{count} case « Signer ici »',
+  'sendsign_boxes_other': '{count} cases « Signer ici »',
+  'sendsign_no_box': 'Pas encore de case. Touchez la page là où il faut signer, ou envoyez-le tel quel : on peut signer n’importe où.', // handwritten; sharing works without a box
+  'sendsign_share': 'Partager pour signature…',
 }
 
 export default phone

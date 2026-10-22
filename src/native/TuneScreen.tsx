@@ -8,13 +8,19 @@ import { ABOUT_APP } from '../lib/aboutApp'
 import { disableSignatureLock, enableSignatureLock } from '../lib/signatureLock'
 import { useVaultStore, vaultAvailability, type Biometry } from '../lib/signatureVault'
 import { Icon, PATHS } from './icons'
-import { Card, Hl, LinkRow, Sheet, SwitchRow } from './parts'
+import { Hl, LinkRow, Sheet, Slip, SwitchRow } from './parts'
 import { usePhonePrefs } from './prefs'
 import { useNav } from './nav'
 
-// Board 8 · Tune this app, a tab: the switches, the rows, Reset to defaults,
-// and a white slip saying what the app is, signed in handwriting. The (?) on
-// the slip opens board 8b, "All free, nothing hidden".
+// Board 8 · Tune this app, a tab: the switches and the rows on paper slips
+// (round 4, James: "go ahead" — Tune and What else as paper slips), Reset to
+// defaults, and a white slip saying what the app is, signed in handwriting:
+// "James Markey MBE" and "the UNI·SIM team" each a link to its own site
+// (James, 2026-10-20; store-listings §8 — the app's only pointer outward). The
+// (?) on the slip opens board 8b, "All free, nothing hidden".
+
+// Ink-coloured, underlined in pencil: a link you can see is one, still in the hand.
+const CREDIT_LINK = 'underline decoration-[1.5px] underline-offset-[3px] decoration-[color:var(--np-orange)]'
 
 const PRIVACY_URL = ABOUT_APP.proof ?? 'https://github.com/universal-simulation-ltd/Universal_PDF/blob/main/PRIVACY.md'
 
@@ -76,7 +82,7 @@ export default function TuneScreen() {
           <Hl>{t('phone.tune_hl')}</Hl> {t('phone.tune_rest')}
         </h1>
 
-        <Card>
+        <Slip label={t('phone.tune_how')} tilt="-0.6deg">
           <SwitchRow
             first
             label={t('phone.scroll_vertical')}
@@ -105,9 +111,9 @@ export default function TuneScreen() {
               onChange={(v) => void toggleVault(v)}
             />
           )}
-        </Card>
+        </Slip>
 
-        <Card>
+        <Slip tilt="0.5deg">
           <label htmlFor={languageId} className="relative w-full flex items-center gap-3 min-h-[52px] px-3.5">
             <span className="flex-1 text-[16px]">{t('phone.language')}</span>
             <span className="text-[15px] text-[color:var(--np-muted)]">{LANGUAGE_LABELS[language as Language]}</span>
@@ -126,7 +132,7 @@ export default function TuneScreen() {
           <LinkRow label={t('phone.howto')} onClick={() => useNav.getState().push('kb')} />
           <LinkRow label={t('phone.privacy')} onClick={() => window.open(PRIVACY_URL, '_blank', 'noopener')} />
           <LinkRow label={t('phone.about')} onClick={() => setAboutOpen(true)} />
-        </Card>
+        </Slip>
 
         <button
           type="button"
@@ -134,8 +140,8 @@ export default function TuneScreen() {
             resetAll()
             useNav.getState().say(t('phone.reset_done'))
           }}
-          className="min-h-[50px] rounded-2xl text-[16px] text-[#b42318]"
-          style={{ background: 'var(--np-slip)', border: '1px solid var(--np-line)' }}
+          className="np-tilt min-h-[50px] rounded-[3px] text-[16px] text-[#b42318] bg-white"
+          style={{ transform: 'rotate(-0.4deg)', boxShadow: '0 6px 14px rgba(60,45,20,0.14)' }}
         >
           {t('phone.reset')}
         </button>
@@ -156,7 +162,12 @@ export default function TuneScreen() {
               ?
             </button>
           </div>
-          <p className="np-hand m-0 text-[22px] leading-tight text-[color:var(--np-cobalt-deep)]">{t('phone.credit')}</p>
+          <p className="np-hand m-0 text-[22px] leading-tight text-[color:var(--np-cobalt-deep)]">
+            {t.rich('phone.credit', {
+              james: <a href="https://jamesmarkey.co.uk" target="_blank" rel="noreferrer" className={CREDIT_LINK}>James Markey MBE</a>,
+              team: <a href="https://www.unisim.co.uk" target="_blank" rel="noreferrer" className={CREDIT_LINK}>{t('phone.credit_team')}</a>,
+            })}
+          </p>
           <p className="m-0 text-[12px] text-[color:var(--np-muted)] tabular-nums">v{__APP_VERSION__}</p>
         </div>
       </div>
@@ -188,7 +199,7 @@ function FreeSheet({ onClose }: { onClose: () => void }) {
           <Icon d={PATHS.close} size={20} />
         </button>
       </div>
-      <Card>
+      <Slip tilt="-0.4deg">
         {FREE.map((k, i) => (
           <div key={k} className="flex items-center gap-3.5 min-h-[44px] px-3.5" style={{ borderTop: i ? '1px solid var(--np-rule)' : 0 }}>
             <Icon d={PATHS.tick} size={18} width={3} stroke="var(--np-cobalt)" />
@@ -201,7 +212,7 @@ function FreeSheet({ onClose }: { onClose: () => void }) {
             <span className="text-[15px]">{t(k)}</span>
           </div>
         ))}
-      </Card>
+      </Slip>
       <div className="h-2" />
     </Sheet>
   )

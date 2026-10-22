@@ -5,6 +5,7 @@ import { usePdfStore } from '../../stores/pdfStore'
 import { useExitGuard } from '../../stores/exitGuard'
 import { useT } from '../../i18n'
 import { formatSize } from '../Export/formatSize'
+import { notice } from '../../lib/notice'
 
 interface Props {
   onClose: () => void
@@ -76,7 +77,7 @@ export default function MergeDialog({ onClose, initialFile }: Props) {
       onClose()
     } catch (err) {
       console.error(err)
-      alert(t('tools.merge.failed', { message: (err as Error).message }))
+      notice(t('tools.merge.failed', { message: (err as Error).message }))
     } finally {
       setBusy(false)
     }
@@ -106,7 +107,7 @@ export default function MergeDialog({ onClose, initialFile }: Props) {
       })
     } catch (err) {
       console.error(err)
-      alert(t('tools.merge.failed', { message: (err as Error).message }))
+      notice(t('tools.merge.failed', { message: (err as Error).message }))
     } finally {
       setBusy(false)
     }

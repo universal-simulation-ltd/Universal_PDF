@@ -6,6 +6,7 @@ import { readNativeFile } from '../../lib/nativeOpen'
 import type { ScanPage } from '../../lib/scan'
 import { useShortcutStore } from '../../stores/shortcutStore'
 import { openFiles } from '../../stores/tabStore'
+import { notice } from '../../lib/notice'
 
 const ScanDialog = lazy(() => import('../Scan/ScanDialog'))
 
@@ -21,8 +22,16 @@ const ScanDialog = lazy(() => import('../Scan/ScanDialog'))
  *
  * Renders nothing except the Scan dialog while a scan is being finished.
  */
-export default function ShortcutRunner() {
+export default function ShortcutRunner({ onScan }: {
+  /**
+   * Where the scanned pages go. The phone screens open their own Scan page
+   * (src/native/ScanScreen); left out, the website's Scan dialog.
+   */
+  onScan?: (pages: ScanPage[]) => void
+} = {}) {
   const t = useT()
+  const onScanRef = useRef(onScan)
+  onScanRef.current = onScan
   const ask = useShortcutStore((s) => s.ask)
   const [scanPages, setScanPages] = useState<ScanPage[] | null>(null)
   const scanning = useRef(false)
@@ -35,10 +44,12 @@ export default function ShortcutRunner() {
         const jpegs = await scanWithCamera()
         if (!jpegs) return
         const { pageFromJpeg } = await import('../../lib/scan')
-        setScanPages(await Promise.all(jpegs.map(pageFromJpeg)))
+        const pages = await Promise.all(jpegs.map(pageFromJpeg))
+        if (onScanRef.current) onScanRef.current(pages)
+        else setScanPages(pages)
       } catch (err) {
         console.error(err)
-        alert(t('app.landing_scan_failed', { message: (err as Error).message }))
+        notice(t('app.landing_scan_failed', { message: (err as Error).message }))
       } finally {
         scanning.current = false
       }

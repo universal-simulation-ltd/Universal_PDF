@@ -232,3 +232,43 @@
   appearance: none;
   display: none;
 }
+
+/* The website's own parts still drawn inside a phone page — the Scan page's
+   corner editor, Compare's pages and words — in the paper-and-cobalt look:
+   the orange action becomes the cobalt one, the slate chips paper, and every
+   button a thumb's height. Scoped, so the website never sees it. */
+.np-borrowed button,
+.np-compare button {
+  min-height: 44px;
+  font-size: 15px;
+}
+.np-borrowed .bg-orange-700,
+.np-compare .bg-orange-700 {
+  background-color: var(--np-cobalt) !important;
+  border-radius: 14px;
+  font-weight: 700;
+}
+.np-borrowed .bg-slate-100,
+.np-compare .bg-slate-100 {
+  background-color: #e8e3d8 !important;
+}
+.np-borrowed .rounded-md.bg-white,
+.np-borrowed [aria-pressed='true'] {
+  color: var(--np-ink) !important;
+  font-weight: 700;
+}
+.np-borrowed .text-slate-500,
+.np-compare .text-slate-500 {
+  color: var(--np-muted) !important;
+  font-size: 14px;
+}
+.np-borrowed .text-xs {
+  font-size: 14px;
+}
+.np-compare .shadow,
+.np-compare .shadow-sm {
+  box-shadow: 0 8px 18px rgba(60, 45, 20, 0.18) !important;
+}
+.np-compare .rounded-lg.bg-white {
+  border-radius: 3px;
+}

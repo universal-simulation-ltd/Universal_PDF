@@ -3,6 +3,7 @@ import { usePdfStore } from '../../stores/pdfStore'
 import { useT } from '../../i18n'
 import { scrollToPage } from '../../lib/links'
 import { usePageThumbnails } from '../../hooks/usePageThumbnails'
+import { notice } from '../../lib/notice'
 
 // Thumbnails — when they are drawn, how big, and how many are kept — live in
 // `usePageThumbnails`. ⚠️ This component is ALWAYS mounted (App.tsx), so
@@ -66,7 +67,7 @@ export default function PageNavigator() {
       await deletePage(i)
     } catch (err) {
       console.error(err)
-      alert(t('viewer.nav.delete_failed'))
+      notice(t('viewer.nav.delete_failed'))
     } finally {
       setBusy(false)
     }
@@ -94,7 +95,7 @@ export default function PageNavigator() {
       setOrder(null)
     } catch (err) {
       console.error(err)
-      alert(t('viewer.nav.reorder_failed'))
+      notice(t('viewer.nav.reorder_failed'))
     } finally {
       setBusy(false)
     }

@@ -4,16 +4,22 @@ import { create } from 'zustand'
 // while no document is open; with one open, the document fills the screen and
 // pages (Sign, Share, the Signed and Smaller moments) stack on top of it, with
 // at most one bottom sheet (Mark up, What else, All free) over the lot.
-// The knowledge base ('kb', and 'kb-article' over it) is the one page that can
-// also sit over the tabs, since Tune opens it with no document open.
+// The knowledge base ('kb', and 'kb-article' over it) and the job pages (Scan,
+// Merge, Photos, OCR, Compare) can also sit over the tabs, since Tune and the
+// Desk open them with no document open.
 //
 // ⚠️ Every layer is also a history entry, so Android's back gesture and the
 // browser's Back close the top one: see `useHistoryLayers` in NativeApp.tsx.
 // Code here only changes the state; it never touches `history` itself.
 
 export type Tab = 'desk' | 'signatures' | 'tune'
-export type Screen = 'sign' | 'share' | 'signed' | 'smaller' | 'qr' | 'kb' | 'kb-article'
-export type Sheet = 'markup' | 'more' | 'free'
+export type Screen =
+  | 'sign' | 'share' | 'signed' | 'smaller' | 'blacked' | 'sent' | 'qr' | 'pages'
+  | 'kb' | 'kb-article'
+  // The jobs that make a new PDF (or read two), pages of their own: they open
+  // from the Desk with no document as well as from What else.
+  | 'scan' | 'merge' | 'photos' | 'ocr' | 'compare'
+export type Sheet = 'markup' | 'more' | 'free' | 'send-sign'
 
 /** What the Smaller moment shows: the sizes before and after, and the file. */
 export interface SmallerResult {
@@ -37,6 +43,13 @@ interface NavState {
   awaitingSignature: boolean
   /** The article the 'kb-article' page shows. */
   kbArticle: string | null
+  /**
+   * A page that wants a word before it goes (Scan, with pages on it): asked by
+   * every way back — the back link, a swipe from the edge, Android's back.
+   * Returns false to stay.
+   */
+  backGuard: (() => boolean) | null
+  setBackGuard: (fn: (() => boolean) | null) => void
   setTab: (tab: Tab) => void
   push: (screen: Screen) => void
   /** Back one page (the history entry follows on its own). */
@@ -55,7 +68,7 @@ interface NavState {
   setAwaitingSignature: (v: boolean) => void
   /** Open an article over the knowledge base's list, or turn to another in place. */
   readArticle: (id: string) => void
-  /** Take the knowledge base's pages off the stack (a document arrived under them). */
+  /** Take the pages that can stand over the tabs off the stack (a document arrived under them). */
   dropKnowledge: () => void
 }
 
@@ -69,6 +82,8 @@ export const useNav = create<NavState>((set) => ({
   toast: null,
   awaitingSignature: false,
   kbArticle: null,
+  backGuard: null,
+  setBackGuard: (backGuard) => set({ backGuard }),
   setTab: (tab) => set({ tab }),
   push: (screen) => set((s) => ({ screens: [...s.screens, screen], sheet: null, toast: null })),
   pop: () => set((s) => ({ screens: s.screens.slice(0, -1) })),
@@ -84,15 +99,33 @@ export const useNav = create<NavState>((set) => ({
   setAwaitingSignature: (awaitingSignature) => set({ awaitingSignature }),
   readArticle: (id) =>
     set((s) => (topScreen(s.screens) === 'kb-article' ? { kbArticle: id } : { screens: [...s.screens, 'kb-article'], kbArticle: id, sheet: null, toast: null })),
-  dropKnowledge: () => set((s) => ({ screens: s.screens.filter((x) => !isKnowledge(x)) })),
+  dropKnowledge: () => set((s) => ({ screens: s.screens.filter((x) => !overTabs(x)) })),
 }))
+
+/** Back one page, unless the page on top wants to stay (see `backGuard`). True if it went. */
+export function goBack(): boolean {
+  const { backGuard, pop } = useNav.getState()
+  if (backGuard && !backGuard()) return false
+  pop()
+  return true
+}
 
 /** The page on top, or null for the document itself. */
 export function topScreen(screens: Screen[]): Screen | null {
   return screens.length ? screens[screens.length - 1] : null
 }
 
-/** The knowledge base's pages, the only ones that may sit over the tabs. */
+/** The knowledge base's pages. */
 export function isKnowledge(screen: Screen | null): boolean {
   return screen === 'kb' || screen === 'kb-article'
+}
+
+/** The job pages that make a new PDF from files picked on them. */
+export function isJobPage(screen: Screen | null): boolean {
+  return screen === 'scan' || screen === 'merge' || screen === 'photos' || screen === 'ocr' || screen === 'compare'
+}
+
+/** The pages that may also stand over the tabs, with no document open. */
+export function overTabs(screen: Screen | null): boolean {
+  return isKnowledge(screen) || isJobPage(screen)
 }

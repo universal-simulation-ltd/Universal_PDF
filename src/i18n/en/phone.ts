@@ -245,7 +245,7 @@ export default {
   'reset': 'Reset to defaults',
   'reset_done': 'Back to how it came.',
   'tune_card': 'Free, open source, no adverts. Your documents stay on this phone and never pass through us.',
-  'credit': 'James Markey MBE & the UNI·SIM team', // handwritten credit; keep the names as they are
+  'credit': '{james} & {team}', // handwritten credit; {james} is a link reading "James Markey MBE" (keep it), {team} one reading credit_team
 
   // The signature drawer (a tab). The heading is split so "drawer" can carry the highlighter.
   'sigs_lead': 'Your',
@@ -265,4 +265,58 @@ export default {
   'kb_clear': 'Clear the search',
   'kb_no_match': 'No guide matches that.',
   'kb_all': 'All guides',
+  // Added 2026-10-22: the job pages, the Blacked out and Sent moments, Send to sign's sheet.
+  'credit_team': 'the UNI·SIM team', // a link inside `credit` (to unisim.co.uk)
+  'tune_how': 'how it behaves…', // handwritten word above the first slip in Tune
+  'put_in_box': 'Put it in the box',
+  'ocr_lead': 'Make the text', // heading, split so the second part carries the highlighter
+  'ocr_hl': 'searchable',
+  'ocr_written_in': 'written in…', // handwritten label above the language choice
+  'ocr_opened': 'The searchable copy is open.',
+  'merge_lead': 'Put them',
+  'merge_hl': 'together',
+  'merge_note': 'Pick the PDFs, put them in order, and they become one. Nothing leaves this phone.',
+  'merge_order': 'In this order',
+  'merge_add': 'Add a PDF',
+  'merge_need_two': 'two or more, in the order they go',
+  'photos_lead': 'Photos into a',
+  'photos_hl': 'PDF',
+  'pictures_lead': 'Pages into',
+  'pictures_hl': 'pictures',
+  'pictures_save': 'Save the pictures',
+  'photos_add_more': 'Add more photos',
+  'compare_lead': 'Spot the',
+  'compare_hl': 'difference',
+  'compare_first': 'the first version',
+  'scan_lead': 'Scan the',
+  'scan_hl': 'paper',
+  'scan_pages': 'The pages',
+  'crop_lead': 'Find the',
+  'crop_hl': 'corners',
+  'scan_keep': 'Keep scanning',
+  'scan_discard': 'Throw them away',
+  'scan_paper': 'paper size?', // handwritten label above the A4 / Letter choice
+  'pages_lead': 'Your',
+  'pages_hl': 'pages',
+  'pages_note': 'Tap a page to go to it. Move it with the arrows, or take it out.',
+  'pages_pending': 'Moved, not saved yet: put them in this order when you’re happy.',
+  'pages_put_back': 'Put them back', // undoes the moves not yet applied on the Pages page
+  'pages_reordered': 'The pages are in their new order. Undo puts them back.',
+  'page_removed': 'Page {page} is out. Undo puts it back.',
+  'page_remove_yes': 'Take it out',
+  'blacked_title': 'Blacked out.',
+  'blacked_note': 'gone for good once it’s sent', // handwritten, under "Blacked out."
+  'blacked_count_one': '{count} black-out on the pages',
+  'blacked_count_other': '{count} black-outs on the pages',
+  'stamp_blacked': 'REDACTED', // a rubber stamp on the Blacked out moment
+  'sent_title': 'Sent.',
+  'sent_note': 'they can sign it in any PDF app', // handwritten, under "Sent."
+  'stamp_sent': 'SENT TO SIGN', // a rubber stamp on the Sent moment
+  'sign_here_box': 'SIGN HERE', // the label inside the empty signature box drawn on the Sent moment
+  'sendsign_title': 'Send it to sign',
+  'sendsign_box_tool': 'Sign here box',
+  'sendsign_boxes_one': '{count} “Sign here” box on it',
+  'sendsign_boxes_other': '{count} “Sign here” boxes on it',
+  'sendsign_no_box': 'No box yet. Tap the page where they should sign, or send it as it is: they can sign anywhere on it.', // handwritten; sharing works without a box
+  'sendsign_share': 'Share for signing…',
 }

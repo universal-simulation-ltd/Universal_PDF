@@ -240,7 +240,7 @@ const phone: Messages['phone'] = {
   'reset': 'Ripristina predefiniti',
   'reset_done': 'Tutto come all’inizio.',
   'tune_card': 'Gratuita, open source, niente pubblicità. I tuoi documenti restano su questo telefono e non passano mai da noi.',
-  'credit': 'James Markey MBE e il team UNI·SIM', // handwritten credit; keep the names as they are
+  'credit': '{james} e {team}', // handwritten credit; {james} is a link reading "James Markey MBE" (keep it), {team} one reading credit_team
 
   // The signature drawer (a tab). The heading is split so "drawer" can carry the highlighter.
   'sigs_lead': 'Il tuo',
@@ -260,6 +260,60 @@ const phone: Messages['phone'] = {
   'kb_clear': 'Cancella la ricerca',
   'kb_no_match': 'Nessuna guida corrisponde.',
   'kb_all': 'Tutte le guide',
+  // Added 2026-10-22: the job pages, the Blacked out and Sent moments, Send to sign's sheet.
+  'credit_team': 'il team UNI·SIM', // a link inside `credit` (to unisim.co.uk)
+  'tune_how': 'come si comporta…', // handwritten word above the first slip in Tune
+  'put_in_box': 'Mettila nel riquadro',
+  'ocr_lead': 'Rendi il testo', // heading, split so the second part carries the highlighter
+  'ocr_hl': 'ricercabile',
+  'ocr_written_in': 'scritto in…', // handwritten label above the language choice
+  'ocr_opened': 'La copia ricercabile è aperta.',
+  'merge_lead': 'Mettili',
+  'merge_hl': 'insieme',
+  'merge_note': 'Scegli i PDF, mettili in ordine e diventano uno solo. Niente lascia questo telefono.',
+  'merge_order': 'In quest’ordine',
+  'merge_add': 'Aggiungi un PDF',
+  'merge_need_two': 'due o più, nell’ordine giusto',
+  'photos_lead': 'Foto in',
+  'photos_hl': 'PDF',
+  'pictures_lead': 'Pagine in',
+  'pictures_hl': 'immagini',
+  'pictures_save': 'Salva le immagini',
+  'photos_add_more': 'Aggiungi altre foto',
+  'compare_lead': 'Trova la',
+  'compare_hl': 'differenza',
+  'compare_first': 'la prima versione',
+  'scan_lead': 'Scansiona la',
+  'scan_hl': 'carta',
+  'scan_pages': 'Le pagine',
+  'crop_lead': 'Trova gli',
+  'crop_hl': 'angoli',
+  'scan_keep': 'Continua a scansionare',
+  'scan_discard': 'Buttale via',
+  'scan_paper': 'formato della carta?', // handwritten label above the A4 / Letter choice
+  'pages_lead': 'Le tue',
+  'pages_hl': 'pagine',
+  'pages_note': 'Tocca una pagina per andarci. Spostala con le frecce o toglila.',
+  'pages_pending': 'Spostate, non ancora salvate: applica l’ordine quando ti va bene.',
+  'pages_put_back': 'Rimetti', // undoes the moves not yet applied on the Pages page
+  'pages_reordered': 'Le pagine sono nel nuovo ordine. Annulla le rimette com’erano.',
+  'page_removed': 'La pagina {page} è stata tolta. Annulla la rimette.',
+  'page_remove_yes': 'Toglila',
+  'blacked_title': 'Oscurato.',
+  'blacked_note': 'sparisce per sempre una volta inviato', // handwritten, under "Blacked out."
+  'blacked_count_one': '{count} oscuramento sulle pagine',
+  'blacked_count_other': '{count} oscuramenti sulle pagine',
+  'stamp_blacked': 'OSCURATO', // a rubber stamp on the Blacked out moment
+  'sent_title': 'Inviato.',
+  'sent_note': 'si può firmare con qualsiasi app PDF', // handwritten, under "Sent."
+  'stamp_sent': 'DA FIRMARE', // a rubber stamp on the Sent moment
+  'sign_here_box': 'FIRMA QUI', // the label inside the empty signature box drawn on the Sent moment
+  'sendsign_title': 'Invia da firmare',
+  'sendsign_box_tool': 'Riquadro «Firma qui»',
+  'sendsign_boxes_one': '{count} riquadro «Firma qui»',
+  'sendsign_boxes_other': '{count} riquadri «Firma qui»',
+  'sendsign_no_box': 'Ancora nessun riquadro. Tocca la pagina dove va la firma, o invialo così: si può firmare ovunque.', // handwritten; sharing works without a box
+  'sendsign_share': 'Condividi da firmare…',
 }
 
 export default phone
