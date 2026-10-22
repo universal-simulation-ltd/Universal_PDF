@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { loadPdf, type PDFDocumentProxy } from '../lib/pdfjs'
-import { listRecents, saveRecent, getRecent, getRecentBySlug, getRecentEdits, updateRecentEdits, deleteRecent, renameRecent, type RecentMeta, type RecentEdits } from '../lib/recents'
+import { listRecents, saveRecent, getRecent, getRecentOriginal, getRecentBySlug, getRecentEdits, updateRecentEdits, deleteRecent, renameRecent, type RecentMeta, type RecentEdits } from '../lib/recents'
 import { isEncryptedPdf, WrongPasswordError } from '../lib/pdfEncryptSniff'
 // ⚠️ pdf-lib is NOT imported statically anywhere on the start-up path. Every
 // module below that needs it (export, page order, metadata scrub, decryption)
@@ -56,11 +56,23 @@ function applyRecentEdits(edits: RecentEdits): boolean {
 // when a different PDF is opened and when the document is closed/reset. The
 // saved signature *library* is intentionally left alone — it is a reusable,
 // cross-document collection.
+//
+// ⚠️ Not an edit: the auto-save below must not file this emptying under the
+// document being closed. It did — `reset` clears the stores while `doc` and
+// `fileName` still name the old document, so 600 ms later its saved
+// annotations were overwritten with nothing, and reopening it showed a clean
+// page (found 2026-10-22, while making the phone leave without asking).
+let clearingDocument = false
 function clearDocumentState() {
-  useAnnotationStore.getState().resetDocument()
-  useFormStore.getState().clearAll()
-  useSearchStore.getState().reset()
-  useSignatureStore.getState().setPendingExtras([])
+  clearingDocument = true
+  try {
+    useAnnotationStore.getState().resetDocument()
+    useFormStore.getState().clearAll()
+    useSearchStore.getState().reset()
+    useSignatureStore.getState().setPendingExtras([])
+  } finally {
+    clearingDocument = false
+  }
 }
 
 export function setHashSlug(slug: string | null) {
@@ -215,6 +227,13 @@ interface PdfState {
   docUndo: DocSnapshot[]
   snapshotDocument: (label: string) => void
   undoDocument: () => Promise<void>
+  /**
+   * Put the open document back as it was first opened on this device: its
+   * original pages, no annotations, no answers. One document-level step, so
+   * Undo brings everything back (James, 2026-10-22). False when there is no
+   * original to go back to.
+   */
+  revertToOriginal: () => Promise<boolean>
 }
 
 /**
@@ -369,6 +388,26 @@ export const usePdfStore = create<PdfState>((set, get) => ({
         }
       ])
     }))
+  },
+
+  revertToOriginal: async () => {
+    const fileName = get().fileName
+    if (!fileName || get().openedLocked) return false
+    const original = await getRecentOriginal(fileName)
+    if (!original) return false
+    // Same atomic shape as applyPageOrder: the new doc first, state after.
+    const doc = await loadPdf(original.slice(0)).promise
+    get().snapshotDocument('revert')
+    get().doc?.destroy()
+    set({ doc, numPages: doc.numPages, sourceBytes: original, isXfa: doc.isPureXfa })
+    // An empty history, so Undo falls through to the snapshot just taken and
+    // puts the bytes, the annotations and the answers back together.
+    useAnnotationStore.getState().resetDocument()
+    useFormStore.getState().clearAll()
+    useSearchStore.getState().reset()
+    noteStructuralEdit()
+    saveToRecents(fileName, original)
+    return true
   },
 
   undoDocument: async () => {
@@ -771,6 +810,18 @@ export async function openDocumentOffscreen(
 // out. Reading both at FIRE time was fine while a window held one document;
 // with tabs, switching away inside the 600 ms wrote the incoming tab's edits
 // and silently dropped the last half-second of the outgoing one's.
+let flushPendingEdits: () => void = () => {}
+
+/**
+ * Write the open document's latest edits to this device now, instead of at
+ * the end of the debounce. The phone leaves a document without asking (its
+ * edits are kept here as they are made), so the last half-second must not be
+ * lost on the way out (James, 2026-10-22).
+ */
+export function flushRecentEdits(): void {
+  flushPendingEdits()
+}
+
 if (typeof window !== 'undefined') {
   let timer: number | null = null
   let lastAnns: unknown = null
@@ -784,6 +835,7 @@ if (typeof window !== 'undefined') {
     pending = null
     if (write) void updateRecentEdits(write.name, write.edits)
   }
+  flushPendingEdits = flush
 
   const schedule = () => {
     const anns = useAnnotationStore.getState().annotations
@@ -791,6 +843,8 @@ if (typeof window !== 'undefined') {
     if (anns === lastAnns && forms === lastForms) return
     lastAnns = anns
     lastForms = forms
+    // Emptied because the document is going, not by the user: nothing to save.
+    if (clearingDocument) return
     const { doc, fileName, openedLocked } = usePdfStore.getState()
     if (!doc || !fileName) return
     // No recent exists for a locked document, and `updateRecentEdits` matches by

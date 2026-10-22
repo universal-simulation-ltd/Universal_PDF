@@ -467,9 +467,10 @@ console.log('\na note being typed on takes its words with it when dragged')
   await page.waitForTimeout(300)
 }
 
-console.log('\n"Back to my desk" on the Smaller moment shows the save prompt on top')
+console.log('\n"Back to my desk" on the Smaller moment goes straight to the desk')
 {
-  // An amendment, so leaving asks first.
+  // Since 2026-10-22 the phone leaves without asking: edits are kept on the
+  // phone as they are made (James: "why not have the confirmation exit?").
   await store("s.add({ id: 'tick1', pageIndex: 0, type: 'tick', x: 50, y: 50, size: 20, color: '#000000' }); s.setSelected(null)")
   await mod('/src/native/nav.ts', "m.useNav.getState().closeSheet(); m.useNav.getState().push('smaller')")
   await page.waitForTimeout(400)
@@ -478,8 +479,8 @@ console.log('\n"Back to my desk" on the Smaller moment shows the save prompt on 
   const screens = await mod('/src/native/nav.ts', 'return m.useNav.getState().screens')
   check('the moment is put away first', !screens.includes('smaller'), json(screens))
   const pending = await mod('/src/stores/exitGuard.ts', 'return !!m.useExitGuard.getState().pending')
-  check('the save prompt is up', pending)
-  await mod('/src/stores/exitGuard.ts', 'm.useExitGuard.getState().cancel()')
+  check('no save prompt', !pending)
+  check('and the document is closed', (await mod('/src/stores/pdfStore.ts', 'return !!m.usePdfStore.getState().doc')) === false)
 }
 
 await browser.close()

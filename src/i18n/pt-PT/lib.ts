@@ -20,6 +20,7 @@ const lib: Messages['lib'] = {
   'undo_convert': 'conversão',
   'undo_page_change': 'alteração de páginas',
   'undo_strip_metadata': 'remoção de metadados',
+  'undo_revert': 'reposição',
 
   // useDefaultPdfApp
   'default_app_failed': 'Não foi possível alterar a predefinição.',

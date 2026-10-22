@@ -14,6 +14,7 @@ import LockedFilePrompt from '../components/Lock/LockedFilePrompt'
 import { Icon, PATHS } from './icons'
 import { isKnowledge, topScreen, useNav, type Screen, type Tab } from './nav'
 import { useEdgeSwipeBack } from './edgeSwipe'
+import { usePagePullToType } from './parts'
 import { useJobs } from './jobs'
 import { usePhonePrefs } from './prefs'
 import DeskScreen from './DeskScreen'
@@ -136,6 +137,7 @@ export default function NativeApp({ launching }: { launching: boolean }) {
 function PageLayer({ swipeBack, children }: { swipeBack: boolean; children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
   useEdgeSwipeBack(ref, swipeBack, () => useNav.getState().pop())
+  usePagePullToType(ref, true)
   return (
     <div ref={ref} className="absolute inset-0 z-[150] flex flex-col">
       {children}

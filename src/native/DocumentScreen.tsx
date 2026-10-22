@@ -1,9 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useT } from '../i18n'
-import { usePdfStore } from '../stores/pdfStore'
+import { usePdfStore, flushRecentEdits } from '../stores/pdfStore'
 import { useAnnotationStore } from '../stores/annotationStore'
-import { useTabStore, closeTab } from '../stores/tabStore'
-import { useExitGuard } from '../stores/exitGuard'
 import { useUndo } from '../hooks/useUndo'
 import { useToolPrefs } from '../stores/toolPrefsStore'
 import { useSignatureStore } from '../stores/signatureStore'
@@ -37,16 +35,20 @@ function signaturesOn(annotations: Annotation[]): number {
   return n
 }
 
-/** Leave the document for the desk, asking first if it has unsaved changes. */
+/** Leave the document for the desk. Its edits stay on this phone. */
 export function leaveDocument(): void {
-  // ⚠️ Down to the document first. The "Save your changes?" prompt is the
-  // website's dialog (z-80) and the Signed and Smaller moments sit above it
-  // (z-150), so their "Back to my desk" opened the prompt UNDER the moment
-  // and the button looked dead (James, 2026-10-18, after Smaller still).
+  // ⚠️ Down to the document first. The Signed and Smaller moments sit above
+  // the document (z-150), so their "Back to my desk" has to clear them.
   useNav.getState().clearScreens()
-  const { tabs, activeId } = useTabStore.getState()
-  if (tabs.length > 1 && activeId) closeTab(activeId)
-  else useExitGuard.getState().requestExit('close', usePdfStore.getState().reset)
+  // No "Save your changes?" on the phone (James, 2026-10-22: "why not have
+  // the confirmation exit? It saves the annotations"). The annotations and
+  // answers are kept on this phone as they are made and come back when the
+  // PDF is reopened; Share is how a copy leaves it. Write the last
+  // half-second now, then go. Clear all and Revert to original in ⋯ are the
+  // ways to throw work away.
+  flushRecentEdits()
+  if (usePdfStore.getState().loading) return
+  usePdfStore.getState().reset()
 }
 
 export default function DocumentScreen() {

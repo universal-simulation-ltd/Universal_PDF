@@ -20,6 +20,7 @@ const lib: Messages['lib'] = {
   'undo_convert': 'la conversion',
   'undo_page_change': 'la modification des pages',
   'undo_strip_metadata': 'la suppression des métadonnées',
+  'undo_revert': 'retour à l’original',
 
   // useDefaultPdfApp
   'default_app_failed': 'Impossible de modifier l’application par défaut.',

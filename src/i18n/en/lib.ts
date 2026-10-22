@@ -20,6 +20,7 @@ export default {
   'undo_convert': 'convert', // noun: the whole-document step being undone
   'undo_page_change': 'page change',
   'undo_strip_metadata': 'strip metadata',
+  'undo_revert': 'revert',
 
   // useDefaultPdfApp
   'default_app_failed': 'Could not change the default.', // making this app the default PDF app failed

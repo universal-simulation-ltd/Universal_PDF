@@ -9,6 +9,7 @@ const DOC_STEP_KEYS: Record<string, MessageKey> = {
   convert: 'lib.undo_convert',
   'page change': 'lib.undo_page_change',
   'strip metadata': 'lib.undo_strip_metadata',
+  revert: 'lib.undo_revert',
 }
 
 function docStepLabel(id: string): string {

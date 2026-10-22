@@ -1,12 +1,13 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { useT } from '../i18n'
 import { usePdfStore } from '../stores/pdfStore'
 import { useAnnotationStore } from '../stores/annotationStore'
+import { useFormStore } from '../stores/formStore'
+import { getRecentOriginal } from '../lib/recents'
 import { formatSize } from '../components/Export/formatSize'
 import { Icon, PATHS } from './icons'
 import { Card, LinkRow, Sheet } from './parts'
 import { useNav } from './nav'
-import { leaveDocument } from './DocumentScreen'
 import { DocThumb } from './DeskScreen'
 
 // Board 6 · ⋯ What else: a sheet over the document in place of the website's
@@ -24,7 +25,25 @@ export default function MoreSheet() {
   // one tap in a list, and a whole document's work is a lot to lose by a slip,
   // even with Undo there.
   const [clearing, setClearing] = useState(false)
+  const [reverting, setReverting] = useState(false)
   const marks = useAnnotationStore((s) => s.annotations.length)
+  const answers = useFormStore((s) => s.values.length)
+  // Whether the file itself has changed since it was first opened (pages
+  // moved, a PDF added…), so Revert has something to put back even with no
+  // marks on it.
+  const [fileChanged, setFileChanged] = useState(false)
+  useEffect(() => {
+    let live = true
+    const { fileName: name, sourceBytes: now } = usePdfStore.getState()
+    if (!name || !now) return
+    void getRecentOriginal(name).then((orig) => {
+      if (!live || !orig) return
+      if (orig.byteLength !== now.byteLength) return setFileChanged(true)
+      const a = new Uint8Array(orig), b = new Uint8Array(now)
+      for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return setFileChanged(true)
+    })
+    return () => { live = false }
+  }, [])
   const [newName, setNewName] = useState(() => (fileName ?? '').replace(/\.pdf$/i, ''))
   const renameId = useId()
   const nav = useNav.getState()
@@ -77,10 +96,18 @@ export default function MoreSheet() {
     { label: t('phone.more_images'), icon: PATHS.images, run: () => { close(); pdf.setConvertOpen(true) } },
     { label: t('phone.more_rename'), icon: PATHS.rename, run: () => setRenaming(true) },
     { label: t('phone.more_howto'), icon: PATHS.help, run: () => nav.push('kb') },
-    { label: t('phone.more_put_away'), icon: PATHS.put, run: () => { close(); leaveDocument() } },
+    // "Put it away" went (James, 2026-10-22): the back arrow does the same.
     // Only with something to clear. The website has it in its Actions menu.
     ...(marks > 0 ? [{ label: t('phone.more_clear'), icon: PATHS.trash, danger: true, run: () => setClearing(true) }] : []),
+    ...(marks > 0 || answers > 0 || fileChanged ? [{ label: t('phone.more_revert'), icon: PATHS.undo, danger: true, run: () => setReverting(true) }] : []),
   ]
+
+  async function revert() {
+    setReverting(false)
+    close()
+    const done = await usePdfStore.getState().revertToOriginal()
+    nav.say(t(done ? 'phone.reverted' : 'phone.revert_failed'))
+  }
 
   function clearAll() {
     const n = useAnnotationStore.getState().annotations.length
@@ -123,7 +150,20 @@ export default function MoreSheet() {
         ))}
       </div>
 
-      {clearing ? (
+      {reverting ? (
+        <div className="flex flex-col gap-2 rounded-2xl p-3.5" style={{ background: 'var(--np-slip)', border: '1px solid var(--np-line)' }}>
+          <p className="m-0 text-[16px] font-semibold">{t('phone.revert_confirm')}</p>
+          <p className="m-0 text-[13px] text-[color:var(--np-muted)]">{t('phone.revert_note')}</p>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => setReverting(false)} className="min-h-[44px] rounded-xl text-[15px] font-semibold" style={{ border: '1px solid var(--np-line)' }}>
+              {t('phone.cancel')}
+            </button>
+            <button type="button" onClick={() => void revert()} className="min-h-[44px] rounded-xl text-white text-[15px] font-bold" style={{ background: '#b42318' }}>
+              {t('phone.revert_yes')}
+            </button>
+          </div>
+        </div>
+      ) : clearing ? (
         <div className="flex flex-col gap-2 rounded-2xl p-3.5" style={{ background: 'var(--np-slip)', border: '1px solid var(--np-line)' }}>
           <p className="m-0 text-[16px] font-semibold">{t.plural('phone.clear_confirm', marks)}</p>
           <p className="m-0 text-[13px] text-[color:var(--np-muted)]">{t('phone.clear_note')}</p>

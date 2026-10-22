@@ -22,6 +22,11 @@ export interface RecentFile extends RecentEdits {
   size: number
   lastOpened: number
   bytes: ArrayBuffer
+  // The file as it was when it was first opened here, kept beside `bytes`
+  // (which page changes, merges and the like rewrite) for "Revert to
+  // original" (James, 2026-10-22). Absent on entries saved before then until
+  // they are next opened, when the stored bytes become their original.
+  original?: ArrayBuffer
   slug?: string
 }
 
@@ -185,6 +190,7 @@ export async function saveRecent(name: string, bytes: ArrayBuffer): Promise<stri
           size: bytes.byteLength,
           lastOpened: Date.now(),
           bytes,
+          original: existing ? (existing.original ?? existing.bytes) : bytes,
           slug: entrySlug,
           // Preserve any edits already stored for this file — saveRecent is
           // called on every open (including reopens), and must not wipe the
@@ -206,6 +212,25 @@ export async function saveRecent(name: string, bytes: ArrayBuffer): Promise<stri
     return slug
   } catch (e) {
     console.warn('recents.saveRecent failed:', e)
+    return null
+  }
+}
+
+/** The file as first opened (see `RecentFile.original`), by its name. */
+export async function getRecentOriginal(name: string): Promise<ArrayBuffer | null> {
+  try {
+    const db = await openDB()
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readonly')
+      const req = tx.objectStore(STORE).getAll()
+      req.onsuccess = () => {
+        const entry = (req.result as RecentFile[]).find((f) => f.name === name)
+        resolve(entry ? (entry.original ?? entry.bytes) : null)
+      }
+      req.onerror = () => reject(req.error)
+    })
+  } catch (e) {
+    console.warn('recents.getRecentOriginal failed:', e)
     return null
   }
 }

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PullDrawer, insideScrolledChild, modalIsOpen, openThenFocus, usePullHint, useSearchRequests } from '@unisim/sdk'
-import { useT, intlLocale } from '../i18n'
+import { useT, intlLocale, getT } from '../i18n'
 import { DESK_PULL_HINT_KEY } from '../lib/resetDefaults'
 import { usePdfStore } from '../stores/pdfStore'
-import type { RecentMeta } from '../lib/recents'
+import { getRecent, getRecentEdits, type RecentMeta } from '../lib/recents'
 import { formatSize } from '../components/Export/formatSize'
 import { AppMark, Dots, Icon, PATHS } from './icons'
-import { Hl, Sheet } from './parts'
+import { Hl, Sheet, SwipeRow } from './parts'
+import { useNav } from './nav'
 import { jobCards, runJob, useJobs, type JobCard, type JobId } from './jobs'
 import { examplePreview } from './examplePreview'
 import { EXAMPLE_PAGES } from '../lib/exampleMeta'
@@ -333,7 +334,12 @@ export default function DeskScreen() {
           ) : (
             <ul className="m-0 p-0 list-none flex flex-col">
               {shown.map((r, i) => (
-                <li key={r.id} className="flex items-center gap-3.5 py-2.5" style={{ borderTop: i ? '1px solid #e6e0d4' : 0 }}>
+                <li key={r.id} style={{ borderTop: i ? '1px solid #e6e0d4' : 0 }}>
+                  <SwipeRow
+                    start={{ label: t('phone.swipe_share'), icon: PATHS.share, color: 'var(--np-cobalt)', run: () => void shareRecent(r) }}
+                    end={{ label: t('phone.swipe_delete'), icon: PATHS.trash, color: '#b42318', run: () => void usePdfStore.getState().removeRecent(r.id) }}
+                  >
+                  <div className="flex items-center gap-3.5 py-2.5">
                   <button
                     type="button"
                     onClick={() => void usePdfStore.getState().openRecent(r.id)}
@@ -355,6 +361,8 @@ export default function DeskScreen() {
                   >
                     <Dots size={20} fill="#5d6068" />
                   </button>
+                  </div>
+                  </SwipeRow>
                 </li>
               ))}
             </ul>
@@ -384,6 +392,19 @@ export default function DeskScreen() {
           <button
             type="button"
             onClick={() => {
+              const r = options
+              setOptions(null)
+              void shareRecent(r)
+            }}
+            className="min-h-[54px] rounded-[18px] text-[16px] font-semibold flex items-center justify-center gap-2"
+            style={{ background: 'var(--np-slip)', border: '1px solid var(--np-line)', color: 'var(--np-cobalt)' }}
+          >
+            <Icon d={PATHS.share} size={20} />
+            {t('phone.doc_share')}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
               const id = options.id
               setOptions(null)
               void usePdfStore.getState().removeRecent(id)
@@ -398,6 +419,30 @@ export default function DeskScreen() {
       )}
     </div>
   )
+}
+
+/**
+ * Send a PDF on the desk to someone, through the phone's share sheet, with
+ * its annotations and answers on it (James, 2026-10-22: "reveal a share
+ * button to send the PDF to someone from the main menu") — without opening
+ * it. The same build the document's own Share makes.
+ */
+async function shareRecent(r: RecentMeta): Promise<void> {
+  try {
+    const bytes = await getRecent(r.id)
+    if (!bytes) return
+    const edits = await getRecentEdits(r.id)
+    const marked = (edits.annotations?.length ?? 0) > 0 || (edits.formValues?.length ?? 0) > 0
+    const { buildAnnotatedPdfBytes } = await import('../lib/export')
+    const out = marked
+      ? await buildAnnotatedPdfBytes(bytes.slice(0), edits.annotations ?? [], 1.0, edits.formValues)
+      : new Uint8Array(bytes)
+    const { downloadPdfBytes } = await import('../lib/download')
+    downloadPdfBytes(out, /\.pdf$/i.test(r.name) ? r.name : `${r.name}.pdf`)
+  } catch (e) {
+    console.warn('desk share failed', e)
+    useNav.getState().say(getT()('phone.failed', { message: (e as Error).message || String(e) }))
+  }
 }
 
 const PREVIEW_W = 40

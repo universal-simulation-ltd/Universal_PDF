@@ -2463,6 +2463,40 @@ reached it, and then nothing led back out.
   whether iOS also shows its own selection handles and menu over the word is
   untested.
 
+
+## The phone leaves without asking; swipes and pulls (2026-10-22)
+
+- **Leaving a document asks nothing.** `leaveDocument` (back arrow, the
+  moments' "Back to my desk") calls `flushRecentEdits()` then `reset()`: the
+  annotations and answers are already kept on the phone as they are made, and
+  Share is how a copy leaves. "Put it away" in ⋯ went (the back arrow does it).
+  The website keeps its "Save your changes?".
+- ⚠️ **Closing a document used to wipe its saved edits** (website too):
+  `reset` clears the stores while `doc` / `fileName` still name the old
+  document, so the auto-save filed an empty set under it 600 ms later and a
+  reopened PDF came back clean. `clearDocumentState` now sets
+  `clearingDocument`, and the auto-save ignores that emptying.
+  `test:phone-gestures` "reopened, the tick is still on it" fails without it.
+- **⋯ What else**: **Clear all annotations** (asks in the sheet, one undo
+  step) and **Revert to original** (asks; `pdfStore.revertToOriginal`).
+  `recents` keeps `original` beside `bytes` (an entry saved before this takes
+  its stored bytes as the original on next open), so page changes revert too.
+  Revert is one `snapshotDocument('revert')` step: Undo brings the pages,
+  marks and answers back together.
+- **Sheets scroll instead of squashing their last card** (`[&>*]:flex-none`
+  on the sheet body): ⋯ What else was cut off at Rename on an iPhone.
+- **A big swipe down anywhere on a drawer closes it; a short pull puts the
+  finger in its text box** (`useSheetBodyPull`). **A pull down on a page puts
+  the finger in its first text box** (`usePagePullToType`, wired in
+  `PageLayer`), so QR's link box gets the keyboard only when asked. Both only
+  from the top of the scroll, mostly downward, and never from a slider, a box,
+  a canvas or a swiper. Suite rules in `Docs_UNI_SIM/BRANDING.md`.
+- **The desk's PDFs swipe**: left for Delete (takes it off the phone), right
+  for Share (the share sheet, annotations and answers built in, without
+  opening it); ⋯ has Share too. `SwipeRow` in `src/native/parts.tsx`. ⚠️ Its
+  close function is made once: a fresh one per render left a stale close in
+  `closeOpenRow` that fired mid-swipe, so a row opened only once.
+
 ## The example PDF — a feature tour
 
 `lib/examplePdf.ts` makes the example on the device with pdf-lib (James,
