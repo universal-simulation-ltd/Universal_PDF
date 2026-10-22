@@ -123,6 +123,11 @@ export default function SendToSignDialog() {
   // for an unprotected one, where the address is free to change.
   const [normalizedEmailAtMint, setNormalizedEmailAtMint] = useState<string | null>(null)
 
+  // Per request: what the last Remind said (kept while the dialog is open).
+  // ⚠️ Above the early return, like every hook here: below it, closing the
+  // dialog rendered one hook fewer and React took the whole page down
+  // ("Rendered fewer hooks than expected", e2e/send-for-signature).
+  const [reminders, setReminders] = useState<Record<string, { busy?: boolean; text?: string; ok?: boolean }>>({})
   if (!open) return null
 
   const signedIn = !!session?.user && session.user.is_anonymous !== true
@@ -315,8 +320,6 @@ export default function SendToSignDialog() {
     }
   }
 
-  // Per request: what the last Remind said (kept while the dialog is open).
-  const [reminders, setReminders] = useState<Record<string, { busy?: boolean; text?: string; ok?: boolean }>>({})
   async function onRemind(req: SignRequest) {
     setReminders((m) => ({ ...m, [req.id]: { busy: true } }))
     const res = await remindSignRequest(supabase, req.id)
