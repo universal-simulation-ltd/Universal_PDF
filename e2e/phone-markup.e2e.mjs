@@ -339,9 +339,12 @@ console.log('\nthe Sign page puts a name and the date under the signature')
   await dateBox.check()
   await page.getByRole('button', { name: 'Put it on the page' }).click()
   await page.waitForTimeout(800)
-  const kept = await mod('/src/stores/signatureStore.ts', 'const s = m.useSignatureStore.getState(); const a = s.signatures.find((x) => x.id === s.activeId); return a && { h: a.height, inkH: a.sig?.inkHeight, name: a.sig?.name, showName: a.sig?.showName, showDate: a.sig?.showDate }')
-  check('the signature carries the name and date as its own labels', !!kept && kept.name === 'Jo Bloggs' && kept.showName && kept.showDate, json(kept))
-  check('…drawn under the ink', !!kept && kept.h > kept.inkH, json(kept))
+  // Since 2026-10-22 they are not baked into the picture: they travel as
+  // separate pieces and land under the signature as their own lines of text
+  // (lib/sigLines; e2e/separate-placement checks the landing).
+  const kept = await mod('/src/stores/signatureStore.ts', 'const s = m.useSignatureStore.getState(); const a = s.signatures.find((x) => x.id === s.activeId); return a && { h: a.height, inkH: a.sig?.inkHeight, extras: a.extras }')
+  check('the signature carries the name and date as separate lines', !!kept && kept.extras?.name === 'Jo Bloggs' && kept.extras?.date === true, json(kept))
+  check('…not drawn into the picture', !!kept && kept.h === kept.inkH, json(kept))
   await store("s.setTool('select')")
   await mod('/src/native/nav.ts', 'm.useNav.getState().setAwaitingSignature(false)')
 }

@@ -58,7 +58,12 @@ export function Sheet({
         style={{ background, pointerEvents: 'auto' }}
       >
         <SheetGrip grip={grip} />
-        <div className="min-h-0 overflow-y-auto overscroll-contain px-4 flex flex-col gap-3.5">{children}</div>
+        {/* ⚠️ Children never shrink (`[&>*]:flex-none`): a flex column lets
+            them, so a menu taller than the sheet squashed its last card,
+            whose overflow-hidden cut the bottom rows off instead of the
+            sheet scrolling (James, 2026-10-22: ⋯ What else ended at
+            Rename, with "Clear all annotations" out of reach). */}
+        <div className="min-h-0 overflow-y-auto overscroll-contain px-4 flex flex-col gap-3.5 [&>*]:flex-none">{children}</div>
       </section>
     </div>
   )

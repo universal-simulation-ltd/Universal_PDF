@@ -60,7 +60,10 @@ const json = (v) => JSON.stringify(v)
 
 const playwright = await loadPlaywright()
 const browser = await playwright.chromium.launch()
-const context = await browser.newContext({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true })
+// ⚠️ A short phone (iPhone SE height). On James's iPhone the ⋯ sheet was
+// taller than the screen and its last card was squashed, cutting the row off;
+// at 852 px it all fitted, and this test passed while the row was out of reach.
+const context = await browser.newContext({ viewport: { width: 375, height: 667 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true })
 await keepAppModuleUrls(context)
 const page = await context.newPage()
 page.on('pageerror', (e) => failures.push('page error: ' + e.message))
@@ -109,6 +112,15 @@ await store(`s.addMany([
 ]); s.setSelected(null)`)
 await openMore()
 check('the row is there', (await row.count()) === 1)
+// Really reachable. ⚠️ Not "scroll it into view, then hit-test": a clipped
+// card is still scrollable FROM CODE, so that passed while the row was cut
+// off for a finger. The sheet's own cards must each show all they hold, and
+// the sheet is what scrolls.
+const clipped = await page.evaluate(() => {
+  const sc = document.querySelector('.np-sheet .overflow-y-auto')
+  return [...(sc?.children ?? [])].filter((c) => c.scrollHeight > c.getBoundingClientRect().height + 1).length
+})
+check('no card in the sheet is cut short (the sheet scrolls instead)', clipped === 0, `${clipped} clipped`)
 await row.click()
 await page.waitForTimeout(300)
 check('it asks first, with the count', (await page.getByText('Take all 3 annotations off this PDF?').count()) === 1)
