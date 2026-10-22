@@ -23,7 +23,9 @@ type MarkupId = 'pen' | 'highlight' | 'text' | 'note' | 'shape' | 'blackout' | '
 const SHAPES: Tool[] = ['rect', 'ellipse', 'line', 'tick', 'cross']
 
 /** Every tool the sheet can put in hand — so the bar knows Mark up is the one active. */
-export const MARKUP_TOOLS: Tool[] = ['draw', 'highlight', 'note', 'redact', 'image', ...SHAPES]
+// Text is one of Mark up's tools since the bar's Fill became Navigate (James,
+// 2026-10-22), so Mark up is what's lit while writing.
+export const MARKUP_TOOLS: Tool[] = ['draw', 'highlight', 'note', 'redact', 'image', 'text', ...SHAPES]
 
 const INKS = [
   { key: 'c_black', hex: '#1b1d22' },

@@ -72,7 +72,7 @@ type ExampleKey = keyof Messages['example']
 /** The app's own button and menu names the "where" lines are built from. */
 const LABELS = [
   'phone.tool_markup', 'phone.mk_highlight', 'phone.mk_pen', 'phone.mk_shape', 'phone.mk_note', 'phone.mk_blackout',
-  'phone.mk_text', 'phone.mk_picture', 'phone.mk_qr', 'phone.tool_fill', 'phone.tool_sign', 'phone.tool_pages', 'phone.more_title',
+  'phone.mk_text', 'phone.mk_picture', 'phone.mk_qr', 'phone.tool_sign', 'phone.tool_pages', 'phone.more_title',
   'viewer.toolbar.tool_highlighter', 'viewer.toolbar.tool_free_draw', 'viewer.toolbar.tool_sticky_note',
   'viewer.toolbar.tool_add_text', 'viewer.toolbar.upload_image', 'viewer.toolbar.add_qr_code', 'viewer.toolbar.export',
   'menu.actions', 'menu.redact', 'menu.free_draw', 'menu.advanced', 'menu.page_numbers', 'menu.word', 'menu.view',
@@ -410,7 +410,7 @@ export async function buildExamplePdf(opts: ExampleOptions = {}): Promise<BuiltE
     // Text anywhere, with two blank lines to write on.
     y = section(
       page, n, y, E('text_title'), E('text_body'),
-      whereBoth(`${T('phone.tool_fill')} / ${path(T('phone.tool_markup'), T('phone.mk_text'))}`, T('viewer.toolbar.tool_add_text')),
+      whereBoth(path(T('phone.tool_markup'), T('phone.mk_text')), T('viewer.toolbar.tool_add_text')),
     )
     y -= 8
     tryTag(page, LEFT + 10, y)

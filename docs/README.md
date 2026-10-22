@@ -2497,6 +2497,15 @@ reached it, and then nothing led back out.
   close function is made once: a fresh one per render left a stale close in
   `closeOpenRow` that fired mid-swipe, so a row opened only once.
 
+- **The bar's Fill is Navigate** (James: "Fill works in the markup anyway …
+  have it as navigate"): Select in hand (tap to select, drag to move, hold and
+  drag for several; a form's boxes take typing with any tool). Text lives in
+  Mark up, so `MARKUP_TOOLS` includes `text` and Mark up is lit while writing.
+  The example PDF's "write anywhere" line is just Mark up › Text.
+- **The highlight pill folds Size behind a button**: a 40 px highlight's pill
+  was 321 px (the slider filled the row); now the slider opens under the
+  swatches at their width, 231 px open or shut.
+
 ## The example PDF — a feature tour
 
 `lib/examplePdf.ts` makes the example on the device with pdf-lib (James,

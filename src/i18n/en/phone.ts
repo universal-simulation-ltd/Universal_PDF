@@ -80,12 +80,12 @@ export default {
   'send_aria': 'Send it on its way',
   'more_aria': 'What else',
   'tools_aria': 'Tools',
-  'tool_fill': 'Fill',
+  'tool_navigate': 'Navigate',
   'tool_markup': 'Mark up',
   'tool_sign': 'Sign',
   'tool_pages': 'Pages',
   'tool_share': 'Share',
-  'fill_hint': 'Tap a box to type in it, or anywhere else to add words.',
+  'navigate_hint': 'Tap a mark to select it and drag to move it. Form boxes take typing straight away; for words anywhere else, Mark up › Text.',
   'select_several_hint': 'To select several marks at once, press and hold an empty part of the page, then drag across them.',
 
   // Mark up (a sheet under the page)

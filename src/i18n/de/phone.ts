@@ -77,12 +77,12 @@ const phone: Messages['phone'] = {
   'send_aria': 'Losschicken',
   'more_aria': 'Was noch',
   'tools_aria': 'Werkzeuge',
-  'tool_fill': 'Ausfüllen',
+  'tool_navigate': 'Navigieren',
   'tool_markup': 'Kommentieren',
   'tool_sign': 'Unterschreiben',
   'tool_pages': 'Seiten',
   'tool_share': 'Teilen',
-  'fill_hint': 'Tippe auf ein Feld, um hineinzuschreiben, oder irgendwo anders, um Text hinzuzufügen.',
+  'navigate_hint': 'Tippe auf ein Element, um es auszuwählen, und ziehe es, um es zu verschieben. In Formularfelder kannst du direkt schreiben; Text an anderer Stelle: Kommentieren › Text.',
   'select_several_hint': 'Um mehrere Kommentare auf einmal auszuwählen, halte eine leere Stelle der Seite gedrückt und ziehe dann darüber.',
 
   // Mark up (a sheet under the page)

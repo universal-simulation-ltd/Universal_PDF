@@ -23,7 +23,8 @@
 //   • The Signed moment waits for the signature's ✓ (not a tap off it).
 //   • The Sign page can put a name and the date under the signature.
 //   • Tapping a shape (or any mark) shows its own options in the sheet.
-//   • The bar is Fill · Mark up · Sign · Share; Pages is in What else (⋯).
+//   • The bar is Navigate · Mark up · Sign · Share (Fill until 2026-10-22);
+//     Pages is in What else (⋯).
 //   • The tool row shows it scrolls: a fade at the edge with more beyond it,
 //     and no nudge (dropped 2026-10-19).
 //   • QR code is a page of its own, and its link box is not focused on arrival.
@@ -376,12 +377,20 @@ console.log('\ntapping a shape shows its own options in the sheet')
   check('no width for a circle', (await page.locator('section input[type="range"]').count()) === 0)
 }
 
-console.log('\nthe bar is Fill · Mark up · Sign · Share, and Pages is in What else')
+console.log('\nthe bar is Navigate · Mark up · Sign · Share, and Pages is in What else')
 {
   // Off the Signed moment the last check left up, and out of Mark up.
   await mod('/src/native/nav.ts', 'm.useNav.getState().clearScreens(); m.useNav.getState().closeSheet()')
   await page.waitForTimeout(400)
   const bar = page.locator('nav[aria-label="Tools"]')
+  // James, 2026-10-22: "Fill works in the markup anyway … have it as navigate".
+  check('Navigate is in the bar, Fill is not', (await bar.getByRole('button', { name: 'Navigate' }).count()) === 1 && (await bar.getByRole('button', { name: 'Fill' }).count()) === 0)
+  await mod('/src/stores/annotationStore.ts', "m.useAnnotationStore.getState().setTool('text')")
+  await page.waitForTimeout(200)
+  check('with Text in hand, Mark up is the one lit', (await bar.getByRole('button', { name: 'Mark up' }).getAttribute('aria-pressed')) === 'true')
+  await bar.getByRole('button', { name: 'Navigate' }).click()
+  await page.waitForTimeout(300)
+  check('Navigate puts Select in hand, and is lit', (await mod('/src/stores/annotationStore.ts', 'return m.useAnnotationStore.getState().tool')) === 'select' && (await bar.getByRole('button', { name: 'Navigate' }).getAttribute('aria-pressed')) === 'true')
   check('Share is in the bar', (await bar.getByRole('button', { name: 'Share' }).count()) === 1)
   check('Sign is in the bar', (await bar.getByRole('button', { name: 'Sign' }).count()) === 1)
   check('Pages is not', (await bar.getByRole('button', { name: 'Pages' }).count()) === 0)

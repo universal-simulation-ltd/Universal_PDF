@@ -16,7 +16,7 @@
 //   • a tap on empty page deselects;
 //   • the group's bin deletes them all, and one undo brings them all back;
 //   • dragging one of the selected marks moves them all;
-//   • it works from Fill (the Text tool) too, where a long tap that doesn't
+//   • it works from Mark up › Text too (Fill until 2026-10-22), where a long tap that doesn't
 //     move still drops a text box;
 //   • the page layer turns off iOS's long-press callout and text selection.
 //
@@ -308,12 +308,13 @@ console.log('\nthe group bin deletes them all, in one undo step')
   }
 }
 
-console.log('\nfrom Fill (the Text tool) too')
+console.log('\nfrom Mark up › Text too')
 {
   await putMarks()
-  await page.locator('nav[aria-label="Tools"]').getByRole('button', { name: 'Fill' }).click()
+  // Text lives in Mark up since the bar's Fill became Navigate (2026-10-22).
+  await store("s.setSelected(null); s.setTool('text')")
   await page.waitForTimeout(400)
-  check('Fill hands you Text', (await store('return s.tool')) === 'text', await store('return s.tool'))
+  check('Text is in hand', (await store('return s.tool')) === 'text', await store('return s.tool'))
   await holdAndBox()
   const ids = await selected()
   if (expectOn) {

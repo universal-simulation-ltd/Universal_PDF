@@ -23,7 +23,7 @@ import { SELECT_SEVERAL_HINT_KEY } from '../lib/resetDefaults'
 // Fill · Mark up · Sign · Share (James, 2026-10-18, after trying Sign's place
 // going to Share: "actually fill mark up sign share and pages in …"). Share
 // used to be an icon in the header; Pages is in What else (the ⋯).
-type BarTool = 'fill' | 'markup' | 'sign' | 'share'
+type BarTool = 'navigate' | 'markup' | 'sign' | 'share'
 
 /** How many signatures are on the pages: placed ones, and signed request boxes. */
 function signaturesOn(annotations: Annotation[]): number {
@@ -155,21 +155,23 @@ export default function DocumentScreen() {
     return () => useAnnotationStore.getState().setRedactStroke(false)
   }, [])
 
-  const active: BarTool | null = markingUp || MARKUP_TOOLS.includes(tool as Tool) ? 'markup' : tool === 'text' || tool === 'select' ? 'fill' : null
+  const active: BarTool | null = markingUp || MARKUP_TOOLS.includes(tool as Tool) ? 'markup' : tool === 'select' ? 'navigate' : null
   // Under the Mark up sheet the bar is only ever seen while the sheet is pulled
-  // away, and putting it away leaves Select in hand: so it already shows Fill
-  // lit, as it will be, rather than switching from Mark up as the sheet goes
-  // (James, 2026-10-19).
-  const barActive: BarTool | null = markingUp ? 'fill' : active
+  // away, and putting it away leaves Select in hand: so it already shows
+  // Navigate lit, as it will be, rather than switching from Mark up as the
+  // sheet goes (James, 2026-10-19).
+  const barActive: BarTool | null = markingUp ? 'navigate' : active
 
   function onBar(id: BarTool) {
-    if (id === 'fill') {
+    if (id === 'navigate') {
+      // Navigate (was Fill, James, 2026-10-22: "Fill works in the markup
+      // anyway … have it as navigate"): Select in hand — tap to select, drag to
+      // move, hold and drag for several — and a form's boxes still take typing
+      // with any tool. Words anywhere else are Mark up › Text.
       if (markingUp) closeSheet()
-      // Typing straight into a form's boxes works with any tool; Text adds
-      // words anywhere else on the page as well.
       useAnnotationStore.getState().setSelected(null)
-      setTool('text')
-      useNav.getState().say(t('phone.fill_hint'))
+      setTool('select')
+      useNav.getState().say(t('phone.navigate_hint'))
     } else if (id === 'markup') {
       if (markingUp) {
         closeSheet()
@@ -192,7 +194,7 @@ export default function DocumentScreen() {
   }
 
   const tools: { id: BarTool; label: string; icon: string }[] = [
-    { id: 'fill', label: t('phone.tool_fill'), icon: PATHS.fill },
+    { id: 'navigate', label: t('phone.tool_navigate'), icon: PATHS.navigate },
     { id: 'markup', label: t('phone.tool_markup'), icon: PATHS.pen },
     { id: 'sign', label: t('phone.tool_sign'), icon: PATHS.sign },
     { id: 'share', label: t('phone.tool_share'), icon: PATHS.share },
@@ -274,7 +276,7 @@ export default function DocumentScreen() {
             <button
               key={b.id}
               type="button"
-              aria-pressed={b.id === 'fill' || b.id === 'markup' ? on : undefined}
+              aria-pressed={b.id === 'navigate' || b.id === 'markup' ? on : undefined}
               onClick={() => onBar(b.id)}
               className="flex flex-col items-center justify-center gap-1.5 min-h-[58px]"
               style={{ color: on ? 'var(--np-cobalt-deep)' : 'var(--np-ink-2)' }}

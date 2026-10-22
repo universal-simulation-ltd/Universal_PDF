@@ -77,12 +77,12 @@ const phone: Messages['phone'] = {
   'send_aria': 'Gönder',
   'more_aria': 'Başka neler',
   'tools_aria': 'Araçlar',
-  'tool_fill': 'Doldur',
+  'tool_navigate': 'Gezin',
   'tool_markup': 'İşaretle',
   'tool_sign': 'İmzala',
   'tool_pages': 'Sayfalar',
   'tool_share': 'Paylaş',
-  'fill_hint': 'Yazmak için bir kutuya, yazı eklemek için başka herhangi bir yere dokunun.',
+  'navigate_hint': 'Seçmek için bir işarete dokunun, taşımak için sürükleyin. Form kutularına doğrudan yazabilirsiniz; başka bir yere yazı için İşaretle › Metin.',
   'select_several_hint': 'Birden çok notu aynı anda seçmek için sayfanın boş bir yerine basılı tutun, sonra üzerlerinden sürükleyin.',
 
   // Mark up (a sheet under the page)

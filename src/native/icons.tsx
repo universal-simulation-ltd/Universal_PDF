@@ -24,6 +24,8 @@ export const PATHS = {
   // Fill: a form's labelled box with a typing cursor in it — typing INTO the
   // boxes, not writing on the page (James, 2026-10-18; it was a pencil, which
   // read as Mark up's pen).
+  // An arrow pointer: the bar's Navigate (select, move, scroll).
+  navigate: 'M5 3l14 7.2-6.4 1.9L9.6 18z',
   fill: 'M3 4.5h8M5 8h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2zM8 10.5v6M6.5 10.5h3M6.5 16.5h3',
   pen: 'M4 20l4-1 11-11-3-3L5 16zM14 6l3 3',
   grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',

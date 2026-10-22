@@ -77,12 +77,12 @@ const phone: Messages['phone'] = {
   'send_aria': 'Enviarlo',
   'more_aria': 'Qué más',
   'tools_aria': 'Herramientas',
-  'tool_fill': 'Rellenar',
+  'tool_navigate': 'Navegar',
   'tool_markup': 'Anotar',
   'tool_sign': 'Firmar',
   'tool_pages': 'Páginas',
   'tool_share': 'Compartir',
-  'fill_hint': 'Toca una casilla para escribir en ella, o en cualquier otro sitio para añadir texto.',
+  'navigate_hint': 'Toca una marca para seleccionarla y arrástrala para moverla. En las casillas de un formulario puedes escribir directamente; para texto en otro sitio, Anotar › Texto.',
   'select_several_hint': 'Para seleccionar varias anotaciones a la vez, mantén pulsada una parte vacía de la página y luego arrastra por encima de ellas.',
 
   // Mark up (a sheet under the page)

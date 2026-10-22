@@ -77,12 +77,12 @@ const phone: Messages['phone'] = {
   'send_aria': 'L’envoyer',
   'more_aria': 'Quoi d’autre',
   'tools_aria': 'Outils',
-  'tool_fill': 'Remplir',
+  'tool_navigate': 'Naviguer',
   'tool_markup': 'Annoter',
   'tool_sign': 'Signer',
   'tool_pages': 'Pages',
   'tool_share': 'Partager',
-  'fill_hint': 'Touchez une case pour y écrire, ou ailleurs pour ajouter du texte.',
+  'navigate_hint': 'Touchez un élément pour le sélectionner et faites-le glisser pour le déplacer. Les cases d’un formulaire acceptent la saisie directement ; pour du texte ailleurs, Annoter › Texte.',
   'select_several_hint': 'Pour sélectionner plusieurs annotations à la fois, maintenez le doigt sur une partie vide de la page, puis faites-le glisser par-dessus.',
 
   // Mark up (a sheet under the page)
