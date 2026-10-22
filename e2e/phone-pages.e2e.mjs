@@ -40,7 +40,7 @@ async function loadPlaywright() {
       continue
     }
     try {
-      const probe = await mod.chromium.launch()
+      const probe = await mod[process.env.E2E_BROWSER || 'chromium'].launch()
       await probe.close()
       return mod
     } catch {
@@ -62,7 +62,7 @@ function check(label, condition, detail) {
 const json = (v) => JSON.stringify(v)
 
 const playwright = await loadPlaywright()
-const browser = await playwright.chromium.launch()
+const browser = await playwright[process.env.E2E_BROWSER || 'chromium'].launch()
 const context = await browser.newContext({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, acceptDownloads: true })
 await keepAppModuleUrls(context)
 // Any browser box at all is a failure: count them, and answer so nothing hangs.

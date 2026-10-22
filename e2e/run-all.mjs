@@ -59,7 +59,6 @@ export const SKIP = {
   'sticky-note': '"nothing moves when the editor closes": the ink sits ~2px off the editor box',
   'external-links': '"inside a native shell" part: no input[type=file] after goto ?mockauth=1 with a stubbed Capacitor',
   'panel-dodge': 'no [data-toolbar-panel] button[title="Red"] to click (the colour swatch changed)',
-  'send-for-signature': 'after signing, no button named /Actions/ to click (the menu changed)',
 }
 
 // The flows the iPhone app lives on, which therefore also run in WebKit (the
@@ -80,6 +79,8 @@ export const CORE = [
   'sigfield-extras',
   // lock
   'lock-pdf',
+  // the phone app's own pages and sheets (the phone app IS WebKit)
+  'phone-pages',
 ]
 // Not in CORE although they are core flows, because they cannot run outside
 // Chromium as written: phone-markup opens a CDP session (Chromium only) and
