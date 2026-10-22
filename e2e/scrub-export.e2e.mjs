@@ -48,7 +48,7 @@ async function loadPlaywright() {
       continue
     }
     try {
-      const probe = await mod.chromium.launch()
+      const probe = await mod[process.env.E2E_BROWSER || 'chromium'].launch()
       await probe.close()
       return mod
     } catch {
@@ -86,7 +86,7 @@ async function testPdf() {
 }
 
 const playwright = await loadPlaywright()
-const browser = await playwright.chromium.launch()
+const browser = await playwright[process.env.E2E_BROWSER || 'chromium'].launch()
 const pdf = await testPdf()
 
 // One pass of the whole flow. `keep` decides whether the box gets ticked, so

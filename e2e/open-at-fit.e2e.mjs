@@ -55,7 +55,8 @@ async function loadPlaywright() {
     try {
       const mod = await import(pathToFileURL(join(HERE, rel)).href)
       if (!mod.default?.chromium) continue
-      const browser = await mod.default.chromium.launch()
+      const engine = process.env.E2E_BROWSER || 'chromium'
+      const browser = await mod.default[engine].launch()
       return { pw: mod.default, browser }
     } catch {
       continue

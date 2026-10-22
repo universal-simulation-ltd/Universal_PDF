@@ -39,7 +39,7 @@ async function loadPlaywright() {
       continue
     }
     try {
-      const probe = await mod.chromium.launch()
+      const probe = await mod[process.env.E2E_BROWSER || 'chromium'].launch()
       await probe.close()
       return mod
     } catch {
@@ -111,7 +111,7 @@ async function openAdvancedExport(page) {
 const SENTENCE = 'Only the password holder should read this.'
 
 const playwright = await loadPlaywright()
-const browser = await playwright.chromium.launch()
+const browser = await playwright[process.env.E2E_BROWSER || 'chromium'].launch()
 let page = await browser.newPage()
 page.on('pageerror', (e) => failures.push('page error: ' + e.message))
 

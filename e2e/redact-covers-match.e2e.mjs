@@ -54,7 +54,7 @@ async function loadPlaywright() {
       continue
     }
     try {
-      const probe = await mod.chromium.launch()
+      const probe = await mod[process.env.E2E_BROWSER || 'chromium'].launch()
       await probe.close()
       return mod
     } catch {
@@ -89,7 +89,7 @@ async function testPdf() {
 }
 
 const playwright = await loadPlaywright()
-const browser = await playwright.chromium.launch()
+const browser = await playwright[process.env.E2E_BROWSER || 'chromium'].launch()
 const pdf = await testPdf()
 const context = await browser.newContext({ viewport: { width: 1400, height: 900 } })
 const page = await context.newPage()

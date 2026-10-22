@@ -1,0 +1,51 @@
+# The Node unit scripts in `scripts/*.test.mjs`, on every push and pull
+# request. No server and no browser — `npm run test:unit` runs each one through
+# its own package.json script (see scripts/run-unit-tests.mjs).
+#
+# Free: the repo is public, so ubuntu-latest minutes cost nothing.
+
+name: unit tests
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: Unit scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # The desktop app's Electron binary is ~100MB and nothing here runs it.
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      # `test:build-env`'s last case ("a configured checkout builds as before")
+      # needs a checkout that HAS a configuration — a developer's .env.local.
+      # These are placeholders in the right shape, not credentials: the case
+      # only asks that the build guard lets a well-formed pair through.
+      - name: Placeholder build configuration
+        run: |
+          printf '%s\n' \
+            'VITE_PLATFORM_SUPABASE_URL=https://ci-placeholder.supabase.co' \
+            'VITE_PLATFORM_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiI.eyJyb2xlIjoiYW5vbiJ9.c2lnbmF0dXJl' \
+            > .env.local
+
+      - run: npm run test:unit

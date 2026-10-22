@@ -48,7 +48,7 @@ async function loadPlaywright() {
       continue
     }
     try {
-      const probe = await mod.chromium.launch()
+      const probe = await mod[process.env.E2E_BROWSER || 'chromium'].launch()
       await probe.close()
       return mod
     } catch {
@@ -79,7 +79,7 @@ const pdf = await testPdf()
 const pdfSha = createHash('sha256').update(pdf).digest('hex')
 
 const playwright = await loadPlaywright()
-const browser = await playwright.chromium.launch()
+const browser = await playwright[process.env.E2E_BROWSER || 'chromium'].launch()
 
 /** A context whose Edge Function is ours to switch on and off. */
 async function world() {

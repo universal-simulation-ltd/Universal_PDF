@@ -43,7 +43,7 @@ async function loadPlaywright() {
       continue
     }
     try {
-      const probe = await mod.chromium.launch()
+      const probe = await mod[process.env.E2E_BROWSER || 'chromium'].launch()
       await probe.close()
       return mod
     } catch {
@@ -102,7 +102,7 @@ p3.drawRectangle({ x: 100, y: 300, width: 395, height: 300, color: rgb(0.6, 0.6,
 const pdf = Buffer.from(await doc.save())
 
 const playwright = await loadPlaywright()
-const browser = await playwright.chromium.launch()
+const browser = await playwright[process.env.E2E_BROWSER || 'chromium'].launch()
 const context = await browser.newContext({ viewport: { width: 1400, height: 900 }, acceptDownloads: true })
 const page = await context.newPage()
 page.on('pageerror', (e) => failures.push('page error: ' + e.message))

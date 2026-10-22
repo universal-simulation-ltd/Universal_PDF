@@ -58,7 +58,7 @@ async function loadPlaywright() {
       continue
     }
     try {
-      const probe = await mod.chromium.launch()
+      const probe = await mod[process.env.E2E_BROWSER || 'chromium'].launch()
       await probe.close()
       return mod
     } catch (err) {
@@ -124,7 +124,7 @@ function check(label, condition, detail) {
 const SENTENCE = 'Flattening removes this sentence from the text layer.'
 
 const playwright = await loadPlaywright()
-const browser = await playwright.chromium.launch()
+const browser = await playwright[process.env.E2E_BROWSER || 'chromium'].launch()
 const page = await browser.newPage()
 page.on('pageerror', (e) => failures.push('page error: ' + e.message))
 
