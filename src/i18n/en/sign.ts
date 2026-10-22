@@ -54,8 +54,8 @@ export default {
   'pad_date_label': 'Date line under the signature',
   'pad_when_placed': 'When placed',
   'pad_with_signature': 'With signature', // placement option: labels baked into the signature image
-  'pad_separate_click': 'Separate click', // placement option: each label placed with its own click
-  'pad_separate_hint': '“Separate click” places each line on a click of its own, so every one can go in a form’s own field.',
+  'pad_separate_click': 'Separate lines', // placement option: each label as its own text under the signature
+  'pad_separate_hint': '“Separate lines” puts each line under the signature as its own text, so you can drag any of them into a form’s own field.',
 
   // SignatureMenu
   'menu_sign': 'Sign', // toolbar button / menu name (verb)

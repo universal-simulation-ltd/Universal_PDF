@@ -54,8 +54,8 @@ const sign: Messages['sign'] = {
   'pad_date_label': 'Riga della data sotto la firma',
   'pad_when_placed': 'Al momento dell’inserimento',
   'pad_with_signature': 'Con la firma',
-  'pad_separate_click': 'Clic separato',
-  'pad_separate_hint': '«Clic separato» inserisce ogni riga con un clic a sé, così ciascuna può andare in un campo modulo distinto.',
+  'pad_separate_click': 'Righe separate',
+  'pad_separate_hint': '«Righe separate» mette ogni riga sotto la firma come testo a sé, così puoi trascinarne una in un campo modulo distinto.',
 
   // SignatureMenu
   'menu_sign': 'Firma',

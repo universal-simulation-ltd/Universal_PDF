@@ -54,8 +54,8 @@ const sign: Messages['sign'] = {
   'pad_date_label': 'İmzanın altındaki tarih satırı',
   'pad_when_placed': 'Yerleştirildiğinde',
   'pad_with_signature': 'İmzayla birlikte',
-  'pad_separate_click': 'Ayrı tıklama',
-  'pad_separate_hint': '“Ayrı tıklama” her satırı kendi tıklamasıyla yerleştirir; böylece her biri formun kendi alanına konabilir.',
+  'pad_separate_click': 'Ayrı satırlar',
+  'pad_separate_hint': '“Ayrı satırlar” her satırı imzanın altına ayrı bir metin olarak koyar; böylece istediğinizi formun kendi alanına sürükleyebilirsiniz.',
 
   // SignatureMenu
   'menu_sign': 'İmzala',

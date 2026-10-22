@@ -10,8 +10,9 @@
 //   • Saving a signature, or "Add to page" in the QR dialog, closes the dialog
 //     and leaves an ARMED tool with nothing on screen saying so. The banner is
 //     the only thing that distinguishes that state from the one before it.
-//   • It names what is about to land — signature vs QR code vs the next of the
-//     name/details/date pieces — because the four states look identical.
+//   • It names what is about to land — signature vs QR code — because the
+//     states look identical. (The name/details/date pieces used to get a turn
+//     each; since 2026-10-22 they land with the signature.)
 //   • It goes when the thing lands, not on a timer.
 //   • ⚠️ It must NOT eat the tap it is asking for. It floats over the page, so
 //     everything but its buttons is pointer-events:none — a placement made
@@ -251,7 +252,7 @@ await page.locator('textarea[aria-label="Details to show under the signature"]')
 await page.waitForTimeout(200)
 await page.click('label:has-text("Add date")')
 await page.waitForTimeout(200)
-await page.click('button:has-text("Separate click")')
+await page.click('button:has-text("Separate lines")')
 await page.waitForTimeout(150)
 await padDialog.locator('button:has-text("Save")').click()
 await page.waitForTimeout(900)
@@ -289,22 +290,16 @@ await page.mouse.click(bannerBox.x + 6, bannerBox.y + bannerBox.height - 16)
 await page.waitForTimeout(600)
 
 const afterDrop = await bannerText()
+// Since 2026-10-22 the name, details and date land under the signature in the
+// same drop, so there is no "now place the name" turn left to announce.
+const placedNow = await page.evaluate(async () =>
+  (await import('/src/stores/annotationStore.ts')).useAnnotationStore.getState().annotations.map((a) => a.type))
 check(
-  'a click through the banner still places the signature',
-  /name/i.test(afterDrop),
-  `banner now reads: ${afterDrop || '(gone)'}`,
+  'a click through the banner still places the signature, with its lines under it',
+  placedNow.filter((t) => t === 'image').length === 1 && placedNow.filter((t) => t === 'text').length === 3,
+  JSON.stringify(placedNow),
 )
-check('and the queue is counted', /2 more/.test(afterDrop), afterDrop)
-
-const seen = [afterDrop]
-for (let i = 0; i < 3; i += 1) {
-  await page.mouse.click(pageBox.x + 120 + i * 80, pageBox.y + 420 + i * 60)
-  await page.waitForTimeout(400)
-  seen.push(await bannerText())
-}
-check('the details line is named on its own turn', /details/i.test(seen[1]), seen[1])
-check('and the date on its own turn', /date/i.test(seen[2]), seen[2])
-check('the banner goes when the last piece lands', seen[3] === '', `still reads: ${seen[3]}`)
+check('and the banner goes, with nothing left to place', afterDrop === '', `still reads: ${afterDrop}`)
 
 // ── "Don't show again" ──────────────────────────────────────────────────────
 // Arm a QR code again (the shortest route back to a banner), then turn the card
@@ -313,7 +308,10 @@ check('the banner goes when the last piece lands', seen[3] === '', `still reads:
 console.log('\n"Don\'t show again" silences the card without disarming the placement')
 await page.locator('button[title="Add a QR code"]').click()
 await page.waitForSelector('h2:has-text("Add a QR code")', { timeout: 5000 })
-await page.locator('input[type="text"], input[type="url"]').first().fill('https://unisim.co.uk')
+// ⚠️ The dialog's own box, by its label. `input[type="text"]` never matched
+// it (it has no type attribute) and only passed while a text piece's pill on
+// the page happened to supply a text box to fill instead.
+await page.getByLabel('Link or text').fill('https://unisim.co.uk')
 await page.locator('button:has-text("Add to page")').click()
 // ⚠️ WAIT FOR THE CARD, not for a fixed time. "Add to page" renders the QR
 // image before it arms the placement, and on a cold or busy machine that took

@@ -17,7 +17,8 @@ import type Konva from 'konva'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { usePdfStore } from '../../stores/pdfStore'
 import { copiesForEveryPage, copiesOnOtherPages, type PageSize } from '../../lib/everyPage'
-import { useSignatureStore, type PendingExtra } from '../../stores/signatureStore'
+import { useSignatureStore } from '../../stores/signatureStore'
+import { stackUnder, type SigLine } from '../../lib/sigLines'
 import { useCoarsePointer } from '../../hooks/useCoarsePointer'
 import { useImage } from '../../lib/useImage'
 import { budgetedPageCount, layerPixelRatio, pagePixelBudget } from '../../lib/renderBudget'
@@ -1929,46 +1930,56 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
         // Capped at half the page — see fitPlacement. The ghost preview runs
         // the same numbers, so what you see under the cursor is what lands.
         const fit = fitPlacement(160 / scale, (160 / scale) * ratio, pageW, pageH)
-        add({
-          id: crypto.randomUUID(),
-          pageIndex,
-          type: 'image',
-          x: pos.x - fit.width / 2,
-          y: pos.y - fit.height / 2,
-          width: fit.width,
-          height: fit.height,
-          src: active.dataUrl,
-          // Carry the re-editable ink + options so the placed signature's
-          // name/date can be changed (double-tap) / restyled (pill) later.
-          sig: active.sig,
-        })
-        // If this signature carries separate label pieces, arm them for
-        // click-placement instead of dropping straight into Select.
+        // A signature that carries its details as separate pieces: each lands
+        // straight under it as its own line of text, in the same undo step,
+        // and can then be dragged on its own — into a form's own field, say
+        // (James, 2026-10-22). It used to take a click per line.
         //
         // ⚠️ The order is `labelsForOptions`' reading order — who, then what
-        // they are, then when — so the queue a user clicks through is the same
-        // block they would have got baked, top to bottom. The date stays LAST
-        // however many detail lines sit above it.
+        // they are, then when — so the lines read as the baked block would,
+        // top to bottom. The date stays LAST however many detail lines sit
+        // above it.
         const extras = active.extras
         const inkColor = extras?.color ?? SIGNATURE_INK
-        const queue: PendingExtra[] = []
-        if (extras?.name) queue.push({ kind: 'name', text: extras.name, color: inkColor })
-        for (const line of extras?.details ?? []) queue.push({ kind: 'details', text: line, color: inkColor })
+        const pieces: SigLine[] = []
+        if (extras?.name) pieces.push({ text: extras.name, scale: 1 })
+        for (const line of extras?.details ?? []) pieces.push({ text: line, scale: 0.7 })
         // ⚠️ The date resolves HERE, not when the signature was saved — a
         // library signature placed a week later must date itself the day it is
         // used. `dateText` is the only part frozen in the pad (the user's own
-        // wording), and an older signature saved without one still gets today.
-        if (extras?.date) queue.push({ kind: 'date', text: extras.dateText?.trim() || formatSigningDate(), color: inkColor })
-        if (queue.length > 0) {
-          sigState.setPendingExtras(queue)
-          // Same reason as the mid-sequence deselect below: the signature image
-          // has just been added and is therefore selected, and its Transformer
-          // is bigger than any of the text pieces — left standing it eats the
-          // first extra click of every sequence.
-          setSelected(null)
-        } else {
-          useAnnotationStore.getState().setTool('select')
-        }
+        // wording); without one it reads "Signed on <today>".
+        if (extras?.date) pieces.push({ text: extras.dateText?.trim() || dateLineSeed(), scale: 0.8 })
+        const sigBox = { x: pos.x - fit.width / 2, y: pos.y - fit.height / 2, width: fit.width, height: fit.height }
+        const stack = stackUnder(sigBox, pieces, pageH)
+        const sigId = crypto.randomUUID()
+        addMany([
+          {
+            id: sigId,
+            pageIndex,
+            type: 'image',
+            x: sigBox.x,
+            y: stack.sigY,
+            width: fit.width,
+            height: fit.height,
+            src: active.dataUrl,
+            // Carry the re-editable ink + options so the placed signature's
+            // name/date can be changed (double-tap) / restyled (pill) later.
+            sig: active.sig,
+          },
+          ...stack.lines.map((l) => ({
+            id: crypto.randomUUID(),
+            pageIndex,
+            type: 'text' as const,
+            x: l.x,
+            y: l.y,
+            text: l.text,
+            color: inkColor,
+            fontSize: l.fontSize,
+            fontFamily
+          })),
+        ])
+        setSelected(sigId)
+        useAnnotationStore.getState().setTool('select')
       }
     } else if (tool === 'image') {
       const { uploadedImageSrc: src, uploadedImageQr: qr } = useAnnotationStore.getState()

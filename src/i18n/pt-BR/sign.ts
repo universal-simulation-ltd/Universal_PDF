@@ -54,8 +54,8 @@ const sign: Messages['sign'] = {
   'pad_date_label': 'Linha de data abaixo da assinatura',
   'pad_when_placed': 'Ao posicionar',
   'pad_with_signature': 'Junto com a assinatura',
-  'pad_separate_click': 'Clique separado',
-  'pad_separate_hint': '“Clique separado” posiciona cada linha com um clique próprio, para que cada uma possa ir em um campo próprio do formulário.',
+  'pad_separate_click': 'Linhas separadas',
+  'pad_separate_hint': '“Linhas separadas” coloca cada linha sob a assinatura como um texto próprio, para que você possa arrastar qualquer uma para um campo próprio do formulário.',
 
   // SignatureMenu
   'menu_sign': 'Assinar',

@@ -54,8 +54,8 @@ const sign: Messages['sign'] = {
   'pad_date_label': 'Línea de fecha debajo de la firma',
   'pad_when_placed': 'Al colocarla',
   'pad_with_signature': 'Con la firma',
-  'pad_separate_click': 'Clic aparte',
-  'pad_separate_hint': '«Clic aparte» coloca cada línea con un clic propio, para que cada una pueda ir en su propio campo de formulario.',
+  'pad_separate_click': 'Líneas aparte',
+  'pad_separate_hint': '«Líneas aparte» pone cada línea bajo la firma como texto propio, para que puedas arrastrar cualquiera a su propio campo de formulario.',
 
   // SignatureMenu
   'menu_sign': 'Firmar',

@@ -5,7 +5,7 @@ import { useAnnotationStore } from '../stores/annotationStore'
 import { useSignatureStore } from '../stores/signatureStore'
 import { inkColorFor, renderInkSignature } from '../lib/renderInk'
 import { renderTypedSignature } from '../lib/renderTyped'
-import { composeSignature, dateLineSeed, DEFAULT_LABEL_SCALE, DEFAULT_SIG_ALIGN } from '../lib/composeSignature'
+import { dateLineSeed, DEFAULT_LABEL_SCALE, DEFAULT_SIG_ALIGN } from '../lib/composeSignature'
 import type { SignatureData } from '../types/annotations'
 import { BackLink, Hl } from './parts'
 import { useNav } from './nav'
@@ -99,19 +99,16 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
         if (made) sig = { ink: made.dataUrl, inkWidth: made.width, inkHeight: made.height, align: DEFAULT_SIG_ALIGN, labelScale: DEFAULT_LABEL_SCALE, color: ink, typed: name, realistic: true }
       }
       if (!made) return
-      if (sig && (nameUnder.trim() || dateUnder)) {
-        sig = {
-          ...sig,
-          name: nameUnder.trim() || undefined,
-          showName: !!nameUnder.trim(),
-          showDate: dateUnder,
-          dateText: dateUnder ? dateLineSeed() : undefined,
-        }
-        made = await composeSignature(sig)
-      }
+      // The name and date go under the signature as their own lines when it
+      // lands, so each can be dragged on its own (James, 2026-10-22). They are
+      // no longer baked into the picture. The date is worked out on the day
+      // it is placed.
+      const extras = nameUnder.trim() || dateUnder
+        ? { name: nameUnder.trim() || undefined, date: dateUnder, color: sig?.color ?? INK }
+        : undefined
       const store = useSignatureStore.getState()
       const name = how === 'type' ? typed.trim() : t('sign.default_signature_name', { n: store.signatures.length + 1 })
-      const id = store.add({ name, dataUrl: made.dataUrl, width: made.width, height: made.height, sig })
+      const id = store.add({ name, dataUrl: made.dataUrl, width: made.width, height: made.height, sig, extras })
       if (mode === 'drawer') {
         onDone()
         return

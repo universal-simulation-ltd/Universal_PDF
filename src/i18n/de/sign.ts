@@ -54,8 +54,8 @@ const sign: Messages['sign'] = {
   'pad_date_label': 'Datumszeile unter der Unterschrift',
   'pad_when_placed': 'Beim Platzieren',
   'pad_with_signature': 'Mit Unterschrift',
-  'pad_separate_click': 'Einzeln klicken',
-  'pad_separate_hint': '„Einzeln klicken“ platziert jede Zeile mit einem eigenen Klick, sodass jede in ein eigenes Formularfeld kommen kann.',
+  'pad_separate_click': 'Einzelne Zeilen',
+  'pad_separate_hint': '„Einzelne Zeilen“ setzt jede Zeile als eigenen Text unter die Unterschrift, sodass du jede in ein eigenes Formularfeld ziehen kannst.',
 
   // SignatureMenu
   'menu_sign': 'Unterschreiben',

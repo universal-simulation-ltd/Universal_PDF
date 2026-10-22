@@ -1,4 +1,5 @@
-// "Separate click" — the signature pad's placement control, browser-level.
+// "Separate lines" (was "Separate click") — the signature pad's placement
+// control, browser-level.
 //
 //   ./scripts/preview.ps1            # or preview.sh — Universal PDF is :5174
 //   npm run test:separate            # in another terminal
@@ -10,17 +11,13 @@
 //   • The control is LIVE as soon as "Add your details" is on, with nothing
 //     typed. It used to need a name typed over the "Signed by: " seed, so it
 //     appeared to belong to the date switch alone.
-//   • Choosing "Separate click" actually places separately WHEN THERE ARE
+//   • Choosing "Separate lines" actually places separately WHEN THERE ARE
 //     DETAILS. It used to bail silently (`&& !wantDetails`) and bake the lot,
 //     so the control did nothing and said nothing about doing nothing.
-//   • One piece per line, date LAST. Name + two detail lines + date is four
-//     click-placements after the signature itself, and the tool only returns to
-//     Select when the queue is empty — which is what counts them here.
-//   • EXACTLY four. It was seven before the mid-sequence deselect: `add` selects
-//     what it adds, so each dropped piece left a Transformer over itself and ate
-//     the next click. The count is the assertion that catches that coming back —
-//     a click that silently does nothing is the same symptom as the feature not
-//     working, which is how it was reported in the first place.
+//   • One piece per line, date LAST, all of them placed under the signature by
+//     the same drop (2026-10-22; until then each needed a click of its own),
+//     lined up with the ink; the tool goes straight back to Select.
+//   • Each line still drags on its own, and one undo takes the lot.
 //
 // Negative control (2026-08-29, run): `git stash`-ing the three source files
 // back turns three of these six red — the details gate, "stays armed", and the
@@ -154,7 +151,7 @@ const details = page.locator('textarea[aria-label="Details to show under the sig
 await details.fill(['Jane Smith', 'Head of Testing', 'jane@example.com'].join('\n'))
 await page.waitForTimeout(200)
 
-await page.click('button:has-text("Separate click")')
+await page.click('button:has-text("Separate lines")')
 await page.waitForTimeout(150)
 // ⚠️ Scoped to the pad. A bare `button:has-text("Save")` also matches the
 // MOBILE toolbar's Save, which is in the DOM at every viewport and merely
@@ -163,66 +160,58 @@ await page.waitForTimeout(150)
 await pad_dialog.locator('button:has-text("Save")').click()
 await page.waitForTimeout(800)
 
-// The signature arms the tool; drop it, then count how many further clicks the
-// queue eats. The tool returns to Select only once it is empty, so the count of
-// clicks IS the number of separately-placed pieces.
-// ⚠️ Prefix match. The select-group button carries a `panel`, so its title is
-// "Select / move — tap again or long-press for options", not the bare label.
 const selectActive = async () =>
   ((await page.locator('button[title^="Select / move"]').first().getAttribute('class')) ?? '').includes(
     'bg-cobalt'
   )
+const annots = () =>
+  page.evaluate(async () => (await import('/src/stores/annotationStore.ts')).useAnnotationStore.getState().annotations)
 
-const pageBox = await page.locator('[data-page-index="0"] canvas').first().boundingBox()
+// Dropping the signature puts every line under it at once (James, 2026-10-22:
+// "automatically place it underneath the signature once the signature
+// location is picked. Allow the user to click and drag them individually
+// still"). It used to take a click per line.
+// ⚠️ Top third of the page: PlacementHint's live buttons sit dead centre.
+const pageCanvas = page.locator('[data-page-index="0"] canvas').first()
+const pageBox = await pageCanvas.boundingBox()
+console.log('\none drop places the signature and every line under it')
+await page.mouse.click(pageBox.x + 200, pageBox.y + 150)
+await page.waitForTimeout(400)
+const all = await annots()
+const img = all.find((a) => a.type === 'image')
+const lines = all.filter((a) => a.type === 'text')
+check('the signature and four lines (name, 2 details, date)', !!img && lines.length === 4, JSON.stringify(all.map((a) => [a.type, a.text])))
+check('the detail lines are there, in order', lines[1]?.text === 'Head of Testing' && lines[2]?.text === 'jane@example.com', JSON.stringify(lines.map((l) => l.text)))
+check('the date is last', /\d{4}/.test(lines[3]?.text ?? ''), lines[3]?.text)
+check('every line starts under the ink, lined up with it', !!img && lines.every((l) => l.y >= img.y + img.height && Math.abs(l.x - img.x) < 0.01), JSON.stringify({ img, lines }))
+check('the tool is back to Select straight away', await selectActive())
 
-// ⚠️ EVERY CLICK STAYS IN THE TOP THIRD OF THE PAGE, and that is not cosmetic.
-//
-// PlacementHint centres its card over the document. The card itself is
-// `pointer-events-none` — deliberately, and its comment says why — but its two
-// buttons (Cancel / Don't show again) are `pointer-events-auto`, and they sit
-// dead centre. The original ladder stepped 60px per click from y+180, so the
-// FOURTH click landed on "Don't show again": the click was swallowed, the hint
-// was permanently dismissed, and the run needed a fifth click to place four
-// pieces.
-//
-// That read exactly like "the queue serves one placement too many" and was
-// recorded as such. It is not: the queue is correct and drains in four. The
-// pieces even land in the right order — the giveaway was a GAP in the placed
-// column where the fourth should have been, visible only in the DEBUG_SEP
-// frames.
-//
-// The underlying hazard is real and is a product question rather than a test
-// one: a live button parked over the middle of the page can eat the very tap
-// the card is instructing the user to make. That is written up in the backlog
-// for the owner; this harness simply stops colliding with it, so it can go back
-// to guarding what it is for.
-const dropAt = async (i) => {
-  await page.mouse.click(pageBox.x + 90 + i * 60, pageBox.y + 110 + i * 42)
-  await page.waitForTimeout(260)
-}
+console.log('\neach line still drags on its own')
+const scale = pageBox.width / 595
+const second = lines[1]
+const from = { x: pageBox.x + (second.x + 10) * scale, y: pageBox.y + (second.y + second.fontSize * 0.5) * scale }
+await page.mouse.click(from.x, from.y)
+await page.waitForTimeout(250)
+await page.mouse.move(from.x, from.y)
+await page.mouse.down()
+await page.mouse.move(from.x + 40, from.y + 30, { steps: 8 })
+await page.mouse.move(from.x + 80, from.y + 60, { steps: 8 })
+await page.mouse.up()
+await page.waitForTimeout(300)
+const after = await annots()
+const moved = after.find((a) => a.id === second.id)
+const others = after.filter((a) => a.id !== second.id)
+check('the dragged line moved', moved && (Math.abs(moved.x - second.x) > 5 || Math.abs(moved.y - second.y) > 5), JSON.stringify({ before: second, after: moved }))
+check('nothing else moved', others.every((o) => { const b = all.find((x) => x.id === o.id); return b && b.x === o.x && b.y === o.y }))
 
-console.log('\nplacing with details on really is a separate click')
-await dropAt(0) // the signature itself
-check('the tool stays armed after the signature (extras queued)', !(await selectActive()))
-
-let clicks = 0
-while (clicks < 8 && !(await selectActive())) {
-  clicks += 1
-  await dropAt(clicks)
-  // Canvas failures are opaque — a red count tells you nothing about WHICH
-  // click did nothing. `DEBUG_SEP=<dir> npm run test:separate` drops a frame
-  // per click there; that is how the swallowed-by-Transformer clicks were found.
-  if (process.env.DEBUG_SEP) {
-    await page.screenshot({ path: `${process.env.DEBUG_SEP}/sep-${clicks}.png`, clip: { x: pageBox.x, y: pageBox.y + 100, width: Math.min(700, pageBox.width), height: 560 } })
-    console.log(`    [debug] after click ${clicks}: select=${await selectActive()}`)
-  }
-}
-check(
-  'name + 2 detail lines + date = four click-placements',
-  clicks === 4,
-  `queue emptied after ${clicks}`
-)
-check('and the tool falls back to Select once the queue is empty', await selectActive())
+console.log('\nundo')
+await page.evaluate(async () => {
+  const s = (await import('/src/stores/annotationStore.ts')).useAnnotationStore.getState()
+  s.undo()
+  s.undo()
+})
+await page.waitForTimeout(200)
+check('undoing the drag, then one more undo, takes the signature and its lines away together', (await annots()).length === 0, JSON.stringify(await annots()))
 
 await browser.close()
 console.log(failures.length ? `\n${failures.length} FAILED:\n  ${failures.join('\n  ')}` : '\nall checks passed')

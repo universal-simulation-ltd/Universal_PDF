@@ -54,8 +54,8 @@ const sign: Messages['sign'] = {
   'pad_date_label': 'Ligne de date sous la signature',
   'pad_when_placed': 'Au placement',
   'pad_with_signature': 'Avec la signature',
-  'pad_separate_click': 'Clic séparé',
-  'pad_separate_hint': '« Clic séparé » place chaque ligne d’un clic distinct, pour que chacune puisse aller dans son propre champ de formulaire.',
+  'pad_separate_click': 'Lignes séparées',
+  'pad_separate_hint': '« Lignes séparées » place chaque ligne sous la signature comme un texte à part, pour que vous puissiez en glisser une dans son propre champ de formulaire.',
 
   // SignatureMenu
   'menu_sign': 'Signer',
