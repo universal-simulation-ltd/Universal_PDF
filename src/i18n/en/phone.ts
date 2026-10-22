@@ -189,6 +189,13 @@ export default {
   'more_rename': 'Rename',
   'more_howto': 'How to…',
   'more_put_away': 'Put it away',
+  'more_clear': 'Clear all annotations',
+  'clear_confirm_one': 'Take the {count} annotation off this PDF?',
+  'clear_confirm_other': 'Take all {count} annotations off this PDF?',
+  'clear_note': 'Undo puts them back.',
+  'clear_yes': 'Clear all',
+  'cleared_one': '{count} annotation cleared. Undo puts it back.',
+  'cleared_other': '{count} annotations cleared. Undo puts them back.',
   'rename_label': 'New name',
 
   // Send it on its way (a page). The heading is split so "way" can carry the highlighter.

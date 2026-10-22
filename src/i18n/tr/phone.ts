@@ -184,6 +184,13 @@ const phone: Messages['phone'] = {
   'more_rename': 'Yeniden adlandır',
   'more_howto': 'Nasıl yapılır…',
   'more_put_away': 'Kenara koy',
+  'more_clear': 'Tüm notları sil',
+  'clear_confirm_one': 'Bu PDF’deki not kaldırılsın mı?',
+  'clear_confirm_other': 'Bu PDF’deki {count} notun tümü kaldırılsın mı?',
+  'clear_note': 'Geri al hepsini geri getirir.',
+  'clear_yes': 'Tümünü sil',
+  'cleared_one': '{count} not silindi. Geri al onu geri getirir.',
+  'cleared_other': '{count} not silindi. Geri al hepsini geri getirir.',
   'rename_label': 'Yeni ad',
 
   // Send it on its way (a page). The heading is split so "way" can carry the highlighter.

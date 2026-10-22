@@ -184,6 +184,13 @@ const phone: Messages['phone'] = {
   'more_rename': 'Renomear',
   'more_howto': 'Como fazer…',
   'more_put_away': 'Deixar de lado',
+  'more_clear': 'Apagar todas as anotações',
+  'clear_confirm_one': 'Tirar a anotação deste PDF?',
+  'clear_confirm_other': 'Tirar todas as {count} anotações deste PDF?',
+  'clear_note': 'Desfazer coloca de volta.',
+  'clear_yes': 'Apagar tudo',
+  'cleared_one': '{count} anotação apagada. Desfazer coloca de volta.',
+  'cleared_other': '{count} anotações apagadas. Desfazer coloca de volta.',
   'rename_label': 'Novo nome',
 
   // Send it on its way (a page). The heading is split so "way" can carry the highlighter.

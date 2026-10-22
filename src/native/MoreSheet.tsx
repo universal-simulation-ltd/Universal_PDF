@@ -20,6 +20,11 @@ export default function MoreSheet() {
   const numPages = usePdfStore((s) => s.numPages)
   const sourceBytes = usePdfStore((s) => s.sourceBytes)
   const [renaming, setRenaming] = useState(false)
+  // Clear all annotations asks first, in the sheet (James, 2026-10-22). It is
+  // one tap in a list, and a whole document's work is a lot to lose by a slip,
+  // even with Undo there.
+  const [clearing, setClearing] = useState(false)
+  const marks = useAnnotationStore((s) => s.annotations.length)
   const [newName, setNewName] = useState(() => (fileName ?? '').replace(/\.pdf$/i, ''))
   const renameId = useId()
   const nav = useNav.getState()
@@ -73,7 +78,17 @@ export default function MoreSheet() {
     { label: t('phone.more_rename'), icon: PATHS.rename, run: () => setRenaming(true) },
     { label: t('phone.more_howto'), icon: PATHS.help, run: () => nav.push('kb') },
     { label: t('phone.more_put_away'), icon: PATHS.put, run: () => { close(); leaveDocument() } },
+    // Only with something to clear. The website has it in its Actions menu.
+    ...(marks > 0 ? [{ label: t('phone.more_clear'), icon: PATHS.trash, danger: true, run: () => setClearing(true) }] : []),
   ]
+
+  function clearAll() {
+    const n = useAnnotationStore.getState().annotations.length
+    useAnnotationStore.getState().clearAll()
+    setClearing(false)
+    close()
+    nav.say(t.plural('phone.cleared', n))
+  }
 
   return (
     <Sheet label={t('phone.more_title')} onClose={close}>
@@ -108,7 +123,20 @@ export default function MoreSheet() {
         ))}
       </div>
 
-      {renaming ? (
+      {clearing ? (
+        <div className="flex flex-col gap-2 rounded-2xl p-3.5" style={{ background: 'var(--np-slip)', border: '1px solid var(--np-line)' }}>
+          <p className="m-0 text-[16px] font-semibold">{t.plural('phone.clear_confirm', marks)}</p>
+          <p className="m-0 text-[13px] text-[color:var(--np-muted)]">{t('phone.clear_note')}</p>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => setClearing(false)} className="min-h-[44px] rounded-xl text-[15px] font-semibold" style={{ border: '1px solid var(--np-line)' }}>
+              {t('phone.cancel')}
+            </button>
+            <button type="button" onClick={clearAll} className="min-h-[44px] rounded-xl text-white text-[15px] font-bold" style={{ background: '#b42318' }}>
+              {t('phone.clear_yes')}
+            </button>
+          </div>
+        </div>
+      ) : renaming ? (
         <form
           className="flex flex-col gap-2 rounded-2xl p-3.5"
           style={{ background: 'var(--np-slip)', border: '1px solid var(--np-line)' }}
@@ -140,7 +168,7 @@ export default function MoreSheet() {
       ) : (
         <Card>
           {rows.map((r, i) => (
-            <LinkRow key={r.label} label={r.label} icon={r.icon} onClick={r.run} first={i === 0} />
+            <LinkRow key={r.label} label={r.label} icon={r.icon} onClick={r.run} first={i === 0} danger={'danger' in r && r.danger} />
           ))}
         </Card>
       )}

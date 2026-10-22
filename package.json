@@ -111,6 +111,7 @@
     "test:note-overhang": "node e2e/note-overhang.e2e.mjs",
     "test:every-page": "node --experimental-strip-types scripts/everyPage.test.mjs",
     "test:sig-lines": "node --experimental-strip-types scripts/sigLines.test.mjs",
+    "test:phone-clear-all": "node e2e/phone-clear-all.e2e.mjs",
     "test:example": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/examplePdf.test.mjs",
     "test:every-page:e2e": "node e2e/every-page.e2e.mjs",
     "test:page-numbers": "node --experimental-strip-types scripts/pageNumbers.test.mjs",
