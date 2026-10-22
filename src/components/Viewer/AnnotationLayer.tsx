@@ -1155,6 +1155,12 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   const numPages = usePdfStore((s) => s.numPages)
   // What "Put on every page" just did, said for a moment beside its button.
   const [everyPageSaid, setEveryPageSaid] = useState<{ id: string; text: string } | null>(null)
+  // The highlight pill's Size slider, folded behind a button until asked for,
+  // so a small highlight's pill is no wider than its colours (James,
+  // 2026-10-22: "the pop-up toolbar for a small highlight annotation is
+  // huge"). Folds again when another mark is selected.
+  const [hlSizeOpen, setHlSizeOpen] = useState(false)
+  useEffect(() => setHlSizeOpen(false), [selectedId])
   const pdfDoc = usePdfStore((s) => s.doc)
   const [pageSizes, setPageSizes] = useState<PageSize[] | null>(null)
   useEffect(() => {
@@ -4765,10 +4771,29 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
               // Size gets a row of its own under the colours, labelled just
               // "Size" (James, 2026-10-19: on a phone the label stayed on the
               // colour row and only the slider wrapped, which looked odd).
-              <>
-                <ColorCluster color={selected.color} setColor={setColor} swatches={highlightColours} />
-                <span className="basis-full flex items-center gap-2">
-                  <span className="text-xs text-slate-500 font-medium">{t('annotate.sig_pill.size')}</span>
+              // The swatches and a Size button on one row; the slider opens
+              // under them, as wide as they are, so the pill never grows
+              // wider than the colours (James, 2026-10-22).
+              <span className="flex flex-col gap-1.5">
+                <span className="flex items-center gap-2">
+                  <ColorCluster color={selected.color} setColor={setColor} swatches={highlightColours} />
+                  <button
+                    type="button"
+                    aria-expanded={hlSizeOpen}
+                    onClick={() => setHlSizeOpen((v) => !v)}
+                    className={`ml-1 h-7 pl-2 pr-2.5 rounded-full flex items-center gap-1.5 text-xs font-medium transition-colors ${
+                      hlSizeOpen ? 'bg-amber-100 text-slate-800' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="rounded-full bg-amber-400"
+                      style={{ width: 14, height: Math.max(3, Math.min(10, selected.strokeWidth * scale * 0.35)) }}
+                    />
+                    {t('annotate.sig_pill.size')}
+                  </button>
+                </span>
+                {hlSizeOpen && (
                   <input
                     type="range"
                     min={HIGHLIGHT_MIN_PX}
@@ -4782,10 +4807,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                     }}
                     aria-label={t('viewer.toolbar.highlight_size')}
                     title={t('viewer.toolbar.highlight_size_value', { size: Math.round(selected.strokeWidth * scale) })}
-                    className="flex-1 min-w-20 accent-amber-500"
+                    className="w-full accent-amber-500"
                   />
-                </span>
-              </>
+                )}
+              </span>
             ) : (
               <ColorCluster color={selected.color} setColor={setColor} />
             )}

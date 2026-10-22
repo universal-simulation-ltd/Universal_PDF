@@ -13,7 +13,8 @@
 //     hugs the ink, and export blacks out the stroke and not the rest of its box.
 //   • A new sticky note is at most 30% of the page across, and stays on the
 //     page when placed near its edge.
-//   • A highlight's pill shows Size on its own row and flips above a mark at
+//   • A highlight's pill folds Size behind a button (no wider than its
+//     colours, 2026-10-22) and flips above a mark at
 //     the page's foot instead of going under the tool bar.
 //   • The page's Colour pill stands down while the sheet is open (the sheet
 //     carries the colour and width), and the sheet's width repaints the
@@ -248,7 +249,7 @@ console.log('\nthe sheet carries a selected highlight\'s colour and width')
   await stroke([[60, 300], [150, 300], [240, 300]])
   const h = (await annotations()).find((a) => a.type === 'draw')
   check('the highlight is selected', !!h && (await store('return s.selectedId')) === h.id)
-  check('the page shows no Colour pill of its own', (await page.getByRole('slider', { name: 'Highlighter size' }).count()) === 0)
+  check('the page shows no Colour pill of its own', (await page.evaluate(() => [...document.querySelectorAll('button[aria-expanded]')].filter((b) => b.textContent.trim() === 'Size').length)) === 0)
   const before = h.strokeWidth
   await page.locator('section input[type="range"]').evaluate((el) => {
     const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
@@ -268,27 +269,39 @@ console.log('\na highlight at the foot of the page: its pill flips above, clear 
   await store("s.resetDocument(); s.add({ id: 'hlow', pageIndex: 0, type: 'draw', points: [80, 828, 300, 828], color: '#eab308', strokeWidth: 14, opacity: 0.4 }); s.setTool('select'); s.setSelected('hlow')")
   await mod('/src/native/nav.ts', 'm.useNav.getState().closeSheet()')
   await page.waitForTimeout(500)
-  const slider = page.getByRole('slider', { name: 'Highlighter size' })
-  check('the highlight\'s pill is up', (await slider.count()) === 1)
+  const sizeBtn = page.getByRole('button', { name: 'Size', exact: true })
+  check('the highlight\'s pill is up', (await sizeBtn.count()) === 1)
   const got = await page.evaluate(() => {
-    const input = document.querySelector('input[aria-label="Highlighter size"]')
-    const pill = input?.closest('.inline-flex')
+    const btn = [...document.querySelectorAll('button[aria-expanded]')].find((b) => b.textContent.trim() === 'Size')
+    const pill = btn?.closest('.inline-flex')
     const nav = document.querySelector('nav[aria-label]')
     const canvas = document.querySelector('[data-page-index="0"] canvas')
     const swatch = pill?.querySelector('[data-pill-swatch]')
-    const label = input?.previousElementSibling
     const r = (el) => (el ? el.getBoundingClientRect().toJSON() : null)
-    return { pill: r(pill), nav: r(nav), page: r(canvas), swatch: r(swatch), label: r(label), labelText: label?.textContent }
+    return { pill: r(pill), nav: r(nav), page: r(canvas), swatch: r(swatch), btn: r(btn) }
   })
   const k = got.page.width / 595
   const markTop = got.page.top + 828 * k - 7 * k
   check('the pill sits above the mark', got.pill.bottom <= markTop, json({ pill: got.pill, markTop }))
   check('…and stays on the page', got.pill.top >= got.page.top && got.pill.bottom <= got.page.bottom, json(got))
-  check('Size is labelled just "Size"', got.labelText === 'Size', got.labelText)
-  check('…on its own row under the colours', got.label.top >= got.swatch.bottom - 1, json({ label: got.label, swatch: got.swatch }))
+  // James, 2026-10-22: "the pop-up toolbar for a small highlight annotation
+  // is huge". Size is a button on the colour row; the slider is folded.
+  check('Size is a button on the colour row', Math.abs((got.btn.top + got.btn.bottom) / 2 - (got.swatch.top + got.swatch.bottom) / 2) < 4, json({ btn: got.btn, swatch: got.swatch }))
+  check('…with the slider folded', (await page.getByRole('slider', { name: 'Highlighter size' }).count()) === 0)
+  check('…so the pill is no wider than its colours', got.pill.width < 260, json(got.pill))
+  await sizeBtn.click()
+  await page.waitForTimeout(300)
+  const open = await page.evaluate(() => {
+    const input = document.querySelector('input[aria-label="Highlighter size"]')
+    const pill = input?.closest('.inline-flex')
+    const swatch = pill?.querySelector('[data-pill-swatch]')
+    return { input: input?.getBoundingClientRect().toJSON(), pill: pill?.getBoundingClientRect().toJSON(), swatch: swatch?.getBoundingClientRect().toJSON() }
+  })
+  check('Size opens the slider under the colours', !!open.input && open.input.top >= open.swatch.bottom - 1, json(open))
+  check('…without the pill getting wider', !!open.pill && Math.abs(open.pill.width - got.pill.width) < 2, json({ closed: got.pill.width, open: open.pill?.width }))
   await store("s.resetDocument(); s.add({ id: 'hmid', pageIndex: 0, type: 'draw', points: [80, 200, 300, 200], color: '#eab308', strokeWidth: 14, opacity: 0.4 }); s.setSelected('hmid')")
   await page.waitForTimeout(400)
-  const mid = await page.evaluate(() => document.querySelector('input[aria-label="Highlighter size"]')?.closest('.inline-flex')?.getBoundingClientRect().top ?? null)
+  const mid = await page.evaluate(() => [...document.querySelectorAll('button[aria-expanded]')].find((b) => b.textContent.trim() === 'Size')?.closest('.inline-flex')?.getBoundingClientRect().top ?? null)
   check('a highlight with room under it keeps its pill below', mid !== null && mid > got.page.top + 200 * k, json({ mid }))
   await store('s.setSelected(null)')
 }

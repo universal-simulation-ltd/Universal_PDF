@@ -136,7 +136,12 @@ check('the bar shows its two colours', (await bar.getByRole('button', { name: 'Y
 const size = page.getByRole('slider', { name: 'Highlighter size' })
 check('no size slider in the main toolbar', (await size.count()) === 0)
 await stroke(100, 200, 300, 200)
-check('a highlight\'s floating pill has the size slider', (await size.count()) === 1)
+// The slider is folded behind a Size button (James, 2026-10-22).
+const sizeBtn = page.getByRole('button', { name: 'Size', exact: true })
+check('a highlight\'s floating pill has a Size button, slider folded', (await sizeBtn.count()) === 1 && (await size.count()) === 0)
+await sizeBtn.click()
+await page.waitForTimeout(150)
+check('…which opens the size slider', (await size.count()) === 1)
 check('…and the highlighter\'s colours, not black and white', (await page.locator('[data-pill-swatch][aria-label="#EAB308"]').count()) === 1 && (await page.locator('[data-pill-swatch][aria-label="Black"]').count()) === 0)
 await size.fill('30')
 await page.waitForTimeout(150)
