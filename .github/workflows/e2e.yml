@@ -6,14 +6,20 @@
 #                   lock). WebKit is the iPhone app's engine, so these are the
 #                   flows that must work there; Firefox costs one more job.
 #
-# What is left out, and why, is the SKIP list at the top of e2e/run-all.mjs —
+# What is left out, and why, is SKIP (and SKIP_WHERE, per engine or OS) at the
+# top of e2e/run-all.mjs —
 # the Electron specs, the two that need a production or extension build, and
 # the specs that are broken on main today. A spec that fails, then passes on
 # its one retry, is reported as FLAKY and does not turn the run red.
 #
 # Playwright is not a dependency of the app (locally the specs borrow a
 # sibling repo's copy), so it is installed here with --no-save at the version
-# below, and its browsers are cached per version and engine.
+# below. The jobs run in Playwright's own image for that version, which already
+# holds all three browsers AND their system libraries: installing the
+# libraries with `playwright install-deps` on a bare runner took 9 to 38
+# minutes of apt per job (measured 2026-10-22), where pulling the image takes
+# about one. The image is the browser cache. Keep its tag and
+# PLAYWRIGHT_VERSION the same.
 #
 # Free: the repo is public, so ubuntu-latest minutes cost nothing.
 
@@ -39,13 +45,19 @@ env:
   PLAYWRIGHT_VERSION: '1.62.1'
   ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
   E2E_BASE_URL: 'http://localhost:5174/'
-  E2E_RESULTS: ${{ github.workspace }}/e2e-results
+  # Relative to the checkout: inside a container `github.workspace` is the
+  # host's path, not the one the job sees.
+  E2E_RESULTS: e2e-results
 
 jobs:
   e2e:
     name: e2e (${{ matrix.browser }})
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 30
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      # Chromium runs out of shared memory in a container without it.
+      options: --ipc=host
     strategy:
       fail-fast: false
       matrix:
@@ -58,6 +70,9 @@ jobs:
             specs: '--core'
     env:
       E2E_BROWSER: ${{ matrix.browser }}
+      # The image runs as root, and Firefox will not start as root unless
+      # HOME is root's own.
+      HOME: /root
     steps:
       - uses: actions/checkout@v5
 
@@ -70,22 +85,6 @@ jobs:
 
       - name: Playwright ${{ env.PLAYWRIGHT_VERSION }}
         run: npm install --no-save --no-audit --no-fund "playwright@$PLAYWRIGHT_VERSION"
-
-      - name: Cache the ${{ matrix.browser }} build
-        id: browsers
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ env.PLAYWRIGHT_VERSION }}-${{ matrix.browser }}-${{ runner.os }}
-
-      - name: Download ${{ matrix.browser }}
-        if: steps.browsers.outputs.cache-hit != 'true'
-        run: npx playwright install "$E2E_BROWSER"
-
-      # System libraries are not in the cache (they live outside it), so they
-      # are installed every time; it is an apt install, about half a minute.
-      - name: System libraries for ${{ matrix.browser }}
-        run: npx playwright install-deps "$E2E_BROWSER"
 
       # The app refuses to start without a Supabase URL and key. Placeholders
       # in the right shape let it start; nothing in these specs signs in, and
@@ -101,12 +100,13 @@ jobs:
       - name: Start the dev server
         run: |
           nohup npx vite --port 5174 --strictPort > vite.log 2>&1 &
-          for i in $(seq 60); do
-            curl -sf -o /dev/null "$E2E_BASE_URL" && exit 0
-            sleep 1
-          done
-          cat vite.log
-          exit 1
+          node -e '
+            const until = Date.now() + 60000
+            const poll = () => fetch(process.env.E2E_BASE_URL).then(
+              (r) => (r.ok ? process.exit(0) : retry()), retry)
+            const retry = () => (Date.now() > until ? process.exit(1) : setTimeout(poll, 1000))
+            poll()
+          ' || { cat vite.log; exit 1; }
 
       - name: Run the specs
         run: node e2e/run-all.mjs --jobs 3 ${{ matrix.specs }}

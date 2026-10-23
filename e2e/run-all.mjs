@@ -45,6 +45,7 @@ export const SKIP = {
   'save-folder-desktop': 'Electron desktop spec (needs a desktop build and a display)',
   'tabs-desktop': 'Electron desktop spec (needs a desktop build and a display)',
   'download-staging': 'Electron desktop spec (npm run test:download-staging:desktop)',
+  'hub-handoff': 'launches the Electron app for its desktop half (no display on a CI runner)',
   // Needs its own artefacts, not the dev server.
   csp: 'drives the PRODUCTION build (npm run build first); not a dev-server spec',
   extension: 'drives extension/dist (npm run build:extension first) in a headed Chromium',
@@ -59,6 +60,30 @@ export const SKIP = {
   'sticky-note': '"nothing moves when the editor closes": the ink sits ~2px off the editor box',
   'external-links': '"inside a native shell" part: no input[type=file] after goto ?mockauth=1 with a stubbed Capacitor',
   'panel-dodge': 'no [data-toolbar-panel] button[title="Red"] to click (the colour swatch changed)',
+}
+
+// Skipped only in one engine or on one OS: they pass elsewhere, and what
+// fails is the environment, or a difference to look at that is not the flow
+// itself. Found on the first CI runs (2026-10-22).
+export const SKIP_WHERE = {
+  // Linux renders with other fonts than macOS: the canvas underline sits
+  // 7.30pt below 40pt text, the export 5.38pt, and the exported colour reads
+  // off. Passes on a Mac.
+  'link-style': { platform: 'linux', why: 'font metrics differ on Linux (underline depth, text colour)' },
+  // Firefox only. Clicking the sr-only checkbox behind "Request name and
+  // date" does not toggle it (Playwright: "Clicking the checkbox did not
+  // change its state"); the visible switch is what a person clicks.
+  'sigfield-extras': { browser: 'firefox', why: "the sr-only 'Request name and date' checkbox does not toggle on click" },
+  // Firefox only: on the two large documents the Flattened choice never
+  // appears in Export (the size estimate does not finish), 3 minutes a try.
+  // Worth a look in real Firefox.
+  'flatten-export': { browser: 'firefox', why: 'the flatten choice never appears for the large documents' },
+}
+const skipWhy = (name, browser) => {
+  if (SKIP[name]) return SKIP[name]
+  const w = SKIP_WHERE[name]
+  if (w && (w.browser ? w.browser === browser : true) && (w.platform ? w.platform === process.platform : true)) return w.why
+  return null
 }
 
 // The flows the iPhone app lives on, which therefore also run in WebKit (the
@@ -87,6 +112,10 @@ export const CORE = [
 // export-fidelity makes its WebP fixture with canvas.toDataURL('image/webp'),
 // which WebKit does not encode. open-at-fit is in SKIP.
 
+// edge-swipe and phone-knowledge launch WebKit themselves whatever
+// E2E_BROWSER says, so the Chromium job (whose image has every engine) runs
+// them.
+
 // Specs that need a particular environment to run at all.
 const ENV = {
   // The About sheet is shared by every Universal App; the spec is told which.
@@ -111,7 +140,10 @@ const all = readdirSync(HERE)
   .filter((f) => f.endsWith('.e2e.mjs'))
   .map((f) => f.slice(0, -'.e2e.mjs'.length))
   .sort()
-let specs = named.length ? named : coreOnly ? CORE : all.filter((n) => !(n in SKIP))
+const browser = process.env.E2E_BROWSER ?? 'chromium'
+const pool = coreOnly ? CORE : all
+const skipped = named.length ? [] : pool.filter((n) => skipWhy(n, browser))
+const specs = named.length ? named : pool.filter((n) => !skipped.includes(n))
 for (const n of specs) {
   if (!all.includes(n)) {
     console.error(`no such spec: e2e/${n}.e2e.mjs`)
@@ -120,13 +152,10 @@ for (const n of specs) {
 }
 
 mkdirSync(OUT, { recursive: true })
-const browser = process.env.E2E_BROWSER ?? 'chromium'
 console.log(
   `${specs.length} spec(s), ${jobs} at a time, ${browser}, against ${process.env.E2E_BASE_URL ?? 'http://localhost:5174/'}`,
 )
-if (!named.length && !coreOnly) {
-  for (const [n, why] of Object.entries(SKIP)) console.log(`  skip ${n}: ${why}`)
-}
+for (const n of skipped) console.log(`  skip ${n}: ${skipWhy(n, browser)}`)
 
 function runOnce(name) {
   return new Promise((resolve) => {
