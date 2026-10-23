@@ -128,6 +128,16 @@ like a lie.
   the app accepts it only with the PIN it shows you. No account is involved.
   See [`src/lib/mobileSign.ts`](src/lib/mobileSign.ts). The phone apps don't
   offer this: you are already holding a phone, so you draw on it.
+  If the person signing uses the **UNI·SIM Hub phone app** instead of the
+  browser, and is logged into a Universal ID whose email is confirmed, the Hub
+  app records on our server that this account sent this signature image (a
+  fingerprint of it, never the image, and a fingerprint of the one-time code),
+  and sends that record's id along with the image. This app then looks the id
+  up, sending nothing but the id, and only if the record matches the code and
+  the image it actually received shows "Signed by <their email> via Universal
+  ID" with a link to check it. It is kept in memory beside that signature only,
+  not saved. The Hub app's own privacy notice covers the record; the code here
+  is [`src/lib/phoneAttest.ts`](src/lib/phoneAttest.ts).
 - **Reading a scan (OCR): the language model, once.** On the website, in the
   desktop app and in the browser extension, the first time you read a scan in
   a language, the app downloads that language's model (0.7–3 MB of data) from

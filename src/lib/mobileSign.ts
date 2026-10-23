@@ -27,4 +27,9 @@ export interface MobileSignPayload {
   pin?: string
   /** Base64 PNG (no data: prefix), white background, drawn on the phone. */
   signature?: string
+  /**
+   * UNI·SIM Hub only (platform 0306): a phone_sign_attestations cert id,
+   * checked by lib/phoneAttest.ts before anything is made of it.
+   */
+  attest?: string
 }

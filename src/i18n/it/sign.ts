@@ -332,6 +332,11 @@ const sign: Messages['sign'] = {
   'vault_locked': 'Le tue firme salvate sono bloccate.',
   'vault_reason_lock': 'Blocca le tue firme salvate',
   'vault_reason_unlock': 'Sblocca le tue firme salvate',
+
+  // ── Scan to sign ─────────────────────────────────────────────────────────
+  'attest_heading': 'Firma inviata da un telefono',
+  'attest_line': 'Firmato da {email} tramite Universal ID · {time}',
+  'attest_check': 'Verifica',
 }
 
 export default sign

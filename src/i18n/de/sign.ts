@@ -332,6 +332,11 @@ const sign: Messages['sign'] = {
   'vault_locked': 'Ihre gespeicherten Unterschriften sind gesperrt.',
   'vault_reason_lock': 'Ihre gespeicherten Unterschriften sperren',
   'vault_reason_unlock': 'Ihre gespeicherten Unterschriften entsperren',
+
+  // ── Scan to sign ─────────────────────────────────────────────────────────
+  'attest_heading': 'Unterschrift vom Handy gesendet',
+  'attest_line': 'Unterschrieben von {email} über die Universal ID · {time}',
+  'attest_check': 'Prüfen',
 }
 
 export default sign

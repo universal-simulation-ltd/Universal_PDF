@@ -332,6 +332,11 @@ const sign: Messages['sign'] = {
   'vault_locked': 'Vos signatures enregistrées sont verrouillées.',
   'vault_reason_lock': 'Verrouiller vos signatures enregistrées',
   'vault_reason_unlock': 'Déverrouiller vos signatures enregistrées',
+
+  // ── Scan to sign ─────────────────────────────────────────────────────────
+  'attest_heading': 'Signature envoyée depuis un téléphone',
+  'attest_line': 'Signé par {email} via Universal ID · {time}',
+  'attest_check': 'Vérifier',
 }
 
 export default sign

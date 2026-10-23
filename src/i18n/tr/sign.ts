@@ -332,6 +332,11 @@ const sign: Messages['sign'] = {
   'vault_locked': 'Kayıtlı imzalarınız kilitli.',
   'vault_reason_lock': 'Kayıtlı imzalarınızı kilitleyin',
   'vault_reason_unlock': 'Kayıtlı imzalarınızın kilidini açın',
+
+  // ── Scan to sign ─────────────────────────────────────────────────────────
+  'attest_heading': 'Telefondan gönderilen imza',
+  'attest_line': '{email} tarafından Universal ID ile imzalandı · {time}',
+  'attest_check': 'Doğrula',
 }
 
 export default sign

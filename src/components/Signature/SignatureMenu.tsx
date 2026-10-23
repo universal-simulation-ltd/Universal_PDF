@@ -7,7 +7,9 @@ import { useSignatureStore } from '../../stores/signatureStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { usePdfStore } from '../../stores/pdfStore'
 import { certifiedSignatureHere } from '../../lib/accounts'
-import { useT } from '../../i18n'
+import { useT, intlLocale } from '../../i18n'
+import { heldFor, usePhoneAttestStore } from '../../stores/phoneAttestStore'
+import { formatAttestLocal } from '../../lib/phoneAttest'
 import { ACTIVE_CHIP, ActiveStroke, MobileToolFace } from '../Toolbar/toolLook'
 import { useDefaultView } from '@unisim/sdk'
 import { SIGN_MENU_TABS, SIGN_MENU_VIEW, type SignMenuTab } from '../../lib/defaultViews'
@@ -120,6 +122,9 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
   const [panelPos, setPanelPos] = useState<{ left: number; top: number } | null>(null)
 
   const signatures = useSignatureStore((s) => s.signatures)
+  // Scan to sign: entries that came from the UNI·SIM Hub app with a checked
+  // attestation say who sent them (stores/phoneAttestStore.ts).
+  const attestByEntry = usePhoneAttestStore((s) => s.byEntry)
   const activeId = useSignatureStore((s) => s.activeId)
   const setActive = useSignatureStore((s) => s.setActive)
   const openPad = useSignatureStore((s) => s.openPad)
@@ -357,6 +362,25 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
               />
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium truncate">{shownName(s.name)}</div>
+                {(() => {
+                  const held = heldFor(attestByEntry, s)
+                  if (!held) return null
+                  const a = held.attestation
+                  return (
+                    <div className="text-[11px] leading-snug text-emerald-800" data-testid="phone-attested-entry">
+                      {t('sign.attest_line', { email: a.signerEmail, time: formatAttestLocal(a.signedAt, intlLocale(t.lang)) })}{' '}
+                      <a
+                        href={a.checkUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-semibold text-orange-700 hover:underline"
+                      >
+                        {t('sign.attest_check')}
+                      </a>
+                    </div>
+                  )
+                })()}
               </div>
               <div className="flex flex-col gap-1">
                 <button

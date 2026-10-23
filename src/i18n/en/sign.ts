@@ -333,4 +333,9 @@ export default {
   'vault_locked': 'Your saved signatures are locked.',
   'vault_reason_lock': 'Lock your saved signatures',
   'vault_reason_unlock': 'Unlock your saved signatures',
+
+  // ── Scan to sign: a signature sent from the UNI·SIM Hub phone app ─────────
+  'attest_heading': 'Signature sent from a phone', // heading over the line below on a printed signing record (printed in capitals)
+  'attest_line': 'Signed by {email} via Universal ID · {time}', // under a signature received from the UNI·SIM Hub phone app; {email} is the signer's confirmed Universal ID email, {time} when our server recorded it. Universal ID is a product name: keep it
+  'attest_check': 'Check', // link after that line: opens the public check of that signature
 }

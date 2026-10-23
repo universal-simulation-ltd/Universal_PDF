@@ -26,7 +26,9 @@ import {
   randomToken,
   type MobileSignPayload
 } from '../../lib/mobileSign'
-import { useT } from '../../i18n'
+import { useT, intlLocale } from '../../i18n'
+import { formatAttestLocal, verifyPhoneAttestation, type PhoneAttestation } from '../../lib/phoneAttest'
+import { usePhoneAttestStore } from '../../stores/phoneAttestStore'
 import { SIGN_PAD_MODES, SIGN_PAD_VIEW, type SignPadMode } from '../../lib/defaultViews'
 import { isNativeShell } from '../../lib/nativeOpen'
 
@@ -172,6 +174,9 @@ export default function SignaturePad() {
   const [token, setToken] = useState(randomToken)
   const [pin, setPin] = useState(randomPin)
   const [phoneStatus, setPhoneStatus] = useState<'waiting' | 'received'>('waiting')
+  // Scan to sign, step 2: the signature came from the UNI·SIM Hub app and its
+  // `attest` checked out against this channel and this image.
+  const [receivedAttest, setReceivedAttest] = useState<PhoneAttestation | null>(null)
 
   // Fresh token + PIN every time the pad opens, so a QR from an earlier
   // session can't feed a signature into this one. It opens on the person's
@@ -183,6 +188,7 @@ export default function SignaturePad() {
     setToken(randomToken())
     setPin(randomPin())
     setPhoneStatus('waiting')
+    setReceivedAttest(null)
   }, [open])
 
   // Fulfilling a "Request signature" box: seed the same name/date options the
@@ -218,30 +224,60 @@ export default function SignaturePad() {
       .on('broadcast', { event: 'signature' }, (msg) => {
         const payload = msg.payload as MobileSignPayload
         if (payload?.pin !== pin || !payload.signature) return
+        const received = payload.signature
         setPhoneStatus('received')
+        setReceivedAttest(null)
+        // Sent from the UNI·SIM Hub app by a confirmed Universal ID (platform
+        // 0306)? Believed only once the record matches this channel and this
+        // exact PNG (lib/phoneAttest.ts); until then, or if it never does,
+        // nothing extra is shown. Older phones send no `attest`.
+        const verified: Promise<PhoneAttestation | null> = payload.attest === undefined
+          ? Promise.resolve(null)
+          : verifyPhoneAttestation((fn, args) => supabase.rpc(fn, args), {
+              attest: payload.attest, channelToken: token, signature: received, app: 'pdf',
+            })
+        // The pad waits a moment for the check, so the line can be read here;
+        // a slow lookup still reaches the library entry when it lands.
+        const shown = Promise.race([verified, new Promise<null>((r) => setTimeout(() => r(null), 3000))])
         // The phone canvas has a white background — run it through the same
         // clean-up as imported signature images (crop + background removal)
         // so it places like an ink signature.
-        const bytes = Uint8Array.from(atob(payload.signature), (c) => c.charCodeAt(0))
-        const file = new File([bytes], 'phone-signature.png', { type: 'image/png' })
+        let bytes: Uint8Array
+        try {
+          // Bare base64 is this app's dialect; a data URL is taken too.
+          bytes = Uint8Array.from(atob(received.replace(/^data:image\/png;base64,/, '')), (c) => c.charCodeAt(0))
+        } catch {
+          setPhoneStatus('waiting')
+          return
+        }
+        const file = new File([bytes as BlobPart], 'phone-signature.png', { type: 'image/png' })
         importImageAsSignature(file, { removeBg: true })
-          .then((res) => {
+          .then(async (res) => {
+            const attest = await shown
+            if (attest) setReceivedAttest(attest)
+            // Long enough to read who it is from, when there is a line to read.
+            const beat = attest ? 2500 : 700
             // Signing a specific request box: drop the phone signature straight
             // into it after a beat, so the "received ✓" tick is visible.
             const fieldId = useSignatureStore.getState().signingFieldId
             if (fieldId) {
               setTimeout(() => {
                 fillField(fieldId, res, splitDetailBlock(detailBlock).name.trim())
-              }, 700)
+              }, beat)
               return
             }
             const count = useSignatureStore.getState().signatures.length
-            add({ name: t('sign.default_signature_name', { n: count + 1 }), dataUrl: res.dataUrl, width: res.width, height: res.height })
+            const entryId = add({ name: t('sign.default_signature_name', { n: count + 1 }), dataUrl: res.dataUrl, width: res.width, height: res.height })
+            // Held against THIS entry and the PNG the phone sent; replacing or
+            // removing the signature drops it (stores/phoneAttestStore.ts).
+            void verified.then((a) => {
+              if (a) usePhoneAttestStore.getState().attach(entryId, { attestation: a, received, dataUrl: res.dataUrl })
+            })
             setTimeout(() => {
               closePad()
               // Arm the signature tool so the user can immediately place it.
               useAnnotationStore.getState().setTool('signature')
-            }, 700)
+            }, beat)
           })
           .catch(() => setPhoneStatus('waiting'))
       })
@@ -684,6 +720,14 @@ export default function SignaturePad() {
             <p className={`text-xs ${phoneStatus === 'received' ? 'text-green-600' : 'text-slate-400'}`}>
               {phoneStatus === 'received' ? t('sign.pad_received') : t('sign.pad_waiting')}
             </p>
+            {phoneStatus === 'received' && receivedAttest && (
+              <p className="text-[11px] text-emerald-800" data-testid="phone-attested">
+                {t('sign.attest_line', { email: receivedAttest.signerEmail, time: formatAttestLocal(receivedAttest.signedAt, intlLocale(t.lang)) })}{' '}
+                <a href={receivedAttest.checkUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-orange-700 hover:underline">
+                  {t('sign.attest_check')}
+                </a>
+              </p>
+            )}
             <button
               type="button"
               onClick={cancel}
