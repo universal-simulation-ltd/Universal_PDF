@@ -119,7 +119,8 @@
 }
 
 /* The SDK phone kit's layers (its BottomSheet, and phonePrompt's sheet) in
-   PDF's paper and cobalt. The kit's own tokens are in :where(), so these win;
+   PDF's paper and cobalt. The kit's own tokens are in :where() (and in a layer
+   since SDK 0.203.1), so these win;
    this file only loads in the phone app. Light only, like the rest of it. */
 .unisim-phone-layer {
   --uph-bg: #f4f1ea;
@@ -151,14 +152,6 @@
   max-height: calc(100% - env(safe-area-inset-top) - 40px);
   display: flex;
   flex-direction: column;
-}
-/* ⚠️ The sheet's insides are styled HERE, not with Tailwind classes passed as
-   `bodyClassName`: Tailwind 4's utilities live in a cascade layer, and the
-   kit's rules are unlayered, so the kit's `gap: 12px` beat `gap-3.5` whatever
-   the specificity (the What else sheet came out 6px shorter). Plain rules in
-   this file are unlayered too, and win on specificity. */
-.np-sheet > .unisim-phone-sheet-body {
-  gap: 14px;
 }
 /* The kit's grip, where PDF's always sat: the bar 12px down, 8px over the body. */
 .np-sheet > .unisim-phone-grip {

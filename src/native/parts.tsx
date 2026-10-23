@@ -50,10 +50,10 @@ export function Sheet({
       className="np-sheet"
       style={{ background }}
       // ⚠️ `overflow-y-auto` is the kit's already; named here as well because
-      // e2e/phone-clear-all finds the sheet's scroller by it. The body's gap
-      // is in native.css (`.np-sheet > .unisim-phone-sheet-body`): a Tailwind
-      // class here would lose to the kit's unlayered rule.
-      bodyClassName="overflow-y-auto"
+      // e2e/phone-clear-all finds the sheet's scroller by it. `gap-3.5` beats
+      // the kit's 12px gap: since SDK 0.203.1 the kit sits in a layer under
+      // Tailwind's utilities.
+      bodyClassName="overflow-y-auto gap-3.5"
     >
       {children}
     </BottomSheet>
