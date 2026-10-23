@@ -134,6 +134,9 @@ await w.page.addInitScript(() => Object.defineProperty(navigator, 'onLine', { co
 await w.page.reload({ waitUntil: 'load' })
 await w.page.waitForSelector('[data-page-index="0"] canvas', { timeout: 30000 }).catch(() => {})
 check('and opens again offline, from this device', (await w.page.locator('[data-page-index="0"] canvas').count()) > 0)
+// Waited for, not counted on the spot: the banner can land a beat after page 1
+// has drawn, and on a slow CI runner it did (WebKit, 2026-10-23).
+await w.page.locator('[data-sign-offline-banner]').first().waitFor({ timeout: 10000 }).catch(() => {})
 check('saying signing will be sent later', (await w.page.locator('[data-sign-offline-banner]').count()) === 1)
 
 // ── Sign offline: queued, nothing sent ──────────────────────────────────────
