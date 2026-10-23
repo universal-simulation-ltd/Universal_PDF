@@ -337,6 +337,11 @@ const sign: Messages['sign'] = {
   'attest_heading': 'Assinatura enviada de um celular',
   'attest_line': 'Assinado por {email} via Universal ID · {time}',
   'attest_check': 'Verificar',
+  'record_title': 'Registro de assinatura',
+  'record_intro': 'O Universal PDF adicionou esta página ao salvar o documento, porque uma assinatura nele foi enviada pelo app UNI·SIM Hub por um Universal ID com e-mail confirmado.',
+  'record_image': 'A assinatura como o celular a enviou',
+  'record_limits': 'O que isto mostra: que o Universal ID indicado enviou exatamente esta imagem de assinatura pelo app UNI·SIM Hub, no horário indicado. Não mostra quem a colocou neste documento, nem que o documento não mudou desde então.',
+  'record_note': 'Uma página "Registro de assinatura" será adicionada no final: quem enviou a assinatura pelo app UNI·SIM Hub, com um QR code para conferir.',
 }
 
 export default sign

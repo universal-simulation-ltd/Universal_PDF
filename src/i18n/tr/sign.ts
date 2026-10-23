@@ -337,6 +337,11 @@ const sign: Messages['sign'] = {
   'attest_heading': 'Telefondan gönderilen imza',
   'attest_line': '{email} tarafından Universal ID ile imzalandı · {time}',
   'attest_check': 'Doğrula',
+  'record_title': 'İmza kaydı',
+  'record_intro': 'Universal PDF bu sayfayı belge kaydedilirken ekledi, çünkü üzerindeki bir imza, e-postası onaylanmış bir Universal ID tarafından UNI·SIM Hub uygulamasından gönderildi.',
+  'record_image': 'Telefonun gönderdiği hâliyle imza',
+  'record_limits': 'Bu sayfanın gösterdiği: burada adı geçen Universal ID’nin tam olarak bu imza görüntüsünü, belirtilen saatte UNI·SIM Hub uygulamasından gönderdiği. İmzayı bu belgeye kimin yerleştirdiğini ya da belgenin o zamandan beri değişmediğini göstermez.',
+  'record_note': 'Sona bir “İmza kaydı” sayfası eklenecek: imzayı UNI·SIM Hub uygulamasından kimin gönderdiği ve doğrulamak için bir QR kodu.',
 }
 
 export default sign

@@ -12,6 +12,7 @@ import LockFields, { EMPTY_LOCK, lockIncomplete, lockPasswordOf, type LockState 
 import { markSaved } from '../../lib/unsavedChanges'
 import { RedactIcon } from '../icons/RedactIcon'
 import { useExportBuild } from './useExportBuild'
+import { SigningRecordNote } from './SigningRecordNote'
 import { FLATTEN_BAR, worthOffering } from './worthOffering'
 import { useT, type Translator } from '../../i18n'
 import { formatSize } from './formatSize'
@@ -474,6 +475,8 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
                 </div>
               </div>
             )}
+
+            <SigningRecordNote />
 
             <p className="mt-4 text-xs text-slate-500">
               {t.rich('tools.export.saves_as', {

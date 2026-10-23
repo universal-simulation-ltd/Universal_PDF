@@ -7,8 +7,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { PDFDocument } from 'pdf-lib'
-import { pngBytes, sha256Hex, verifyPhoneAttestation, ATTEST_CHECK_URL } from '../src/lib/phoneAttest.ts'
-import { printPhoneAttest } from '../src/lib/phoneAttestPdf.ts'
+import { attestedOnDocument, pngBytes, sha256Hex, verifyPhoneAttestation, ATTEST_CHECK_URL } from '../src/lib/phoneAttest.ts'
+import { appendSigningRecordPages, printPhoneAttest } from '../src/lib/phoneAttestPdf.ts'
 
 // A real 1×1 transparent PNG, and a different one (one byte of the pixel data changed).
 const PNG_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
@@ -141,4 +141,108 @@ test('a language the standard font cannot draw falls back to English', async () 
   })
   assert.equal(did, true)
   assert.ok(drawn.includes('Signed by signer@example.com via Universal ID · 2026-10-22 14:07 UTC'), drawn.join(' | '))
+})
+
+// ── The Signing record page (lib/signingRecord.ts → appendSigningRecordPages) ──
+
+const PAGE_EN = {
+  title: 'Signing record',
+  intro: 'Universal PDF added this page when the document was saved.',
+  image: 'The signature as the phone sent it',
+  limits: 'What this shows: that the Universal ID named here sent exactly this signature image.',
+}
+const LINE_EN = { heading: 'Signature sent from a phone', line: 'Signed by {email} via Universal ID · {time}' }
+const recordArgs = (qr) => ({
+  page: PAGE_EN,
+  englishPage: PAGE_EN,
+  texts: ({ email, time }) => ({ heading: LINE_EN.heading, line: `Signed by ${email} via Universal ID · ${time}` }),
+  english: LINE_EN,
+  qrPngFor: qr,
+})
+
+// A one-page "document", saved without pdf-lib's own metadata so two saves compare.
+async function onePager() {
+  const doc = await PDFDocument.create({ updateMetadata: false })
+  doc.addPage([400, 400])
+  return doc
+}
+
+// Watch what lands on each page the record adds.
+function watchNewPages(doc) {
+  const seen = { text: [], images: 0 }
+  const addPage = doc.addPage.bind(doc)
+  doc.addPage = (...a) => {
+    const page = addPage(...a)
+    const drawText = page.drawText.bind(page)
+    const drawImage = page.drawImage.bind(page)
+    page.drawText = (t, o) => { seen.text.push(t); drawText(t, o) }
+    page.drawImage = (img, o) => { seen.images++; seen.qrSize = o.width; drawImage(img, o) }
+    return page
+  }
+  return seen
+}
+
+async function held(signature = PNG_B64) {
+  const a = await verifyPhoneAttestation(rpcReturning(await row()).rpc, base)
+  return { attestation: a, received: signature, dataUrl: 'data:image/png;base64,LIBRARYCOPY' }
+}
+
+test('attestedOnDocument: only an attested signature that is placed counts', async () => {
+  const h = await held()
+  const byEntry = { e1: h }
+  assert.deepEqual(attestedOnDocument([], byEntry), [])
+  assert.deepEqual(attestedOnDocument([{ type: 'image', src: h.dataUrl }], {}), [])
+  assert.deepEqual(attestedOnDocument([{ type: 'image', src: 'data:image/png;base64,OTHER' }, { type: 'text' }], byEntry), [])
+  // Placed as it is, placed then given a name (src recomposed, ink kept), or signed into a box.
+  assert.deepEqual(attestedOnDocument([{ type: 'image', src: h.dataUrl }], byEntry), [h])
+  assert.deepEqual(attestedOnDocument([{ type: 'image', src: 'data:composite', sig: { ink: h.dataUrl } }], byEntry), [h])
+  assert.deepEqual(attestedOnDocument([{ type: 'sigfield', signed: { src: 'x', data: { ink: h.dataUrl } } }], byEntry), [h])
+  // Placed twice: one record.
+  assert.deepEqual(attestedOnDocument([{ type: 'image', src: h.dataUrl }, { type: 'image', src: h.dataUrl }], byEntry), [h])
+})
+
+test('no attestation: no page, and the file is byte-for-byte the same', async () => {
+  const plain = await (await onePager()).save()
+  const doc = await onePager()
+  const records = attestedOnDocument([{ type: 'image', src: 'data:image/png;base64,PLAIN' }], {})
+  assert.equal(await appendSigningRecordPages(doc, records, recordArgs()), 0)
+  assert.equal(doc.getPageCount(), 1)
+  assert.deepEqual(await doc.save(), plain)
+})
+
+test('attested: a Signing record page with the line, the check URL and a 72pt QR', async () => {
+  const h = await held()
+  const doc = await onePager()
+  const seen = watchNewPages(doc)
+  const asked = []
+  const added = await appendSigningRecordPages(doc, [h], recordArgs(async (url) => { asked.push(url); return PNG }))
+  assert.equal(added, 1)
+  assert.equal(doc.getPageCount(), 2)
+  assert.deepEqual(asked, [`https://app.unisim.co.uk/check?attest=${CERT}`])
+  assert.ok(seen.text.includes('Signing record'), seen.text.join(' | '))
+  assert.ok(seen.text.includes('SIGNATURE SENT FROM A PHONE'))
+  assert.ok(seen.text.includes('Signed by signer@example.com via Universal ID · 2026-10-22 14:07 UTC'), seen.text.join(' | '))
+  assert.ok(seen.text.includes(`https://app.unisim.co.uk/check?attest=${CERT}`))
+  // The signature itself, then the QR (drawn last, 72pt square).
+  assert.equal(seen.images, 2)
+  assert.equal(seen.qrSize, 72)
+  // The reloaded file has the page.
+  assert.equal((await PDFDocument.load(await doc.save())).getPageCount(), 2)
+})
+
+test('attested, but not about the image the phone sent: no page', async () => {
+  const h = { ...(await held()), received: OTHER_B64 }
+  const doc = await onePager()
+  assert.equal(await appendSigningRecordPages(doc, [h], recordArgs(async () => PNG)), 0)
+  assert.equal(doc.getPageCount(), 1)
+})
+
+test('a page language the standard font cannot draw falls back to English', async () => {
+  const h = await held()
+  const doc = await onePager()
+  const seen = watchNewPages(doc)
+  const args = { ...recordArgs(), page: { title: 'İmza kaydı', intro: 'Universal PDF bu sayfayı ekledi.', image: 'İmza', limits: 'Bu sayfanın gösterdiği.' } }
+  assert.equal(await appendSigningRecordPages(doc, [h], args), 1)
+  assert.ok(seen.text.includes('Signing record'), seen.text.join(' | '))
+  assert.ok(seen.text.includes('THE SIGNATURE AS THE PHONE SENT IT'))
 })

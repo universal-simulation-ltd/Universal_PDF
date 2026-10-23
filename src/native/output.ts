@@ -19,11 +19,14 @@ export async function buildAnnotated(): Promise<Uint8Array> {
   if (isXfa && doc) return doc.saveDocument()
   if (!sourceBytes) throw new Error('No document is open')
   const { buildAnnotatedPdfBytes } = await import('../lib/export')
+  const { signingRecordsFor } = await import('../lib/signingRecord')
+  const annotations = useAnnotationStore.getState().annotations
   return buildAnnotatedPdfBytes(
     sourceBytes.slice(0),
-    useAnnotationStore.getState().annotations,
+    annotations,
     1.0,
-    useFormStore.getState().values
+    useFormStore.getState().values,
+    { signingRecords: signingRecordsFor(annotations) }
   )
 }
 

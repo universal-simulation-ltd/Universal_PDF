@@ -3,16 +3,18 @@
 // page. Separate from pdf.ts so `npm run test:attest` can run it in plain Node
 // (pdf.ts pulls in the i18n runtime); so it imports with `.ts` extensions.
 //
-// ⚠️ Universal PDF: a copy of Universal Signatures' file, kept in step with it
-// (and tested here by `npm run test:attest`). Nothing in this app calls it
-// yet: Universal PDF builds no signing certificate page of its own (the SDK's
-// appendSigningAuditPage is Signatures'; PDF's certified route keeps its
-// record online, on the ?cert= page). Whatever page PDF prints a signing
-// record on first is where this goes, with the image it attests
+// ⚠️ Universal PDF: `printPhoneAttest` is a copy of Universal Signatures'
+// file, kept in step with it (and tested here by `npm run test:attest`). PDF
+// has no signing certificate of its own (the SDK's appendSigningAuditPage
+// vouches for a document fingerprint a server recorded, which PDF has no
+// record of), so it prints the line on a page of its own: the "Signing
+// record" page `appendSigningRecordPages` adds at the end of an export, when
+// a signature that arrived from the UNI·SIM Hub app is on the document
+// (James, 2026-10-23). Always checked against the image the phone SENT
 // (phoneAttestStore's `received`), not the cleaned-up library copy.
 
-import { StandardFonts, rgb, type PDFDocument, type PDFFont, type PDFPage } from 'pdf-lib'
-import { attestationMatches, type PhoneAttestation } from './phoneAttest.ts'
+import { PageSizes, StandardFonts, rgb, type PDFDocument, type PDFFont, type PDFPage } from 'pdf-lib'
+import { attestationMatches, type AttestedSignature, type PhoneAttestation } from './phoneAttest.ts'
 
 export interface AttestTexts {
   heading: string
@@ -111,4 +113,102 @@ export async function printPhoneAttest(doc: PDFDocument, page: PDFPage, args: Pr
     }
   }
   return true
+}
+
+// ── The Signing record page ────────────────────────────────────────────────
+
+export interface RecordPageTexts {
+  title: string
+  intro: string
+  /** Over the picture of the signature the phone sent. */
+  image: string
+  limits: string
+}
+
+export interface AppendSigningRecordArgs {
+  /** In the app's language; English is used for any text the font can't draw. */
+  page: RecordPageTexts
+  englishPage: RecordPageTexts
+  texts: PrintPhoneAttestArgs['texts']
+  english: AttestTexts
+  /** A PNG data URL of a QR code for `url`, or undefined for none. */
+  qrPngFor?: (url: string) => Promise<string | undefined>
+}
+
+/**
+ * Add one "Signing record" page per attested signature at the end of `doc`,
+ * each with the line and QR `printPhoneAttest` draws. A record whose
+ * attestation no longer matches the image the phone sent adds nothing.
+ * Returns how many pages were added (0 leaves `doc` untouched).
+ */
+export async function appendSigningRecordPages(
+  doc: PDFDocument,
+  records: readonly AttestedSignature[],
+  args: AppendSigningRecordArgs,
+): Promise<number> {
+  let added = 0
+  for (const r of records) {
+    if (!(await attestationMatches(r.attestation, r.received))) continue
+    const font = await doc.embedFont(StandardFonts.Helvetica)
+    const bold = await doc.embedFont(StandardFonts.HelveticaBold)
+    const pick = (local: string, english: string, f: PDFFont) => (canEncode(f, local) ? local : english)
+    const title = pick(args.page.title, args.englishPage.title, bold)
+    const intro = pick(args.page.intro, args.englishPage.intro, font)
+    const limits = pick(args.page.limits, args.englishPage.limits, font)
+    const imageLabel = pick(args.page.image, args.englishPage.image, bold).toUpperCase()
+    if (![[bold, title], [font, intro], [font, limits], [bold, imageLabel]].every(([f, t]) => canEncode(f as PDFFont, t as string))) continue
+
+    const page = doc.addPage(PageSizes.A4)
+    const ink = rgb(0.11, 0.13, 0.16)
+    const muted = rgb(0.42, 0.45, 0.5)
+    const rule = rgb(0.85, 0.87, 0.89)
+    const margin = 56
+    const width = page.getWidth() - margin * 2
+    let y = page.getHeight() - margin
+    page.drawText(title, { x: margin, y, size: 20, font: bold, color: ink })
+    y -= 26
+    for (const l of wrap(intro, font, 10, width, 4)) {
+      page.drawText(l, { x: margin, y, size: 10, font, color: muted })
+      y -= 14
+    }
+    y -= 8
+    page.drawLine({ start: { x: margin, y }, end: { x: margin + width, y }, thickness: 1, color: rule })
+
+    // The image itself, as the phone sent it: the one the line below is about.
+    try {
+      const png = await doc.embedPng(r.received.startsWith('data:') ? r.received : `data:image/png;base64,${r.received}`)
+      const k = Math.min(240 / png.width, 110 / png.height, 1)
+      y -= 30
+      page.drawText(imageLabel, { x: margin, y, size: 8, font: bold, color: muted })
+      y -= 10
+      page.drawImage(png, { x: margin, y: y - png.height * k, width: png.width * k, height: png.height * k })
+    } catch {
+      // A picture that won't embed shouldn't cost the record.
+    }
+
+    const qrPng = args.qrPngFor ? await args.qrPngFor(r.attestation.checkUrl).catch(() => undefined) : undefined
+    const did = await printPhoneAttest(doc, page, {
+      attestation: r.attestation,
+      signature: r.received,
+      qrPng,
+      texts: args.texts,
+      english: args.english,
+    })
+    if (!did) {
+      doc.removePage(doc.getPageCount() - 1)
+      continue
+    }
+
+    // What the page does and doesn't show, above the foot (printPhoneAttest
+    // keeps to the band above y≈180).
+    const footY = margin + 54
+    page.drawLine({ start: { x: margin, y: footY + 30 }, end: { x: margin + width, y: footY + 30 }, thickness: 1, color: rule })
+    let fy = footY + 12
+    for (const l of wrap(limits, font, 8, width, 4)) {
+      page.drawText(l, { x: margin, y: fy, size: 8, font, color: muted })
+      fy -= 11
+    }
+    added++
+  }
+  return added
 }

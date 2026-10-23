@@ -337,6 +337,11 @@ const sign: Messages['sign'] = {
   'attest_heading': 'Unterschrift vom Handy gesendet',
   'attest_line': 'Unterschrieben von {email} über die Universal ID · {time}',
   'attest_check': 'Prüfen',
+  'record_title': 'Signaturnachweis',
+  'record_intro': 'Universal PDF hat diese Seite beim Speichern des Dokuments hinzugefügt, weil eine Unterschrift darauf von einer Universal ID mit bestätigter E-Mail-Adresse aus der UNI·SIM Hub App gesendet wurde.',
+  'record_image': 'Die Unterschrift, wie das Telefon sie gesendet hat',
+  'record_limits': 'Was dies zeigt: dass die hier genannte Universal ID genau dieses Unterschriftsbild zur angegebenen Zeit aus der UNI·SIM Hub App gesendet hat. Es zeigt nicht, wer sie in dieses Dokument eingefügt hat, und auch nicht, dass das Dokument seitdem unverändert ist.',
+  'record_note': 'Am Ende wird eine Seite „Signaturnachweis“ angefügt: wer die Unterschrift aus der UNI·SIM Hub App gesendet hat, mit einem QR-Code zur Prüfung.',
 }
 
 export default sign

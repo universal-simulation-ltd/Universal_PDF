@@ -338,4 +338,11 @@ export default {
   'attest_heading': 'Signature sent from a phone', // heading over the line below on a printed signing record (printed in capitals)
   'attest_line': 'Signed by {email} via Universal ID · {time}', // under a signature received from the UNI·SIM Hub phone app; {email} is the signer's confirmed Universal ID email, {time} when our server recorded it. Universal ID is a product name: keep it
   'attest_check': 'Check', // link after that line: opens the public check of that signature
+
+  // ── The Signing record page at the end of a saved PDF (lib/signingRecord.ts) ──
+  'record_title': 'Signing record', // title of the page added at the end of a saved PDF when a signature on it came from the UNI·SIM Hub phone app
+  'record_intro': 'Universal PDF added this page when the document was saved, because a signature on it was sent from the UNI·SIM Hub phone app by a Universal ID with a confirmed email.', // printed under that title
+  'record_image': 'The signature as the phone sent it', // label over the picture of the signature on that page (printed in capitals)
+  'record_limits': 'What this shows: that the Universal ID named here sent exactly this signature image from the UNI·SIM Hub app, at the time shown. It does not show who placed it on this document, or that the document is unchanged since.', // small print at the foot of that page: what it does and does not prove
+  'record_note': 'A Signing record page goes at the end: who sent the signature from the UNI·SIM Hub app, with a QR code to check it.', // note in the export and share screens, shown only when such a signature is on the document
 }

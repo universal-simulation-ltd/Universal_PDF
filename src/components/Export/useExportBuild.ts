@@ -13,6 +13,8 @@ import {
   type RasterEstimate
 } from '../../lib/export'
 import { getT } from '../../i18n'
+import { signingRecordsFor } from '../../lib/signingRecord'
+import { usePhoneAttestStore } from '../../stores/phoneAttestStore'
 
 // Everything BOTH export dialogs have to do before either can offer a button:
 // bake the annotations in, work out whether there is anything to compress, and
@@ -65,6 +67,9 @@ export function useExportBuild(open: boolean, quality: CompressQuality | null): 
   const isXfa = usePdfStore((s) => s.isXfa)
   const annotations = useAnnotationStore((s) => s.annotations)
   const formValues = useFormStore((s) => s.values)
+  // A signature from the UNI·SIM Hub app re-runs the build when it is held or
+  // let go, so the Signing record page comes and goes with it.
+  const attestByEntry = usePhoneAttestStore((s) => s.byEntry)
 
   const [annotated, setAnnotated] = useState<Uint8Array | null>(null)
   const [compressed, setCompressed] = useState<CompressResult | null>(null)
@@ -101,7 +106,9 @@ export function useExportBuild(open: boolean, quality: CompressQuality | null): 
           return
         }
         const copy = sourceBytes.slice(0)
-        const annot = await buildAnnotatedPdfBytes(copy, annotations, EXPORT_SCALE, formValues)
+        const annot = await buildAnnotatedPdfBytes(copy, annotations, EXPORT_SCALE, formValues, {
+          signingRecords: signingRecordsFor(annotations),
+        })
         if (myId !== buildIdRef.current) return
         setAnnotated(annot)
         // Asked of the ANNOTATED bytes, not the source: a placed signature or
@@ -130,7 +137,7 @@ export function useExportBuild(open: boolean, quality: CompressQuality | null): 
         if (myId === buildIdRef.current) setBuilding(false)
       }
     })()
-  }, [open, sourceBytes, annotations, formValues, isXfa, doc])
+  }, [open, sourceBytes, annotations, formValues, isXfa, doc, attestByEntry])
 
   // Compression is its own pass so that changing the quality re-compresses the
   // annotated bytes we already have, instead of re-baking every annotation and

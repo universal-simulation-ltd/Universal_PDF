@@ -434,8 +434,11 @@ async function shareRecent(r: RecentMeta): Promise<void> {
     const edits = await getRecentEdits(r.id)
     const marked = (edits.annotations?.length ?? 0) > 0 || (edits.formValues?.length ?? 0) > 0
     const { buildAnnotatedPdfBytes } = await import('../lib/export')
+    const { signingRecordsFor } = await import('../lib/signingRecord')
     const out = marked
-      ? await buildAnnotatedPdfBytes(bytes.slice(0), edits.annotations ?? [], 1.0, edits.formValues)
+      ? await buildAnnotatedPdfBytes(bytes.slice(0), edits.annotations ?? [], 1.0, edits.formValues, {
+          signingRecords: signingRecordsFor(edits.annotations ?? []),
+        })
       : new Uint8Array(bytes)
     const { downloadPdfBytes } = await import('../lib/download')
     downloadPdfBytes(out, /\.pdf$/i.test(r.name) ? r.name : `${r.name}.pdf`)

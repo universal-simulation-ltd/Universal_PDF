@@ -8,6 +8,7 @@ import { countRedactions, isRedactConfirmed, REDACT_CONFIRM_WORD } from '../lib/
 import { MIN_PASSWORD } from '../lib/lockPassword'
 import { SQUIGGLE } from './icons'
 import { BackLink, Hl } from './parts'
+import { SigningRecordNote } from '../components/Export/SigningRecordNote'
 import { useNav } from './nav'
 import { baseName, buildAnnotated, estimateFlattened, handOver, inkTheAnswers, lockWithPassword, makeSmaller } from './output'
 
@@ -289,6 +290,8 @@ export default function ShareScreen() {
             />
           </div>
         )}
+
+        <SigningRecordNote className="m-0 bg-white rounded-[3px] px-4 py-3 text-[14px] text-[color:var(--np-ink-2)] shadow-[0_8px_18px_rgba(60,45,20,0.18)]" />
 
         {error && <p className="m-0 text-[14px] text-[#b42318]">{t('phone.failed', { message: error })}</p>}
         {lock && password.length > 0 && !passwordOk && (

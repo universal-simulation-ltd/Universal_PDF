@@ -150,3 +150,52 @@ export function formatAttestLocal(iso: string, lang: string): string {
 export function attestLineEnglish(a: PhoneAttestation): string {
   return `Signed by ${a.signerEmail} via Universal ID · ${formatAttestUtc(a.signedAt)}`
 }
+
+// ── Which attested signatures are on a document ────────────────────────────
+
+/** A held attestation, as phoneAttestStore keeps it (no store import here). */
+export interface AttestedSignature {
+  attestation: PhoneAttestation
+  /** The base64 PNG exactly as the phone sent it. */
+  received: string
+  /** The library entry's image: what a placed signature carries. */
+  dataUrl: string
+}
+
+/** The parts of an annotation this needs (types/annotations, structurally). */
+type PlacedMark =
+  | { type: 'image'; src?: string; sig?: { ink?: string } }
+  | { type: 'sigfield'; signed?: { src?: string; data?: { ink?: string } } }
+  | { type: string }
+
+/**
+ * The attested signatures that are actually ON the document: a placed
+ * library signature (its `src`, or the untouched `sig.ink` once its name or
+ * date was changed) or a signed box holding the same image. One per
+ * attestation, however many times it was placed. Empty means no record page.
+ */
+export function attestedOnDocument(
+  annotations: readonly PlacedMark[],
+  byEntry: Record<string, AttestedSignature>,
+): AttestedSignature[] {
+  const held = Object.values(byEntry)
+  if (!held.length) return []
+  const images = new Set<string>()
+  for (const a of annotations) {
+    if (a.type === 'image') {
+      const m = a as { src?: string; sig?: { ink?: string } }
+      if (m.src) images.add(m.src)
+      if (m.sig?.ink) images.add(m.sig.ink)
+    } else if (a.type === 'sigfield') {
+      const f = a as { signed?: { src?: string; data?: { ink?: string } } }
+      if (f.signed?.src) images.add(f.signed.src)
+      if (f.signed?.data?.ink) images.add(f.signed.data.ink)
+    }
+  }
+  const seen = new Set<string>()
+  return held.filter((h) => {
+    if (!images.has(h.dataUrl) || seen.has(h.attestation.certId)) return false
+    seen.add(h.attestation.certId)
+    return true
+  })
+}

@@ -7,6 +7,7 @@ import { countRedactions, isRedactConfirmed, REDACT_CONFIRM_WORD } from '../../l
 import { markSaved } from '../../lib/unsavedChanges'
 import { RedactIcon } from '../icons/RedactIcon'
 import { useExportBuild } from './useExportBuild'
+import { SigningRecordNote } from './SigningRecordNote'
 import { useFlattenedCopy } from './useFlattenedCopy'
 import { FLATTEN_BAR, LOSSLESS_BAR, worthOffering } from './worthOffering'
 import { useT } from '../../i18n'
@@ -388,6 +389,8 @@ export default function ExportModal({ open, onClose }: Props) {
                 </div>
               </div>
             )}
+
+            <SigningRecordNote />
 
             {/* The name, before the button is pressed. It is the point of the
                 change and it is not otherwise guessable — a second export from

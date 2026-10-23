@@ -337,6 +337,11 @@ const sign: Messages['sign'] = {
   'attest_heading': 'Firma inviata da un telefono',
   'attest_line': 'Firmato da {email} tramite Universal ID · {time}',
   'attest_check': 'Verifica',
+  'record_title': 'Registro della firma',
+  'record_intro': 'Universal PDF ha aggiunto questa pagina al salvataggio del documento, perché una firma al suo interno è stata inviata dall’app UNI·SIM Hub da un Universal ID con email confermata.',
+  'record_image': 'La firma come l’ha inviata il telefono',
+  'record_limits': 'Cosa dimostra: che l’Universal ID indicato ha inviato esattamente questa immagine della firma dall’app UNI·SIM Hub, all’ora indicata. Non dimostra chi l’ha inserita in questo documento, né che il documento sia rimasto invariato da allora.',
+  'record_note': 'Alla fine verrà aggiunta una pagina «Registro della firma»: chi ha inviato la firma dall’app UNI·SIM Hub, con un codice QR per verificarlo.',
 }
 
 export default sign

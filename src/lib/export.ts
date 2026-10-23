@@ -5,6 +5,7 @@ import {
   pushGraphicsState, popGraphicsState, concatTransformationMatrix, drawRectangle,
   type PDFFont, type PDFImage, type PDFPage, type PDFAcroField, type PDFForm
 } from 'pdf-lib'
+import type { AttestedSignature } from './phoneAttest'
 import type { Annotation, RedactAnnotation, SignatureFieldAnnotation, TextAnnotation } from '../types/annotations'
 import type { FormFieldValue } from '../stores/formStore'
 import { hexToPdfRgb } from './colors'
@@ -1142,11 +1143,22 @@ export function foldOverhangingNotes(annotations: Annotation[], pageSizes: { wid
   })
 }
 
+export interface BuildOptions {
+  /**
+   * Signatures from the UNI·SIM Hub app that are on this document, from
+   * `signingRecordsFor(annotations)` (lib/signingRecord.ts): each adds a
+   * "Signing record" page at the end. Absent or empty adds nothing, and the
+   * file is exactly what it was without this.
+   */
+  signingRecords?: readonly AttestedSignature[]
+}
+
 export async function buildAnnotatedPdfBytes(
   sourceBytes: ArrayBuffer,
   annotationsIn: Annotation[],
   scale: number,
-  formValues?: FormFieldValue[]
+  formValues?: FormFieldValue[],
+  options?: BuildOptions
 ): Promise<Uint8Array> {
   // updateMetadata: false — pdf-lib otherwise stamps its own Producer and a
   // fresh ModDate on every save, which would quietly re-add metadata to a
@@ -1291,6 +1303,12 @@ export async function buildAnnotatedPdfBytes(
     annotations.filter((a): a is SignatureFieldAnnotation => a.type === 'sigfield' && !a.signed),
     scale
   )
+
+  // Last, so it reads as an appendix after the document's own pages.
+  if (options?.signingRecords?.length) {
+    const { appendSigningRecord } = await import('./signingRecord')
+    await appendSigningRecord(pdf, options.signingRecords)
+  }
 
   return pdf.save()
 }

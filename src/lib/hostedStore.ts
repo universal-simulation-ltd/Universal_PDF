@@ -32,7 +32,10 @@ export async function currentPdfBytes(): Promise<{ bytes: Uint8Array; fileName: 
   const formValues = useFormStore.getState().values
   // On demand: export.ts carries pdf-lib, which start-up must not load.
   const { buildAnnotatedPdfBytes } = await import('./export')
-  const bytes = await buildAnnotatedPdfBytes(sourceBytes.slice(0), annotations, EXPORT_SCALE, formValues)
+  const { signingRecordsFor } = await import('./signingRecord')
+  const bytes = await buildAnnotatedPdfBytes(sourceBytes.slice(0), annotations, EXPORT_SCALE, formValues, {
+    signingRecords: signingRecordsFor(annotations),
+  })
   return { bytes, fileName: fileName ?? 'document.pdf' }
 }
 
