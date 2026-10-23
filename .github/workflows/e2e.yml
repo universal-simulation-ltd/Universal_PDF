@@ -35,7 +35,7 @@ on:
 # moves often (several sessions push to it), and every commit there should
 # get its own result.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
@@ -56,8 +56,10 @@ jobs:
     timeout-minutes: 30
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
-      # Chromium runs out of shared memory in a container without it.
-      options: --ipc=host
+      # --ipc=host: Chromium runs out of shared memory in a container
+      # without it. --user 1001: the runner's own user (Playwright's advice),
+      # so the checkout is writable and Firefox is not started as root.
+      options: --ipc=host --user 1001
     strategy:
       fail-fast: false
       matrix:
@@ -70,9 +72,9 @@ jobs:
             specs: '--core'
     env:
       E2E_BROWSER: ${{ matrix.browser }}
-      # The image runs as root, and Firefox will not start as root unless
-      # HOME is root's own.
-      HOME: /root
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v5
 
@@ -99,12 +101,16 @@ jobs:
 
       - name: Start the dev server
         run: |
-          nohup npx vite --port 5174 --strictPort > vite.log 2>&1 &
+          # --host: every address, IPv4 and IPv6, whichever "localhost" is.
+          nohup npx vite --host --port 5174 --strictPort > vite.log 2>&1 &
           node -e '
-            const until = Date.now() + 60000
+            const until = Date.now() + 90000
             const poll = () => fetch(process.env.E2E_BASE_URL).then(
-              (r) => (r.ok ? process.exit(0) : retry()), retry)
-            const retry = () => (Date.now() > until ? process.exit(1) : setTimeout(poll, 1000))
+              (r) => (r.ok ? process.exit(0) : retry(`HTTP ${r.status}`)), (e) => retry(e.cause ?? e))
+            const retry = (why) => {
+              if (Date.now() > until) { console.error("dev server never answered:", why); process.exit(1) }
+              setTimeout(poll, 1000)
+            }
             poll()
           ' || { cat vite.log; exit 1; }
 
