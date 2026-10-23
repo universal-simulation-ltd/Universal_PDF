@@ -46,6 +46,10 @@ export const SKIP = {
   'tabs-desktop': 'Electron desktop spec (needs a desktop build and a display)',
   'download-staging': 'Electron desktop spec (npm run test:download-staging:desktop)',
   'hub-handoff': 'launches the Electron app for its desktop half (no display on a CI runner)',
+  // Needs the real Realtime relay: CI builds against a placeholder Supabase,
+  // so the pad never joins its channel there. Run it by hand against the dev
+  // server (npm run test:phone-attest).
+  'phone-attest': 'needs the real Supabase Realtime relay (CI builds against a placeholder)',
   // Needs its own artefacts, not the dev server.
   csp: 'drives the PRODUCTION build (npm run build first); not a dev-server spec',
   extension: 'drives extension/dist (npm run build:extension first) in a headed Chromium',
