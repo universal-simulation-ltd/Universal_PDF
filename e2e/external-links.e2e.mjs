@@ -99,7 +99,9 @@ const pdf = await testPdf()
  * ran) and whether the dialog is still there afterwards.
  */
 async function run(native) {
-  const context = await browser.newContext({ viewport: { width: 1400, height: 900 } })
+  // The native half at a phone's size: that is the only shape the phone app
+  // comes in.
+  const context = await browser.newContext({ viewport: native ? { width: 393, height: 852 } : { width: 1400, height: 900 } })
   const page = await context.newPage()
   page.on('pageerror', (e) => failures.push('page error: ' + e.message))
 
@@ -129,26 +131,38 @@ async function run(native) {
     process.exit(2)
   }
 
-  await page.setInputFiles('input[type=file]', { name: 'links.pdf', mimeType: 'application/pdf', buffer: pdf })
-  await page.waitForSelector('[data-page-index="0"] canvas', { timeout: 30000 })
-  await page.waitForTimeout(500)
+  if (native) {
+    // ⚠️ Inside a native shell the app is the PHONE app (src/native/, since
+    // 2026-10-16): no website chrome, no Actions pill, no file input on the
+    // desk. About lives at the foot of its Tune page, and that is the route a
+    // phone takes to the full-credits link today.
+    await page.waitForSelector('nav[aria-label] button', { timeout: 30000 })
+    await page.getByRole('button', { name: 'Tune', exact: true }).click()
+    await page.waitForTimeout(400)
+    await page.getByRole('button', { name: 'About', exact: true }).click()
+    await page.waitForTimeout(700)
+  } else {
+    await page.setInputFiles('input[type=file]', { name: 'links.pdf', mimeType: 'application/pdf', buffer: pdf })
+    await page.waitForSelector('[data-page-index="0"] canvas', { timeout: 30000 })
+    await page.waitForTimeout(500)
 
-  // ⚠️ HOVER, not click — <UserProfile> opens the pill on hover, so a click
-  // opens it and then toggles it shut again. Same landmine as `about-app`.
-  const pill = page.locator('button:has-text("Actions")').first()
-  await pill.waitFor({ state: 'visible', timeout: 15000 })
-  await pill.hover()
-  await page.waitForTimeout(600)
-  // About this app is at the foot of "Tune this app" since SDK 0.161.0.
-  const tune = page.locator('[role=menuitem]', { hasText: /Tune this app/ }).first()
-  if (!(await tune.isVisible())) {
-    await pill.click()
+    // ⚠️ HOVER, not click — <UserProfile> opens the pill on hover, so a click
+    // opens it and then toggles it shut again. Same landmine as `about-app`.
+    const pill = page.locator('button:has-text("Actions")').first()
+    await pill.waitFor({ state: 'visible', timeout: 15000 })
+    await pill.hover()
     await page.waitForTimeout(600)
+    // About this app is at the foot of "Tune this app" since SDK 0.161.0.
+    const tune = page.locator('[role=menuitem]', { hasText: /Tune this app/ }).first()
+    if (!(await tune.isVisible())) {
+      await pill.click()
+      await page.waitForTimeout(600)
+    }
+    await tune.click()
+    await page.waitForTimeout(400)
+    await page.locator('[data-testid="unisim-prefs-about"]').first().click()
+    await page.waitForTimeout(700)
   }
-  await tune.click()
-  await page.waitForTimeout(400)
-  await page.locator('[data-testid="unisim-prefs-about"]').first().click()
-  await page.waitForTimeout(700)
 
   // ⚠️ Watch the click's own `defaultPrevented`, not whether a tab appeared.
   // A tab appearing proves nothing here: off a device, `@capacitor/browser`

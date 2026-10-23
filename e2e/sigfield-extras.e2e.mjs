@@ -184,8 +184,16 @@ check('Send for signature is disabled with no box on the page', await send.isDis
 check('…and says why', (await page.getByText('Place a signature box first').count()) > 0)
 await page.screenshot({ path: join(SHOTS, 'sigfield-request-tab-empty.png') })
 
-await details.check({ force: true })
-await label.check({ force: true })
+// ⚠️ Click the ROW — the label a person taps — not the input. The input is
+// `sr-only` (1×1px, clipped), and Firefox hit-tests a forced click at its
+// centre straight through it to whatever is beneath, so
+// `check({ force: true })` never toggled it there ("Clicking the checkbox did
+// not change its state", CI 2026-10-22). Clicking the label toggles the
+// checkbox in every engine, which is also how the switch is really used.
+const row = (box) => box.locator('xpath=ancestor::label[1]')
+await row(details).click()
+await row(label).click()
+await page.waitForTimeout(100)
 check('the switches reach the store', json(await sigStore('return [s.requestDetails, s.requestLabel]')) === '[true,true]')
 
 // Place a box the way the menu does: arm the tool, sweep a rectangle.

@@ -5679,13 +5679,19 @@ function selectAllContents(el: HTMLElement) {
 }
 
 // How far the editor box sits above the Konva line so the two baselines meet.
-// Konva draws each line with a "middle" baseline on the EM box, fontSize/2
-// down; the browser puts its baseline in the middle of the line-height using
-// the font's own ascent and descent (A, D). The old flat 0.125 × size is the
-// answer only when A + D is exactly one em. Helvetica / Arial run taller
-// (about 1.12 em), so the typed words sat 0.03 × size low, and the big words
-// in a fitted sticky note visibly dropped when the editor closed. In full:
-//   lift = (lineHeight − 1)/2 · size + (A − D)/2 · (1 − size / (A + D))
+// Konva draws each line with a "middle" baseline, fontSize/2 down; the browser
+// puts its baseline in the middle of the line-height using the font's own
+// ascent and descent (A, D), i.e. (lineHeight·size)/2 + (A − D)/2 down. So
+//   lift = (lineHeight − 1)/2 · size + (A − D)/2 − m
+// where m is how far below the canvas's "middle" line the alphabetic baseline
+// sits — MEASURED, because the engines disagree about where "middle" is.
+// ⚠️ Chromium takes the middle of the font's ascent/descent box (m = (A − D)/2,
+// which is the flat 0.125 × size); WebKit, the iPhone's engine, takes the
+// middle of the em box (m = A − size/2). Each assumed formula is right in one
+// engine and off by ~0.03 × size in the other, which a fitted sticky note's
+// big words show as a jump when the editor closes (2.3pt at Chromium on the
+// formula written for WebKit; sticky-note e2e, 2026-10-23). m is read as the
+// difference between the box's ascent above the two baselines.
 const liftCache = new Map<string, number>()
 function editorLift(px: number, family: string): number {
   const key = `${px.toFixed(2)}|${family}`
@@ -5696,10 +5702,14 @@ function editorLift(px: number, family: string): number {
     const ctx = document.createElement('canvas').getContext('2d')
     if (ctx) {
       ctx.font = `${px}px ${family}`
-      const m = ctx.measureText('M')
-      const A = m.fontBoundingBoxAscent
-      const D = m.fontBoundingBoxDescent
-      if (A > 0 && D >= 0) lift += ((A - D) / 2) * (1 - px / (A + D))
+      ctx.textBaseline = 'alphabetic'
+      const a = ctx.measureText('M')
+      ctx.textBaseline = 'middle'
+      const mid = ctx.measureText('M')
+      const A = a.fontBoundingBoxAscent
+      const D = a.fontBoundingBoxDescent
+      const fromMiddle = mid.fontBoundingBoxAscent
+      if (A > 0 && D >= 0 && Number.isFinite(fromMiddle)) lift += (A - D) / 2 - (A - fromMiddle)
     }
   } catch {
     // No canvas metrics: the flat nudge it always was.

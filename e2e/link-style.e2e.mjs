@@ -111,6 +111,19 @@ await page.waitForTimeout(800)
 
 const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16))
 const [CR, CG, CB] = hex(COLOR)
+// ⚠️ Font-tolerant off a Mac. The canvas draws "Helvetica, Arial, sans-serif"
+// in whatever the system has for it — real Helvetica on a Mac, Liberation or
+// DejaVu Sans on a Linux runner — while the export embeds the PDF's own
+// Helvetica, and pdf.js rasterises that with the platform's own hinting.
+// Konva hangs the underline off the em box of the font it was GIVEN, so on
+// Linux it sits ~0.05 em deeper below the substitute's glyphs (7.30pt against
+// 5.38pt at 40pt on CI, 2026-10-22), and thin 10pt glyphs come out paler
+// (rgb(199,80,31) for rgb(194,65,12)). Neither is a link question. On a Mac
+// the fonts are the same and the tight limits stand.
+const SAME_FONTS = process.platform === 'darwin'
+const depthTol = (fontSize) => (SAME_FONTS ? 0.75 : Math.max(0.75, fontSize * 0.06))
+const exportColourTol = SAME_FONTS ? 16 : 24
+
 const near = (rgb, tol) => !!rgb && Math.abs(rgb[0] - CR) <= tol && Math.abs(rgb[1] - CG) <= tol && Math.abs(rgb[2] - CB) <= tol
 
 for (const fontSize of [10, 18, 40]) {
@@ -247,7 +260,7 @@ for (const fontSize of [10, 18, 40]) {
   check('the exported file carries the link', res.links.some((l) => l.url === URL_), JSON.stringify(res.links))
   check('and its /Link annotation draws no border of its own', res.links.every((l) => !l.border), JSON.stringify(res.links))
   check('the canvas text is the annotation colour', near(c.glyphColour, 6), fmt(c.glyphColour))
-  check('the exported text is the annotation colour', near(e.glyphColour, 16), fmt(e.glyphColour))
+  check('the exported text is the annotation colour', near(e.glyphColour, exportColourTol), fmt(e.glyphColour))
   check('the canvas underlines the link', !!c.underline)
   check('the exported file underlines the link', !!e.underline)
   if (!c.underline || !e.underline) continue
@@ -259,7 +272,7 @@ for (const fontSize of [10, 18, 40]) {
   const eDepth = e.underline.top - e.glyphBottom
   check(
     'the underline sits at the same depth below the text',
-    Math.abs(cDepth - eDepth) <= 0.75,
+    Math.abs(cDepth - eDepth) <= depthTol(fontSize),
     `canvas ${cDepth.toFixed(2)}pt, export ${eDepth.toFixed(2)}pt`,
   )
   check(

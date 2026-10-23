@@ -135,8 +135,10 @@ await page.evaluate((top) => {
   el.id = 'fake-placement-hint'
   document.body.appendChild(el)
 }, Math.round(anchor.y + anchor.height + 20))
-// A real commit is what re-places the panel — click a colour inside it.
-await page.click('[data-toolbar-panel] button[title="Red"]')
+// A real commit is what re-places the panel — click a shape inside it.
+// ⚠️ A SHAPE, not a colour: the colours left the drawing panel for the bar
+// beside the pen (James, 2026-10-13), so it holds the shapes and the stroke.
+await page.click('[data-toolbar-panel] button[aria-label="Line"]')
 await page.waitForTimeout(700)
 
 check('the app is still running', !(await crashed()), 'the error boundary took over')
@@ -150,14 +152,14 @@ check(
 )
 check(
   'the click that moved it still did its own job',
-  (await page.locator('[data-toolbar-panel] button[title="Red"]').getAttribute('class')).includes('border-white'),
-  'Red is not the selected colour',
+  (await page.locator('[data-toolbar-panel] button[aria-label="Line"]').getAttribute('aria-pressed')) === 'true',
+  'Line is not the selected tool',
 )
 
 // ── And back again when the banner goes ─────────────────────────────────────
 console.log('\nand it comes back up when the banner goes')
 await page.evaluate(() => document.getElementById('fake-placement-hint')?.remove())
-await page.click('[data-toolbar-panel] button[title="Blue"]')
+await page.click('[data-toolbar-panel] button[aria-label="Box"]')
 await page.waitForTimeout(500)
 const back = await panelBox()
 check('the app is still running', !(await crashed()))

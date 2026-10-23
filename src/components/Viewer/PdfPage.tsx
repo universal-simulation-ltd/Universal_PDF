@@ -306,7 +306,14 @@ function PdfPage({ doc, pageIndex, scale, isXfa, active, onSized }: Props) {
         )
       ) : (
         <>
-          <canvas ref={canvasRef} className="block" />
+          {/* ⚠️ Out of layout until the page has its size. An unsized <canvas>
+              lays out at its default 300×150, so between mounting and
+              `getPage()` resolving, page 1 was a 300px-wide box that then
+              snapped to the fitted width — every open in WebKit (the
+              iPhone's engine), about half in Chromium (open-at-fit). The
+              class and the canvas's CSS size (the layout effect above) land
+              in the same commit, so the first frame it is seen in is final. */}
+          <canvas ref={canvasRef} className={size ? 'block' : 'hidden'} />
           {size && active && <SearchHighlightLayer pageIndex={pageIndex} scale={scale} />}
           {size && active && (
             <AnnotationLayer pageIndex={pageIndex} width={size.width} height={size.height} scale={scale} />

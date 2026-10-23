@@ -127,6 +127,36 @@ const playwright = await loadPlaywright()
 const browser = await playwright[process.env.E2E_BROWSER || 'chromium'].launch()
 const page = await browser.newPage()
 page.on('pageerror', (e) => failures.push('page error: ' + e.message))
+// A navigation the page refuses (an exit guard) shows up here, not as an error.
+page.on('dialog', (d) => {
+  console.log(`  (dialog: ${d.type()} ${JSON.stringify(d.message())})`)
+  void d.accept().catch(() => {})
+})
+page.on('console', (m) => {
+  if (m.type() === 'error') console.log(`  (console error: ${m.text().slice(0, 300)})`)
+})
+
+// What was on screen when the flatten checkbox could not be found: which
+// engine, whether a document is open and how many pages it drew, and the
+// words of any dialog — so a failure on CI says where it stopped.
+async function whyNoCheckbox(page) {
+  const s = await page.evaluate(() => ({
+    pages: document.querySelectorAll('[data-page-index]').length,
+    dialog: [...document.querySelectorAll('h2')].map((h) => h.textContent).join(' | '),
+    modal: (document.querySelector('.fixed.inset-0.z-50')?.textContent ?? '').slice(0, 400),
+  })).catch((e) => ({ error: String(e) }))
+  return JSON.stringify(s)
+}
+
+// The document is open — its first page has drawn — before the menu is asked
+// for it. Without this the Profile pill can be hovered while the landing page
+// is still up, and the Advanced section there has no Advanced export.
+async function documentOpen(page, timeout = 60000) {
+  return page
+    .waitForSelector('[data-page-index="0"] canvas', { state: 'visible', timeout })
+    .then(() => true)
+    .catch(() => false)
+}
 
 try {
   await page.goto(BASE, { waitUntil: 'networkidle' })
@@ -296,16 +326,24 @@ if (uiOk !== true) {
 // ── And where the levels DO differ, the choice is offered ────────────────────
 console.log('\n  A document big enough for Balanced vs Maximum to matter')
 {
+  // ⚠️ Let the last document's export work finish before navigating away.
+  // WebKit reports the canvas JPEG a rasterising pass is still reading as an
+  // uncaught "Cannot load blob:… due to access control checks" when the page
+  // unloads under it (the app catches the rejection; the engine reports it
+  // anyway), which failed this spec about one run in two.
+  await waitReady(page)
   await page.goto(BASE, { waitUntil: 'networkidle' })
   const ok = await openTextPdf(8, 34)
   if (ok !== true) {
     check('a 24-page PDF can be opened in the app', false, String(ok))
   } else {
-    await openAdvancedExport(page)
+    const opened = await documentOpen(page)
+    const reached = await openAdvancedExport(page)
+    if (!opened || !reached) console.log(`  (document open: ${opened}, Advanced export reached: ${reached})`)
     const box2 = page.getByRole('checkbox', { name: /Flatten pages to images/i })
     await box2.waitFor({ state: 'visible', timeout: 60000 }).catch(() => {})
     if (!(await box2.count())) {
-      check('the flatten checkbox is on screen', false)
+      check('the flatten checkbox is on screen', false, await whyNoCheckbox(page))
     } else {
       // ⚠️ NO "≈ N smaller" here, deliberately. Flattening TEXT inflates it,
       // and `flattenSaving` is null for a negative — "· 240 KB bigger" beside
@@ -328,6 +366,7 @@ console.log('\n  A document big enough for Balanced vs Maximum to matter')
 // ── The scan: the case where flattening IS also a saving ─────────────────────
 console.log('\n  A scan, where flattening genuinely shrinks the file')
 {
+  await waitReady(page) // see the note before the 24-page document
   await page.goto(BASE, { waitUntil: 'networkidle' })
   const ok = await page.evaluate(async () => {
     const { PDFDocument } = await import('/node_modules/pdf-lib/dist/pdf-lib.esm.js')
@@ -385,11 +424,13 @@ console.log('\n  A scan, where flattening genuinely shrinks the file')
   if (ok !== true) {
     check('a scan-like PDF can be opened in the app', false, String(ok))
   } else {
-    await openAdvancedExport(page)
+    const opened = await documentOpen(page)
+    const reached = await openAdvancedExport(page)
+    if (!opened || !reached) console.log(`  (document open: ${opened}, Advanced export reached: ${reached})`)
     const box3 = page.getByRole('checkbox', { name: /Flatten pages to images/i })
     await box3.waitFor({ state: 'visible', timeout: 60000 }).catch(() => {})
     if (!(await box3.count())) {
-      check('the flatten checkbox is on screen for a scan', false)
+      check('the flatten checkbox is on screen for a scan', false, await whyNoCheckbox(page))
     } else {
       // The estimate is measured from ONE sampled page and multiplied out, so
       // it lands long before the real rasterising pass finishes.

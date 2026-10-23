@@ -56,33 +56,14 @@ export const SKIP = {
   // Known broken, not flaky: its drag-and-drop checks fail (7 of them, also
   // against the old file) — backlog, PDF App, "e2e fragility".
   tabs: 'drag-and-drop checks fail (known, backlog PDF App "e2e fragility")',
-  // Found failing on main when CI was added (2026-10-22, at a043f8d), every
-  // run, in a clean checkout. Each is a spec or app regression to chase, not
-  // CI noise; take the line out with the fix.
-  'open-at-fit':
-    'page 1 is re-laid-out on the way in (canvas 300px then 326px): every run in WebKit, about half in Chromium',
-  'sticky-note': '"nothing moves when the editor closes": the ink sits ~2px off the editor box',
-  'external-links': '"inside a native shell" part: no input[type=file] after goto ?mockauth=1 with a stubbed Capacitor',
-  'panel-dodge': 'no [data-toolbar-panel] button[title="Red"] to click (the colour swatch changed)',
 }
 
-// Skipped only in one engine or on one OS: they pass elsewhere, and what
-// fails is the environment, or a difference to look at that is not the flow
-// itself. Found on the first CI runs (2026-10-22).
-export const SKIP_WHERE = {
-  // Linux renders with other fonts than macOS: the canvas underline sits
-  // 7.30pt below 40pt text, the export 5.38pt, and the exported colour reads
-  // off. Passes on a Mac.
-  'link-style': { platform: 'linux', why: 'font metrics differ on Linux (underline depth, text colour)' },
-  // Firefox only. Clicking the sr-only checkbox behind "Request name and
-  // date" does not toggle it (Playwright: "Clicking the checkbox did not
-  // change its state"); the visible switch is what a person clicks.
-  'sigfield-extras': { browser: 'firefox', why: "the sr-only 'Request name and date' checkbox does not toggle on click" },
-  // Firefox only: on the two large documents the Flattened choice never
-  // appears in Export (the size estimate does not finish), 3 minutes a try.
-  // Worth a look in real Firefox.
-  'flatten-export': { browser: 'firefox', why: 'the flatten choice never appears for the large documents' },
-}
+// Skipped only in one engine or on one OS, as { browser?, platform?, why }:
+// they pass elsewhere, and what fails is the environment, not the flow. Empty
+// since 2026-10-23 — link-style is font-tolerant off a Mac, sigfield-extras
+// clicks the switch's row rather than its sr-only input, and flatten-export
+// waits for the document to open before asking for the menu.
+export const SKIP_WHERE = {}
 const skipWhy = (name, browser) => {
   if (SKIP[name]) return SKIP[name]
   const w = SKIP_WHERE[name]
@@ -110,11 +91,14 @@ export const CORE = [
   'lock-pdf',
   // the phone app's own pages and sheets (the phone app IS WebKit)
   'phone-pages',
+  // a document arrives at its fitted width in one paint — it was 300px then
+  // 326px on every WebKit open until 2026-10-23
+  'open-at-fit',
 ]
 // Not in CORE although they are core flows, because they cannot run outside
 // Chromium as written: phone-markup opens a CDP session (Chromium only) and
 // export-fidelity makes its WebP fixture with canvas.toDataURL('image/webp'),
-// which WebKit does not encode. open-at-fit is in SKIP.
+// which WebKit does not encode.
 
 // edge-swipe and phone-knowledge launch WebKit themselves whatever
 // E2E_BROWSER says, so the Chromium job (whose image has every engine) runs
