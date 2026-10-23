@@ -1089,7 +1089,7 @@ export default function PdfViewer() {
   // (James, 2026-10-20). Sideways swipes stay the browser's own.
   //
   // Decided once per swipe, on its first real move, the way the swipe back
-  // does it (native/edgeSwipe.ts): a touchmove can only be cancelled before the
+  // does it (the SDK's useEdgeSwipeBack): a touchmove can only be cancelled before the
   // browser starts scrolling, so a swipe that began scrolling the page down
   // stays a scroll down even when it reaches the bottom — the next one walks
   // the row, as the wheel does. Let go mid-swipe and the row coasts on, so it

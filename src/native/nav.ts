@@ -9,7 +9,7 @@ import { create } from 'zustand'
 // Desk open them with no document open.
 //
 // ⚠️ Every layer is also a history entry, so Android's back gesture and the
-// browser's Back close the top one: see `useHistoryLayers` in NativeApp.tsx.
+// browser's Back close the top one: the SDK's phone layer stack (usePhoneLayer, set up in NativeApp.tsx).
 // Code here only changes the state; it never touches `history` itself.
 
 export type Tab = 'desk' | 'signatures' | 'tune'

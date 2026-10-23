@@ -10,7 +10,8 @@ import { importImageAsSignature, type ImportedSignature } from '../lib/imageSign
 import { unlockSignatures } from '../lib/signatureLock'
 import { useVaultStore } from '../lib/signatureVault'
 import type { SignatureData } from '../types/annotations'
-import { BackLink, Hl, SwitchRow, useScrollHint } from './parts'
+import { useScrollHint } from '@unisim/sdk'
+import { BackLink, Hl, SwitchRow } from './parts'
 import { useNav } from './nav'
 import { pickFiles } from './jobs'
 
@@ -417,8 +418,8 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
 
 /**
  * The signatures in the drawer, one sideways row: a tap puts that one in hand
- * to place. Its own component so `useScrollHint` (the cut-off card and the
- * faded edge that say "there's more") is mounted with the row.
+ * to place. The cut-off card and the faded edge (`useScrollHint`) say
+ * "there's more".
  */
 function SavedRow({ saved, onPick }: { saved: { id: string; name: string; dataUrl: string }[]; onPick: (id: string) => void }) {
   const t = useT()
@@ -429,8 +430,8 @@ function SavedRow({ saved, onPick }: { saved: { id: string; name: string; dataUr
       <div
         ref={hint.ref}
         data-swipe-x
-        className="-mx-5 px-5 pt-1 pb-2 flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-px-5"
-        style={{ ...hint.style, scrollbarWidth: 'none' }}
+        className={`-mx-5 px-5 pt-1 pb-2 flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-px-5 ${hint.className}`}
+        style={hint.style}
       >
         {saved.map((s, i) => (
           <button

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef } from 'react'
-import { requestSearch } from '@unisim/sdk'
+import { configurePhoneLayers, PhoneDialogHost, requestSearch, useEdgeSwipeBack, usePagePullToType, usePhoneLayer } from '@unisim/sdk'
 import { useT } from '../i18n'
 import { usePdfStore } from '../stores/pdfStore'
 import { useSignatureStore } from '../stores/signatureStore'
@@ -10,8 +10,7 @@ import UnsavedChangesDialog from '../components/Exit/UnsavedChangesDialog'
 import type { ScanPage } from '../lib/scan'
 import { Icon, PATHS } from './icons'
 import { goBack, isJobPage, isKnowledge, overTabs as canStandOverTabs, topScreen, useNav, type Screen, type Tab } from './nav'
-import { useEdgeSwipeBack } from './edgeSwipe'
-import { FitLabel, usePagePullToType } from './parts'
+import { FitLabel } from './parts'
 import { currentFile, openJob, useJobs } from './jobs'
 import { usePhonePrefs } from './prefs'
 import DeskScreen from './DeskScreen'
@@ -30,7 +29,7 @@ import OcrScreen from './OcrScreen'
 import CompareScreen from './CompareScreen'
 import PagesScreen from './PagesScreen'
 import SendSignSheet from './SendSignSheet'
-import { AskSheet, LockedSheet, usePhonePrompts } from './Prompts'
+import { LockedSheet, usePhonePrompts } from './Prompts'
 import { BlackedMoment, SentMoment, SignedMoment, SmallerMoment } from './Moments'
 import './native.css'
 
@@ -46,6 +45,18 @@ import './native.css'
 // returns this tree in place of its own, so nothing of App's render reaches
 // the phone. Requests the shared code still makes through the website's store
 // flags (the ✏️ on a Sign here box, Siri's Scan…) are turned into pages here.
+
+// Every layer — the open document, each page on it, each sheet — is on the
+// SDK's phone layer stack (`usePhoneLayer`), which keeps one browser history
+// entry per layer, so Android's back gesture (Capacitor goes `history.back()`
+// while there is history) closes the top one, and so does the browser's Back
+// in development. Kept by counting, which matters here: pdfStore rewrites the
+// current entry with `replaceState(null)` whenever the document's slug
+// changes. ⚠️ The kit's sheets stack from z 1200 by default; here they are
+// rendered inside `.np` (Sheet in parts.tsx) and start at 200, over the pages
+// (150) and the opening veil (140) and under the toast (400), where PDF's own
+// sheets always were.
+configurePhoneLayers({ baseZ: 200 })
 
 const ShortcutRunner = lazy(() => import('../components/Shortcuts/ShortcutRunner'))
 const onShortcutScan = (pages: ScanPage[]) => openJob({ kind: 'scan', source: 'camera', pages })
@@ -73,7 +84,6 @@ export default function NativeApp({ launching }: { launching: boolean }) {
   useWebsiteRequests()
   useJobHandOff()
   useDocumentChanges()
-  useHistoryLayers(inDocument)
   useKeepAwake(!!doc)
   useShortcutRequests()
   useNoFocusZoom()
@@ -95,9 +105,12 @@ export default function NativeApp({ launching }: { launching: boolean }) {
 
       {inDocument ? (
         <div className="flex-1 min-h-0 flex flex-col relative">
+          {/* First, so it is the bottom of the stack: a page or sheet that
+              mounts in the same commit registers after it. */}
+          <DocumentLayer />
           {doc && <DocumentScreen />}
           {top && (
-            <PageLayer swipeBack={hasBackLink(top) && !sheet}>
+            <PageLayer swipeBack={hasBackLink(top)}>
               {top === 'sign' && <SignScreen onDone={() => useNav.getState().pop()} />}
               {top === 'share' && <ShareScreen />}
               {top === 'signed' && <SignedMoment />}
@@ -135,7 +148,8 @@ export default function NativeApp({ launching }: { launching: boolean }) {
 
       <Toast />
       <LockedSheet />
-      <AskSheet />
+      {/* The shared code's one-line questions (Prompts.tsx), as the kit's sheet. */}
+      <PhoneDialogHost theme="light" />
       {/* Kept in case anything still asks before leaving a document; nothing
           on the phone does (leaving keeps the work, DocumentScreen). */}
       <UnsavedChangesDialog />
@@ -163,16 +177,35 @@ function isMoment(screen: Screen | null): boolean {
 }
 
 /**
+ * The open document, as the bottom layer: Back with nothing over it leaves the
+ * document for the desk (keeping the work — see leaveDocument). Still open a
+ * tick later (still loading), the kit keeps its history entry for the next Back.
+ */
+function DocumentLayer() {
+  usePhoneLayer('page', () => {
+    if (usePdfStore.getState().doc || useTabStore.getState().tabs.length) leaveDocument()
+    return usePdfStore.getState().doc ? false : undefined
+  })
+  return null
+}
+
+/**
  * A page over the document (or the knowledge base over the tabs). One with a
  * back link also goes back on a swipe in from the left edge, the way an
  * iPhone's pages do (James, 2026-10-19) — set up here, once, rather than on
  * each page. The Signed and Smaller moments have no way back, so no swipe;
- * nor while a sheet is open over the page.
+ * nor while a sheet is open over the page (it is not the top layer then).
+ *
+ * ONE layer for the stack of pages: only the top page is mounted, and a page
+ * popped with another under it leaves this layer open, so the kit pushes its
+ * history entry again for the next Back. `goBack()` answers false for a page
+ * that asks first (Scan), which keeps it.
  */
 function PageLayer({ swipeBack, children }: { swipeBack: boolean; children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
-  useEdgeSwipeBack(ref, swipeBack, () => void goBack())
-  usePagePullToType(ref, true)
+  const { isTop } = usePhoneLayer('page', () => goBack())
+  useEdgeSwipeBack(ref, swipeBack && isTop, () => void goBack())
+  usePagePullToType(ref)
   return (
     <div ref={ref} className="absolute inset-0 z-[150] flex flex-col">
       {children}
@@ -337,72 +370,6 @@ function useDocumentChanges() {
     // One arrived (the share sheet) while the knowledge base was over the tabs.
     else if (!was) useNav.getState().dropKnowledge()
   }, [doc])
-}
-
-/**
- * Every layer — the open document, each page on it, a sheet — is one entry in
- * the browser history, so Android's back gesture (Capacitor's default is
- * `history.back()` while there is history) closes the top one, and so does the
- * browser's Back in development.
- *
- * Kept by counting rather than by state objects: pdfStore rewrites the current
- * entry with `replaceState(null)` whenever the document's slug changes, which
- * would wipe anything stored on it.
- */
-function useHistoryLayers(inDocument: boolean) {
-  const screens = useNav((s) => s.screens)
-  const sheet = useNav((s) => s.sheet)
-  const pushed = useRef(0)
-  const ignore = useRef(0)
-  // With no document, only the knowledge base's and the jobs' pages stand over the tabs.
-  const wanted = inDocument ? 1 + screens.length + (sheet ? 1 : 0) : screens.filter(canStandOverTabs).length
-
-  useEffect(() => {
-    if (wanted > pushed.current) {
-      for (let i = pushed.current; i < wanted; i++) history.pushState({ np: i + 1 }, '')
-      pushed.current = wanted
-    } else if (wanted < pushed.current) {
-      // Closed from a button: take our own entries back off, quietly.
-      const n = pushed.current - wanted
-      ignore.current += n
-      pushed.current = wanted
-      history.go(-n)
-    }
-  }, [wanted])
-
-  useEffect(() => {
-    function onPop() {
-      if (ignore.current > 0) {
-        ignore.current--
-        return
-      }
-      if (pushed.current === 0) return
-      pushed.current--
-      const nav = useNav.getState()
-      if (nav.sheet) nav.closeSheet()
-      else if (nav.screens.length) {
-        // A page that asks first (Scan) keeps its history entry.
-        if (!goBack()) {
-          history.pushState({ np: pushed.current + 1 }, '')
-          pushed.current++
-        }
-      }
-      else if (usePdfStore.getState().doc || useTabStore.getState().tabs.length) {
-        // Leaving asks first when there is unsaved work; if the answer is
-        // "stay", the document's entry is pushed again by the effect above.
-        leaveDocument()
-        queueMicrotask(() => {
-          const still = !!usePdfStore.getState().doc
-          if (still && pushed.current === 0) {
-            history.pushState({ np: 1 }, '')
-            pushed.current = 1
-          }
-        })
-      }
-    }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [])
 }
 
 /**

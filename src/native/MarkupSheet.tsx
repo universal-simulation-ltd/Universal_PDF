@@ -5,8 +5,9 @@ import { usePdfStore } from '../stores/pdfStore'
 import { useToolPrefs } from '../stores/toolPrefsStore'
 import type { Annotation, Tool } from '../types/annotations'
 import { FONT_DEFS } from '../lib/fonts'
+import { usePhoneLayer, useScrollHint, useSheetPull } from '@unisim/sdk'
 import { useNav } from './nav'
-import { SheetGrip, useScrollHint, useSheetPull } from './parts'
+import { SheetGrip } from './parts'
 import { SHEET_PULL_HINT_KEY } from '../lib/resetDefaults'
 
 // Board 3 · Mark up: a sheet under the page (the page stays usable above it),
@@ -150,6 +151,10 @@ export default function MarkupSheet() {
     useNav.getState().closeSheet()
     useAnnotationStore.getState().setTool('select')
   })
+  // Mark up is PDF's own chrome — a sheet in the document's column, not over
+  // it — so it goes on the kit's layer stack itself: Android's back closes it
+  // (and only it), as it closes any sheet.
+  usePhoneLayer('sheet', () => useNav.getState().closeSheet())
   const pullHint = usePullHint(sheetRef)
   const rowHint = useScrollHint<HTMLDivElement>()
   // The tool in hand; with nothing in hand, the one the selected mark was made with.
@@ -263,7 +268,7 @@ export default function MarkupSheet() {
 
       <div
         ref={rowHint.ref}
-        className="flex overflow-x-auto np-jobs px-2.5 snap-x scroll-px-2.5"
+        className={`flex overflow-x-auto np-jobs px-2.5 snap-x scroll-px-2.5 ${rowHint.className}`}
         style={rowHint.style}
         role="group"
         aria-label={t('phone.markup_tools_aria')}
@@ -428,12 +433,11 @@ function usePullHint(ref: React.RefObject<HTMLElement | null>): 'on' | 'fading' 
   return hint
 }
 
-/** Box · Circle · Line · Tick · Cross, under Shape. Its own component so its
- *  scroll hint starts when it appears (see useScrollHint). */
+/** Box · Circle · Line · Tick · Cross, under Shape. */
 function ShapeRow({ tool, labels }: { tool: Tool; labels: Record<string, string> }) {
   const shapeHint = useScrollHint<HTMLDivElement>()
   return (
-    <div ref={shapeHint.ref} className="flex gap-2 overflow-x-auto np-jobs -mx-1 px-1" style={shapeHint.style}>
+    <div ref={shapeHint.ref} className={`flex gap-2 overflow-x-auto np-jobs -mx-1 px-1 ${shapeHint.className}`} style={shapeHint.style}>
       {SHAPES.map((sh) => (
         <button
           key={sh}

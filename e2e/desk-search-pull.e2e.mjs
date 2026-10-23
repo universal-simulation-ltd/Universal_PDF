@@ -311,7 +311,7 @@ try {
     await page.waitForTimeout(500)
     const sheet = page.locator('section[role="dialog"]')
     check('the options sheet is open', await sheet.isVisible())
-    const grip = await page.locator('section[role="dialog"] .np-grip').boundingBox()
+    const grip = await page.locator('section[role="dialog"] [data-sheet-grip]').boundingBox()
     await pull(page, cdp, { y: grip.y + grip.height / 2, x: grip.x + grip.width / 2, dy: 260, steps: 16 })
     await page.waitForTimeout(400)
     const s = await state(page)

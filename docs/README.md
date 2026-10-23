@@ -2339,7 +2339,7 @@ was (`ToolbarUserProfile`, the landing navbar).
 - **Navigation:** two `Screen`s on the nav stack, `'kb'` (the list) and
   `'kb-article'` (with `kbArticle`), so Android's back closes article → list
   → page. They are the one page that may sit over the tabs: with no document
-  open, `useHistoryLayers` counts only those (`isKnowledge`). A document that
+  open, they are the only layer on the stack (`overTabs`). A document that
   arrives under them (from the share sheet) drops them (`dropKnowledge`). The
   status bar keeps dark glyphs over them, even on the Desk tab.
 - `npm run test:phone-knowledge` (WebKit, iPhone size) pins all of the above,
@@ -2505,6 +2505,40 @@ reached it, and then nothing led back out.
 - **The highlight pill folds Size behind a button**: a 40 px highlight's pill
   was 321 px (the slider filled the row); now the slider opens under the
   swatches at their width, 231 px open or shut.
+
+## The phone's pages and sheets run on the SDK's phone kit (2026-10-23)
+
+The plumbing this app grew for its phone screens — the bottom sheet, the
+grip and the pulls on it, the left-edge swipe back, the pull-down-to-type on
+a page, the scroll hint and the history entry per layer — went into
+`@unisim/sdk` 0.203 as the phone kit (SDK README ▸ "Phone pages, sheets and
+gestures") so every suite phone app has the same one, and PDF now uses it.
+What stayed here is the look: `JobPage`, `Card`, `Slip`, `FitLabel`,
+`SwipeRow`, the paper and the cobalt.
+
+- **Layers.** `NativeApp.tsx` puts the open document (`DocumentLayer`) and
+  the stack of pages (`PageLayer`, one layer: only the top page is mounted)
+  on the kit's stack with `usePhoneLayer`; every `Sheet` is the kit's
+  `BottomSheet` and registers itself; Mark up, which sits in the document's
+  column rather than over it, registers itself as a sheet. Back (Android's,
+  the browser's) closes sheet → page → document, in that order, and a page
+  that asks first (Scan with pages on it) keeps its entry.
+- **Inside `.np`.** `Sheet` (parts.tsx) renders the kit's sheet with
+  `portal={false}`, so PDF's `--np-*` colours reach it, and the stack starts
+  at z 200 (`configurePhoneLayers({ baseZ: 200 })`): over the pages (150),
+  under the toast (400), as before. `native.css` sets the kit's `--uph-*`
+  colours to PDF's paper and cobalt.
+- ⚠️ **Style the kit's elements in `native.css`, not with Tailwind classes.**
+  Tailwind 4 puts its utilities in a cascade layer and the kit's rules are
+  unlayered, so the kit's `gap: 12px` beat a `gap-3.5` passed as
+  `bodyClassName` whatever the specificity (the What else sheet came out 6px
+  shorter). Plain rules in `native.css` are unlayered and win.
+- **A one-line question** (a link for some text) is the kit's `phonePrompt`
+  through `<PhoneDialogHost />`: the suite's prompt sheet, in PDF's colours.
+  It no longer puts the keyboard up on its own (the suite rule: a short pull
+  does that); `fill()` in a test still works.
+- Checked: every phone spec, and a 393px screenshot of each screen and sheet
+  before and after — pixel-identical except the question sheet.
 
 ## The example PDF — a feature tour
 

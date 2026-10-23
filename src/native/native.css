@@ -118,18 +118,32 @@
   display: none;
 }
 
-/* A bottom sheet and its scrim. */
-.np-scrim {
-  position: absolute;
-  inset: 0;
-  background: rgba(20, 22, 28, 0.42);
-  animation: np-fade 160ms ease-out;
+/* The SDK phone kit's layers (its BottomSheet, and phonePrompt's sheet) in
+   PDF's paper and cobalt. The kit's own tokens are in :where(), so these win;
+   this file only loads in the phone app. Light only, like the rest of it. */
+.unisim-phone-layer {
+  --uph-bg: #f4f1ea;
+  --uph-surface: #fffdf8;
+  --uph-sheet: #fbf6ee;
+  --uph-text: #1b1d22;
+  --uph-muted: #5d6068;
+  --uph-line: #e3ded3;
+  --uph-accent: #2353c9;
+  --uph-primary: #2353c9;
+  --uph-on-primary: #ffffff;
+  --uph-scrim: rgba(20, 22, 28, 0.42);
+  --uph-grip: #d6d0c3;
 }
+
+/* A bottom sheet (Sheet in parts.tsx: the kit's BottomSheet, on paper). */
 .np-sheet {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
+  /* The kit centres a sheet at 640px; PDF's run the width of an iPad too. */
+  max-width: none;
+  margin: 0;
   border-radius: 26px 26px 0 0;
   box-shadow: 0 -10px 30px rgba(60, 45, 20, 0.2);
   padding-bottom: calc(env(safe-area-inset-bottom) + 18px);
@@ -137,6 +151,21 @@
   max-height: calc(100% - env(safe-area-inset-top) - 40px);
   display: flex;
   flex-direction: column;
+}
+/* ⚠️ The sheet's insides are styled HERE, not with Tailwind classes passed as
+   `bodyClassName`: Tailwind 4's utilities live in a cascade layer, and the
+   kit's rules are unlayered, so the kit's `gap: 12px` beat `gap-3.5` whatever
+   the specificity (the What else sheet came out 6px shorter). Plain rules in
+   this file are unlayered too, and win on specificity. */
+.np-sheet > .unisim-phone-sheet-body {
+  gap: 14px;
+}
+/* The kit's grip, where PDF's always sat: the bar 12px down, 8px over the body. */
+.np-sheet > .unisim-phone-grip {
+  padding: 12px 0 8px;
+}
+.np-sheet > .unisim-phone-grip > span {
+  border-radius: 3px;
 }
 .np-grip {
   width: 40px;
@@ -168,7 +197,7 @@
   to { transform: translateX(0); opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .np-scrim, .np-sheet, .np-page-enter, .np-moment-enter { animation: none; }
+  .np-sheet, .np-page-enter, .np-moment-enter { animation: none; }
 }
 
 /* The desk's first-run "Pull down to search": it bobs the way the pull goes. */

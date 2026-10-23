@@ -1,5 +1,11 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { BottomSheet, type GripProps } from '@unisim/sdk'
 import { Icon, PATHS } from './icons'
+
+// The page / sheet / gesture plumbing is the SDK's phone kit (`@unisim/sdk`,
+// README ▸ "Phone pages, sheets and gestures") since SDK 0.203 — it was
+// lifted out of this file. What stays here is PDF's own look: the paper, the
+// cobalt, the slips and the highlighter.
 
 /**
  * A heading with one word on the orange highlighter: "Make your *mark*",
@@ -11,8 +17,14 @@ export function Hl({ children, desk = false }: { children: ReactNode; desk?: boo
 }
 
 /**
- * A bottom sheet over a scrim. Tapping the scrim or Escape closes it; focus
- * goes into the sheet when it opens and back where it was when it closes.
+ * A bottom sheet over a scrim, on paper: the kit's `BottomSheet` in PDF's
+ * look. The kit does the rest — a tap on the scrim, Escape, Back (Android's
+ * gesture) and a big swipe down close it; a shorter pull puts the finger in
+ * its text box; the grip drags it down; focus goes in and comes back.
+ *
+ * ⚠️ `portal={false}`: rendered inside `.np`, where PDF's `--np-*` colours
+ * live — a sheet portalled to <body> would lose every one of them. It is
+ * `position: fixed` either way, and `.np` is the whole screen.
  */
 export function Sheet({
   label,
@@ -25,294 +37,35 @@ export function Sheet({
   onClose: () => void
   children: ReactNode
   background?: string
-  /** False for a sheet the page above must stay usable under (Mark up). */
+  /** False for a sheet the page above must stay usable under (Send to sign). */
   scrim?: boolean
 }) {
-  const ref = useRef<HTMLElement>(null)
-  const bodyRef = useRef<HTMLDivElement>(null)
-  const grip = useSheetPull(ref, onClose)
-  useSheetBodyPull(ref, bodyRef, onClose)
-  const closeRef = useRef(onClose)
-  closeRef.current = onClose
-  // ⚠️ Once, for the life of the sheet — not on each new `onClose`. Callers
-  // pass an inline arrow, and re-running this on every render put the focus
-  // back on the sheet (and the opener) under a box being typed in, so each
-  // keystroke in a sheet's text box lost the keyboard.
-  useEffect(() => {
-    const before = document.activeElement as HTMLElement | null
-    ref.current?.focus({ preventScroll: true })
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        closeRef.current()
-      }
-    }
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      before?.focus?.({ preventScroll: true })
-    }
-  }, [])
   return (
-    <div className="absolute inset-0 z-[200]" style={scrim ? undefined : { pointerEvents: 'none' }}>
-      {scrim && <div className="np-scrim" onClick={onClose} aria-hidden="true" />}
-      <section
-        ref={ref}
-        role="dialog"
-        aria-modal={scrim ? 'true' : undefined}
-        aria-label={label}
-        tabIndex={-1}
-        className="np-sheet outline-none"
-        style={{ background, pointerEvents: 'auto' }}
-      >
-        <SheetGrip grip={grip} />
-        {/* ⚠️ Children never shrink (`[&>*]:flex-none`): a flex column lets
-            them, so a menu taller than the sheet squashed its last card,
-            whose overflow-hidden cut the bottom rows off instead of the
-            sheet scrolling (James, 2026-10-22: ⋯ What else ended at
-            Rename, with "Clear all annotations" out of reach). */}
-        <div ref={bodyRef} className="min-h-0 overflow-y-auto overscroll-contain px-4 flex flex-col gap-3.5 [&>*]:flex-none">{children}</div>
-      </section>
-    </div>
+    <BottomSheet
+      label={label}
+      onClose={onClose}
+      scrim={scrim}
+      portal={false}
+      theme="light"
+      className="np-sheet"
+      style={{ background }}
+      // ⚠️ `overflow-y-auto` is the kit's already; named here as well because
+      // e2e/phone-clear-all finds the sheet's scroller by it. The body's gap
+      // is in native.css (`.np-sheet > .unisim-phone-sheet-body`): a Tailwind
+      // class here would lose to the kit's unlayered rule.
+      bodyClassName="overflow-y-auto"
+    >
+      {children}
+    </BottomSheet>
   )
 }
 
-type GripProps = Pick<
-  React.HTMLAttributes<HTMLDivElement>,
-  'onPointerDown' | 'onPointerMove' | 'onPointerUp' | 'onPointerCancel'
->
-
 /**
- * A sheet that comes down with the finger from its grip, like any phone's
- * (James, 2026-10-19: "taking the drawer handle you should be able to drag it
- * down and it takes the drawer with it"). Let go past a third of its height —
- * or flick it — and it slides the rest of the way and closes; short of that it
- * settles back. The sheet's own transform is written straight to the element,
- * so a drag doesn't re-render the tools under it on every move.
+ * The grip, in a strip the width of the sheet so there's a finger's worth to
+ * take hold of — for Mark up, the one sheet that is PDF's own chrome (it sits
+ * in the document's column rather than over it). `grip` is the kit's
+ * `useSheetPull`.
  */
-export function useSheetPull(ref: React.RefObject<HTMLElement | null>, onClose: () => void): GripProps {
-  const drag = useRef<{ y: number; dy: number; t: number; v: number } | null>(null)
-  const close = useRef(onClose)
-  close.current = onClose
-
-  function finish(cancelled: boolean) {
-    const d = drag.current
-    drag.current = null
-    const el = ref.current
-    if (!d || !el) return
-    const away = !cancelled && (d.dy > Math.min(140, el.offsetHeight / 3) || (d.v > 0.5 && d.dy > 16))
-    el.style.transition = 'transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1)'
-    if (away) {
-      el.style.transform = `translateY(${el.offsetHeight + 24}px)`
-      window.setTimeout(() => close.current(), 160)
-    } else {
-      el.style.transform = ''
-    }
-  }
-
-  return {
-    onPointerDown(e) {
-      const el = ref.current
-      if (!el) return
-      drag.current = { y: e.clientY, dy: 0, t: e.timeStamp, v: 0 }
-      e.currentTarget.setPointerCapture(e.pointerId)
-      // The rise-in (or Mark up's first-time dip) would otherwise hold the
-      // transform while it runs.
-      el.getAnimations?.().forEach((a) => a.cancel())
-      el.style.animation = 'none'
-      el.style.transition = 'none'
-    },
-    onPointerMove(e) {
-      const d = drag.current
-      const el = ref.current
-      if (!d || !el) return
-      // Down only: pulled up, it stays put.
-      const dy = Math.max(0, e.clientY - d.y)
-      const dt = e.timeStamp - d.t
-      if (dt > 0) d.v = (dy - d.dy) / dt
-      d.dy = dy
-      d.t = e.timeStamp
-      el.style.transform = dy ? `translateY(${dy}px)` : ''
-    },
-    onPointerUp: () => finish(false),
-    onPointerCancel: () => finish(true),
-  }
-}
-
-// Where a pull down must not be taken over: a box being typed in, a slider,
-// a sideways swiper, and anything drawn on (the Sign page's pad is a canvas,
-// and a downward stroke of a signature is not a pull).
-const PULL_EXEMPT = 'input, textarea, select, canvas, [contenteditable="true"], [data-swipe-x], [data-sheet-grip]'
-// The boxes a pull down puts the finger in: one-line text and the like.
-const TYPE_BOX = 'input:not([type]), input[type="text"], input[type="search"], input[type="url"], input[type="email"], input[type="tel"], input[type="number"], input[type="password"], textarea'
-
-/** The first visible, usable text box inside `root`, in reading order. */
-export function firstTypeBox(root: HTMLElement | null): HTMLInputElement | HTMLTextAreaElement | null {
-  if (!root) return null
-  for (const el of root.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(TYPE_BOX)) {
-    if (el.disabled || el.readOnly) continue
-    if (el.getClientRects().length === 0) continue
-    return el
-  }
-  return null
-}
-
-/**
- * Two suite-wide rules for a pull down anywhere on a drawer (James,
- * 2026-10-22), not just on its grip:
- *
- *  • A big swipe down closes it ("allow a big swipe down to close drawers
- *    without having to use the handle"). The drawer follows the finger; let
- *    go far enough, or flick hard, and it goes.
- *  • A shorter pull puts the finger in its text box, keyboard up, when it has
- *    one ("on a swipe down, focus on the input"). The focus is made in the
- *    touch's release, the only place iOS raises the keyboard for it.
- *
- * Only from the top of the drawer's own scroll, only a mostly downward pull,
- * and not one that starts on a slider, a box being typed in or a swiper.
- * Touch events, not pointer ones, so the drawer's own scrolling is untouched
- * until the pull is decided.
- */
-export function useSheetBodyPull(
-  sheetRef: React.RefObject<HTMLElement | null>,
-  bodyRef: React.RefObject<HTMLElement | null>,
-  onClose: () => void
-) {
-  const close = useRef(onClose)
-  close.current = onClose
-  useEffect(() => {
-    const sheet = sheetRef.current
-    const body = bodyRef.current
-    if (!sheet || !body) return
-    let g: { x: number; y: number; dy: number; t: number; v: number; pull: boolean | null } | null = null
-    const onStart = (e: TouchEvent) => {
-      g = null
-      if (e.touches.length !== 1) return
-      const target = e.target as Element | null
-      if (target?.closest?.(PULL_EXEMPT)) return
-      if (body.scrollTop > 0) return
-      const tt = e.touches[0]
-      g = { x: tt.clientX, y: tt.clientY, dy: 0, t: e.timeStamp, v: 0, pull: null }
-    }
-    const onMove = (e: TouchEvent) => {
-      if (!g) return
-      const tt = e.touches[0]
-      const dx = tt.clientX - g.x
-      const dy = tt.clientY - g.y
-      if (g.pull === null) {
-        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return
-        g.pull = dy > 0 && dy > Math.abs(dx) * 1.2 && body.scrollTop <= 0
-        if (!g.pull) { g = null; return }
-        sheet.getAnimations?.().forEach((a) => a.cancel())
-        sheet.style.animation = 'none'
-        sheet.style.transition = 'none'
-      }
-      e.preventDefault()
-      const d = Math.max(0, dy)
-      const dt = e.timeStamp - g.t
-      if (dt > 0) g.v = (d - g.dy) / dt
-      g.dy = d
-      g.t = e.timeStamp
-      sheet.style.transform = d ? `translateY(${d}px)` : ''
-    }
-    const onEnd = () => {
-      const d = g
-      g = null
-      if (!d?.pull) return
-      const big = d.dy > Math.min(180, sheet.offsetHeight * 0.4) || (d.v > 0.8 && d.dy > 90)
-      sheet.style.transition = 'transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1)'
-      if (big) {
-        sheet.style.transform = `translateY(${sheet.offsetHeight + 24}px)`
-        window.setTimeout(() => close.current(), 160)
-        return
-      }
-      sheet.style.transform = ''
-      if (d.dy > 36) firstTypeBox(body)?.focus()
-    }
-    sheet.addEventListener('touchstart', onStart, { passive: true })
-    sheet.addEventListener('touchmove', onMove, { passive: false })
-    sheet.addEventListener('touchend', onEnd)
-    sheet.addEventListener('touchcancel', onEnd)
-    return () => {
-      sheet.removeEventListener('touchstart', onStart)
-      sheet.removeEventListener('touchmove', onMove)
-      sheet.removeEventListener('touchend', onEnd)
-      sheet.removeEventListener('touchcancel', onEnd)
-    }
-  }, [sheetRef, bodyRef])
-}
-
-/** The nearest scrolling box between `el` and `root`, or `root`. */
-function scrollerOf(el: Element | null, root: HTMLElement): HTMLElement {
-  for (let n = el as HTMLElement | null; n && n !== root; n = n.parentElement) {
-    const oy = getComputedStyle(n).overflowY
-    if ((oy === 'auto' || oy === 'scroll') && n.scrollHeight > n.clientHeight) return n
-  }
-  return root
-}
-
-/**
- * A pull down on a page (QR, Sign's Type, the knowledge base…) puts the finger
- * in its text box, keyboard up (James, 2026-10-22: "on the QR pop-up … if you
- * scroll down, it should focus on the input and allow you to use the
- * keyboard"). The page never focuses it on arrival, so the keyboard comes up
- * only when asked for. Only from the top of the page's scroll, only a mostly
- * downward pull, and only on a page that has a box; the page gives a little
- * with the finger so the pull is felt.
- */
-export function usePagePullToType(ref: React.RefObject<HTMLElement | null>, enabled: boolean) {
-  useEffect(() => {
-    const page = ref.current
-    if (!page || !enabled) return
-    let g: { x: number; y: number; dy: number; scroller: HTMLElement; pull: boolean | null } | null = null
-    const onStart = (e: TouchEvent) => {
-      g = null
-      if (e.touches.length !== 1) return
-      const target = e.target as Element | null
-      if (target?.closest?.(PULL_EXEMPT)) return
-      if (!firstTypeBox(page)) return
-      const scroller = scrollerOf(target, page)
-      if (scroller.scrollTop > 0) return
-      const tt = e.touches[0]
-      g = { x: tt.clientX, y: tt.clientY, dy: 0, scroller, pull: null }
-    }
-    const onMove = (e: TouchEvent) => {
-      if (!g) return
-      const tt = e.touches[0]
-      const dx = tt.clientX - g.x
-      const dy = tt.clientY - g.y
-      if (g.pull === null) {
-        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return
-        g.pull = dy > 0 && dy > Math.abs(dx) * 1.2 && g.scroller.scrollTop <= 0
-        if (!g.pull) { g = null; return }
-        page.style.transition = 'none'
-      }
-      e.preventDefault()
-      g.dy = Math.max(0, dy)
-      page.style.transform = `translateY(${Math.min(48, g.dy * 0.35)}px)`
-    }
-    const onEnd = () => {
-      const d = g
-      g = null
-      if (!d?.pull) return
-      page.style.transition = 'transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1)'
-      page.style.transform = ''
-      if (d.dy > 50) firstTypeBox(page)?.focus()
-    }
-    page.addEventListener('touchstart', onStart, { passive: true })
-    page.addEventListener('touchmove', onMove, { passive: false })
-    page.addEventListener('touchend', onEnd)
-    page.addEventListener('touchcancel', onEnd)
-    return () => {
-      page.removeEventListener('touchstart', onStart)
-      page.removeEventListener('touchmove', onMove)
-      page.removeEventListener('touchend', onEnd)
-      page.removeEventListener('touchcancel', onEnd)
-    }
-  }, [ref, enabled])
-}
-
-/** The grip, in a strip the width of the sheet so there's a finger's worth to take hold of. */
 export function SheetGrip({ grip }: { grip: GripProps }) {
   return (
     <div {...grip} data-sheet-grip className="flex-none self-stretch flex justify-center pt-1 pb-0.5 touch-none cursor-grab">
@@ -597,50 +350,6 @@ export function Card({ children }: { children: ReactNode }) {
       {children}
     </div>
   )
-}
-
-/**
- * A row that scrolls sideways shows that it does (James, 2026-10-18: "needs to
- * be obvious you can scroll … make it a global rule — maybe it could nudge
- * slightly on page load"; Docs_UNI_SIM/BRANDING.md → "A row that scrolls shows
- * it scrolls"): a fade at each edge that has more beyond it (`style`, a CSS
- * mask), so the cut-off item reads as "continues" rather than "clipped". It
- * also nudged along and back as it appeared until James dropped that
- * (2026-10-19: "doesn't need the peek anymore, the fade on the last item works
- * well").
- *
- * Spread `style` onto the scroller and give it `ref`. ⚠️ The scroller must be
- * mounted with the component that calls this (the effect runs once): a row
- * that appears later needs a component of its own.
- */
-export function useScrollHint<T extends HTMLElement>(): { ref: React.RefObject<T>; style: React.CSSProperties } {
-  const ref = useRef<T>(null)
-  const [edges, setEdges] = useState({ start: false, end: false })
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const measure = () => {
-      const max = el.scrollWidth - el.clientWidth
-      setEdges({ start: el.scrollLeft > 2, end: el.scrollLeft < max - 2 })
-    }
-    measure()
-    el.addEventListener('scroll', measure, { passive: true })
-    const ro = new ResizeObserver(measure)
-    ro.observe(el)
-
-    return () => {
-      el.removeEventListener('scroll', measure)
-      ro.disconnect()
-    }
-  }, [])
-
-  const FADE = 28
-  const mask =
-    edges.start || edges.end
-      ? `linear-gradient(to right, ${edges.start ? 'transparent' : '#000'} 0, #000 ${edges.start ? FADE : 0}px, #000 calc(100% - ${edges.end ? FADE : 0}px), ${edges.end ? 'transparent' : '#000'} 100%)`
-      : undefined
-  return { ref, style: mask ? { maskImage: mask, WebkitMaskImage: mask } : {} }
 }
 
 export type SwipeAction = { label: string; icon: string; color: string; run: () => void }

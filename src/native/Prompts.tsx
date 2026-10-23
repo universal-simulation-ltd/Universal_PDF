@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { create } from 'zustand'
-import { useT } from '../i18n'
+import { phonePrompt } from '@unisim/sdk'
+import { getT, useT } from '../i18n'
 import { usePdfStore } from '../stores/pdfStore'
 import { setNotifier, setTextAsker } from '../lib/notice'
 import { BTN_PRIMARY, BTN_PRIMARY_STYLE, Sheet } from './parts'
@@ -9,91 +9,24 @@ import { useNav } from './nav'
 // The questions the shared code asks, as the phone asks them: never a browser
 // box (2026-10-22, "review every popup"). Messages become the short line at
 // the foot of the screen (`say`); a one-line question (a link for some text)
-// is a sheet with a text box; a locked PDF's password is a sheet too, in place
-// of the website's dialog.
-
-interface AskState {
-  question: string | null
-  value: string
-  resolve: ((answer: string | null) => void) | null
-}
-
-const useAsk = create<AskState>(() => ({ question: null, value: '', resolve: null }))
+// is the kit's `phonePrompt`, a sheet with a text box, shown by the
+// <PhoneDialogHost /> NativeApp mounts (a question still open is answered
+// "no" by the next one, as before); a locked PDF's password is a sheet too,
+// in place of the website's dialog.
 
 /** Route `notice()` and `askText()` (lib/notice) to the phone's own ways of saying and asking. */
 export function usePhonePrompts() {
   useEffect(() => {
     const offNotice = setNotifier((message) => useNav.getState().say(message))
-    const offAsk = setTextAsker(
-      (question, value) =>
-        new Promise((resolve) => {
-          // A question still open is answered "no" by the next one.
-          useAsk.getState().resolve?.(null)
-          useAsk.setState({ question, value, resolve })
-        })
-    )
+    const offAsk = setTextAsker((question, value) => {
+      const t = getT()
+      return phonePrompt({ message: question, value, inputMode: 'url', confirmLabel: t('phone.done'), cancelLabel: t('phone.cancel') })
+    })
     return () => {
       offNotice()
       offAsk()
     }
   }, [])
-}
-
-/** The one-line question, as a sheet. */
-export function AskSheet() {
-  const t = useT()
-  const question = useAsk((s) => s.question)
-  const initial = useAsk((s) => s.value)
-  const [value, setValue] = useState(initial)
-  const id = useId()
-  const inputRef = useRef<HTMLInputElement>(null)
-  useEffect(() => setValue(initial), [question, initial])
-  // After the sheet has taken focus for itself (its effect runs after ours).
-  useEffect(() => {
-    if (!question) return
-    const r = requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }))
-    return () => cancelAnimationFrame(r)
-  }, [question])
-  if (!question) return null
-
-  const answer = (a: string | null) => {
-    const r = useAsk.getState().resolve
-    useAsk.setState({ question: null, value: '', resolve: null })
-    r?.(a)
-  }
-
-  return (
-    <Sheet label={question} onClose={() => answer(null)} background="var(--np-sheet)">
-      <form
-        className="flex flex-col gap-3 pb-1"
-        onSubmit={(e) => {
-          e.preventDefault()
-          answer(value)
-        }}
-      >
-        <label htmlFor={id} className="text-[16px] font-semibold">{question}</label>
-        <input
-          ref={inputRef}
-          id={id}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          inputMode="url"
-          autoCapitalize="off"
-          autoCorrect="off"
-          className="h-12 px-3 rounded-xl text-[16px] outline-none bg-white"
-          style={{ border: '1px solid var(--np-line)' }}
-        />
-        <div className="grid grid-cols-2 gap-2.5">
-          <button type="button" onClick={() => answer(null)} className="min-h-[52px] rounded-[16px] text-[16px] font-semibold" style={{ border: '1px solid var(--np-line)' }}>
-            {t('phone.cancel')}
-          </button>
-          <button type="submit" className={BTN_PRIMARY} style={BTN_PRIMARY_STYLE}>
-            {t('phone.done')}
-          </button>
-        </div>
-      </form>
-    </Sheet>
-  )
 }
 
 /**

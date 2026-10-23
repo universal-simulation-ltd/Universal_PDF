@@ -1,6 +1,6 @@
 // A swipe in from the left edge goes back a page, as on any iPhone (James,
 // 2026-10-19: "Side swipe should go back a page, I am on send and it doesn't
-// do anything"). See src/native/edgeSwipe.ts.
+// do anything"). See useEdgeSwipeBack in @unisim/sdk (the phone kit).
 //
 //   ./scripts/preview.sh              # or preview.ps1 — Universal PDF is :5174
 //   npm run test:edge-swipe           # in another terminal
