@@ -328,6 +328,9 @@ const phone: Messages['phone'] = {
   'pages_leave_q': 'Değişiklikler uygulanmadan çıkılsın mı?',
   'pages_leave_no': 'Düzenlemeye devam et',
   'view_title': 'Sayfa {page} / {total}',
+  'view_title_moved': 'Artık sayfa {page} / {total}',
+  'view_strip_aria': 'Sayfalar yeni sıralarında',
+  'view_put_back_aria': '{page}. sayfa çıkarıldı: geri koy',
   'view_earlier': 'Öne',
   'view_later': 'Arkaya',
   'view_turn': 'Döndür',
@@ -339,7 +342,7 @@ const phone: Messages['phone'] = {
   'view_prev': 'Önceki sayfa',
   'view_next': 'Sonraki sayfa',
   'view_confirm': 'Onayla',
-  'view_hint': 'sonraki sayfa için kaydırın · yakınlaştırmak için parmaklarınızı açın',
+  'view_hint': 'yakınlaştırmak için parmaklarınızı açın',
   'page_chip_aria': 'Sayfa {page} / {total}, Sayfalar’ı aç',
   'blacked_title': 'Karartıldı.',
   'blacked_note': 'gönderildiğinde tamamen gider', // handwritten, under "Blacked out."

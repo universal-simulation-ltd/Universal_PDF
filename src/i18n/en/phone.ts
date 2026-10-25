@@ -333,6 +333,9 @@ export default {
   'pages_leave_q': 'Leave without applying your changes?',
   'pages_leave_no': 'Keep editing',
   'view_title': 'Page {page} of {total}',
+  'view_title_moved': 'Now page {page} of {total}',
+  'view_strip_aria': 'The pages in their new order',
+  'view_put_back_aria': 'Page {page}, taken out: put it back',
   'view_earlier': 'Earlier',
   'view_later': 'Later',
   'view_turn': 'Turn',
@@ -344,7 +347,7 @@ export default {
   'view_prev': 'Previous page',
   'view_next': 'Next page',
   'view_confirm': 'Confirm',
-  'view_hint': 'swipe for the next page · pinch to zoom',
+  'view_hint': 'pinch to zoom',
   'page_chip_aria': 'Page {page} of {total}, open Pages',
   'blacked_title': 'Blacked out.',
   'blacked_note': 'gone for good once it’s sent', // handwritten, under "Blacked out."

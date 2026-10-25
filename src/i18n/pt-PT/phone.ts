@@ -328,6 +328,9 @@ const phone: Messages['phone'] = {
   'pages_leave_q': 'Sair sem aplicar as alterações?',
   'pages_leave_no': 'Continuar a editar',
   'view_title': 'Página {page} de {total}',
+  'view_title_moved': 'Agora página {page} de {total}',
+  'view_strip_aria': 'As páginas na nova ordem',
+  'view_put_back_aria': 'Página {page}, retirada: repor',
   'view_earlier': 'Antes',
   'view_later': 'Depois',
   'view_turn': 'Rodar',
@@ -339,7 +342,7 @@ const phone: Messages['phone'] = {
   'view_prev': 'Página anterior',
   'view_next': 'Página seguinte',
   'view_confirm': 'Confirmar',
-  'view_hint': 'deslize para a página seguinte · afaste os dedos para ampliar',
+  'view_hint': 'afaste os dedos para ampliar',
   'page_chip_aria': 'Página {page} de {total}, abrir Páginas',
   'blacked_title': 'Rasurado.',
   'blacked_note': 'desaparece de vez quando for enviado', // handwritten, under "Blacked out."

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { phoneConfirm, prefersReducedMotion } from '@unisim/sdk'
+import { phoneConfirm, prefersReducedMotion, useScrollHint } from '@unisim/sdk'
 import { useT } from '../i18n'
 import { usePdfStore } from '../stores/pdfStore'
 import { usePageThumbnails } from '../hooks/usePageThumbnails'
@@ -479,6 +479,16 @@ function PageViewer({ doc, slots, start, onConfirm }: { doc: PDFDocumentProxy; s
   const [live, setLive] = useState(false)
   const [level, setLevel] = useState(1)
   const big = useBigPage(doc, slot.src, level)
+  // Pages taken out here, kept in the strip (dimmed) so a tap puts one back
+  // where it was. Confirm drops them.
+  const [outs, setOuts] = useState<{ slot: Slot; at: number }[]>([])
+  // Where each page stood when the viewer opened: "Now page 3 of 5" once moved.
+  const [origin] = useState(() => new Map(slots.map((s, i) => [s.src, i] as const)))
+  const numPages = usePdfStore((s) => s.numPages)
+  // The small pictures the strip and the neighbours' slices show, drawn for
+  // the strip's row as it scrolls.
+  const stripRef = useRef<HTMLDivElement | null>(null)
+  const thumbFor = usePageThumbnails(doc, numPages, true, stripRef)
 
   useLayoutEffect(() => {
     const el = stageRef.current
@@ -512,17 +522,35 @@ function PageViewer({ doc, slots, start, onConfirm }: { doc: PDFDocumentProxy; s
       return
     }
     const next = draft.filter((_, i) => i !== at)
+    setOuts((o) => [...o, { slot: draft[at], at }])
     setDraft(next)
     setPos(Math.min(at, next.length - 1))
   }
+  function putBack(src: number) {
+    const o = outs.find((x) => x.slot.src === src)
+    if (!o) return
+    const i = Math.min(o.at, draft.length)
+    const next = draft.slice()
+    next.splice(i, 0, o.slot)
+    setOuts((all) => all.filter((x) => x !== o))
+    setDraft(next)
+    setPos(i)
+  }
 
-  // The picture, fitted to the stage as it will stand once turned.
+  // Slices of the pages either side at the stage's edges, at the whole page
+  // only (James, 2026-10-25: "a preview of page before and after").
+  const prev = at > 0 ? draft[at - 1] : null
+  const next = at < draft.length - 1 ? draft[at + 1] : null
+
+  // The picture, fitted to the stage as it will stand once turned — leaving
+  // room at the sides for the neighbours' slices.
   const odd = slot.q % 2 === 1
+  const peekRoom = prev || next ? 2 * (PEEK + PEEK_GAP) : 0
   let size = { w: 0, h: 0 }
   if (big && box.w > 0 && box.h > 0) {
     const bw = odd ? big.h : big.w
     const bh = odd ? big.w : big.h
-    const s = Math.min(box.w / bw, box.h / bh)
+    const s = Math.min((box.w - peekRoom) / bw, box.h / bh)
     size = { w: big.w * s, h: big.h * s }
   }
   const smooth = !prefersReducedMotion()
@@ -675,8 +703,8 @@ function PageViewer({ doc, slots, start, onConfirm }: { doc: PDFDocumentProxy; s
         <BackLink label={t('phone.pages_back')} onClick={cancel} />
       </header>
       <div className="flex-none px-5 pb-2 flex items-center gap-2">
-        <h1 className="np-serif m-0 flex-1 min-w-0 text-[26px] leading-tight font-bold" aria-live="polite">
-          {t('phone.view_title', { page: at + 1, total: draft.length })}
+        <h1 className="np-serif m-0 flex-1 min-w-0 text-[22px] leading-tight font-bold" aria-live="polite">
+          {t(origin.get(slot.src) === at ? 'phone.view_title' : 'phone.view_title_moved', { page: at + 1, total: draft.length })}
         </h1>
         <RoundButton label={t('phone.view_prev')} disabled={at === 0} onClick={() => goTo(at - 1)}>
           <Icon d={PATHS.back} size={18} width={2.4} />
@@ -694,6 +722,8 @@ function PageViewer({ doc, slots, start, onConfirm }: { doc: PDFDocumentProxy; s
         className="flex-1 min-h-0 relative mx-5 my-1 overflow-hidden select-none"
         style={{ touchAction: 'none' }}
       >
+        {zoom.s === 1 && size.w > 0 && prev && <Peek side="left" slot={prev} url={thumbFor(prev.src)} height={size.h * 0.86} />}
+        {zoom.s === 1 && size.w > 0 && next && <Peek side="right" slot={next} url={thumbFor(next.src)} height={size.h * 0.86} />}
         {big && size.w > 0 ? (
           <div
             className="absolute inset-0"
@@ -705,6 +735,7 @@ function PageViewer({ doc, slots, start, onConfirm }: { doc: PDFDocumentProxy; s
           >
           <img
             key={slot.src}
+            data-big-page
             src={big.url}
             alt={t('viewer.nav.page', { page: at + 1 })}
             draggable={false}
@@ -722,9 +753,10 @@ function PageViewer({ doc, slots, start, onConfirm }: { doc: PDFDocumentProxy; s
           <span className="absolute inset-0 flex items-center justify-center text-[15px] text-[color:var(--np-muted)]">{t('phone.opening')}</span>
         )}
       </div>
-      <p className="np-hand m-0 text-center text-[19px] leading-none text-[color:var(--np-muted)]" aria-hidden="true">{t('phone.view_hint')}</p>
+      <OrderStrip stripRef={stripRef} thumbFor={thumbFor} draft={draft} at={at} outs={outs} onGo={goTo} onPutBack={putBack} />
+      <p className="np-hand m-0 text-center text-[17px] leading-none text-[color:var(--np-muted)] [@media(max-height:720px)]:hidden" aria-hidden="true">{t('phone.view_hint')}</p>
 
-      <div className="flex-none px-5 pt-3 grid grid-cols-4 gap-2">
+      <div className="flex-none px-5 pt-2 grid grid-cols-4 gap-2">
         {actions.map((a) => (
           <button
             key={a.id}
@@ -734,7 +766,7 @@ function PageViewer({ doc, slots, start, onConfirm }: { doc: PDFDocumentProxy; s
             disabled={a.disabled}
             onClick={a.run}
             data-view-action={a.id}
-            className="min-w-0 min-h-[64px] rounded-2xl flex flex-col items-center justify-center gap-1 disabled:opacity-35"
+            className="min-w-0 min-h-[58px] rounded-2xl flex flex-col items-center justify-center gap-1 disabled:opacity-35"
             style={{ background: 'var(--np-slip)', boxShadow: '0 1px 4px rgba(60,45,20,0.14)', color: a.danger ? '#b42318' : 'var(--np-cobalt-deep)' }}
           >
             <Icon d={a.icon} size={22} width={2.2} />
@@ -751,6 +783,161 @@ function PageViewer({ doc, slots, start, onConfirm }: { doc: PDFDocumentProxy; s
           {t('phone.view_confirm')}
         </button>
       </div>
+    </div>
+  )
+}
+
+/** How much of each neighbour shows at the stage's edges, and the gap to the page. */
+const PEEK = 20
+const PEEK_GAP = 8
+
+/** A thumbnail's picture, turned as staged (the Pages page's thumbnails, shared through `thumbFor`). */
+function useThumbUrl(src: string | undefined, q: number): string | undefined {
+  const turned = useTurned(src, q % 4)
+  return q % 4 ? turned : src
+}
+
+/** A slice of the page before or after, at the stage's edge, its inner edge showing. */
+function Peek({ side, slot, url: thumb, height }: { side: 'left' | 'right'; slot: Slot; url: string | undefined; height: number }) {
+  const url = useThumbUrl(thumb, slot.q)
+  return (
+    <div
+      aria-hidden="true"
+      data-peek={side}
+      className="absolute top-1/2 bg-white overflow-hidden"
+      style={{
+        [side]: 0,
+        width: PEEK,
+        height,
+        transform: 'translateY(-50%)',
+        borderRadius: side === 'left' ? '0 2px 2px 0' : '2px 0 0 2px',
+        boxShadow: '0 4px 10px rgba(60,45,20,0.18)',
+        opacity: 0.9,
+      }}
+    >
+      {url && <img src={url} alt="" draggable={false} className="block h-full max-w-none" style={{ [side === 'left' ? 'right' : 'left']: 0, position: 'absolute' }} />}
+    </div>
+  )
+}
+
+/**
+ * The pages in their staged order, small, in one row under the big page
+ * (James, 2026-10-25: "so you have an idea when you're moving the page
+ * order"): the one being viewed raised, with the orange ring; each numbered
+ * in the new order and turned as staged; pages taken out here dimmed and
+ * struck at the end, a tap putting one back. A tap on another goes to it.
+ * When Earlier / Later move the page, its thumbnail slides past its
+ * neighbour (FLIP; reduced motion: it simply jumps). The row scrolls and
+ * shows it (useScrollHint: the cut-off thumbnail and the faded edge), and
+ * keeps the page being viewed in the middle.
+ */
+function OrderStrip({
+  stripRef,
+  thumbFor,
+  draft,
+  at,
+  outs,
+  onGo,
+  onPutBack,
+}: {
+  stripRef: React.MutableRefObject<HTMLDivElement | null>
+  thumbFor: (i: number) => string | undefined
+  draft: Slot[]
+  at: number
+  outs: { slot: Slot; at: number }[]
+  onGo: (i: number) => void
+  onPutBack: (src: number) => void
+}) {
+  const t = useT()
+  const hint = useScrollHint<HTMLDivElement>()
+  const setRef = (el: HTMLDivElement | null) => {
+    stripRef.current = el
+    hint.ref(el)
+  }
+
+  // FLIP: where each thumbnail was, so a move can slide from there.
+  const lefts = useRef(new Map<number, number>())
+  const order = draft.map((s) => s.src).join(',')
+  useLayoutEffect(() => {
+    const el = stripRef.current
+    if (!el) return
+    const smooth = !prefersReducedMotion()
+    const now = new Map<number, number>()
+    for (const item of el.querySelectorAll<HTMLElement>('[data-strip-page]')) {
+      const src = Number(item.dataset.stripPage)
+      const left = item.offsetLeft
+      now.set(src, left)
+      const was = lefts.current.get(src)
+      if (smooth && was !== undefined && was !== left) {
+        item.style.transition = 'none'
+        item.style.translate = `${was - left}px 0`
+        requestAnimationFrame(() => {
+          item.style.transition = 'translate 260ms cubic-bezier(0.2, 0.8, 0.2, 1)'
+          item.style.translate = ''
+        })
+      }
+    }
+    lefts.current = now
+  }, [order, outs.length])
+
+  // The page being viewed kept in the middle of the row.
+  useEffect(() => {
+    const el = stripRef.current
+    const item = el?.querySelector<HTMLElement>('[data-strip-current]')
+    if (!el || !item) return
+    const want = item.offsetLeft + item.offsetWidth / 2 - el.clientWidth / 2
+    el.scrollTo({ left: Math.max(0, want), behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+  }, [at, order])
+
+  return (
+    <div
+      ref={setRef}
+      role="list"
+      aria-label={t('phone.view_strip_aria')}
+      data-order-strip
+      data-swipe-x
+      className={`flex-none flex items-end gap-2.5 overflow-x-auto px-5 pt-2.5 pb-2 ${hint.className}`}
+      style={hint.style}
+    >
+      {draft.map((s, i) => (
+        <StripThumb key={s.src} slot={s} n={i + 1} url={thumbFor(s.src)} current={i === at} label={t('viewer.nav.page', { page: i + 1 })} onClick={() => onGo(i)} />
+      ))}
+      {outs.map((o) => (
+        <StripThumb key={o.slot.src} slot={o.slot} url={thumbFor(o.slot.src)} out label={t('phone.view_put_back_aria', { page: o.slot.src + 1 })} onClick={() => onPutBack(o.slot.src)} />
+      ))}
+    </div>
+  )
+}
+
+function StripThumb({ slot, n, url, current = false, out = false, label, onClick }: { slot: Slot; n?: number; url: string | undefined; current?: boolean; out?: boolean; label: string; onClick: () => void }) {
+  const shown = useThumbUrl(url, slot.q)
+  const w = current ? 46 : 36
+  return (
+    <div role="listitem" data-strip-page={slot.src} data-strip-current={current ? '' : undefined} data-strip-out={out ? '' : undefined} data-thumb-page={slot.src} className="flex-none flex flex-col items-center gap-1">
+      <button
+        type="button"
+        aria-label={label}
+        aria-current={current ? 'page' : undefined}
+        onClick={onClick}
+        className="relative block bg-white"
+        style={{
+          width: w,
+          transform: current ? 'translateY(-3px)' : undefined,
+          boxShadow: current ? '0 0 0 3px var(--np-orange), 0 6px 12px rgba(60,45,20,0.25)' : '0 2px 5px rgba(60,45,20,0.18)',
+          opacity: out ? 0.4 : 1,
+          transition: 'width 200ms ease, transform 200ms ease',
+        }}
+      >
+        {shown ? <img src={shown} alt="" draggable={false} className="block w-full" /> : <span className="block w-full aspect-[1/1.41] bg-white" />}
+        {out && (
+          <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center">
+            <span className="block w-[130%] h-[2px] rotate-[-50deg]" style={{ background: '#b42318' }} />
+          </span>
+        )}
+      </button>
+      <span aria-hidden="true" className={`text-[11px] leading-none tabular-nums ${current ? 'font-bold text-[color:var(--np-orange-ink)]' : 'text-[color:var(--np-muted)]'}`}>
+        {out ? '×' : n}
+      </span>
     </div>
   )
 }
