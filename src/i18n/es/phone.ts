@@ -122,6 +122,8 @@ const phone: Messages['phone'] = {
   'sign_draw': 'Dibujar',
   'sign_type': 'Escribir',
   'sign_photo': 'Foto del papel',
+  'sign_stamps': 'Sellos',
+  'stamps_note': 'Elige uno y toca la página donde va.',
   'sign_on_line': 'firma sobre la línea, como en papel', // handwritten, under the line in the drawing box
   'sign_pad_aria': 'Dibuja aquí tu firma',
   'start_again': 'Empezar de nuevo',

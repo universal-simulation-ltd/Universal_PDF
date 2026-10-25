@@ -122,6 +122,8 @@ const phone: Messages['phone'] = {
   'sign_draw': 'Çiz',
   'sign_type': 'Yaz',
   'sign_photo': 'Kâğıdın fotoğrafı',
+  'sign_stamps': 'Damgalar',
+  'stamps_note': 'Birini seçin, sonra sayfada gideceği yere dokunun.',
   'sign_on_line': 'çizginin üstüne, tıpkı kâğıttaki gibi', // handwritten, under the line in the drawing box
   'sign_pad_aria': 'İmzanızı buraya çizin',
   'start_again': 'Baştan başla',

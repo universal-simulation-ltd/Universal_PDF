@@ -11,13 +11,19 @@ import { unlockSignatures } from '../lib/signatureLock'
 import { useVaultStore } from '../lib/signatureVault'
 import type { SignatureData } from '../types/annotations'
 import { useScrollHint } from '@unisim/sdk'
-import { BackLink, Hl, SwitchRow } from './parts'
+import { StampPreview } from '../components/Signature/StampPicker'
+import { STAMPS, STAMP_COLORS, STAMP_H, STAMP_SUFFIX, STAMP_W, isStampName, renderStampDataUrl, type StampShape } from '../lib/stamps'
+import { Icon, PATHS } from './icons'
+import { BackLink, Hl, Segmented, SwitchRow } from './parts'
 import { useNav } from './nav'
 import { pickFiles } from './jobs'
 
 // Board 4 · Sign, a page of its own: "Make your mark", Draw / Type / Photo of
-// paper, a white slip to sign on with a line and an ×, the drawer of saved
-// signatures, and "Put it on the page". From the Signatures tab the same page
+// paper / Stamps, a white slip to sign on with a line and an ×, the drawer of
+// saved signatures, and "Put it on the page". The slip takes most of a
+// phone's height (James, 2026-10-25: "make the drawing area bigger"). Stamps
+// are the website's (lib/stamps, StampPicker's set): a tap puts one in hand to
+// place, the way the website does. From the Signatures tab the same page
 // only keeps what you draw (`mode="drawer"`).
 //
 // The drawing becomes a library signature through the same renderer the
@@ -25,10 +31,15 @@ import { pickFiles } from './jobs'
 // and behaves exactly like one drawn there — re-editable, recolourable, placed
 // by tapping the page.
 
-type How = 'draw' | 'type' | 'photo'
+type How = 'draw' | 'type' | 'photo' | 'stamps'
 
 const INK = '#173a94'
-const PAD_H = 240
+/**
+ * The slip's height: most of the screen a phone has under the heading and the
+ * tabs, never less than the old 240 (landscape scrolls to it), never more than
+ * an iPad needs. `dvh` follows the browser's own bars where it has them.
+ */
+const PAD_H = 'clamp(240px, 48dvh, 500px)'
 
 export default function SignScreen({ mode = 'document', onDone }: { mode?: 'document' | 'drawer'; onDone: () => void }) {
   const t = useT()
@@ -94,7 +105,10 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
     return () => { live = false }
   }, [photoFile, keepWhite, t])
 
-  const ready = how === 'draw' ? lines.length > 0 : how === 'type' ? typed.trim().length > 0 : !!photoInk && !photoBusy
+  const ready = how === 'draw' ? lines.length > 0 : how === 'type' ? typed.trim().length > 0 : how === 'photo' ? !!photoInk && !photoBusy : false
+  // Stamps only where a stamp can go: on the document, not into a "Sign here"
+  // box and not from the Signatures tab.
+  const stamps = mode === 'document' && !fieldId
 
   /**
    * Fill the "Sign here" box this page was opened for, with the name and date
@@ -126,6 +140,25 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
     useAnnotationStore.getState().setTool('select')
     // Straight to the moment: the box is already where it belongs.
     useNav.getState().replaceTop('signed')
+  }
+
+  /** A stamp in hand, and back to the page to place it: no Signed moment, it isn't a signature. */
+  function placeStamp(id: string) {
+    useSignatureStore.getState().setActive(id)
+    const a = useAnnotationStore.getState()
+    a.setSelected(null)
+    a.setTool('signature')
+    useNav.getState().say(t('phone.place_hint'))
+    onDone()
+  }
+
+  /** One of the website's stamps, drawn in the reader's language; kept once in the drawer. */
+  function pickPreset(text: string, color: string, shape: StampShape, label: string) {
+    const dataUrl = renderStampDataUrl(text, color, shape)
+    const store = useSignatureStore.getState()
+    const name = label + STAMP_SUFFIX
+    const had = store.signatures.find((x) => x.name === name && x.dataUrl === dataUrl)
+    placeStamp(had ? had.id : store.add({ name, dataUrl, width: STAMP_W, height: STAMP_H }))
   }
 
   /** Put a library signature in hand and go back to the page to place it (or fill the box). */
@@ -236,9 +269,11 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
     { id: 'draw', label: t('phone.sign_draw') },
     { id: 'type', label: t('phone.sign_type') },
     { id: 'photo', label: t('phone.sign_photo') },
+    ...(stamps ? [{ id: 'stamps' as const, label: t('phone.sign_stamps') }] : []),
   ]
 
-  const saved = signatures.filter((s) => !s.id.startsWith('uid-main:'))
+  const saved = signatures.filter((s) => !s.id.startsWith('uid-main:') && !isStampName(s.name))
+  const savedStamps = signatures.filter((s) => isStampName(s.name))
 
   return (
     <div className="np-page-enter flex-1 min-h-0 flex flex-col" style={{ background: 'var(--np-paper)' }}>
@@ -260,7 +295,7 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
           {t('phone.sign_lead')} <Hl>{t('phone.sign_hl')}</Hl>
         </h1>
 
-        <div role="tablist" aria-label={t('phone.sign_how_aria')} className="grid grid-cols-3 rounded-xl p-[3px]" style={{ background: '#e8e3d8' }}>
+        <div role="tablist" aria-label={t('phone.sign_how_aria')} className="grid rounded-xl p-[3px]" style={{ background: '#e8e3d8', gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -354,7 +389,15 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
           </div>
         )}
 
-        {(how !== 'photo' || photoInk) && (
+        {how === 'stamps' && (
+          <StampsTab
+            saved={savedStamps}
+            onPreset={pickPreset}
+            onSaved={placeStamp}
+          />
+        )}
+
+        {(how === 'draw' || how === 'type' || photoInk) && how !== 'stamps' && (
           <div className="flex flex-col gap-2.5">
             <h2 className="np-serif m-0 text-[19px] font-bold">{t('phone.sign_under')}</h2>
             <label htmlFor={nameId} className="text-[13px] text-[color:var(--np-muted)]">{t('phone.sign_name_label')}</label>
@@ -386,7 +429,7 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
 
       </div>
 
-      {(how !== 'photo' || photoFile) && (
+      {how !== 'stamps' && (how !== 'photo' || photoFile) && (
         <div className="flex-none px-5 pt-3 flex flex-col gap-2" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 18px)' }}>
           {mode === 'document' && (
             <label htmlFor={keepId} className="flex items-center gap-2.5 text-[15px] min-h-[44px]">
@@ -537,7 +580,7 @@ function DrawPad({
   }
 
   return (
-    <div className="np-tilt bg-white rounded-[3px] relative" style={{ height: PAD_H, boxShadow: '0 10px 24px rgba(23,30,50,0.14)', transform: 'rotate(-1deg)' }}>
+    <div className="np-tilt bg-white rounded-[3px] relative flex-none" style={{ height: PAD_H, boxShadow: '0 10px 24px rgba(23,30,50,0.14)', transform: 'rotate(-1deg)' }}>
       <span aria-hidden="true" className="np-hand absolute left-[22px] bottom-[50px] text-[30px] text-[color:var(--np-orange-ink)]">×</span>
       <div aria-hidden="true" className="absolute left-11 right-6 bottom-[58px]" style={{ borderBottom: '1.5px solid var(--np-ink)' }} />
       {lines.length === 0 && (
@@ -597,5 +640,153 @@ function LockedRow() {
         {t('phone.sigs_unlock')}
       </button>
     </section>
+  )
+}
+
+/**
+ * Stamps (the website's StampPicker, on the phone's Sign page): the eight
+ * ready-made ones in the reader's language, a stamp of your own, and the ones
+ * already in the drawer. A tap puts one in hand; the page takes it as the
+ * website does (a stamp is a signature whose name ends " Stamp").
+ */
+function StampsTab({
+  saved,
+  onPreset,
+  onSaved,
+}: {
+  saved: { id: string; name: string; dataUrl: string }[]
+  onPreset: (text: string, color: string, shape: StampShape, label: string) => void
+  onSaved: (id: string) => void
+}) {
+  const t = useT()
+  const [creating, setCreating] = useState(false)
+  const [text, setText] = useState('')
+  const [color, setColor] = useState(STAMP_COLORS[0])
+  const [shape, setShape] = useState<StampShape>('oval')
+  const textId = useId()
+  const shown = text.trim().toLocaleUpperCase(t.lang)
+  const shownName = (name: string) => (isStampName(name) ? t('sign.stamp_named', { name: name.slice(0, -STAMP_SUFFIX.length) }) : name)
+  const slip = 'np-tilt bg-white rounded-[3px] flex items-center justify-center p-3 min-h-[78px]'
+
+  function save() {
+    if (!shown) return
+    const dataUrl = renderStampDataUrl(shown, color, shape)
+    // Saved, then shown under "Your saved stamps" to pick, as on the website.
+    useSignatureStore.getState().add({ name: shown + STAMP_SUFFIX, dataUrl, width: STAMP_W, height: STAMP_H })
+    setCreating(false)
+    setText('')
+  }
+
+  if (creating) {
+    return (
+      <div data-stamp-new className="np-tilt bg-white rounded-[3px] px-4 py-4 flex flex-col gap-3.5" style={{ boxShadow: '0 10px 24px rgba(23,30,50,0.14)', transform: 'rotate(-0.6deg)' }}>
+        <h2 className="np-serif m-0 text-[20px] font-bold">{t('sign.stamp_new')}</h2>
+        <label htmlFor={textId} className="text-[13px] text-[color:var(--np-muted)] -mb-2">{t('sign.stamp_text')}</label>
+        <input
+          id={textId}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') save()
+          }}
+          maxLength={20}
+          placeholder={t('sign.stamp_text_placeholder')}
+          className="w-full text-[17px] px-3 py-2.5 rounded-xl bg-white outline-none uppercase placeholder:normal-case"
+          style={{ border: '1px solid var(--np-line)' }}
+        />
+        <Segmented
+          label={t('sign.stamp_border_shape')}
+          value={shape}
+          onChange={setShape}
+          options={[
+            { id: 'oval', label: t('sign.stamp_shape_oval') },
+            { id: 'rect', label: t('sign.stamp_shape_rect') },
+          ]}
+        />
+        <div role="radiogroup" aria-label={t('sign.stamp_colour')} className="flex flex-wrap gap-2.5">
+          {STAMP_COLORS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              role="radio"
+              aria-checked={color === c}
+              aria-label={t('sign.stamp_colour_named', { color: c })}
+              onClick={() => setColor(c)}
+              className="w-9 h-9 rounded-full"
+              style={{ background: c, boxShadow: color === c ? '0 0 0 3px #ffffff, 0 0 0 5px var(--np-ink)' : undefined }}
+            />
+          ))}
+        </div>
+        <div className="rounded-xl flex items-center justify-center min-h-[78px] p-3" style={{ background: 'var(--np-paper)' }}>
+          {shown ? <StampPreview def={{ text: shown, color, shape }} /> : <span className="text-[13px] text-[color:var(--np-muted)]">{t('sign.stamp_preview_empty')}</span>}
+        </div>
+        <div className="grid grid-cols-[auto_1fr] gap-2.5">
+          <button type="button" onClick={() => setCreating(false)} className="min-h-[48px] px-4 rounded-2xl text-[15px] font-semibold" style={{ border: '1px solid var(--np-line)' }}>
+            {t('phone.cancel')}
+          </button>
+          <button type="button" onClick={save} disabled={!shown} className="min-h-[48px] rounded-2xl text-white text-[15px] font-bold disabled:opacity-50" style={{ background: 'var(--np-cobalt)' }}>
+            {t('sign.stamp_save_mine')}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div data-stamps className="flex flex-col gap-3">
+      <p className="m-0 text-[14px] leading-[1.45] text-[color:var(--np-ink-2)]">{t('phone.stamps_note')}</p>
+      <div className="grid grid-cols-2 gap-3">
+        {STAMPS.map((def, i) => (
+          <button
+            key={def.text}
+            type="button"
+            aria-label={t(def.label)}
+            onClick={() => onPreset(t(def.text), def.color, def.shape, t(def.label))}
+            className={slip}
+            style={{ boxShadow: '0 4px 10px rgba(23,30,50,0.12)', transform: `rotate(${['-1.2deg', '1deg', '0.8deg', '-0.8deg'][i % 4]})` }}
+          >
+            <StampPreview def={{ text: t(def.text), color: def.color, shape: def.shape }} />
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => setCreating(true)}
+          className="rounded-[3px] min-h-[78px] flex flex-col items-center justify-center gap-1 text-[14px] font-semibold"
+          style={{ border: '2px dashed var(--np-line)', color: 'var(--np-cobalt-deep)' }}
+        >
+          <Icon d={PATHS.plus} size={20} width={2.4} />
+          {t('sign.stamp_new')}
+        </button>
+      </div>
+      {saved.length > 0 && (
+        <section className="flex flex-col gap-2 pt-1">
+          <h2 className="np-serif m-0 text-[17px] font-bold">{t('sign.stamp_saved')}</h2>
+          <div className="grid grid-cols-2 gap-3">
+            {saved.map((s) => (
+              <div key={s.id} className="relative">
+                <button
+                  type="button"
+                  aria-label={shownName(s.name)}
+                  onClick={() => onSaved(s.id)}
+                  className={`${slip} w-full`}
+                  style={{ boxShadow: '0 4px 10px rgba(23,30,50,0.12)' }}
+                >
+                  <img src={s.dataUrl} alt="" className="h-12 max-w-full object-contain" />
+                </button>
+                <button
+                  type="button"
+                  aria-label={t('sign.stamp_remove_named', { name: shownName(s.name) })}
+                  onClick={() => useSignatureStore.getState().remove(s.id)}
+                  className="absolute -top-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center"
+                  style={{ background: 'var(--np-slip)', border: '1px solid var(--np-line)', color: '#b42318' }}
+                >
+                  <Icon d={PATHS.close} size={14} width={2.4} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
   )
 }

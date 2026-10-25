@@ -122,6 +122,8 @@ const phone: Messages['phone'] = {
   'sign_draw': 'Zeichnen',
   'sign_type': 'Tippen',
   'sign_photo': 'Foto von Papier',
+  'sign_stamps': 'Stempel',
+  'stamps_note': 'Wähl einen aus und tipp dann auf die Stelle auf der Seite.',
   'sign_on_line': 'unterschreib auf der Linie, wie auf Papier', // handwritten, under the line in the drawing box
   'sign_pad_aria': 'Zeichne hier deine Unterschrift',
   'start_again': 'Neu anfangen',

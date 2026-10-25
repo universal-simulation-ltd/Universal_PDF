@@ -125,6 +125,8 @@ export default {
   'sign_draw': 'Draw',
   'sign_type': 'Type',
   'sign_photo': 'Photo of paper',
+  'sign_stamps': 'Stamps',
+  'stamps_note': 'Pick one, then tap the page where it goes.',
   'sign_on_line': 'sign on the line, like on paper', // handwritten, under the line in the drawing box
   'sign_pad_aria': 'Draw your signature here',
   'start_again': 'Start again',
