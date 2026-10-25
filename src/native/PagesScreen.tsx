@@ -56,6 +56,21 @@ export default function PagesScreen() {
   const [picked, setPicked] = useState<Set<number>>(new Set())
   const [viewAt, setViewAt] = useState(0)
   const pending = !sameSlots(slots, base)
+  // Opened from the document's page chip: that page, scrolled to and marked
+  // for a moment (PageChip.tsx).
+  const [flash, setFlash] = useState<number | null>(() => useNav.getState().pagesFocus)
+  useEffect(() => {
+    if (flash === null) return
+    useNav.getState().setPagesFocus(null)
+    const frame = requestAnimationFrame(() =>
+      rootRef.current?.querySelector(`[data-thumb-page="${flash}"]`)?.scrollIntoView({ block: 'center' }),
+    )
+    const id = window.setTimeout(() => setFlash(null), 2400)
+    return () => {
+      cancelAnimationFrame(frame)
+      window.clearTimeout(id)
+    }
+  }, [flash])
 
   // Staged changes belong to the document they were staged on.
   useEffect(() => {
@@ -248,6 +263,7 @@ export default function PagesScreen() {
               {[...slots, ...out].map((slot, i) => {
                 const gone = i >= slots.length
                 const isPicked = selecting && picked.has(slot.src)
+                const lit = flash === slot.src
                 return (
                   <li key={slot.src} data-thumb-page={slot.src} hidden={gone} className={gone ? 'hidden' : 'flex flex-col gap-2'}>
                     <button
@@ -255,10 +271,17 @@ export default function PagesScreen() {
                       onClick={() => tapSheet(i, slot.src)}
                       aria-label={t('viewer.nav.page', { page: i + 1 })}
                       aria-pressed={selecting ? isPicked : undefined}
+                      aria-current={lit ? 'page' : undefined}
+                      data-flash={lit ? '' : undefined}
                       className="np-tilt relative bg-white block"
                       style={{
                         transform: `rotate(${TILTS[i % 4]})`,
-                        boxShadow: isPicked ? '0 0 0 3px var(--np-cobalt), 0 8px 18px rgba(60,45,20,0.2)' : '0 8px 18px rgba(60,45,20,0.2)',
+                        boxShadow: isPicked
+                          ? '0 0 0 3px var(--np-cobalt), 0 8px 18px rgba(60,45,20,0.2)'
+                          : lit
+                            ? '0 0 0 4px var(--np-orange), 0 8px 18px rgba(60,45,20,0.2)'
+                            : '0 8px 18px rgba(60,45,20,0.2)',
+                        transition: 'box-shadow 400ms ease',
                       }}
                     >
                       <Thumb src={thumbFor(slot.src)} q={slot.q} />
@@ -373,12 +396,18 @@ function useTurned(src: string | undefined, q: number): string | undefined {
   return key ? url : undefined
 }
 
+/** The most pixels one drawing of a page may have, zoomed or not (as the export's rasters). */
+const MAX_BIG_PIXELS = 8_000_000
+
 /**
  * One page of the file drawn large enough for the viewer: the screen's width
- * at the device's pixels (at most twice), through the render queue like any
- * viewer page. Upright as the file has it; the viewer turns the picture.
+ * at the device's pixels (at most twice), times `level` once it is zoomed in
+ * (drawn again as a pinch settles, so it stays sharp), never past
+ * MAX_BIG_PIXELS — through the render queue like any viewer page. Upright as
+ * the file has it; the viewer turns the picture. While a sharper drawing is
+ * made the last one stays up.
  */
-function useBigPage(doc: PDFDocumentProxy, src: number): { url: string; w: number; h: number } | null {
+function useBigPage(doc: PDFDocumentProxy, src: number, level = 1): { url: string; w: number; h: number } | null {
   const [out, setOut] = useState<{ src: number; url: string; w: number; h: number } | null>(null)
   useEffect(() => {
     let cancelled = false
@@ -397,8 +426,9 @@ function useBigPage(doc: PDFDocumentProxy, src: number): { url: string; w: numbe
         const dpr = Math.min(window.devicePixelRatio || 1, 2)
         const unscaled = page.getViewport({ scale: 1 })
         const longSide = Math.max(unscaled.width, unscaled.height)
-        const want = Math.min(1600, Math.max(window.innerWidth, window.innerHeight * 0.6) * dpr)
-        const viewport = page.getViewport({ scale: want / longSide })
+        const want = Math.min(1600, Math.max(window.innerWidth, window.innerHeight * 0.6) * dpr) * level
+        const cap = Math.sqrt(MAX_BIG_PIXELS / (unscaled.width * unscaled.height))
+        const viewport = page.getViewport({ scale: Math.min(want / longSide, cap) })
         canvas.width = Math.round(viewport.width)
         canvas.height = Math.round(viewport.height)
         const ctx = canvas.getContext('2d')
@@ -425,7 +455,7 @@ function useBigPage(doc: PDFDocumentProxy, src: number): { url: string; w: numbe
       task?.cancel()
       slotRelease()
     }
-  }, [doc, src])
+  }, [doc, src, level])
   return out && out.src === src ? out : null
 }
 
@@ -439,10 +469,16 @@ function PageViewer({ doc, slots, start, onConfirm }: { doc: PDFDocumentProxy; s
   const [pos, setPos] = useState(Math.max(0, start))
   const at = Math.min(pos, draft.length - 1)
   const slot = draft[at]
-  const big = useBigPage(doc, slot.src)
   const stageRef = useRef<HTMLDivElement>(null)
   const [box, setBox] = useState({ w: 0, h: 0 })
-  const swipe = useRef<{ x: number; y: number } | null>(null)
+  // Pinch to look closer (James, 2026-10-25: "so he can check details such as
+  // whether it's the right way up"). The zoom is the picture's: scale `s`
+  // about the stage's middle, moved by (x, y). Settled past 1.2×, the page is
+  // drawn again sharper (`level`, within MAX_BIG_PIXELS).
+  const [zoom, setZoom] = useState<Zoom>(FIT)
+  const [live, setLive] = useState(false)
+  const [level, setLevel] = useState(1)
+  const big = useBigPage(doc, slot.src, level)
 
   useLayoutEffect(() => {
     const el = stageRef.current
@@ -467,6 +503,7 @@ function PageViewer({ doc, slots, start, onConfirm }: { doc: PDFDocumentProxy; s
     setPos(to)
   }
   function turn() {
+    setZoom(FIT)
     setDraft((d) => d.map((s, i) => (i === at ? { ...s, q: s.q + 1 } : s)))
   }
   function takeOut() {
@@ -489,6 +526,141 @@ function PageViewer({ doc, slots, start, onConfirm }: { doc: PDFDocumentProxy; s
     size = { w: big.w * s, h: big.h * s }
   }
   const smooth = !prefersReducedMotion()
+
+  // Another page, or the same one turned: back to the whole page.
+  useEffect(() => {
+    setZoom(FIT)
+  }, [slot.src])
+  useEffect(() => {
+    const id = window.setTimeout(() => setLevel(zoom.s <= 1.2 ? 1 : zoom.s <= 2.5 ? 2 : 4), 250)
+    return () => window.clearTimeout(id)
+  }, [zoom.s])
+  // The picture as it stands on the stage (turned), for keeping it on screen.
+  const shownW = odd ? size.h : size.w
+  const shownH = odd ? size.w : size.h
+  const clamp = (z: Zoom): Zoom => {
+    const sc = Math.max(1, Math.min(MAX_ZOOM, z.s))
+    if (sc <= 1.001) return FIT
+    const mx = Math.max(0, (sc * shownW - box.w) / 2)
+    const my = Math.max(0, (sc * shownH - box.h) / 2)
+    return { s: sc, x: Math.max(-mx, Math.min(mx, z.x)), y: Math.max(-my, Math.min(my, z.y)) }
+  }
+  const zoomRef = useRef(zoom)
+  zoomRef.current = zoom
+  const clampRef = useRef(clamp)
+  clampRef.current = clamp
+  const pageRef = useRef({ at, goTo })
+  pageRef.current = { at, goTo }
+
+  // The gestures, with pointer events (a finger, a pen or a mouse alike):
+  // two fingers pinch (and move it); one finger pans while zoomed in, and at
+  // the whole page swipes to the next; a double tap zooms in where it lands,
+  // or back out. A trackpad pinch (a wheel with ctrl) and, zoomed in, the
+  // wheel itself, on the web.
+  useEffect(() => {
+    const el = stageRef.current
+    if (!el) return
+    const pts = new Map<number, { x: number; y: number }>()
+    let g:
+      | { kind: 'pinch'; s0: number; x0: number; y0: number; d0: number; m0: { x: number; y: number } }
+      | { kind: 'pan' | 'swipe'; x0: number; y0: number; start: { x: number; y: number }; t: number; moved: boolean }
+      | null = null
+    let lastTap: { t: number; x: number; y: number } | null = null
+    const rel = (e: { clientX: number; clientY: number }) => {
+      const r = el.getBoundingClientRect()
+      return { x: e.clientX - r.left - r.width / 2, y: e.clientY - r.top - r.height / 2 }
+    }
+    const two = () => {
+      const [a, b] = [...pts.values()]
+      return { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, m: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } }
+    }
+    const set = (z: Zoom) => setZoom(clampRef.current(z))
+    /** Scale to `s` keeping the picture's point under `p` (from the middle) where it is. */
+    const scaleAbout = (z: Zoom, s: number, p: { x: number; y: number }, to = p): Zoom => {
+      const cx = (p.x - z.x) / z.s
+      const cy = (p.y - z.y) / z.s
+      return { s, x: to.x - s * cx, y: to.y - s * cy }
+    }
+    const startOne = (p: { x: number; y: number }, afterPinch = false) => {
+      const z = zoomRef.current
+      g = { kind: z.s > 1.01 || afterPinch ? 'pan' : 'swipe', x0: z.x, y0: z.y, start: p, t: Date.now(), moved: afterPinch }
+    }
+    function down(e: PointerEvent) {
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      el!.setPointerCapture?.(e.pointerId)
+      pts.set(e.pointerId, rel(e))
+      setLive(true)
+      if (pts.size === 2) {
+        const z = zoomRef.current
+        const { d, m } = two()
+        g = { kind: 'pinch', s0: z.s, x0: z.x, y0: z.y, d0: d, m0: m }
+      } else if (pts.size === 1) startOne(rel(e))
+    }
+    function move(e: PointerEvent) {
+      if (!pts.has(e.pointerId)) return
+      const p = rel(e)
+      pts.set(e.pointerId, p)
+      if (!g) return
+      if (g.kind === 'pinch' && pts.size >= 2) {
+        const { d, m } = two()
+        set(scaleAbout({ s: g.s0, x: g.x0, y: g.y0 }, Math.max(1, Math.min(MAX_ZOOM, (g.s0 * d) / g.d0)), g.m0, m))
+      } else if (g.kind !== 'pinch') {
+        const dx = p.x - g.start.x
+        const dy = p.y - g.start.y
+        if (Math.hypot(dx, dy) > 8) g.moved = true
+        if (g.kind === 'pan') set({ s: zoomRef.current.s, x: g.x0 + dx, y: g.y0 + dy })
+      }
+    }
+    function up(e: PointerEvent) {
+      if (!pts.has(e.pointerId)) return
+      const p = rel(e)
+      pts.delete(e.pointerId)
+      if (g?.kind === 'pinch') {
+        // One finger left on the glass carries on as a pan.
+        // (Never a tap or a swipe: it was a pinch.)
+        if (pts.size === 1) startOne([...pts.values()][0], true)
+        else g = null
+      } else if (g && pts.size === 0) {
+        const dx = p.x - g.start.x
+        const dy = p.y - g.start.y
+        if (g.kind === 'swipe' && e.type === 'pointerup' && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+          const { at: i, goTo: go } = pageRef.current
+          go(dx < 0 ? i + 1 : i - 1)
+        } else if (!g.moved && e.type === 'pointerup' && Date.now() - g.t < 350) {
+          const now = Date.now()
+          if (lastTap && now - lastTap.t < 320 && Math.hypot(p.x - lastTap.x, p.y - lastTap.y) < 40) {
+            lastTap = null
+            const z = zoomRef.current
+            set(z.s > 1.05 ? FIT : scaleAbout(z, DOUBLE_TAP_ZOOM, p))
+          } else lastTap = { t: now, x: p.x, y: p.y }
+        }
+        g = null
+      }
+      if (pts.size === 0) setLive(false)
+    }
+    function wheel(e: WheelEvent) {
+      const z = zoomRef.current
+      if (e.ctrlKey) {
+        e.preventDefault()
+        set(scaleAbout(z, Math.max(1, Math.min(MAX_ZOOM, z.s * Math.exp(-e.deltaY * 0.01))), rel(e)))
+      } else if (z.s > 1.01) {
+        e.preventDefault()
+        set({ s: z.s, x: z.x - e.deltaX, y: z.y - e.deltaY })
+      }
+    }
+    el.addEventListener('pointerdown', down)
+    el.addEventListener('pointermove', move)
+    el.addEventListener('pointerup', up)
+    el.addEventListener('pointercancel', up)
+    el.addEventListener('wheel', wheel, { passive: false })
+    return () => {
+      el.removeEventListener('pointerdown', down)
+      el.removeEventListener('pointermove', move)
+      el.removeEventListener('pointerup', up)
+      el.removeEventListener('pointercancel', up)
+      el.removeEventListener('wheel', wheel)
+    }
+  }, [])
 
   const actions: { id: string; label: string; aria: string; icon: string; run: () => void; disabled: boolean; danger?: boolean; flip?: boolean }[] = [
     { id: 'earlier', label: t('phone.view_earlier'), aria: t('phone.view_earlier_aria'), icon: PATHS.back, run: () => moveBy(-1), disabled: at === 0 },
@@ -517,23 +689,20 @@ function PageViewer({ doc, slots, start, onConfirm }: { doc: PDFDocumentProxy; s
       <div
         ref={stageRef}
         data-swipe-x
-        className="flex-1 min-h-0 relative mx-5 my-1 overflow-hidden"
-        style={{ touchAction: 'pan-y' }}
-        onTouchStart={(e) => {
-          const p = e.touches[0]
-          swipe.current = e.touches.length === 1 ? { x: p.clientX, y: p.clientY } : null
-        }}
-        onTouchEnd={(e) => {
-          const s = swipe.current
-          swipe.current = null
-          const p = e.changedTouches[0]
-          if (!s || !p) return
-          const dx = p.clientX - s.x
-          const dy = p.clientY - s.y
-          if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) goTo(dx < 0 ? at + 1 : at - 1)
-        }}
+        data-page-stage
+        data-zoom={zoom.s.toFixed(2)}
+        className="flex-1 min-h-0 relative mx-5 my-1 overflow-hidden select-none"
+        style={{ touchAction: 'none' }}
       >
         {big && size.w > 0 ? (
+          <div
+            className="absolute inset-0"
+            style={{
+              transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.s})`,
+              transformOrigin: '50% 50%',
+              transition: smooth && !live ? 'transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1)' : undefined,
+            }}
+          >
           <img
             key={slot.src}
             src={big.url}
@@ -548,6 +717,7 @@ function PageViewer({ doc, slots, start, onConfirm }: { doc: PDFDocumentProxy; s
               boxShadow: '0 10px 24px rgba(60,45,20,0.22)',
             }}
           />
+          </div>
         ) : (
           <span className="absolute inset-0 flex items-center justify-center text-[15px] text-[color:var(--np-muted)]">{t('phone.opening')}</span>
         )}
@@ -584,6 +754,15 @@ function PageViewer({ doc, slots, start, onConfirm }: { doc: PDFDocumentProxy; s
     </div>
   )
 }
+
+interface Zoom {
+  s: number
+  x: number
+  y: number
+}
+const FIT: Zoom = { s: 1, x: 0, y: 0 }
+const MAX_ZOOM = 6
+const DOUBLE_TAP_ZOOM = 2.5
 
 function RoundButton({ label, disabled, onClick, children }: { label: string; disabled?: boolean; onClick: () => void; children: React.ReactNode }) {
   return (

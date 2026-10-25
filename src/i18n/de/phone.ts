@@ -322,7 +322,8 @@ const phone: Messages['phone'] = {
   'view_prev': 'Vorherige Seite',
   'view_next': 'Nächste Seite',
   'view_confirm': 'Bestätigen',
-  'view_hint': 'wischen für die nächste Seite',
+  'view_hint': 'wischen für die nächste Seite · aufziehen zum Zoomen',
+  'page_chip_aria': 'Seite {page} von {total}, Seiten öffnen',
   'blacked_title': 'Geschwärzt.',
   'blacked_note': 'für immer weg, sobald es raus ist', // handwritten, under "Blacked out."
   'blacked_count_one': '{count} Schwärzung auf den Seiten',

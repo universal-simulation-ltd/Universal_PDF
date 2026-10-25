@@ -322,7 +322,8 @@ const phone: Messages['phone'] = {
   'view_prev': 'Önceki sayfa',
   'view_next': 'Sonraki sayfa',
   'view_confirm': 'Onayla',
-  'view_hint': 'sonraki sayfa için kaydırın',
+  'view_hint': 'sonraki sayfa için kaydırın · yakınlaştırmak için parmaklarınızı açın',
+  'page_chip_aria': 'Sayfa {page} / {total}, Sayfalar’ı aç',
   'blacked_title': 'Karartıldı.',
   'blacked_note': 'gönderildiğinde tamamen gider', // handwritten, under "Blacked out."
   'blacked_count_one': 'sayfalarda {count} karartma',

@@ -51,6 +51,9 @@ interface NavState {
    * Returns false to stay.
    */
   backGuard: (() => boolean) | null
+  /** The page the Pages page opens scrolled to and marked (the document's page chip). */
+  pagesFocus: number | null
+  setPagesFocus: (i: number | null) => void
   /** The Desk's search is in use and the cobalt desk folded away (the status bar's glyphs go dark). */
   deskSearching: boolean
   setBackGuard: (fn: (() => boolean) | null) => void
@@ -88,6 +91,8 @@ export const useNav = create<NavState>((set) => ({
   kbArticle: null,
   backGuard: null,
   deskSearching: false,
+  pagesFocus: null,
+  setPagesFocus: (pagesFocus) => set({ pagesFocus }),
   setBackGuard: (backGuard) => set({ backGuard }),
   setTab: (tab) => set({ tab }),
   push: (screen) => set((s) => ({ screens: [...s.screens, screen], sheet: null, toast: null })),

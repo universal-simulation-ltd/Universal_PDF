@@ -229,8 +229,84 @@ await page.waitForTimeout(800)
 const viewer = page.locator('[data-page-viewer]')
 check('the page viewer, over the Pages page', (await top()) === 'page-view' && (await viewer.locator('h1').innerText()) === 'Page 2 of 3', `${await top()} / ${await viewer.locator('h1').innerText().catch(() => '')}`)
 check('…showing the page large', await viewer.locator('img').evaluate((img) => img.getBoundingClientRect().width > 250).catch(() => false))
+console.log('\nthe page viewer: pinch to look closer, pan, double-tap back')
+// Real multi-finger touches need CDP (Chromium); WebKit runs the wheel half.
+const cdp = await context.newCDPSession(page).catch(() => null)
+const touch = (type, points) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points })
+const stage = viewer.locator('[data-page-stage]')
+const sb = await stage.boundingBox()
+const cx = sb.x + sb.width / 2
+const cy = sb.y + sb.height / 2
+const zoomOf = async () => Number(await stage.getAttribute('data-zoom'))
+const panOf = () => stage.evaluate((el) => el.firstElementChild?.style.transform ?? '')
+const title = () => viewer.locator('h1').innerText()
+async function drag(x0, y0, dx, dy, steps = 10) {
+  await touch('touchStart', [{ x: x0, y: y0, id: 1 }])
+  for (let i = 1; i <= steps; i++) {
+    await touch('touchMove', [{ x: x0 + (dx * i) / steps, y: y0 + (dy * i) / steps, id: 1 }])
+    await page.waitForTimeout(16)
+  }
+  await touch('touchEnd', [])
+  await page.waitForTimeout(250)
+}
+async function pinch(from, to, steps = 10) {
+  await touch('touchStart', [{ x: cx - from, y: cy, id: 1 }, { x: cx + from, y: cy, id: 2 }])
+  for (let i = 1; i <= steps; i++) {
+    const d = from + ((to - from) * i) / steps
+    await touch('touchMove', [{ x: cx - d, y: cy, id: 1 }, { x: cx + d, y: cy, id: 2 }])
+    await page.waitForTimeout(16)
+  }
+  await touch('touchEnd', [])
+  await page.waitForTimeout(300)
+}
+async function doubleTap(x, y) {
+  for (let i = 0; i < 2; i++) {
+    await touch('touchStart', [{ x, y, id: 1 }])
+    await touch('touchEnd', [])
+    await page.waitForTimeout(90)
+  }
+  await page.waitForTimeout(350)
+}
+const naturalW = () => viewer.locator('img').evaluate((img) => img.naturalWidth)
+if (cdp) {
+const w0 = await naturalW()
+await pinch(40, 130)
+check('two fingers apart zoom in', (await zoomOf()) > 2.5, String(await zoomOf()))
+const before2 = await panOf()
+await drag(cx, cy, -90, 0)
+check('zoomed in, one finger pans the page', (await panOf()) !== before2 && (await title()) === 'Page 2 of 3', `${before2} → ${await panOf()} / ${await title()}`)
+await drag(cx + 100, cy, -220, 0)
+check('…and a long swipe does not turn to the next page', (await title()) === 'Page 2 of 3', await title())
+await page.waitForTimeout(1500)
+const w1 = await naturalW()
+const px = await viewer.locator('img').evaluate((img) => img.naturalWidth * img.naturalHeight)
+check('settled, the page is drawn again sharper', w1 > w0 * 1.5, `${w0} → ${w1}`)
+check('…within 8 MP', px <= 8_000_000, String(px))
+await doubleTap(cx, cy)
+check('a double tap goes back to the whole page', (await zoomOf()) === 1, String(await zoomOf()))
+await doubleTap(cx - 40, cy - 60)
+check('…and another zooms in where it lands', (await zoomOf()) > 2, String(await zoomOf()))
+await doubleTap(cx, cy)
+await drag(cx + 100, cy, -200, 0)
+check('at the whole page, a swipe goes to the next page', (await title()) === 'Page 3 of 3', await title())
+await drag(cx - 100, cy, 200, 0)
+check('…and back', (await title()) === 'Page 2 of 3', await title())
+} else console.log('  (touch gestures: Chromium only — the wheel below runs here)')
+// A WheelEvent as a trackpad pinch sends it (ctrlKey); dispatched, as mobile
+// WebKit has no wheel to drive.
+const wheel = (deltaX, deltaY, ctrlKey) =>
+  stage.evaluate((el, a) => el.dispatchEvent(new WheelEvent('wheel', { ...a, bubbles: true, cancelable: true })), { deltaX, deltaY, ctrlKey, clientX: cx, clientY: cy })
+await wheel(0, -150, true)
+await page.waitForTimeout(300)
+check('a trackpad pinch (ctrl + wheel) zooms on the web', (await zoomOf()) > 1.5, String(await zoomOf()))
+await wheel(0, 120, false)
+await page.waitForTimeout(200)
+check('…and the wheel then pans', (await zoomOf()) > 1.5 && /translate\(0px, 0px\)/.test(await panOf()) === false, await panOf())
+const actionsShown = await viewer.locator('[data-view-action="turn"]').isVisible()
+check('the buttons stay on screen while zoomed', actionsShown)
 await viewer.locator('[data-view-action="turn"]').click()
 await page.waitForTimeout(300)
+check('Turn goes back to the whole page', (await zoomOf()) === 1, String(await zoomOf()))
 check('Turn turns the picture a quarter', /rotate\(90deg\)/.test(await viewer.locator('img').getAttribute('style')))
 await viewer.locator('[data-view-action="earlier"]').click()
 await page.waitForTimeout(200)

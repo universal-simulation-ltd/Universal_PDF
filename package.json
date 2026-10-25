@@ -132,6 +132,7 @@
     "test:cross-page-drag": "node e2e/cross-page-drag.e2e.mjs",
     "test:phone-markup": "node e2e/phone-markup.e2e.mjs",
     "test:phone-pages": "node e2e/phone-pages.e2e.mjs",
+    "test:page-chip": "node e2e/phone-page-chip.e2e.mjs",
     "test:phone-knowledge": "node e2e/phone-knowledge.e2e.mjs",
     "test:edge-swipe": "node e2e/edge-swipe.e2e.mjs",
     "test:desk-search": "node e2e/desk-search-pull.e2e.mjs",

@@ -322,7 +322,8 @@ const phone: Messages['phone'] = {
   'view_prev': 'Page précédente',
   'view_next': 'Page suivante',
   'view_confirm': 'Confirmer',
-  'view_hint': 'glissez pour la page suivante',
+  'view_hint': 'glissez pour la page suivante · pincez pour zoomer',
+  'page_chip_aria': 'Page {page} sur {total}, ouvrir Pages',
   'blacked_title': 'Caviardé.',
   'blacked_note': 'parti pour de bon une fois envoyé', // handwritten, under "Blacked out."
   'blacked_count_one': '{count} passage caviardé',

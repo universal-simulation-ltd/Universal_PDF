@@ -322,7 +322,8 @@ const phone: Messages['phone'] = {
   'view_prev': 'Página anterior',
   'view_next': 'Página seguinte',
   'view_confirm': 'Confirmar',
-  'view_hint': 'deslize para a página seguinte',
+  'view_hint': 'deslize para a página seguinte · afaste os dedos para ampliar',
+  'page_chip_aria': 'Página {page} de {total}, abrir Páginas',
   'blacked_title': 'Rasurado.',
   'blacked_note': 'desaparece de vez quando for enviado', // handwritten, under "Blacked out."
   'blacked_count_one': '{count} rasura nas páginas',

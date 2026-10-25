@@ -327,7 +327,8 @@ export default {
   'view_prev': 'Previous page',
   'view_next': 'Next page',
   'view_confirm': 'Confirm',
-  'view_hint': 'swipe for the next page',
+  'view_hint': 'swipe for the next page · pinch to zoom',
+  'page_chip_aria': 'Page {page} of {total}, open Pages',
   'blacked_title': 'Blacked out.',
   'blacked_note': 'gone for good once it’s sent', // handwritten, under "Blacked out."
   'blacked_count_one': '{count} black-out on the pages',

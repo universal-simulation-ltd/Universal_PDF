@@ -13,6 +13,7 @@ import { useNav } from './nav'
 import MarkupSheet, { MARKUP_TOOLS } from './MarkupSheet'
 import { BackLink, FitLabel } from './parts'
 import { SELECT_SEVERAL_HINT_KEY } from '../lib/resetDefaults'
+import PageChip from './PageChip'
 
 // Board 2 · A document open: the pages lie on the warm grey desk, a back
 // chevron and the name at the top with ⋯, and four tools floating
@@ -68,6 +69,9 @@ export default function DocumentScreen() {
   const push = useNav((s) => s.push)
   const { canUndo, undo } = useUndo()
   const markingUp = sheet === 'markup'
+  const mainRef = useRef<HTMLElement>(null)
+  const pageOnTop = useNav((s) => s.screens.length > 0)
+  const toast = useNav((s) => !!s.toast)
 
   // A signature from the Sign page lands on the page, and the Signed moment
   // follows once it is where it should be — kept with its ✓ (James,
@@ -263,6 +267,7 @@ export default function DocumentScreen() {
       </header>
 
       <main
+        ref={mainRef}
         className="flex-1 min-h-0 relative isolate"
         style={{ paddingBottom: markingUp ? 0 : 'calc(env(safe-area-inset-bottom) + 96px)' }}
       >
@@ -314,6 +319,9 @@ export default function DocumentScreen() {
           )
         })}
       </nav>
+
+      {/* Not while Mark up's tools, a sheet or a page are up, nor under a message at the foot. */}
+      <PageChip viewRef={mainRef} shown={!sheet && !pageOnTop && !toast && !MARKUP_TOOLS.includes(tool as Tool)} />
 
       {markingUp && <MarkupSheet />}
     </div>

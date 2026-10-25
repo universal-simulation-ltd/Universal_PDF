@@ -322,7 +322,8 @@ const phone: Messages['phone'] = {
   'view_prev': 'Pagina precedente',
   'view_next': 'Pagina successiva',
   'view_confirm': 'Conferma',
-  'view_hint': 'scorri per la pagina successiva',
+  'view_hint': 'scorri per la pagina successiva · pizzica per ingrandire',
+  'page_chip_aria': 'Pagina {page} di {total}, apri Pagine',
   'blacked_title': 'Oscurato.',
   'blacked_note': 'sparisce per sempre una volta inviato', // handwritten, under "Blacked out."
   'blacked_count_one': '{count} oscuramento sulle pagine',

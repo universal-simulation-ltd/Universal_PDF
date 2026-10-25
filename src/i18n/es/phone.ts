@@ -322,7 +322,8 @@ const phone: Messages['phone'] = {
   'view_prev': 'Página anterior',
   'view_next': 'Página siguiente',
   'view_confirm': 'Confirmar',
-  'view_hint': 'desliza para la siguiente página',
+  'view_hint': 'desliza para la siguiente página · pellizca para ampliar',
+  'page_chip_aria': 'Página {page} de {total}, abrir Páginas',
   'blacked_title': 'Censurado.',
   'blacked_note': 'desaparece para siempre al enviarlo', // handwritten, under "Blacked out."
   'blacked_count_one': '{count} censura en las páginas',
