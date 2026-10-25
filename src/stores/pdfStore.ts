@@ -221,6 +221,12 @@ interface PdfState {
   removeRecent: (id: string) => Promise<void>
   renameFile: (newName: string) => Promise<void>
   applyPageOrder: (newOrder: number[]) => Promise<void>
+  /**
+   * Pages in `newOrder` (as applyPageOrder) and turned: `turns` maps an
+   * ORIGINAL page index to quarter turns clockwise. One rewrite, one undo step;
+   * the marks on a turned page turn with it (lib/rotateAnnotations).
+   */
+  applyPageChanges: (newOrder: number[], turns: Record<number, number>) => Promise<void>
   deletePage: (pageIndex: number) => Promise<void>
   movePage: (from: number, to: number) => Promise<void>
   // Whole-document undo. See DocSnapshot.
@@ -656,15 +662,23 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     await renameRecent(current, cleaned)
     await get().refreshRecents()
   },
-  applyPageOrder: async (newOrder) => {
+  applyPageOrder: async (newOrder) => get().applyPageChanges(newOrder, {}),
+  applyPageChanges: async (newOrder, turnsIn) => {
     const bytes = get().sourceBytes
     const fileName = get().fileName
     if (!bytes || !fileName) return
     if (newOrder.length === 0) return
 
     const current = get().numPages
+    // Only the pages that stay, and only real turns.
+    const turns: Record<number, number> = {}
+    for (const idx of newOrder) {
+      const q = (((turnsIn[idx] ?? 0) % 4) + 4) % 4
+      if (q) turns[idx] = q
+    }
+    const turned = Object.keys(turns).length > 0
     const isNoop =
-      newOrder.length === current && newOrder.every((idx, i) => idx === i)
+      !turned && newOrder.length === current && newOrder.every((idx, i) => idx === i)
     if (isNoop) return
 
     // After the no-op test, so reordering back to where you started does not
@@ -673,8 +687,20 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     get().snapshotDocument('page change')
 
     const { applyPageOrderToPdf, buildPageIndexMap } = await import('../lib/pdfPages')
-    const newBytes = await applyPageOrderToPdf(bytes, newOrder)
+    const newBytes = await applyPageOrderToPdf(bytes, newOrder, turns)
     const indexMap = buildPageIndexMap(newOrder)
+
+    // The size of each page being turned as the reader sees it now, for
+    // turning its marks with it. Read before the old document goes.
+    const sizes = new Map<number, { w: number; h: number }>()
+    const turnAnnotations = turned ? (await import('../lib/rotateAnnotations')).turnAnnotations : null
+    const oldDoc = get().doc
+    if (turned && oldDoc) {
+      for (const idx of Object.keys(turns).map(Number)) {
+        const vp = (await oldDoc.getPage(idx + 1)).getViewport({ scale: 1 })
+        sizes.set(idx, { w: vp.width, h: vp.height })
+      }
+    }
 
     // Build the new doc FIRST, before touching any state. Previously the
     // annotation/form remap and the old doc's destroy() ran ahead of this
@@ -696,6 +722,14 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     // Now commit, in order: remap annotations/forms (before React renders the
     // new doc so they land on the right pages), swap out the old doc, set state.
     noteStructuralEdit()
+    if (turnAnnotations) {
+      useAnnotationStore.setState((st) => ({
+        annotations: st.annotations.map((a) => {
+          const size = sizes.get(a.pageIndex)
+          return size ? turnAnnotations([a], turns[a.pageIndex], size)[0] : a
+        }),
+      }))
+    }
     useAnnotationStore.getState().remapPages(indexMap)
     useFormStore.getState().remapPages(indexMap)
     get().doc?.destroy()

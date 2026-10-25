@@ -43,6 +43,8 @@ export const PATHS = {
   plus: 'M12 5v14M5 12h14',
   trash: 'M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13',
   put: 'M3 7h18M5 7l1 13h12l1-13M9 11v5M15 11v5',
+  // A quarter turn to the right: the Pages viewer's Turn.
+  turn: 'M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5',
 } as const
 
 export function Icon({

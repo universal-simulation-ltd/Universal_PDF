@@ -119,7 +119,8 @@ export default function NativeApp({ launching }: { launching: boolean }) {
               {top === 'blacked' && <BlackedMoment />}
               {top === 'sent' && <SentMoment />}
               {top === 'qr' && <QrScreen />}
-              {top === 'pages' && <PagesScreen />}
+              {/* One element for both, so the staged changes live on under the viewer. */}
+              {(top === 'pages' || top === 'page-view') && <PagesScreen />}
               <JobPages top={top} />
             </PageLayer>
           )}
@@ -361,13 +362,19 @@ function useJobHandOff() {
 function useDocumentChanges() {
   const doc = usePdfStore((s) => s.doc)
   const prev = useRef(doc)
+  const prevName = useRef(usePdfStore.getState().fileName)
   useEffect(() => {
     const was = prev.current
+    const name = usePdfStore.getState().fileName
+    const wasName = prevName.current
     prev.current = doc
+    prevName.current = name
     // Closed: back to the tabs. Another document came to the front (from the
     // share sheet, say): it starts on its own pages. Opening one from the desk
-    // (null → doc) keeps whatever the job pushed on top of it.
-    if (!doc || (was && was !== doc)) useNav.getState().clearScreens()
+    // (null → doc) keeps whatever the job pushed on top of it. The SAME
+    // document rewritten (its pages applied on the Pages page, which stays
+    // open — James, 2026-10-25) is a new PDFDocumentProxy under the same name.
+    if (!doc || (was && was !== doc && name !== wasName)) useNav.getState().clearScreens()
     // One arrived (the share sheet) while the knowledge base was over the tabs.
     else if (!was) useNav.getState().dropKnowledge()
   }, [doc])

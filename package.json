@@ -120,6 +120,7 @@
     "test:example": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/examplePdf.test.mjs",
     "test:every-page:e2e": "node e2e/every-page.e2e.mjs",
     "test:page-numbers": "node --experimental-strip-types scripts/pageNumbers.test.mjs",
+    "test:rotate-annotations": "node --experimental-strip-types scripts/rotateAnnotations.test.mjs",
     "test:page-numbers:e2e": "node e2e/page-numbers.e2e.mjs",
     "test:pdf-to-docx": "node --experimental-strip-types scripts/pdfToDocx.test.mjs",
     "test:word-export": "node e2e/word-export.e2e.mjs",

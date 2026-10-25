@@ -1,13 +1,18 @@
-import { PDFDocument } from 'pdf-lib'
+import { PDFDocument, degrees } from 'pdf-lib'
 import { getT } from '../i18n'
 
 // Rebuild the PDF so its pages appear in `newOrder`. Each entry is the
 // original page index that should occupy that slot — omitting an index
 // drops that page. The page objects themselves are kept intact, so
 // annotations, form widgets and resources move with their page.
+//
+// `turns` (original page index → quarter turns clockwise) turns pages as
+// well: the page's own /Rotate, so every reader shows it turned and nothing
+// on it is redrawn (the phone's Pages page, 2026-10-25).
 export async function applyPageOrderToPdf(
   sourceBytes: ArrayBuffer,
-  newOrder: number[]
+  newOrder: number[],
+  turns: Record<number, number> = {}
 ): Promise<ArrayBuffer> {
   const pdf = await PDFDocument.load(sourceBytes, { updateMetadata: false })
   const originalPages = pdf.getPages()
@@ -29,7 +34,10 @@ export async function applyPageOrderToPdf(
     pdf.removePage(i)
   }
   for (const idx of newOrder) {
-    pdf.addPage(originalPages[idx])
+    const page = originalPages[idx]
+    const q = (((turns[idx] ?? 0) % 4) + 4) % 4
+    if (q) page.setRotation(degrees((((page.getRotation().angle + q * 90) % 360) + 360) % 360))
+    pdf.addPage(page)
   }
 
   const out = await pdf.save()

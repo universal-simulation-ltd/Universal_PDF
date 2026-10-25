@@ -13,6 +13,12 @@
 //     after it, the "Sent." moment. Done after blacking out: "Blacked out.".
 //   • A tap on a Sign here box opens the Sign page, which fills that box.
 //   • Scan asks before throwing scanned pages away, on the page, by any road.
+//   • Pages (James, 2026-10-25; was "Split or reorder pages"): moves, pages
+//     taken out (one, or several selected) and turns are all staged until
+//     "Apply changes"; Undo steps back; never every page; leaving with changes
+//     staged asks first. A tap on a page opens it large: move, turn, take out,
+//     Confirm back to the Pages page. Applied, a turned page is turned in the
+//     file itself (/Rotate) and its marks turn with it.
 //   • No alert(), confirm() or prompt() anywhere: a message is the line at the
 //     foot, a question a sheet, a locked PDF's password a sheet.
 
@@ -74,6 +80,7 @@ await context.addInitScript(() => {
 })
 const page = await context.newPage()
 page.on('pageerror', (e) => failures.push('page error: ' + e.message))
+if (process.env.E2E_CONSOLE) page.on('console', (m) => console.log('   [console]', m.type(), m.text()))
 try {
   await page.goto(`${BASE}?app`, { waitUntil: 'load' })
 } catch {
@@ -150,14 +157,14 @@ const openMore = async () => {
   await page.waitForTimeout(400)
 }
 for (const [row, screen] of [
-  ['Split or reorder pages', 'pages'],
+  ['Pages', 'pages'],
   ['Make the text searchable', 'ocr'],
   ['Spot the difference', 'compare'],
   ['Add another PDF to it', 'merge'],
   ['Turn the pages into pictures', 'photos'],
 ]) {
   await openMore()
-  await page.getByRole('button', { name: row }).click()
+  await page.getByRole('button', { name: row, exact: true }).click()
   await page.waitForTimeout(500)
   check(`${row} → the ${screen} page`, (await top()) === screen, json(await screens()))
   check(`${row}: no website dialog`, (await websiteDialogs()) === 0)
@@ -166,17 +173,97 @@ for (const [row, screen] of [
   await page.waitForTimeout(300)
 }
 
-console.log('\nthe pages page moves a page, and asks before taking one out')
+console.log('\nPages: moves, take-outs and turns are staged until applied')
 await nav("n.push('pages')")
-await page.waitForTimeout(600)
-const before = await mod('/src/stores/pdfStore.ts', 'return m.usePdfStore.getState().numPages')
+await page.waitForTimeout(800)
+const pdf = (src) => mod('/src/stores/pdfStore.ts', `const s = m.usePdfStore.getState(); ${src}`)
+const before = await pdf('return s.numPages')
+const shown = () => page.locator('ol li:not([hidden])').evaluateAll((els) => els.map((el) => Number(el.dataset.thumbPage)))
+const applyBtn = page.getByRole('button', { name: 'Apply changes' })
 await page.getByRole('button', { name: /Move page 1 down/i }).first().click()
 await page.waitForTimeout(200)
-check('a move is staged, with the button to apply it', (await page.getByRole('button', { name: /Apply|order/i }).count()) >= 1)
-check('no taking out while a move is staged', await page.locator('li button[style*="180, 35, 24"]').first().isDisabled())
+check('a move is staged, with the button to apply it', (await applyBtn.count()) === 1 && json(await shown()) === json([1, 0, 2]), json(await shown()))
+await page.getByRole('button', { name: 'Delete page 3', exact: true }).click()
+await page.waitForTimeout(200)
+check('taking a page out is staged too, with a move staged', json(await shown()) === json([1, 0]), json(await shown()))
+check('…and stays on the Pages page, the file untouched', (await top()) === 'pages' && (await pdf('return s.numPages')) === before)
+await page.getByRole('button', { name: 'Undo', exact: true }).click()
+await page.waitForTimeout(200)
+check('Undo puts the page back', json(await shown()) === json([1, 0, 2]), json(await shown()))
+await page.getByRole('button', { name: 'Put them back' }).click()
+await page.waitForTimeout(200)
+check('Put them back drops every change', json(await shown()) === json([0, 1, 2]) && (await applyBtn.count()) === 0, json(await shown()))
+
+console.log('\nPages: select several and take them out together, never all')
+await page.getByRole('button', { name: 'Select', exact: true }).click()
+for (const n of [1, 2, 3]) await page.getByRole('button', { name: `Page ${n}`, exact: true }).click()
+const takeOut = page.locator('[data-pages-take-out]')
+check('every page picked: refused', (await takeOut.isDisabled()) && /One page has to stay/.test(await takeOut.innerText()), await takeOut.innerText())
+await page.getByRole('button', { name: 'Page 3', exact: true }).click()
+check('two picked: "Take out 2 pages"', (await takeOut.isEnabled()) && (await takeOut.innerText()) === 'Take out 2 pages', await takeOut.innerText())
+await takeOut.click()
+await page.waitForTimeout(200)
+check('both go at once, staged', json(await shown()) === json([2]) && (await pdf('return s.numPages')) === before, json(await shown()))
+await page.getByRole('button', { name: 'Undo', exact: true }).click()
+await page.waitForTimeout(200)
+check('one Undo brings both back', json(await shown()) === json([0, 1, 2]), json(await shown()))
+
+console.log('\nPages: leaving with changes staged asks first')
+await page.getByRole('button', { name: /Move page 1 down/i }).first().click()
+await page.waitForTimeout(150)
+await mod('/src/native/nav.ts', 'return m.goBack()')
+await page.waitForTimeout(400)
+const ask = page.locator('[data-phone-dialog="confirm"]')
+check('Back asks, and stays', (await top()) === 'pages' && (await ask.getByText(/without applying/).count()) === 1)
+await ask.getByRole('button', { name: 'Keep editing' }).click()
+await page.waitForTimeout(400)
+check('"Keep editing" keeps the changes', (await top()) === 'pages' && json(await shown()) === json([1, 0, 2]), json(await shown()))
+await page.getByRole('button', { name: 'Put them back' }).click()
+await page.waitForTimeout(200)
+
+console.log('\nPages: a tap opens the page large, to move, turn or take out')
+// A mark on page 2, to see it turn with its page.
+await mod('/src/stores/annotationStore.ts', "m.useAnnotationStore.getState().add({ id: 'turnme', type: 'rect', pageIndex: 1, x: 10, y: 20, width: 100, height: 40, color: '#000000' })")
+await page.getByRole('button', { name: 'Page 2', exact: true }).click()
+await page.waitForTimeout(800)
+const viewer = page.locator('[data-page-viewer]')
+check('the page viewer, over the Pages page', (await top()) === 'page-view' && (await viewer.locator('h1').innerText()) === 'Page 2 of 3', `${await top()} / ${await viewer.locator('h1').innerText().catch(() => '')}`)
+check('…showing the page large', await viewer.locator('img').evaluate((img) => img.getBoundingClientRect().width > 250).catch(() => false))
+await viewer.locator('[data-view-action="turn"]').click()
+await page.waitForTimeout(300)
+check('Turn turns the picture a quarter', /rotate\(90deg\)/.test(await viewer.locator('img').getAttribute('style')))
+await viewer.locator('[data-view-action="earlier"]').click()
+await page.waitForTimeout(200)
+check('Earlier moves it, and the viewer follows it', (await viewer.locator('h1').innerText()) === 'Page 1 of 3')
+await viewer.getByRole('button', { name: 'Confirm' }).click()
+await page.waitForTimeout(500)
+check('Confirm: back on the Pages page with it staged', (await top()) === 'pages' && json(await shown()) === json([1, 0, 2]) && (await applyBtn.count()) === 1, json(await shown()))
+check('…the file still untouched', (await pdf('return s.numPages')) === before && (await pdf('return s.doc.getPage(2).then((p) => p.rotate)')) === 0)
+await page.getByRole('button', { name: 'Page 3', exact: true }).click()
+await page.waitForTimeout(600)
+await viewer.locator('[data-view-action="out"]').click()
+await page.waitForTimeout(200)
+check('Take out in the viewer: one page fewer there', (await viewer.locator('h1').innerText()) === 'Page 2 of 2', await viewer.locator('h1').innerText())
+await mod('/src/native/nav.ts', 'return m.goBack()')
+await page.waitForTimeout(500)
+check('Back from the viewer drops its changes, without asking', (await top()) === 'pages' && json(await shown()) === json([1, 0, 2]) && (await ask.count()) === 0, json(await shown()))
+
+console.log('\nPages: applied, the page is turned in the file, and its mark with it')
+await applyBtn.click()
+for (let i = 0; i < 60 && (await pdf('return s.numPages')) === before && (await applyBtn.count()) > 0; i++) await page.waitForTimeout(250)
+await page.waitForTimeout(500)
+check('page 1 of the file is the old page 2, turned (/Rotate 90)', (await pdf('return s.doc.getPage(1).then((p) => p.rotate)')) === 90)
+check('…the others are not', (await pdf('return s.doc.getPage(2).then((p) => p.rotate)')) === 0)
+check('…still three pages, and the staging cleared', (await pdf('return s.numPages')) === before && (await applyBtn.count()) === 0)
+const mark = await mod('/src/stores/annotationStore.ts', "return m.useAnnotationStore.getState().annotations.find((a) => a.id === 'turnme')")
+check('its mark went with it, turned', mark && mark.pageIndex === 0 && mark.rotation === 90, json(mark))
+check('…and the Pages page stayed open', (await top()) === 'pages')
+await mod('/src/stores/pdfStore.ts', 'return m.usePdfStore.getState().undoDocument()')
+await page.waitForTimeout(800)
+check('the document Undo puts it all back', (await pdf('return s.doc.getPage(2).then((p) => p.rotate)')) === 0 && (await mod('/src/stores/annotationStore.ts', "return m.useAnnotationStore.getState().annotations.find((a) => a.id === 'turnme')?.pageIndex")) === 1)
+await mod('/src/stores/annotationStore.ts', 'm.useAnnotationStore.getState().resetDocument()')
 await nav('n.pop()')
 await page.waitForTimeout(300)
-check('leaving drops the staged move', (await mod('/src/stores/pdfStore.ts', 'return m.usePdfStore.getState().numPages')) === before)
 
 console.log('\nSend to sign: a sheet, and Share does not wait for a box')
 await openMore()

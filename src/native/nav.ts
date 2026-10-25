@@ -15,6 +15,8 @@ import { create } from 'zustand'
 export type Tab = 'desk' | 'signatures' | 'tune'
 export type Screen =
   | 'sign' | 'share' | 'signed' | 'smaller' | 'blacked' | 'sent' | 'qr' | 'pages'
+  // One page large, over the Pages page (PagesScreen keeps both).
+  | 'page-view'
   | 'kb' | 'kb-article'
   // The jobs that make a new PDF (or read two), pages of their own: they open
   // from the Desk with no document as well as from What else.

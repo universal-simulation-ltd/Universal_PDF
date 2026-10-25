@@ -442,10 +442,10 @@ console.log('\nthe bar is Navigate · Mark up · Sign · Share, and Pages is in 
   check('Pages is not', (await bar.getByRole('button', { name: 'Pages' }).count()) === 0)
   await page.getByRole('button', { name: 'What else' }).click()
   await page.waitForTimeout(400)
-  await page.getByRole('button', { name: 'Split or reorder pages' }).click()
+  await page.getByRole('button', { name: 'Pages', exact: true }).click()
   await page.waitForTimeout(400)
   // A page of its own since 2026-10-22, not the website's sliding pane.
-  check('What else ▸ Split or reorder pages opens the Pages page', (await mod('/src/native/nav.ts', 'return m.useNav.getState().screens')).includes('pages'))
+  check('What else ▸ Pages opens the Pages page', (await mod('/src/native/nav.ts', 'return m.useNav.getState().screens')).includes('pages'))
   await mod('/src/native/nav.ts', 'm.useNav.getState().pop()')
   await page.waitForTimeout(400)
   await bar.getByRole('button', { name: 'Share' }).click()

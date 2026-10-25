@@ -217,9 +217,12 @@ export function JobPage({
   footer,
   background = 'var(--np-paper)',
   bodyClass = 'gap-[18px]',
+  action,
 }: {
   backLabel: string
   onBack: () => void
+  /** A button on the right of the back link's row (Pages' Select). */
+  action?: ReactNode
   lead: string
   hl: string
   note?: ReactNode
@@ -230,8 +233,11 @@ export function JobPage({
 }) {
   return (
     <div className="np-page-enter flex-1 min-h-0 flex flex-col" style={{ background }}>
-      <header className="flex-none px-1.5" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 6px)' }}>
-        <BackLink label={backLabel} onClick={onBack} />
+      <header className="flex-none px-1.5 flex items-center justify-between gap-2" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 6px)' }}>
+        <span className="min-w-0">
+          <BackLink label={backLabel} onClick={onBack} />
+        </span>
+        {action}
       </header>
       <div className={`flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pt-1 pb-4 flex flex-col ${bodyClass}`}>
         <div className="flex flex-col gap-1.5">
