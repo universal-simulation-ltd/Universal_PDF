@@ -294,3 +294,26 @@
 .np-compare .rounded-lg.bg-white {
   border-radius: 3px;
 }
+
+/* A search in use moves its box to the top (searchMode.ts): what stood above
+   it folds away to nothing — its row of a one-row grid shrinks from 1fr to 0fr,
+   so whatever height it has animates — and comes back when the search is left. */
+.np-collapse {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 260ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 200ms ease;
+}
+.np-collapse > * {
+  min-height: 0;
+  overflow: hidden;
+}
+.np-collapse[data-collapsed] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+.np-search-move {
+  transition: margin 260ms cubic-bezier(0.2, 0.8, 0.2, 1), padding 260ms cubic-bezier(0.2, 0.8, 0.2, 1), border-radius 260ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .np-collapse, .np-search-move { transition: none; }
+}

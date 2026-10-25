@@ -49,6 +49,8 @@ interface NavState {
    * Returns false to stay.
    */
   backGuard: (() => boolean) | null
+  /** The Desk's search is in use and the cobalt desk folded away (the status bar's glyphs go dark). */
+  deskSearching: boolean
   setBackGuard: (fn: (() => boolean) | null) => void
   setTab: (tab: Tab) => void
   push: (screen: Screen) => void
@@ -83,6 +85,7 @@ export const useNav = create<NavState>((set) => ({
   awaitingSignature: false,
   kbArticle: null,
   backGuard: null,
+  deskSearching: false,
   setBackGuard: (backGuard) => set({ backGuard }),
   setTab: (tab) => set({ tab }),
   push: (screen) => set((s) => ({ screens: [...s.screens, screen], sheet: null, toast: null })),

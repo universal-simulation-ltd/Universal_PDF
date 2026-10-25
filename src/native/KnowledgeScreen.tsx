@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { parseArticleBody, translateNav, useLanguage, useUniversal } from '@unisim/sdk'
 import { useT } from '../i18n'
 import { usePdfStore } from '../stores/pdfStore'
@@ -7,6 +7,7 @@ import type { Article, Source } from '../knowledge/types'
 import { Icon, PATHS } from './icons'
 import { BackLink, Hl } from './parts'
 import { topScreen, useNav } from './nav'
+import { KEEP_FOCUS, leaveIfEmptyOnBlur, useSearchMode } from './searchMode'
 
 // The knowledge base as a page of the phone's own (James, 2026-10-18: "Make
 // knowledge base native page"), in place of the SDK's KnowledgeBaseDialog,
@@ -30,6 +31,11 @@ import { topScreen, useNav } from './nav'
 //
 // ⚠️ The search box is never focused for the reader: the keyboard must not
 // come up before the page has been taken in (James).
+//
+// In use, the search moves to the top (searchMode.ts; James, 2026-10-25): the
+// back link and the heading fold away, the box pins under the status bar with
+// a Cancel beside it, and the guides found fill the room down to the
+// keyboard. Cancel, Back, or the box emptied and let go put the page back.
 
 /** Where the suite's guide PDFs live: the SDK's KB_LIBRARY_URL, which it doesn't export. */
 const KB_LIBRARY = 'https://opensource.unisim.co.uk/kb'
@@ -122,6 +128,15 @@ function ListPage({
   const tab = useNav((s) => s.tab)
   const fileName = usePdfStore((s) => (s.doc ? s.fileName : null))
   const list = loaded && loaded !== 'failed' ? loaded.list : null
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [focused, setFocused] = useState(false)
+  const searching = !hidden && (focused || query !== '')
+  const leave = useCallback(() => {
+    setQuery('')
+    setFocused(false)
+    inputRef.current?.blur()
+  }, [setQuery])
+  const keyboard = useSearchMode(searching, leave)
 
   const backTo = fileName
     ? fileName.replace(/\.pdf$/i, '') || t('phone.sign_back')
@@ -152,24 +167,42 @@ function ListPage({
       aria-hidden={hidden || undefined}
       style={hidden ? { visibility: 'hidden' } : undefined}
     >
-      <header className="flex-none px-1.5" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 6px)' }}>
-        <BackLink label={backTo} onClick={() => useNav.getState().pop()} />
-      </header>
+      <div
+        className="np-collapse flex-none"
+        data-collapsed={searching || undefined}
+        aria-hidden={searching || undefined}
+        {...(searching ? { inert: '' } : {})}
+      >
+        <div>
+          <header className="px-1.5" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 6px)' }}>
+            <BackLink label={backTo} onClick={() => useNav.getState().pop()} />
+          </header>
+        </div>
+      </div>
 
       <div
-        className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pt-1 flex flex-col gap-4"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 24px)' }}
+        data-kb-list
+        className="np-search-move flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 flex flex-col"
+        style={{
+          paddingTop: searching ? 'calc(env(safe-area-inset-top) + 8px)' : 4,
+          paddingBottom: searching ? Math.max(24, keyboard + 16) : 'calc(env(safe-area-inset-bottom) + 24px)',
+        }}
       >
-        <div className="flex flex-col gap-1.5">
-          <h1 className="np-serif m-0 text-[34px] leading-[1.05] font-bold">
-            {t('phone.kb_lead')} <Hl>{t('phone.kb_hl')}</Hl>
-          </h1>
-          <span className="text-[14px] leading-[1.45] text-[color:var(--np-muted)]">{t('phone.kb_note')}</span>
+        <div className="np-collapse flex-none" data-collapsed={searching || undefined} aria-hidden={searching || undefined}>
+          <div>
+            <div className="flex flex-col gap-1.5 pb-4">
+              <h1 className="np-serif m-0 text-[34px] leading-[1.05] font-bold">
+                {t('phone.kb_lead')} <Hl>{t('phone.kb_hl')}</Hl>
+              </h1>
+              <span className="text-[14px] leading-[1.45] text-[color:var(--np-muted)]">{t('phone.kb_note')}</span>
+            </div>
+          </div>
         </div>
 
+        <div className="sticky top-0 z-[2] -mx-5 px-5 pb-4 flex items-center gap-2" style={{ background: 'var(--np-paper)' }}>
         <form
           role="search"
-          className="relative"
+          className="relative flex-1 min-w-0"
           onSubmit={(e) => {
             // Enter puts the keyboard away so the results can be read.
             e.preventDefault()
@@ -180,10 +213,19 @@ function ListPage({
             <Icon d={PATHS.search} size={18} />
           </span>
           <input
+            ref={inputRef}
             type="search"
             enterKeyHint="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={(e) => {
+              setFocused(false)
+              leaveIfEmptyOnBlur(e.currentTarget, leave)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') leave()
+            }}
             placeholder={t('phone.kb_search')}
             aria-label={t('phone.kb_search')}
             className="np-kb-search w-full h-11 pl-10 pr-11 rounded-xl text-[16px] outline-none"
@@ -193,6 +235,7 @@ function ListPage({
             <button
               type="button"
               aria-label={t('phone.kb_clear')}
+              {...KEEP_FOCUS}
               onClick={() => setQuery('')}
               className="absolute right-0 top-0 w-11 h-11 flex items-center justify-center text-[color:var(--np-muted)]"
             >
@@ -200,6 +243,20 @@ function ListPage({
             </button>
           )}
         </form>
+        {searching && (
+          <button
+            type="button"
+            data-search-cancel
+            {...KEEP_FOCUS}
+            onClick={leave}
+            className="flex-none min-h-[44px] px-1 text-[16px] font-semibold text-[color:var(--np-cobalt)]"
+          >
+            {t('phone.cancel')}
+          </button>
+        )}
+        </div>
+
+        <div className="flex flex-col gap-4">
 
         {loaded === 'failed' ? (
           <p className="m-0 text-[15px] leading-[1.45] text-[color:var(--np-muted)]">{translateNav(language, 'kb.load_failed')}</p>
@@ -243,6 +300,7 @@ function ListPage({
             )
           })
         )}
+        </div>
       </div>
     </div>
   )

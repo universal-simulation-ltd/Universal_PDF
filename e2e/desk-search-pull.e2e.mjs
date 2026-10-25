@@ -24,10 +24,14 @@
 //     of cards, or from the tab bar: not pulls.
 //   • A full pull opens it without the keyboard; a second pull focuses the
 //     box from inside the touch's release (what iOS needs for the keyboard).
+//   • Open, the search moves to the top (James, 2026-10-25): the cobalt desk
+//     and "On your desk" fold away, the box sits under the status bar, and
+//     the list leaves room for the keyboard (a shrunken visualViewport, faked).
+//     Cancel puts the desk back; so does Back; so does the box emptied and let go.
 //   • Typing filters the list, and a typed search stays when scrolled. The ×
-//     clears and folds it.
-//   • Scrolled out of sight with nothing typed, it folds away and the rows
-//     stay still on screen.
+//     only clears; Cancel clears and folds it.
+//   • Open, it stays pinned at the top of the list as the list scrolls (until
+//     2026-10-25 it folded away instead).
 //   • With the list scrolled down, a drag down (on the list or the desk above)
 //     is not a pull.
 //   • Tapping Desk while on it opens it with the box focused, inside the tap.
@@ -86,6 +90,9 @@ const json = (v) => JSON.stringify(v)
 
 const W = 390
 const H = 844
+// The desk keeps 8 (lib/recents). With the desk folded away for a search they
+// fit without scrolling, so the scrolling checks below run with the faked
+// keyboard up, whose room at the foot makes the list scroll.
 const NAMES = ['Alpha lease', 'Bravo invoice', 'Charlie form', 'Delta letter', 'Echo receipt', 'Foxtrot contract', 'Golf report', 'Hotel booking']
 
 const playwright = await loadPlaywright()
@@ -122,7 +129,7 @@ async function phone({ recents = NAMES } = {}) {
       const s = await imp('/src/stores/pdfStore.ts')
       await s.usePdfStore.getState().refreshRecents()
     }, recents)
-    await page.waitForSelector(`text=${recents[0]}`, { timeout: 10000 })
+    await page.waitForSelector(`text=${recents.at(-1)}`, { timeout: 10000 })
   }
   await page.waitForTimeout(300)
   return { context, page, cdp }
@@ -163,12 +170,27 @@ const listBox = (page) =>
     const r = document.querySelector('[data-pull-drawer]').parentElement.getBoundingClientRect()
     return { top: r.top, bottom: r.bottom, mid: (r.top + r.bottom) / 2 }
   })
-const rowTop = (page, n) => page.evaluate((n) => document.querySelectorAll('[data-pull-drawer] + div li')[n]?.getBoundingClientRect().top ?? null, n)
 const setListScroll = (page, y) =>
   page.evaluate((y) => {
     document.querySelector('[data-pull-drawer]').parentElement.scrollTop = y
   }, y)
 const hint = (page) => page.getByRole('button', { name: /Pull down to search/ })
+const cancel = async (page) => {
+  await page.locator('[data-search-cancel]').click()
+  await page.waitForTimeout(450)
+}
+/** Where the box, the folded desk and the "On your desk" heading are. */
+const layout = (page) =>
+  page.evaluate(() => {
+    const box = document.querySelector('[data-pull-drawer] input')?.getBoundingClientRect()
+    const desk = document.querySelector('.np-collapse')?.getBoundingClientRect()
+    const heading = [...document.querySelectorAll('h2')].find((h) => /On your desk/.test(h.textContent))
+    return {
+      boxTop: box ? Math.round(box.top) : null,
+      deskHeight: desk ? Math.round(desk.height) : null,
+      headingShown: !!heading && heading.getBoundingClientRect().height > 0 && heading.closest('[data-collapsed]') === null,
+    }
+  })
 
 try {
   console.log('\nthe desk: no search button, the drawer shut, a hint to pull')
@@ -176,7 +198,7 @@ try {
   {
     const s = await state(page)
     check('there is a drawer, shut, 0 tall and inert', s.drawer === 'shut' && s.height === 0 && s.inert === true, json(s))
-    check('all 8 recents are listed', s.rows === 8, json(s))
+    check(`all ${NAMES.length} recents are listed`, s.rows === NAMES.length, json(s))
     const btn = page.getByRole('button', { name: 'Search your documents' })
     const box = (await btn.count()) ? await btn.boundingBox() : null
     check('no search button on screen (the keyboard one takes no room)', !box || (box.width <= 1 && box.height <= 1), json(box))
@@ -223,13 +245,19 @@ try {
     const learnt = await page.evaluate(() => localStorage.getItem('unipdf:desk-pull-learnt'))
     check('…and remembered', learnt === '1', String(learnt))
 
+    await page.waitForTimeout(300)
+    const lay = await layout(page)
+    check('open, the search moved to the top: the cobalt desk folded away', lay.deskHeight === 0, json(lay))
+    check('…"On your desk" folded away too', !lay.headingShown, json(lay))
+    check('…and the box sits just under the status bar', lay.boxTop !== null && lay.boxTop < 40, json(lay))
+
     await pull(page, cdp, { y: L.top + 80, dy: 170 })
     s = await state(page)
     check('a second pull puts the cursor in the box', s.focused, json(s))
     check('…focused from inside the touchend (so iOS raises the keyboard)', json(s.focusLog) === json(['touchend']), json(s.focusLog))
   }
 
-  console.log('\ntyping filters the desk; a typed search stays; the × clears and folds')
+  console.log('\ntyping filters the desk; a typed search stays; the × clears, Cancel folds')
   {
     await page.keyboard.type('bravo')
     await page.waitForTimeout(200)
@@ -239,32 +267,93 @@ try {
     await page.keyboard.press('Escape')
     s = await state(page)
     check('still open with a search typed in', s.drawer === 'open', json(s))
-    await page.getByRole('button', { name: 'Close the search' }).click()
-    await page.waitForTimeout(400)
+    await page.locator('[data-pull-drawer] input').focus()
+    await page.getByRole('button', { name: 'Clear the search' }).click()
+    await page.waitForTimeout(300)
     s = await state(page)
-    check('the × empties the box and folds it away', s.drawer === 'shut' && s.height === 0 && s.query === '' && s.rows === 8, json(s))
+    check('the × empties the box and keeps the finger in it', s.drawer === 'open' && s.query === '' && s.focused && s.rows === NAMES.length, json(s))
+    await cancel(page)
+    s = await state(page)
+    const lay = await layout(page)
+    check('Cancel folds it away', s.drawer === 'shut' && s.height === 0 && s.query === '' && s.rows === NAMES.length, json(s))
+    check('…and the desk is back', lay.deskHeight > 200 && lay.headingShown, json(lay))
   }
 
-  console.log('\nscrolled out of sight it folds away, holding the rows still')
+  console.log('\nthe box emptied and let go leaves the search; Back leaves it too')
+  {
+    await pull(page, cdp, { y: L.top + 20, dy: 170 })
+    await page.locator('[data-pull-drawer] input').focus()
+    await page.locator('[data-pull-drawer] input').blur()
+    await page.waitForTimeout(500)
+    let s = await state(page)
+    check('focused, then let go with nothing typed: folded away', s.drawer === 'shut', json(s))
+    await pull(page, cdp, { y: L.top + 20, dy: 170 })
+    await page.locator('[data-pull-drawer] input').fill('alpha')
+    await page.locator('[data-pull-drawer] input').blur()
+    await page.waitForTimeout(300)
+    await page.evaluate(() => history.back())
+    await page.waitForTimeout(500)
+    s = await state(page)
+    const lay = await layout(page)
+    check('Back leaves the search and puts the desk back', s.drawer === 'shut' && s.query === '' && lay.deskHeight > 200, json({ s, lay }))
+  }
+
+  console.log('\nthe keyboard: the list leaves room for it')
+  {
+    // A phone keyboard 336px tall: the visual viewport shrinks, the page does not (iOS).
+    await page.evaluate(() => {
+      const listeners = []
+      const fake = {
+        height: window.innerHeight - 336,
+        width: window.innerWidth,
+        offsetTop: 0,
+        offsetLeft: 0,
+        scale: 1,
+        addEventListener: (_t, fn) => listeners.push(fn),
+        removeEventListener: () => {},
+      }
+      Object.defineProperty(window, 'visualViewport', { value: fake, configurable: true })
+    })
+    await pull(page, cdp, { y: L.top + 20, dy: 170 })
+    await page.locator('[data-pull-drawer] input').focus()
+    await page.waitForTimeout(300)
+    const room = await page.evaluate(() => {
+      const list = document.querySelector('[data-pull-drawer]').parentElement
+      list.scrollTop = list.scrollHeight
+      const rows = document.querySelectorAll('[data-pull-drawer] + div li')
+      const last = rows[rows.length - 1].getBoundingClientRect()
+      return { pad: parseFloat(getComputedStyle(list).paddingBottom), lastBottom: Math.round(last.bottom), keyboardTop: window.innerHeight - 336 }
+    })
+    check('the list pads its foot by the keyboard', room.pad >= 336, json(room))
+    check('…so the last document scrolls up above the keyboard', room.lastBottom <= room.keyboardTop, json(room))
+    await page.evaluate(() => {
+      document.querySelector('[data-pull-drawer]').parentElement.scrollTop = 0
+    })
+    await cancel(page)
+    // ⚠️ The fake keyboard stays up from here on: see NAMES.
+  }
+
+  console.log('\nopen, it stays pinned at the top while the list scrolls')
   {
     await pull(page, cdp, { y: L.top + 20, dy: 170 })
     let s = await state(page)
     check('open again', s.drawer === 'open', json(s))
     const drawerH = s.height
-    const before = await rowTop(page, 3)
+    const boxBefore = (await layout(page)).boxTop
     await setListScroll(page, drawerH + 40)
     await page.waitForTimeout(150)
     s = await state(page)
-    const after = await rowTop(page, 3)
-    const expected = before - (drawerH + 40)
-    check('scrolled past it, it folds itself away', s.drawer === 'shut' && s.height === 0, json(s))
-    check('…and the rows did not move on screen', after !== null && Math.abs(after - expected) <= 1, `before=${before} expected=${expected} after=${after}`)
+    const boxAfter = (await layout(page)).boxTop
+    check('scrolled, it stays open', s.drawer === 'open' && s.scrollTop > 0, json(s))
+    check('…pinned where it was', boxAfter === boxBefore, `before=${boxBefore} after=${boxAfter}`)
+    await setListScroll(page, 0)
+    await cancel(page)
 
     // A typed search stays however far the list scrolls.
     await setListScroll(page, 0)
     await page.waitForTimeout(100)
     await pull(page, cdp, { y: L.top + 20, dy: 170 })
-    await page.locator('[data-pull-drawer] input').fill('o')
+    await page.locator('[data-pull-drawer] input').fill('e')
     await page.locator('[data-pull-drawer] input').blur()
     await page.waitForTimeout(100)
     s = await state(page)
@@ -273,8 +362,7 @@ try {
     const t = await state(page)
     check('with a search typed in it stays open when scrolled', s.drawer === 'open' && t.drawer === 'open' && t.scrollTop > 0, json({ s, t }))
     await setListScroll(page, 0)
-    await page.getByRole('button', { name: 'Close the search' }).click()
-    await page.waitForTimeout(400)
+    await cancel(page)
   }
 
   console.log('\nwith the list scrolled down, a drag down is the list, not a pull')
@@ -301,8 +389,7 @@ try {
     check('the drawer is open', s.drawer === 'open', json(s))
     check('the list went back to its top to show it', s.scrollTop === 0, json(s))
     check('the box is focused, from inside the tap', s.focused && s.focusLog.length === 1 && ['click', 'touchend', 'pointerup'].includes(s.focusLog[0]), json(s))
-    await page.getByRole('button', { name: 'Close the search' }).click()
-    await page.waitForTimeout(400)
+    await cancel(page)
   }
 
   console.log("\nthe options sheet's pull-to-close still works, and opens nothing")

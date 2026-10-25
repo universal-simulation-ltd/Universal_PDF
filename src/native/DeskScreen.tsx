@@ -10,6 +10,7 @@ import { Hl, Sheet, SwipeRow } from './parts'
 import { useNav } from './nav'
 import { jobCards, runJob, useJobs, type JobCard, type JobId } from './jobs'
 import { examplePreview } from './examplePreview'
+import { KEEP_FOCUS, leaveIfEmptyOnBlur, useSearchMode } from './searchMode'
 import { EXAMPLE_PAGES } from '../lib/exampleMeta'
 
 // Board 1 · Home, round 4: the top half is the cobalt desk with the headline
@@ -87,7 +88,14 @@ export default function DeskScreen() {
   // search button that is invisible until it takes keyboard focus (where the
   // old button was), and the first-run hint, which is a button too.
   const [pulled, setPulled] = useState(false)
+  const [focused, setFocused] = useState(false)
   const searchShown = pulled || query !== ''
+  // In use, the search moves to the top (searchMode.ts; James, 2026-10-25):
+  // the cobalt desk and "On your desk" fold away above it, the box pins under
+  // the status bar, and the documents found fill the room down to the
+  // keyboard. Opened by a pull, a tap on Desk, or a finger in the box; left by
+  // Cancel, Back, or the box emptied and let go.
+  const searching = searchShown || focused
   const canSearch = recents.length > 0
   const { learnt, learn } = usePullHint(DESK_PULL_HINT_KEY)
 
@@ -113,8 +121,15 @@ export default function DeskScreen() {
   const clearAndClose = useCallback(() => {
     setQuery('')
     setPulled(false)
+    setFocused(false)
     searchRef.current?.blur()
   }, [])
+  const keyboard = useSearchMode(searching, clearAndClose)
+  // The status bar's glyphs go dark over the paper while the desk is folded away.
+  useEffect(() => {
+    useNav.setState({ deskSearching: searching })
+  }, [searching])
+  useEffect(() => () => useNav.setState({ deskSearching: false }), [])
   // The tab bar's `requestSearch` (NativeApp's TabBar): Desk tapped while on it.
   useSearchRequests({ onOpen: openAndFocus }, canSearch)
 
@@ -131,28 +146,9 @@ export default function DeskScreen() {
     return modalIsOpen() || (listRef.current?.scrollTop ?? 0) > 0 || insideScrolledChild(e.target)
   }, [])
 
-  /**
-   * Scrolled out of sight, the box folds away again, unless a search is typed
-   * in, and the list stays still on screen. The SDK does this for a page that
-   * scrolls the window; this list scrolls itself, so it is done here, the way
-   * PullDrawer does it: shut at once (no slide off screen), then measure what
-   * moved rather than assume (Chromium anchors the scroll, WebKit doesn't).
-   */
-  function foldIfScrolledAway(e: React.UIEvent<HTMLDivElement>) {
-    if (!pulled || query) return
-    const list = e.currentTarget
-    const drawer = list.querySelector<HTMLElement>(':scope > [data-pull-drawer]')
-    if (!drawer || drawer.offsetHeight === 0) return
-    if (drawer.getBoundingClientRect().bottom > list.getBoundingClientRect().top) return
-    const below = drawer.nextElementSibling
-    const before = below?.getBoundingClientRect().top ?? 0
-    drawer.style.transition = 'none'
-    drawer.style.height = '0px'
-    drawer.style.opacity = '0'
-    const after = below?.getBoundingClientRect().top ?? 0
-    if (after !== before) list.scrollTop += after - before
-    setPulled(false)
-  }
+  // ⚠️ No folding away when the list scrolls (it did until 2026-10-25): open,
+  // the box is pinned at the top of the list (sticky), so it never scrolls out
+  // of sight. Cancel, Back or an empty box let go are the ways out.
 
   const shown = useMemo(() => {
     const q = query.trim().toLocaleLowerCase()
@@ -168,10 +164,13 @@ export default function DeskScreen() {
   }
 
   return (
-    <div ref={rootRef} className="flex-1 min-h-0 flex flex-col" style={{ background: 'var(--np-desk)' }}>
+    <div ref={rootRef} className="flex-1 min-h-0 flex flex-col" style={{ background: searching ? 'var(--np-paper)' : 'var(--np-desk)' }}>
+      <div className="np-collapse flex-none" data-collapsed={searching || undefined} aria-hidden={searching || undefined} {...(searching ? { inert: '' } : {})}>
+      {/* ⚠️ The grid's child has no padding of its own: padding can't fold to 0. */}
+      <div>
       <div
-        className="flex-none px-5 pb-[30px] flex flex-col gap-4 text-white"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 14px)' }}
+        className="px-5 pb-[30px] flex flex-col gap-4 text-white"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 14px)', background: 'var(--np-desk)' }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -260,14 +259,26 @@ export default function DeskScreen() {
           </p>
         </section>
       </div>
+      </div>
+      </div>
 
       <div
-        className="flex-1 min-h-0 -mt-2.5 rounded-t-3xl px-5 pt-5 flex flex-col gap-2.5"
-        style={{ background: 'var(--np-paper)' }}
+        data-desk-panel
+        className="np-search-move flex-1 min-h-0 px-5 flex flex-col"
+        style={{
+          background: 'var(--np-paper)',
+          marginTop: searching ? 0 : -10,
+          borderRadius: searching ? 0 : '24px 24px 0 0',
+          paddingTop: searching ? 'calc(env(safe-area-inset-top) + 8px)' : 20,
+        }}
       >
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="np-serif m-0 text-[22px] font-bold">{t('phone.desk_title')}</h2>
-          <span className="text-[13px] text-[color:var(--np-muted)]">{t('phone.desk_only_here')}</span>
+        <div className="np-collapse flex-none" data-collapsed={searching || undefined} aria-hidden={searching || undefined}>
+          <div>
+            <div className="flex items-baseline justify-between gap-3 pb-2.5">
+              <h2 className="np-serif m-0 text-[22px] font-bold">{t('phone.desk_title')}</h2>
+              <span className="text-[13px] text-[color:var(--np-muted)]">{t('phone.desk_only_here')}</span>
+            </div>
+          </div>
         </div>
         {canSearch && !searchShown && !learnt && (
           // First run: nothing else on screen says the search is there. A tap
@@ -275,13 +286,18 @@ export default function DeskScreen() {
           <button
             type="button"
             onClick={openDrawer}
-            className="np-hand np-pull-hint self-center -mt-1 -mb-1 px-3 min-h-[36px] flex items-center gap-1 text-[21px] leading-none"
+            className="np-hand np-pull-hint self-center -mt-1 mb-1.5 px-3 min-h-[36px] flex items-center gap-1 text-[21px] leading-none"
             style={{ color: 'var(--np-cobalt)' }}
           >
             <span aria-hidden="true">↓</span> {t('phone.pull_to_search')}
           </button>
         )}
-        <div ref={listRef} onScroll={foldIfScrolledAway} className="flex-1 min-h-0 overflow-y-auto overscroll-contain -mx-5 px-5 pb-4">
+        <div
+          ref={listRef}
+          data-desk-list
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain -mx-5 px-5"
+          style={{ paddingBottom: 16 + (searching ? keyboard : 0) }}
+        >
           {/* No pull-to-refresh while it can be pulled (containOverscroll):
               Chrome on Android starts it on the same gesture. */}
           <PullDrawer
@@ -291,15 +307,24 @@ export default function DeskScreen() {
             pullable={canSearch}
             ignoreTouch={notAPull}
             containOverscroll
-            innerClassName="pb-2.5"
+            innerClassName="pt-[3px] pb-2.5"
+            // Pinned at the top of the list while open, over the rows that
+            // scroll under it.
+            style={{ position: 'sticky', top: 0, zIndex: 2, background: 'var(--np-paper)' }}
           >
-            <div role="search" className="relative">
+            <div role="search" className="flex items-center gap-2">
+            <div className="relative flex-1 min-w-0">
               <input
                 ref={searchRef}
                 type="search"
                 enterKeyHint="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
+                onFocus={() => setFocused(true)}
+                onBlur={(e) => {
+                  setFocused(false)
+                  leaveIfEmptyOnBlur(e.currentTarget, clearAndClose)
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Escape') clearAndClose()
                   else if (e.key === 'Enter') e.currentTarget.blur()
@@ -309,13 +334,30 @@ export default function DeskScreen() {
                 className="np-kb-search w-full h-11 pl-3.5 pr-11 rounded-xl text-[16px] outline-none"
                 style={{ background: 'var(--np-slip)', border: '1px solid var(--np-line)' }}
               />
+              {query && (
+                <button
+                  type="button"
+                  aria-label={t('phone.kb_clear')}
+                  // Keeps the finger in the box: clearing is not leaving.
+                  {...KEEP_FOCUS}
+                  onClick={() => {
+                    setQuery('')
+                    searchRef.current?.focus({ preventScroll: true })
+                  }}
+                  className="absolute right-0 top-0 w-11 h-11 flex items-center justify-center text-[color:var(--np-muted)]"
+                >
+                  <Icon d={PATHS.close} size={16} width={2.4} />
+                </button>
+              )}
+            </div>
               <button
                 type="button"
-                aria-label={t('phone.search_close')}
+                data-search-cancel
+                {...KEEP_FOCUS}
                 onClick={clearAndClose}
-                className="absolute right-0 top-0 w-11 h-11 flex items-center justify-center text-[color:var(--np-muted)]"
+                className="flex-none min-h-[44px] px-1 text-[16px] font-semibold text-[color:var(--np-cobalt)]"
               >
-                <Icon d={PATHS.close} size={16} width={2.4} />
+                {t('phone.cancel')}
               </button>
             </div>
           </PullDrawer>

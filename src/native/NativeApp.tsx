@@ -72,6 +72,7 @@ export default function NativeApp({ launching }: { launching: boolean }) {
   const screens = useNav((s) => s.screens)
   const sheet = useNav((s) => s.sheet)
   const plainPaper = usePhonePrefs((s) => s.plainPaper)
+  const deskSearching = useNav((s) => s.deskSearching)
 
   const inDocument = !!doc || loading || hasTabs || !!lockedFile
   const top = inDocument ? topScreen(screens) : null
@@ -92,7 +93,7 @@ export default function NativeApp({ launching }: { launching: boolean }) {
 
   // The clock and battery stay legible: light glyphs over the cobalt desk and
   // the moments, dark ones over paper.
-  const darkTop = inDocument ? isMoment(top) : tab === 'desk' && !overTabs
+  const darkTop = inDocument ? isMoment(top) : tab === 'desk' && !overTabs && !deskSearching
   useEffect(() => {
     void setStatusBarOverDarkChrome(darkTop)
   }, [darkTop])
