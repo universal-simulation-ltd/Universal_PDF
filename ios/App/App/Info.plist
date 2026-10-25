@@ -110,6 +110,8 @@
 	     NSMicrophoneUsageDescription: iOS only offers "Take Video" (and only
 	     then asks for the microphone) when the input accepts a video type. -->
 	<!-- "Lock saved signatures with Face ID" (SignatureVault.swift). Translated in <lang>.lproj/InfoPlist.strings. -->
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Save the pages you turn into pictures to your photo library. Universal PDF can only add photos; it never sees the ones already there.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Use Face ID to unlock the signatures you saved in Universal PDF. They stay on this device.</string>
 	<key>NSCameraUsageDescription</key>

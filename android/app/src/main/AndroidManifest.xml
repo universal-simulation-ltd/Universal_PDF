@@ -108,4 +108,7 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Save to Photos on Android 7–9 only (PhotoLibraryPlugin): from Android 10
+         the Gallery (MediaStore) takes an app's own pictures with no permission. -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 </manifest>

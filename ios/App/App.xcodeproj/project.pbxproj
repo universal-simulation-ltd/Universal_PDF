@@ -23,6 +23,7 @@
 		A7AC7104E000000000000011 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = A7AC7104E000000000000010 /* Localizable.strings */; };
 		A7AC7104E000000000000021 /* AppShortcuts.strings in Resources */ = {isa = PBXBuildFile; fileRef = A7AC7104E000000000000020 /* AppShortcuts.strings */; };
 		A7AC7104E000000000000004 /* SignatureVault.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7AC7104E000000000000003 /* SignatureVault.swift */; };
+		A7AC7104E000000000000006 /* PhotoLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7AC7104E000000000000005 /* PhotoLibrary.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -67,6 +68,7 @@
 		A7AC7104E000000000000206 /* pt-PT */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-PT"; path = pt-PT.lproj/AppShortcuts.strings; sourceTree = "<group>"; };
 		A7AC7104E000000000000207 /* tr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = tr; path = tr.lproj/AppShortcuts.strings; sourceTree = "<group>"; };
 		A7AC7104E000000000000003 /* SignatureVault.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignatureVault.swift; sourceTree = "<group>"; };
+		A7AC7104E000000000000005 /* PhotoLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoLibrary.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -116,6 +118,7 @@
 				5CA9D0C5E000000000000001 /* DocumentScanner.swift */,
 				A7AC7104E000000000000001 /* AppActions.swift */,
 				A7AC7104E000000000000003 /* SignatureVault.swift */,
+				A7AC7104E000000000000005 /* PhotoLibrary.swift */,
 				A7AC7104E000000000000010 /* Localizable.strings */,
 				A7AC7104E000000000000020 /* AppShortcuts.strings */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
@@ -270,6 +273,7 @@
 				5CA9D0C5E000000000000002 /* DocumentScanner.swift in Sources */,
 				A7AC7104E000000000000002 /* AppActions.swift in Sources */,
 				A7AC7104E000000000000004 /* SignatureVault.swift in Sources */,
+				A7AC7104E000000000000006 /* PhotoLibrary.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

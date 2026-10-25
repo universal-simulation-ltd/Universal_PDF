@@ -14,6 +14,7 @@ class MainViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(DocumentScannerPlugin())
         bridge?.registerPluginInstance(AppActionsPlugin())
         bridge?.registerPluginInstance(SignatureVaultPlugin())
+        bridge?.registerPluginInstance(PhotoLibraryPlugin())
     }
 }
 

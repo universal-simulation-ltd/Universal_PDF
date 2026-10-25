@@ -271,6 +271,25 @@ if (cameraReaches.length > 0 && !info.NSCameraUsageDescription) {
   )
 }
 
+// ── 3. The photo library, reached from the app's own Swift ────────────────
+// PhotoLibrary.swift saves pictures with ADD-ONLY access (2026-10-25). iOS
+// kills the app the moment PHPhotoLibrary is asked without the matching usage
+// string — add-only needs NSPhotoLibraryAddUsageDescription, anything more
+// NSPhotoLibraryUsageDescription — and no build or test sees it before a phone.
+const swiftDir = join(ROOT, 'ios', 'App', 'App')
+let photoReaches = 0
+for (const entry of readdirSync(swiftDir).filter((f) => f.endsWith('.swift'))) {
+  const source = readFileSync(join(swiftDir, entry), 'utf8')
+  if (!/PHPhotoLibrary/.test(source)) continue
+  photoReaches++
+  if (!info.NSPhotoLibraryAddUsageDescription) {
+    fail(`Info.plist has no NSPhotoLibraryAddUsageDescription, but ${entry} saves to the photo library`, 'iOS kills the process on the first save without one.')
+  }
+  if (/\.readWrite|requestAuthorization\s*\{|requestAuthorization\(\s*\)/.test(source) && !info.NSPhotoLibraryUsageDescription) {
+    fail(`${entry} asks for full photo-library access, and Info.plist has no NSPhotoLibraryUsageDescription`, 'Ask for .addOnly, or add the usage string.')
+  }
+}
+
 // ── Report ─────────────────────────────────────────────────────────────────
 if (problems.length > 0) {
   console.error('\niOS: this build would be killed by the OS, or lose what it is handed — nothing the app can catch.\n')
@@ -280,5 +299,6 @@ if (problems.length > 0) {
 
 console.log(
   `iOS: scene life cycle adopted (${delegateClass}), ` +
-    `${new Set(cameraReaches).size} camera reach(es) covered by NSCameraUsageDescription. OK`
+    `${new Set(cameraReaches).size} camera reach(es) covered by NSCameraUsageDescription, ` +
+    `${photoReaches} photo-library save(s) covered by NSPhotoLibraryAddUsageDescription. OK`
 )

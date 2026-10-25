@@ -10,6 +10,7 @@ import { Icon, PATHS } from './icons'
 import { BTN_PRIMARY, BTN_PRIMARY_STYLE, BTN_SECOND, BTN_SECOND_STYLE, JobPage, Segmented } from './parts'
 import { useNav } from './nav'
 import { pickFiles, useJobBackLabel, useJobs } from './jobs'
+import { PhotoAccessDenied, canSaveToPhotos, openAppSettings, photoLibraryKind, saveToPhotos } from '../lib/photoLibrary'
 import { handOver } from './output'
 import { AddSlip } from './MergeScreen'
 import { FileSlip } from './OcrScreen'
@@ -27,6 +28,26 @@ export default function PhotosScreen() {
 
 const TILTS = ['-3deg', '2deg', '-1.5deg', '2.5deg', '-2deg', '1deg']
 
+// Where the pictures go (James, 2026-10-25): straight into the phone's photo
+// library, or one ZIP file as before. A pick-one, so it starts where it was
+// left last time (ZIP the very first time, as it always was).
+type Dest = 'photos' | 'zip'
+const DEST_KEY = 'unipdf:pictures-dest'
+function readDest(): Dest {
+  try {
+    return localStorage.getItem(DEST_KEY) === 'photos' ? 'photos' : 'zip'
+  } catch {
+    return 'zip'
+  }
+}
+function keepDest(d: Dest) {
+  try {
+    localStorage.setItem(DEST_KEY, d)
+  } catch {
+    /* not remembered: harmless */
+  }
+}
+
 function PhotosPage({ mode: startMode, initialPdf }: { mode: ConvertMode; initialPdf: File | null }) {
   const t = useT()
   const backLabel = useJobBackLabel()
@@ -38,6 +59,10 @@ function PhotosPage({ mode: startMode, initialPdf }: { mode: ConvertMode; initia
   const [progress, setProgress] = useState('')
   const [error, setError] = useState<string | null>(null)
   const back = () => useNav.getState().pop()
+  const library = canSaveToPhotos()
+  const kind = photoLibraryKind()
+  const [dest, setDest] = useState<Dest>(() => (library ? readDest() : 'zip'))
+  const [denied, setDenied] = useState(false)
 
   const thumbs = useMemo(() => images.map((f) => URL.createObjectURL(f)), [images])
   useEffect(() => () => thumbs.forEach((u) => URL.revokeObjectURL(u)), [thumbs])
@@ -70,17 +95,26 @@ function PhotosPage({ mode: startMode, initialPdf }: { mode: ConvertMode; initia
     }
   }
 
-  async function toImages() {
+  async function toImages(to: Dest = dest) {
     if (!pdf || busy) return
     setBusy(true)
     setError(null)
+    setDenied(false)
     setProgress('')
     try {
       const entries = await pdfToImages(await pdf.arrayBuffer(), pdf.name, {
         format,
         onProgress: (done, total) => setProgress(t('tools.convert.rendering', { done, total })),
       })
-      if (entries.length === 1) {
+      if (to === 'photos') {
+        try {
+          const n = await saveToPhotos(entries, pdf.name.replace(/\.pdf$/i, ''), (done, total) => setProgress(t('phone.pictures_saving', { done, total })))
+          useNav.getState().say(t.plural(kind === 'gallery' ? 'phone.pictures_saved_gallery' : 'phone.pictures_saved_photos', n))
+        } catch (err) {
+          if (err instanceof PhotoAccessDenied) setDenied(true)
+          else throw err
+        }
+      } else if (entries.length === 1) {
         saveBlob(new Blob([entries[0].data as BlobPart], { type: format === 'png' ? 'image/png' : 'image/jpeg' }), entries[0].name)
       } else {
         downloadZip(entries, `${pdf.name.replace(/\.pdf$/i, '')}-images.zip`)
@@ -111,7 +145,11 @@ function PhotosPage({ mode: startMode, initialPdf }: { mode: ConvertMode; initia
           </>
         ) : (
           <button type="button" className={BTN_PRIMARY} style={BTN_PRIMARY_STYLE} disabled={!pdf || busy} onClick={() => void toImages()}>
-            {busy ? progress || t('tools.convert.converting') : t('phone.pictures_save')}
+            {busy
+              ? progress || t('tools.convert.converting')
+              : dest === 'photos'
+                ? t(kind === 'gallery' ? 'phone.pictures_save_gallery' : 'phone.pictures_save_photos')
+                : t('phone.pictures_save')}
           </button>
         )
       }
@@ -187,6 +225,51 @@ function PhotosPage({ mode: startMode, initialPdf }: { mode: ConvertMode; initia
               { id: 'jpeg', label: t('tools.convert.jpg_smaller') },
             ]}
           />
+          {library && (
+            <div className="flex flex-col gap-2" data-pictures-dest>
+              <span className="np-hand text-[22px] leading-none text-[color:var(--np-cobalt-deep)] px-1">{t('phone.pictures_where')}</span>
+              <Segmented
+                label={t('phone.pictures_where')}
+                value={dest}
+                disabled={busy}
+                onChange={(d) => {
+                  setDest(d)
+                  keepDest(d)
+                  setDenied(false)
+                }}
+                options={[
+                  { id: 'photos', label: t(kind === 'gallery' ? 'phone.pictures_dest_gallery' : 'phone.pictures_dest_photos') },
+                  { id: 'zip', label: t('phone.pictures_dest_zip') },
+                ]}
+              />
+              <p className="m-0 text-[13px] leading-[1.4] text-[color:var(--np-muted)]">
+                {dest === 'zip' ? t('phone.pictures_note_zip') : t(kind === 'gallery' ? 'phone.pictures_note_gallery' : 'phone.pictures_note_photos')}
+              </p>
+            </div>
+          )}
+          {denied && (
+            <div role="alert" data-pictures-denied className="flex flex-col gap-2.5 rounded-2xl p-3.5" style={{ background: 'var(--np-slip)', border: '1px solid var(--np-line)' }}>
+              <p className="m-0 text-[15px] leading-[1.45]">{t('phone.pictures_denied')}</p>
+              {/* One above the other: side by side, German's words broke across lines. */}
+              <div className="flex flex-col gap-2">
+                <button type="button" onClick={() => void openAppSettings()} className="min-h-[44px] px-3 rounded-xl text-[15px] font-semibold" style={{ border: '1px solid var(--np-line)', color: 'var(--np-cobalt-deep)' }}>
+                  {t('phone.pictures_open_settings')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDest('zip')
+                    keepDest('zip')
+                    void toImages('zip')
+                  }}
+                  className="min-h-[44px] px-3 rounded-xl text-white text-[15px] font-bold"
+                  style={{ background: 'var(--np-cobalt)' }}
+                >
+                  {t('phone.pictures_zip_instead')}
+                </button>
+              </div>
+            </div>
+          )}
         </>
       )}
 

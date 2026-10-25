@@ -5,3 +5,5 @@
 "CFBundleDisplayName" = "Universal PDF";
 /* "Lock saved signatures with Face ID" (SignatureVault.swift). */
 "NSFaceIDUsageDescription" = "Entsperren Sie mit Face ID die in Universal PDF gespeicherten Unterschriften. Sie bleiben auf diesem Gerät.";
+/* "Save to Photos" for the pages turned into pictures (PhotoLibrary.swift): add-only access. */
+"NSPhotoLibraryAddUsageDescription" = "Speichern Sie die in Bilder umgewandelten Seiten in Ihrer Fotomediathek. Universal PDF kann nur Fotos hinzufügen und sieht die vorhandenen nie.";

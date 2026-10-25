@@ -80,6 +80,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(DocumentScannerPlugin.class);
         registerPlugin(AppActionsPlugin.class);
         registerPlugin(SignatureVaultPlugin.class);
+        registerPlugin(PhotoLibraryPlugin.class);
         super.onCreate(savedInstanceState);
         // Same rule as the VIEW intent above: a restored activity's intent is
         // a memory, so only a fresh launch can carry a shortcut or a share.
