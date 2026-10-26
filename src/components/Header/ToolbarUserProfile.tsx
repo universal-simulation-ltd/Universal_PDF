@@ -98,7 +98,9 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
   // No accounts in the phone and extension builds (lib/accounts.ts):
   // the pill keeps the app rows (Actions, Tune this app, About) and drops
   // every account row and the sign-in dialog — the SDK's `noAccount`.
-  const { supabase, session, noAccounts } = useUniversal()
+  // A guest gets that same pill with no Sign in either (`signInInMenu: false`
+  // in main.tsx): Send to sign asks for the account where it needs one.
+  const { config, supabase, session, noAccounts } = useUniversal()
   const { subscription } = useSubscription()
   const [signInOpen, setSignInOpen] = useState(false)
 
@@ -193,11 +195,13 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
       : firstLoad
       ? { initials: '·' }
       : !user || isAnonymous
-        ? {
-            initials: '?',
-            signInHref: HUB_LOGIN_HREF,
-            onSignInClick: () => setSignInOpen(true),
-          }
+        ? config.signInInMenu === false
+          ? { noAccount: true }
+          : {
+              initials: '?',
+              signInHref: HUB_LOGIN_HREF,
+              onSignInClick: () => setSignInOpen(true),
+            }
         : {
             name: profile?.display_name ?? undefined,
             email: user.email ?? undefined,

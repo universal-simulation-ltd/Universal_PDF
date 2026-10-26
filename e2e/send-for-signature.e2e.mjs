@@ -365,11 +365,18 @@ await recipient.close()
 // The sender's page is the website with no one signed in: the SDK may look for
 // a session, but nothing here needs one.
 console.log(`  (the sender's website page made ${webAuth.length} auth call(s) — informational)`)
-// The control for (5): on the website, signed out, the same menu DOES offer
-// "Sign in" — so its absence in the phone app below means something.
+// The control for (5): on the website, signed out, the app DOES still offer a
+// way in — no longer in the Actions menu (`signInInMenu: false`, 2026-10-26),
+// but at the certified route — so its absence in the phone app below means
+// something.
 await page.getByRole('button', { name: /Actions/ }).first().click()
 await page.waitForTimeout(600)
-check('on the website the Actions menu still offers “Sign in”', (await page.getByText(/Sign in/).count()) > 0)
+check('on the website the Actions menu offers no “Sign in”', (await page.getByRole('menuitem', { name: /Sign in/ }).count()) === 0)
+await page.keyboard.press('Escape')
+await page.click('button[aria-label="Sign"]')
+await page.click('button:has-text("Request")')
+await page.click('button:has-text("Get a certified signature")')
+check('…but the certified route offers a Universal ID', await page.locator('button:has-text("Create a free Universal ID")').waitFor({ timeout: 10000 }).then(() => true, () => false))
 await context.close()
 
 // ── 5: as the phone app ─────────────────────────────────────────────────────

@@ -239,14 +239,15 @@ await step('Present', async () => {
   await page.keyboard.press('Escape')
 })
 await step('the sign-in dialog', async () => {
-  await page.goto(BASE, { waitUntil: 'load' })
-  await page.waitForTimeout(800)
-  // Hover, not click: the pill opens on mouseenter and a click toggles it shut.
-  await page.hover('button[aria-label$="Profile"]')
-  await page.waitForTimeout(600)
-  await page.locator('[role=menuitem]:has-text("Sign in")').first().click({ timeout: 10000 })
-  await page.waitForSelector('text=Email me a code', { timeout: 10000 })
-  await page.locator('text=Apple, Google or Microsoft').first().click()
+  // Through Send to sign's certified route: since 2026-10-26 the profile menu
+  // offers a guest no "Sign in" (`signInInMenu: false`), and this is the one
+  // place the app asks for an account.
+  await fresh()
+  await page.click('button[aria-label="Sign"]')
+  await page.click('button:has-text("Request")')
+  await page.click('button:has-text("Get a certified signature")')
+  await page.click('button:has-text("Create a free Universal ID")', { timeout: 10000 })
+  await page.locator('text=Apple, Google or Microsoft').first().click({ timeout: 10000 })
   await page.waitForSelector('text=Continue with Google', { timeout: 10000 })
   // Not pressed: it leaves for Google. (A top-level navigation, which the
   // policy doesn't govern; Google's own sign-in script, when the SDK uses it,

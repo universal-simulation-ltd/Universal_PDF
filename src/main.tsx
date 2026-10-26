@@ -72,6 +72,12 @@ const universalConfig = {
   // and the desktop app keep an optional Universal ID for the certified
   // signature and the saved main signature. See lib/accounts.ts.
   noAccounts: accountsOff(),
+  // No "Sign in" in the profile menu for a guest (James, 2026-10-26: "there
+  // really isn't much need to sign in", and signing in pulls the account's
+  // Global Tuning over what the guest had set). The one thing that needs an
+  // account, the certified signature in Send to sign, asks for it in place;
+  // once signed in the account rows and Sign out are back (SDK 0.205.0).
+  signInInMenu: false,
 }
 const noAccounts = universalConfig.noAccounts
 
