@@ -24,6 +24,16 @@ Scanned / image-only PDFs can be made **searchable on-device via OCR**
   automatic browser copy and a re-importable backup file). The one PDF stored
   online is a Send to sign copy — free, Universal-ID-gated, in the shared suite
   Supabase project (migration 0227, product `pdf_sign`).
+- **No "Sign in" in the menus for a guest** (1.0.17, SDK 0.205.0
+  `signInInMenu: false`, James 2026-10-26: "there really isn't much need to
+  sign in"). Signing in from a row beside "Tune this app" pulled the account's
+  Global Tuning over the guest's own settings. Both the navbar profile menu and
+  `ToolbarUserProfile` (the open-document Actions pill) drop the row; a
+  signed-in user still gets the account block and Sign out. The one sign-in
+  left is at the point of need: Sign ▸ Request ▸ "Need proof? Get a certified
+  signature" ▸ "Create a free Universal ID". The phone apps and extension were
+  already `noAccounts`. e2e `test:csp` and `test:send-for-signature` reach
+  sign-in by that route now.
 
 MIT licensed — free and open source, like all Universal Apps.
 
