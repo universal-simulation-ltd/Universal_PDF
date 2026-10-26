@@ -7,6 +7,8 @@ const app: Messages['app'] = {
   'dismiss': 'Kapat',
   'discard': 'At',
   'loading': 'Yükleniyor…',
+  'personal_title': '{name} · PDF’ler',
+  'personal_title_mine': 'PDF’lerim',
 
   // App
   'could_not_open': '“{name}” açılamadı',

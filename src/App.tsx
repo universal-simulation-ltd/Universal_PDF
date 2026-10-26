@@ -558,6 +558,13 @@ export default function App() {
             // can be set before a document is opened. Reset to defaults clears
             // the double-tap defaults via the SDK.
             appPreferences={<><PageScrollPreference /><ToolBehaviourRows /><SignatureDefaultViewRows /><SignatureVaultRow /></>}
+            // Signed in = personalised (James, 2026-10-26: "Bradley's PDFs"):
+            // no avatar or greeting, the bar names the app for them, and the
+            // account (email, the hub, Sign out) is in Tune this app (SDK
+            // 0.206.0). PDF asks nobody to sign in; someone signed in to any
+            // unisim.co.uk app is recognised through the shared cookie.
+            accountInTune
+            personalTitle={(name) => (name ? t('app.personal_title', { name }) : t('app.personal_title_mine'))}
             // The SDK's "Delete my account" stays ON here (its default in a
             // native shell): this is the menu a phone opens first. It was
             // switched off to stop the row doubling — but the double was in

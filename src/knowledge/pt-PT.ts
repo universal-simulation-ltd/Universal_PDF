@@ -128,6 +128,8 @@ Se optar por desenhar a assinatura no telemóvel, o desenho passa do telemóvel 
 
 No site e na app para computador pode iniciar sessão com um Universal ID e, enquanto tiver sessão iniciada, a app regista que foi aberta, para a página de atividade da sua conta. As apps para telemóvel e a extensão do navegador não têm início de sessão. No site, na primeira vez que abre a app em cada dia, soma também um à contagem anónima de aberturas do dia, enviada depois do seu primeiro clique ou da primeira tecla premida. Essa contagem contém apenas o nome da app e o tipo de plataforma («web» no site): nenhum identificador, nenhuma conta e nada sobre o que faz. Uma marca de «já contado hoje» fica no seu dispositivo e nunca é enviada. As apps para telemóvel e computador e a extensão do navegador não a enviam. Nada do que a app envia inclui algo sobre os seus ficheiros. Não há publicidade nem rastreio por terceiros.
 
+O Universal PDF nunca lhe pede para iniciar sessão para o usar. Se já tiver sessão iniciada, por exemplo noutra app da UNI·SIM no mesmo navegador, o nome no topo mostra-o, como “PDFs de Bradley”, e a sua conta e **Terminar sessão** estão em **Ajustar esta aplicação**. Terminar sessão aí termina-a em todas as apps da UNI·SIM nesse navegador.
+
 No site, por baixo dos ícones de transferência, também é possível pedir um aviso quando a app para computador estiver pronta. O endereço de email só nos é enviado se for escrito aí, e é a única coisa guardada: é enviado um único email quando a app para computador estiver pronta, e o endereço é eliminado até 30 dias depois, ou ao fim de 24 meses se a app ainda não estiver pronta.`,
   },
   {
@@ -204,7 +206,7 @@ As ligações de assinatura expiram ao fim de 30 dias. Os ficheiros guardados po
 
 ## Como alterar
 
-1. Abra o menu no canto superior direito, junto à fotografia de perfil (com um documento aberto, chama-se **Ações**), e escolha **Ajustar esta aplicação**.
+1. Abra o menu no canto superior direito (com um documento aberto, chama-se **Ações**), e escolha **Ajustar esta aplicação**.
 2. Em **Deslocamento das páginas**, escolha **Vertical** para ter uma página por baixo da outra, ou **Horizontal** para as ter lado a lado.
 
 A definição pode ser alterada no ecrã inicial, antes de abrir qualquer documento, ou com um documento já aberto. Um documento aberto muda de imediato e mantém-se na página que estava a ser lida.

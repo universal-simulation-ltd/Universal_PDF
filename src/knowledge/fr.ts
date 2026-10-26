@@ -128,6 +128,8 @@ Si vous choisissez de dessiner votre signature sur votre téléphone, le dessin 
 
 Sur le site web et dans l’application pour ordinateur, vous pouvez vous connecter avec un Universal ID ; tant que vous êtes connecté, l’application enregistre qu’elle a été ouverte, pour la page d’activité de votre compte. Les applications pour téléphone et l’extension de navigateur n’ont aucune connexion. Sur le site web, la première fois que vous ouvrez l’application chaque jour, elle ajoute aussi un au décompte anonyme des ouvertures du jour, envoyé après votre premier clic ou votre première frappe au clavier. Ce décompte ne contient que le nom de l’application et le type de plateforme (« web » sur le site) : aucun identifiant, aucun compte et rien sur ce que vous faites. Une marque « déjà compté aujourd’hui » reste sur votre appareil et n’est jamais envoyée. Les applications pour téléphone et pour ordinateur et l’extension de navigateur ne l’envoient pas. Rien de ce que l’application envoie ne contient quoi que ce soit sur vos fichiers. Il n’y a ni publicité ni pistage par des tiers.
 
+Universal PDF ne vous demande jamais de vous connecter pour l’utiliser. Si vous êtes connecté, par exemple à une autre application UNI·SIM dans le même navigateur, le nom en haut le montre, comme « Les PDF de Bradley », et votre compte et **Se déconnecter** se trouvent dans **Régler cette application**. Vous déconnecter là vous déconnecte de toutes les applications UNI·SIM dans ce navigateur.
+
 Sur le site web, sous les icônes de téléchargement, vous pouvez aussi demander à être prévenu quand l’application pour ordinateur sera prête. Votre adresse e-mail ne nous est envoyée que si vous la saisissez à cet endroit, et c’est la seule chose conservée : vous recevez un seul e-mail quand l’application pour ordinateur est prête, puis l’adresse est supprimée dans les 30 jours qui suivent, ou au bout de 24 mois si l’application n’est toujours pas prête.`,
   },
   {
@@ -204,7 +206,7 @@ Les liens de signature expirent au bout de 30 jours. Les fichiers stockés peuve
 
 ## Changer ce réglage
 
-1. Ouvrez le menu en haut à droite, à côté de votre photo de profil (quand un document est ouvert, il s’intitule **Actions**), et choisissez **Régler cette application**.
+1. Ouvrez le menu en haut à droite (quand un document est ouvert, il s’intitule **Actions**), et choisissez **Régler cette application**.
 2. Sous **Défilement des pages**, choisissez **Vertical** pour des pages les unes sous les autres, ou **Horizontal** pour des pages côte à côte.
 
 Vous pouvez le faire depuis l’écran d’accueil, avant d’ouvrir quoi que ce soit, ou avec un document déjà ouvert. Un document ouvert change aussitôt et reste à la page que vous étiez en train de lire.

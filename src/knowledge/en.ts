@@ -128,6 +128,8 @@ If you choose to draw your signature on your phone, the drawing travels from you
 
 On the website and in the desktop app you can sign in with a Universal ID, and while you are signed in, the app records that it was opened, for your account’s activity page. The phone apps and the browser extension have no sign-in at all. On the website, the first time you open the app each day, it also adds one to an anonymous count of daily opens, sent after your first click or key press. That count holds only the app's name and the kind of platform (on the website, "web"): no identifier, no account and nothing about what you do. A "counted today" mark stays on your device and is never sent. The phone and desktop apps and the browser extension do not send it. Nothing the app sends includes anything about your files. There is no advertising or third-party tracking.
 
+Universal PDF never asks you to sign in to use it. If you are signed in, for example to another UNI·SIM app in the same browser, the name at the top shows it, such as “Bradley’s PDFs”, and your account and **Sign out** are in **Tune this app**. Signing out there signs you out of every UNI·SIM app in that browser.
+
 On the website, under the download marks, you can also ask to be told when the desktop app is ready. Only if you type your email address there is it sent to us, and it is the only thing kept: you get one email when the desktop app is ready, and the address is deleted within 30 days of that, or after 24 months if the app is not ready by then.`,
   },
   {
@@ -204,7 +206,7 @@ Signing links expire after 30 days. Stored files can be up to 50 MB, and a file 
 
 ## Changing it
 
-1. Open the menu at the top right, next to your profile picture (while a document is open it reads **Actions**), and choose **Tune this app**.
+1. Open the menu at the top right (while a document is open it reads **Actions**), and choose **Tune this app**.
 2. Under **Page scrolling**, choose **Vertical** for one page under another, or **Horizontal** for pages side by side.
 
 You can change it on the home screen, before you open anything, or with a document already open. An open document changes straight away and stays on the page you were reading.

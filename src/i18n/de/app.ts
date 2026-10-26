@@ -7,6 +7,8 @@ const app: Messages['app'] = {
   'dismiss': 'Ausblenden',
   'discard': 'Verwerfen',
   'loading': 'Wird geladen…',
+  'personal_title': 'PDFs von {name}',
+  'personal_title_mine': 'Meine PDFs',
 
   // App
   'could_not_open': '{name} konnte nicht geöffnet werden',

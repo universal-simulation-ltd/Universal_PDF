@@ -128,6 +128,8 @@ Wenn Sie Ihre Unterschrift auf dem Handy zeichnen, gelangt die Zeichnung als kur
 
 Auf der Website und in der Desktop-App können Sie sich mit einer Universal ID anmelden; solange Sie angemeldet sind, vermerkt die App für die Aktivitätsseite Ihres Kontos, dass sie geöffnet wurde. Die Handy-Apps und die Browsererweiterung haben gar keine Anmeldung. Auf der Website zählt sie außerdem beim ersten Öffnen jedes Tages eins zur anonymen Tageszählung der Öffnungen hinzu, gesendet nach Ihrem ersten Klick oder Tastendruck. Diese Zählung enthält nur den Namen der App und die Art der Plattform („web“ auf der Website): keine Kennung, kein Konto und nichts darüber, was Sie tun. Eine Markierung „heute schon gezählt“ bleibt auf Ihrem Gerät und wird nie gesendet. Die Telefon- und Desktop-Apps und die Browsererweiterung senden sie nicht. Nichts, was die App sendet, enthält irgendetwas über Ihre Dateien. Es gibt keine Werbung und kein Tracking durch Dritte.
 
+Universal PDF verlangt nie, dass Sie sich anmelden. Wenn Sie angemeldet sind, etwa bei einer anderen UNI·SIM-App im selben Browser, zeigt es der Name oben, zum Beispiel „PDFs von Bradley“, und Ihr Konto mit **Abmelden** finden Sie unter **Diese App anpassen**. Wenn Sie sich dort abmelden, werden Sie in diesem Browser bei allen UNI·SIM-Apps abgemeldet.
+
 Auf der Website können Sie unter den Download-Symbolen außerdem darum bitten, benachrichtigt zu werden, wenn die Desktop-App fertig ist. Nur wenn Sie dort Ihre E-Mail-Adresse eingeben, wird sie an uns gesendet, und sie ist das Einzige, was gespeichert wird: Sie erhalten eine einzige E-Mail, sobald die Desktop-App fertig ist, und die Adresse wird innerhalb von 30 Tagen danach gelöscht – oder nach 24 Monaten, falls die App bis dahin nicht fertig ist.`,
   },
   {
@@ -204,7 +206,7 @@ Links zum Unterschreiben laufen nach 30 Tagen ab. Gespeicherte Dateien dürfen b
 
 ## So stellen Sie es um
 
-1. Öffnen Sie das Menü oben rechts neben Ihrem Profilbild (bei geöffnetem Dokument heißt es **Aktionen**) und wählen Sie **Diese App anpassen**.
+1. Öffnen Sie das Menü oben rechts (bei geöffnetem Dokument heißt es **Aktionen**) und wählen Sie **Diese App anpassen**.
 2. Wählen Sie unter **Blätterrichtung** **Vertikal** für Seiten untereinander oder **Horizontal** für Seiten nebeneinander.
 
 Das geht auf dem Startbildschirm, bevor Sie etwas öffnen, oder bei einem bereits geöffneten Dokument. Ein geöffnetes Dokument stellt sich sofort um und bleibt auf der Seite, die Sie gerade gelesen haben.

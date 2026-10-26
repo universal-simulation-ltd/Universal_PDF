@@ -7,6 +7,8 @@ export default {
   'dismiss': 'Dismiss', // verb, button that hides a notice
   'discard': 'Discard', // verb, button that throws away a compressed result
   'loading': 'Loading…',
+  'personal_title': '{name}’s PDFs', // the bar's name for the app once signed in; {name} is the person's first name
+  'personal_title_mine': 'My PDFs', // signed in, no name known
 
   // App
   'could_not_open': 'Could not open {name}', // {name} is a file name

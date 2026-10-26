@@ -128,6 +128,8 @@ Se scegli di disegnare la firma sul telefono, il disegno passa dal telefono all�
 
 Sul sito e nell’app per computer puoi accedere con un Universal ID e, finché hai effettuato l’accesso, l’app registra che è stata aperta, per la pagina delle attività del tuo account. Le app per telefono e l’estensione del browser non hanno alcun accesso. Sul sito web, la prima volta che apri l’app ogni giorno, aggiunge anche uno al conteggio anonimo delle aperture del giorno, inviato dopo il tuo primo clic o tasto premuto. Quel conteggio contiene solo il nome dell’app e il tipo di piattaforma («web» sul sito): nessun identificativo, nessun account e niente su ciò che fai. Un segno «già contato oggi» resta sul tuo dispositivo e non viene mai inviato. Le app per telefono e computer e l’estensione del browser non lo inviano. Niente di ciò che l’app invia contiene informazioni sui tuoi file. Non ci sono pubblicità né tracciamento di terze parti.
 
+Universal PDF non ti chiede mai di accedere per usarlo. Se hai già effettuato l’accesso, per esempio a un’altra app UNI·SIM nello stesso browser, lo mostra il nome in alto, come «I PDF di Bradley», e il tuo account con **Esci** è in **Regola questa app**. Uscendo da lì esci da tutte le app UNI·SIM in quel browser.
+
 Sul sito, sotto le icone di download, puoi anche chiedere di essere avvisato quando l’app per computer sarà pronta. Il tuo indirizzo email ci viene inviato solo se lo scrivi lì, ed è l’unica cosa che conserviamo: ricevi una sola email quando l’app per computer è pronta, e l’indirizzo viene cancellato entro 30 giorni da allora, oppure dopo 24 mesi se l’app non è ancora pronta.`,
   },
   {
@@ -204,7 +206,7 @@ I link per la firma scadono dopo 30 giorni. I file archiviati possono arrivare a
 
 ## Come cambiarla
 
-1. Apri il menu in alto a destra, accanto alla tua immagine del profilo (con un documento aperto si chiama **Azioni**), e scegli **Regola questa app**.
+1. Apri il menu in alto a destra (con un documento aperto si chiama **Azioni**), e scegli **Regola questa app**.
 2. In **Scorrimento delle pagine**, scegli **Verticale** per avere una pagina sotto l’altra, oppure **Orizzontale** per averle affiancate.
 
 Puoi cambiarla dalla schermata iniziale, prima di aprire qualsiasi cosa, oppure con un documento già aperto. Un documento aperto cambia subito e resta sulla pagina che stavi leggendo.

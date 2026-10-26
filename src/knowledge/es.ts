@@ -128,6 +128,8 @@ Si decide dibujar su firma en el móvil, el dibujo viaja del móvil a la aplicac
 
 En el sitio web y en la aplicación de escritorio puede iniciar sesión con un Universal ID y, mientras la tenga iniciada, la aplicación registra que se ha abierto, para la página de actividad de su cuenta. Las aplicaciones para teléfono y la extensión del navegador no tienen inicio de sesión. En el sitio web, la primera vez que abre la aplicación cada día, también suma uno al recuento anónimo de aperturas del día, que se envía tras su primer clic o pulsación de tecla. Ese recuento solo contiene el nombre de la aplicación y el tipo de plataforma («web» en el sitio): ningún identificador, ninguna cuenta y nada sobre lo que hace. Una marca de «ya contado hoy» se queda en su dispositivo y nunca se envía. Las aplicaciones para teléfono y ordenador y la extensión del navegador no lo envían. Nada de lo que envía la aplicación incluye información sobre sus archivos. No hay publicidad ni rastreo de terceros.
 
+Universal PDF nunca le pide iniciar sesión para usarlo. Si ya la tiene iniciada, por ejemplo en otra app de UNI·SIM del mismo navegador, el nombre de arriba lo muestra, como «Los PDF de Bradley», y su cuenta y **Cerrar sesión** están en **Ajustar esta app**. Cerrar sesión allí la cierra en todas las apps de UNI·SIM de ese navegador.
+
 En el sitio web, debajo de los iconos de descarga, también puede pedir que le avisemos cuando la aplicación de escritorio esté lista. Solo si escribe ahí su dirección de correo se nos envía, y es lo único que se guarda: recibirá un solo correo cuando la aplicación de escritorio esté lista, y la dirección se borra en los 30 días siguientes, o a los 24 meses si para entonces la aplicación no está lista.`,
   },
   {
@@ -204,7 +206,7 @@ Los enlaces de firma caducan a los 30 días. Los archivos guardados pueden ocupa
 
 ## Cómo cambiarlo
 
-1. Abra el menú de arriba a la derecha, junto a su foto de perfil (con un documento abierto se llama **Acciones**), y elija **Ajustar esta app**.
+1. Abra el menú de arriba a la derecha (con un documento abierto se llama **Acciones**), y elija **Ajustar esta app**.
 2. En **Desplazamiento de páginas**, elija **Vertical** para tener una página debajo de otra, u **Horizontal** para tenerlas una al lado de otra.
 
 Puede cambiarlo en la pantalla de inicio, antes de abrir nada, o con un documento ya abierto. Un documento abierto cambia al instante y se queda en la página que estaba leyendo.

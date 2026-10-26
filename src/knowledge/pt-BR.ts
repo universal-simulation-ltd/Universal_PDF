@@ -128,6 +128,8 @@ Se você escolher desenhar sua assinatura no celular, o desenho vai do celular p
 
 No site e no aplicativo para computador, você pode entrar com um Universal ID e, enquanto estiver conectado, o aplicativo registra que foi aberto, para a página de atividade da sua conta. Os aplicativos para celular e a extensão do navegador não têm login. No site, na primeira vez que você abre o aplicativo a cada dia, ele também soma um à contagem anônima de aberturas do dia, enviada depois do seu primeiro clique ou tecla pressionada. Essa contagem contém só o nome do aplicativo e o tipo de plataforma ("web" no site): nenhum identificador, nenhuma conta e nada sobre o que você faz. Uma marca de "já contado hoje" fica no seu dispositivo e nunca é enviada. Os aplicativos para celular e computador e a extensão do navegador não a enviam. Nada do que o aplicativo envia inclui algo sobre os seus arquivos. Não há publicidade nem rastreamento de terceiros.
 
+O Universal PDF nunca pede que você entre para usá-lo. Se você já estiver conectado, por exemplo em outro app da UNI·SIM no mesmo navegador, o nome no topo mostra isso, como “PDFs de Bradley”, e sua conta e **Sair** ficam em **Ajustar este app**. Sair ali desconecta você de todos os apps da UNI·SIM nesse navegador.
+
 No site, abaixo dos ícones de download, você também pode pedir para ser avisado quando o aplicativo para computador estiver pronto. Seu endereço de e-mail só é enviado para nós se você digitá-lo ali, e é a única coisa guardada: você recebe um único e-mail quando o aplicativo para computador estiver pronto, e o endereço é excluído em até 30 dias depois disso, ou após 24 meses se o aplicativo ainda não estiver pronto.`,
   },
   {
@@ -204,7 +206,7 @@ Os links de assinatura expiram depois de 30 dias. Os arquivos guardados podem te
 
 ## Como mudar
 
-1. Abra o menu no canto superior direito, ao lado da sua foto de perfil (com um documento aberto, ele se chama **Ações**), e escolha **Ajustar este app**.
+1. Abra o menu no canto superior direito (com um documento aberto, ele se chama **Ações**), e escolha **Ajustar este app**.
 2. Em **Rolagem das páginas**, escolha **Vertical** para uma página embaixo da outra, ou **Horizontal** para as páginas lado a lado.
 
 Dá para mudar na tela inicial, antes de abrir qualquer coisa, ou com um documento já aberto. Um documento aberto muda na hora e continua na página que você estava lendo.

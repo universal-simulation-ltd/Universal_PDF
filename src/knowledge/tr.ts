@@ -128,6 +128,8 @@ Son açılan dosyalar, bu cihazdaki tarayıcınızın kendi depolama alanında t
 
 Web sitesinde ve bilgisayar uygulamasında bir Universal ID ile giriş yapabilirsiniz; giriş yapmışken uygulama, hesabınızın etkinlik sayfası için açıldığını kaydeder. Telefon uygulamalarında ve tarayıcı uzantısında hiç giriş yoktur. Web sitesinde, uygulamayı her gün ilk açışınızda, ilk tıklamanızdan veya tuşa basmanızdan sonra anonim günlük açılış sayısına bir de ekler. Bu sayım yalnızca uygulamanın adını ve platform türünü (sitede "web") içerir: hiçbir tanımlayıcı, hesap ya da ne yaptığınıza dair bir şey yoktur. "Bugün sayıldı" işareti cihazınızda kalır ve asla gönderilmez. Telefon ve bilgisayar uygulamaları ile tarayıcı uzantısı bunu göndermez. Uygulamanın gönderdiği hiçbir şey dosyalarınızla ilgili bir şey içermez. Reklam ya da üçüncü taraf izleme yoktur.
 
+Universal PDF, kullanmanız için asla giriş yapmanızı istemez. Giriş yapmışsanız, örneğin aynı tarayıcıda başka bir UNI·SIM uygulamasına, üstteki ad bunu gösterir (ör. “Bradley · PDF’ler”) ve hesabınızla **Çıkış yap** **Bu uygulamayı ayarla**’dadır. Oradan çıkış yapmak o tarayıcıdaki tüm UNI·SIM uygulamalarından çıkış yapar.
+
 Web sitesinde, indirme simgelerinin altından bilgisayar uygulaması hazır olduğunda haber verilmesini de isteyebilirsiniz. E-posta adresiniz yalnızca oraya yazarsanız bize gönderilir ve saklanan tek şey odur: bilgisayar uygulaması hazır olduğunda tek bir e-posta alırsınız; adres bundan sonraki 30 gün içinde, uygulama o zamana kadar hazır olmazsa da 24 ay sonra silinir.`,
   },
   {
@@ -204,7 +206,7 @@ Her onaylı isteğin bir sertifika sayfası vardır. Belgeyi, her imzalayanın e
 
 ## Nasıl değiştirilir
 
-1. Sağ üstte, profil resminizin yanındaki menüyü açın (bir belge açıkken adı **İşlemler**’dir) ve **Bu uygulamayı ayarla**’yı seçin.
+1. Sağ üstteki menüyü açın (bir belge açıkken adı **İşlemler**’dir) ve **Bu uygulamayı ayarla**’yı seçin.
 2. **Sayfa kaydırma** altında, sayfaların alt alta durması için **Dikey**’i, yan yana durması için **Yatay**’ı seçin.
 
 Bu ayar, henüz bir şey açmadan ana ekranda ya da açık bir belgedeyken değiştirilebilir. Açık bir belge hemen değişir ve okuduğunuz sayfada kalır.
