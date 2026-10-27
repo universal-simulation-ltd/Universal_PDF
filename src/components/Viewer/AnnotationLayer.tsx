@@ -611,7 +611,15 @@ function isResizable(a: Annotation): boolean {
   if (a.type === 'sigfield') return !a.locked
   // A folded note is an icon: there's no card to resize until it's opened.
   if (a.type === 'text' && a.noteFolded) return false
-  return a.type === 'image' || a.type === 'rect' || a.type === 'ellipse' || a.type === 'redact' || a.type === 'text'
+  return (
+    a.type === 'image' ||
+    a.type === 'rect' ||
+    a.type === 'ellipse' ||
+    a.type === 'redact' ||
+    a.type === 'text' ||
+    a.type === 'tick' ||
+    a.type === 'cross'
+  )
 }
 
 // Text gets side handles as well as corners: the corners scale the font (kept
@@ -2945,11 +2953,9 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
       endTextTransform(node)
       if (patch) update(a.id, patch)
     } else if (a.type === 'tick' || a.type === 'cross') {
-      update(a.id, {
-        x: node.x(),
-        y: node.y(),
-        rotation
-      } as Partial<Annotation>)
+      // The corners scale the mark — nodeTransformPatch turns that into its size.
+      const patch = nodeTransformPatch(a, node)
+      if (patch) update(a.id, patch)
     }
   }
 
@@ -3840,7 +3846,15 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 // Text corners scale the whole box (font included), so they
                 // have to stay proportional — the side handles are the ones
                 // that change width alone, by re-wrapping.
-                keepRatio={!isMulti && (single?.type === 'image' || single?.type === 'text')}
+                // A tick or cross has one size, not a width and a height, so
+                // its corners stay proportional too.
+                keepRatio={
+                  !isMulti &&
+                  (single?.type === 'image' ||
+                    single?.type === 'text' ||
+                    single?.type === 'tick' ||
+                    single?.type === 'cross')
+                }
                 // Bigger rotate arm + anchors on touch so they clear the finger
                 // and are easy to grab; desktop keeps the compact sizing.
                 rotateAnchorOffset={coarsePointer ? 40 : 28}
