@@ -2,10 +2,14 @@ import { isNativeShell } from './nativeOpen'
 
 // Where Universal PDF has accounts at all (James, 2026-10-12).
 //
-// The PHONE apps and the browser EXTENSION have NO sign-in: signing, sending
-// for signature and everything else works with no account and uploads nothing.
-// `@unisim/sdk`'s `noAccounts` is set for them (src/main.tsx), which also
-// keeps them signed out of any suite session the device holds.
+// The PHONE apps and the browser EXTENSION have NO account features: signing,
+// sending for signature and everything else works with no account and uploads
+// nothing. `@unisim/sdk`'s `noAccounts` is set for them (src/main.tsx). Since
+// SDK 0.211.0 that no longer keeps them signed out: a suite session the device
+// already holds is read and followed (Global Tuning comes with it), and the
+// extension's Tune this app offers a discreet Sign in (the phone screens draw
+// no SDK navbar, so offer none). The certified signature and the saved main
+// signature stay off here whatever the session (`accountsOff()`).
 //
 // The WEBSITE and the DESKTOP app keep an optional Universal ID, for the two
 // things that need one: the "Certified signature" route (the PDF is stored,
@@ -22,7 +26,7 @@ import { isNativeShell } from './nativeOpen'
 //   • any other `--mode desktop` page, or one that is not http(s), is the
 //     extension (chrome-extension://).
 
-/** True in the phone and extension builds: no sign-in, no uploads. */
+/** True in the phone and extension builds: no account features, no uploads. */
 export function accountsOff(): boolean {
   if (typeof window === 'undefined') return false
   if (window.desktop) return false

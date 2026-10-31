@@ -101,13 +101,14 @@ like a lie.
   certified signature, and the main signature saved in your account. You can
   delete it from inside the app: **Delete my account** at the foot of Global Tuning,
   in the profile menu. That deletes it in every UNI·SIM app, not only this one.
-  **The phone apps and the browser extension have no sign-in at all:** they run signed out even if the device is signed in to UNI·SIM
-  elsewhere, and make no account requests. See `noAccounts` in
+  **The phone apps and the browser extension have no account features** (no certified signature, no main signature saved to an account). If the device is already signed in to UNI·SIM
+  elsewhere, they recognise it so your suite-wide settings (colour scheme, language) come with you, and the extension's Tune this app offers a discreet Sign in. See `noAccounts` in
   [`src/main.tsx`](src/main.tsx) and [`src/lib/accounts.ts`](src/lib/accounts.ts).
 - **"You opened the app".** When you are signed in (on the website or in the
   desktop app), the app records one event saying the app was opened, so your
   account's activity page is accurate. It does not include anything about your file — not its name,
-  not its size. With no sign-in, the other builds never send it. See
+  not its size. The phone apps and the extension can send it too when they
+  recognise a session the device already holds; signed out, no build sends it. See
   `UsageTracker` in `@unisim/sdk`.
 - **An anonymous daily open count.** Once a day, the first time you open the
   app (after your first click or key press), it adds one to that day's total
@@ -169,7 +170,7 @@ like a lie.
 - **The changelog and update notice**, which is just fetching a list of
   releases.
 
-**The iPhone, iPad and Android apps work fully offline.** No sign-in, no
+**The iPhone, iPad and Android apps work fully offline.** No account needed, no
 open count, and every OCR model on board: nothing in them needs a connection.
 Only links you choose to follow (help guides, this page) open the web.
 
