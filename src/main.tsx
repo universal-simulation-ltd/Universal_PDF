@@ -106,7 +106,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <ErrorBoundary>
       <UniversalProvider config={universalConfig}>
         <I18nRoot>
-          <UsageTracker />
+          {/* Website and desktop only: the phone apps and the extension send
+              nothing, even when they recognise a session (James,
+              2026-10-31: "we see downloads anyway"; the store labels say
+              the phone app collects nothing). */}
+          {!noAccounts && <UsageTracker />}
           {signToken ? <SignMobilePage token={signToken} />
             : signDocToken ? <SignRequestPage token={signDocToken} />
             : certId ? <SignCertificatePage certId={certId} />

@@ -28,7 +28,8 @@ const unwired = files.filter((f) => !entries.some(([, file]) => file === `script
 const failed = []
 for (const [name, file] of entries) {
   const started = Date.now()
-  const r = spawnSync('npm', ['run', '-s', name], { cwd: ROOT, encoding: 'utf8' })
+  // `npm` is `npm.cmd` on Windows, which Node only spawns through a shell.
+  const r = spawnSync('npm', ['run', '-s', name], { cwd: ROOT, encoding: 'utf8', shell: process.platform === 'win32' })
   const secs = ((Date.now() - started) / 1000).toFixed(1)
   const ok = r.status === 0
   console.log(`${ok ? 'pass' : 'FAIL'} ${secs.padStart(5)}s  ${name}  (${file})`)

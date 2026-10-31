@@ -107,9 +107,9 @@ like a lie.
 - **"You opened the app".** When you are signed in (on the website or in the
   desktop app), the app records one event saying the app was opened, so your
   account's activity page is accurate. It does not include anything about your file — not its name,
-  not its size. The phone apps and the extension can send it too when they
-  recognise a session the device already holds; signed out, no build sends it. See
-  `UsageTracker` in `@unisim/sdk`.
+  not its size. The phone apps and the extension never send it, even when
+  they recognise a session the device already holds. See `UsageTracker` in
+  `@unisim/sdk` and [`src/main.tsx`](src/main.tsx).
 - **An anonymous daily open count.** Once a day, the first time you open the
   app (after your first click or key press), it adds one to that day's total
   for this app. It sends the app's name and the kind of platform ("web") and
