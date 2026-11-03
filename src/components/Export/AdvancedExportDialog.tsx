@@ -16,6 +16,11 @@ import { SigningRecordNote } from './SigningRecordNote'
 import { FLATTEN_BAR, worthOffering } from './worthOffering'
 import { useT, type Translator } from '../../i18n'
 import { formatSize } from './formatSize'
+import PagesPicker from './PagesPicker'
+import { PrintGlyph } from './ExportModal'
+import { printBytes } from '../../lib/printPdf'
+import { keepPages } from '../../lib/pdfPages'
+import { isWholeDocument, pageInView, pagesFor, type PagesChoice } from '../../lib/pageRange'
 
 // Actions ▸ Advanced ▸ Advanced export — the things that change what the
 // exported file IS, rather than how big it is: flatten, strip metadata, lock.
@@ -70,7 +75,11 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
   const fileName = usePdfStore((s) => s.fileName)
   const isXfa = usePdfStore((s) => s.isXfa)
   const annotations = useAnnotationStore((s) => s.annotations)
+  const numPages = usePdfStore((s) => s.numPages)
   const t = useT()
+  // Which pages go into the file — and to the printer (James, 2026-11-03).
+  const [pages, setPages] = useState<PagesChoice>({ kind: 'all' })
+  const pickedPages = pagesFor(pages, numPages, pageInView())
 
   // ⚠️ ONE boolean's worth of state, held as the quality itself. There is no
   // separate `flatten` flag to keep in step, and so no way for the checkbox and
@@ -125,6 +134,7 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
     setLockError(null)
     setKeepMeta(false)
     setScrubError(null)
+    setPages({ kind: 'all' })
   }, [open])
 
   useEffect(() => {
@@ -171,7 +181,24 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
       : null
 
   const previewName = previewExportName(fileName)
-  const blocked = !ready || !redactConfirmed || lockIncomplete(lock) || locking
+  const blocked = !ready || !redactConfirmed || lockIncomplete(lock) || locking || !pickedPages
+
+  // The finished pages before scrubbing and locking: flattened when the box is
+  // ticked, cut down to the chosen pages. Null when that is not possible yet.
+  async function pickedBytes(): Promise<Uint8Array | null> {
+    if (!annotated || !pickedPages) return null
+    if (flatten && !compressed) return null
+    const whole: Uint8Array = flatten ? compressed!.bytes : annotated
+    return isWholeDocument(pickedPages, numPages) ? whole.slice() : keepPages(whole, pickedPages)
+  }
+
+  // Print what this dialog would save, less the lock and the metadata — a
+  // printer has no use for either, and a locked file would ask for its
+  // password inside the print frame.
+  async function print() {
+    const bytes = await pickedBytes()
+    if (bytes) printBytes(bytes)
+  }
 
   async function download() {
     if (!annotated) return
@@ -183,7 +210,10 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
     // Widened to plain `Uint8Array` because the locked bytes come back over a
     // buffer TypeScript will not narrow to ArrayBuffer; both are the same
     // thing at runtime.
-    let bytes: Uint8Array = (flatten ? compressed!.bytes : annotated).slice()
+    // Cut to the chosen pages first: scrub and lock both run over the result.
+    const picked = await pickedBytes()
+    if (!picked) return
+    let bytes: Uint8Array = picked
 
     // ⚠️ BEFORE the lock, after the flatten. Both neighbours are load-and-save
     // passes over the whole document: the rasteriser writes a fresh file (with
@@ -478,6 +508,8 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
 
             <SigningRecordNote />
 
+            <PagesPicker value={pages} onChange={setPages} numPages={numPages} invalid={!pickedPages} />
+
             <p className="mt-4 text-xs text-slate-500">
               {t.rich('tools.export.saves_as', {
                 name: <span className="font-medium text-slate-700">{previewName}</span>
@@ -494,7 +526,7 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
             )}
             {lockError && <p className="mt-1 text-xs text-red-600">{lockError}</p>}
 
-            <div className="mt-2">
+            <div className="mt-2 grid grid-cols-[1fr_auto] gap-2">
               <button
                 onClick={() => { void download() }}
                 disabled={blocked}
@@ -510,6 +542,14 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
                       : lock.enabled
                         ? t('tools.advanced.download_locked')
                         : t('tools.export.download')}
+              </button>
+              <button
+                onClick={() => { void print() }}
+                disabled={!ready || !redactConfirmed || !pickedPages || (flatten && !compressed)}
+                className="px-3.5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-slate-700 flex items-center justify-center gap-2"
+              >
+                <PrintGlyph />
+                {t('tools.export.print')}
               </button>
             </div>
           </>

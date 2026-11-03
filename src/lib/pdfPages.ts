@@ -44,6 +44,11 @@ export async function applyPageOrderToPdf(
   return out.buffer.slice(out.byteOffset, out.byteOffset + out.byteLength) as ArrayBuffer
 }
 
+/** The same PDF with only these pages (indexes from 0), in this order. */
+export async function keepPages(bytes: Uint8Array, indexes: number[]): Promise<Uint8Array> {
+  return new Uint8Array(await applyPageOrderToPdf(bytes.slice().buffer as ArrayBuffer, indexes))
+}
+
 // Map old page indices to new ones for `newOrder`. Pages dropped from the
 // document do not appear in the map — callers should treat those as "remove".
 export function buildPageIndexMap(newOrder: number[]): Map<number, number> {

@@ -99,6 +99,13 @@ export default {
   'export.building_short': 'Building…',
   'export.download_filled_form': 'Download filled form',
   'export.print': 'Print',
+  'export.pages': 'Pages', // which pages to print or export
+  'export.pages_all': 'All',
+  'export.pages_current': 'This page', // the page on screen
+  'export.pages_custom': 'Choose', // type the pages yourself
+  'export.pages_placeholder': 'e.g. 1-3, 5',
+  'export.pages_invalid': 'Pages 1 to {count} only, e.g. 1-3, 5', // {count} = pages in the document
+  'export.pages_to_print': 'Pages to print',
   'export.percent_less': '−{pct}%', // size reduction, e.g. −12%
   'export.compressing': 'Compressing…',
   'export.no_images': 'Already as small as it goes — there are no images here to compress.',

@@ -13,6 +13,10 @@ import { FLATTEN_BAR, LOSSLESS_BAR, worthOffering } from './worthOffering'
 import { useT } from '../../i18n'
 import { formatNumber, formatSize } from './formatSize'
 import LockedOriginNote from '../Lock/LockedOriginNote'
+import { printBytes } from '../../lib/printPdf'
+import { keepPages } from '../../lib/pdfPages'
+import { isWholeDocument, pageInView, pagesFor, type PagesChoice } from '../../lib/pageRange'
+import PagesPicker from './PagesPicker'
 
 // The plain export: here is your document, here is what it weighs, take it.
 //
@@ -31,35 +35,6 @@ import LockedOriginNote from '../Lock/LockedOriginNote'
 // change the file is how the two would come to disagree.
 type Variant = 'original' | 'compressed' | 'flattened'
 
-function printBytes(bytes: Uint8Array) {
-  const blob = new Blob([bytes.slice() as BlobPart], { type: 'application/pdf' })
-  const url = URL.createObjectURL(blob)
-  const iframe = document.createElement('iframe')
-  iframe.style.position = 'fixed'
-  iframe.style.right = '0'
-  iframe.style.bottom = '0'
-  iframe.style.width = '0'
-  iframe.style.height = '0'
-  iframe.style.border = '0'
-  iframe.src = url
-  iframe.onload = () => {
-    setTimeout(() => {
-      try {
-        iframe.contentWindow?.focus()
-        iframe.contentWindow?.print()
-      } catch (err) {
-        console.error(err)
-        window.open(url, '_blank')
-      }
-    }, 50)
-  }
-  document.body.appendChild(iframe)
-  setTimeout(() => {
-    URL.revokeObjectURL(url)
-    iframe.remove()
-  }, 60_000)
-}
-
 interface Props {
   open: boolean
   onClose: () => void
@@ -71,7 +46,12 @@ export default function ExportModal({ open, onClose }: Props) {
   const setPreviewOpen = usePdfStore((s) => s.setPreviewOpen)
   const setAdvancedExportOpen = usePdfStore((s) => s.setAdvancedExportOpen)
   const annotations = useAnnotationStore((s) => s.annotations)
+  const numPages = usePdfStore((s) => s.numPages)
   const t = useT()
+  // Which pages Print sends (James, 2026-11-03). Print only: Download keeps
+  // following the tab and nothing else (see the note at the top).
+  const [pages, setPages] = useState<PagesChoice>({ kind: 'all' })
+  const pickedPages = pagesFor(pages, numPages, pageInView())
 
   // ⚠️ 'light' and nothing else. It is the LOSSLESS re-save — an object-stream
   // rebuild that keeps the text layer — so this dialog can offer a smaller copy
@@ -125,6 +105,7 @@ export default function ExportModal({ open, onClose }: Props) {
     if (!open) return
     setTab('compressed')
     setRedactConfirm('')
+    setPages({ kind: 'all' })
   }, [open])
 
   useEffect(() => {
@@ -191,9 +172,12 @@ export default function ExportModal({ open, onClose }: Props) {
     onClose()
   }
 
-  function doPrint() {
+  async function doPrint() {
     if (!annotated) return
-    printBytes(annotated)
+    // An XFA form is printed whole: cutting pages out of one loses the form.
+    const keep = isXfa ? null : pickedPages
+    if (!isXfa && !keep) return
+    printBytes(keep && !isWholeDocument(keep, numPages) ? await keepPages(annotated, keep) : annotated)
   }
 
   return (
@@ -254,7 +238,7 @@ export default function ExportModal({ open, onClose }: Props) {
                 {t('tools.export.download_filled_form')}
               </button>
               <button
-                onClick={doPrint}
+                onClick={() => { void doPrint() }}
                 disabled={!annotated}
                 className="px-3.5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-slate-700 flex items-center justify-center gap-2"
               >
@@ -392,6 +376,14 @@ export default function ExportModal({ open, onClose }: Props) {
 
             <SigningRecordNote />
 
+            <PagesPicker
+              label={t('tools.export.pages_to_print')}
+              value={pages}
+              onChange={setPages}
+              numPages={numPages}
+              invalid={!pickedPages}
+            />
+
             {/* The name, before the button is pressed. It is the point of the
                 change and it is not otherwise guessable — a second export from
                 the same document goes to v2, not v1. */}
@@ -442,8 +434,8 @@ export default function ExportModal({ open, onClose }: Props) {
                 {t('tools.export.preview')}
               </button>
               <button
-                onClick={doPrint}
-                disabled={!ready || !redactConfirmed}
+                onClick={() => { void doPrint() }}
+                disabled={!ready || !redactConfirmed || !pickedPages}
                 className="px-3.5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-slate-700 flex items-center justify-center gap-2"
               >
                 <PrintGlyph />
@@ -541,7 +533,7 @@ function PreviewGlyph() {
   )
 }
 
-function PrintGlyph() {
+export function PrintGlyph() {
   return (
     <Glyph>
       <path d="M6 9V3h12v6" />
