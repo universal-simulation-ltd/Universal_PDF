@@ -74,6 +74,11 @@ import { usePageNumberSync } from './components/PageNumbers/usePageNumberSync'
 
 const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_PDF'
 
+// A name ending in s takes the apostrophe alone: "James’ PDFs", not
+// "James’s PDFs" (James, 2026-11-03, suite-wide). Only English says "’s",
+// so the other languages' titles pass through untouched.
+const whose = (title: string, name: string) => (/s$/i.test(name.trim()) ? title.replace(`${name}’s`, `${name}’`) : title)
+
 // A document the OS handed over — the desktop's double-click / "Open with", an
 // installed PWA's launchQueue, the iOS/Android share sheet — goes through the
 // same front door as a drop on the landing page (`openHandedOver` / `openFiles`
@@ -564,7 +569,7 @@ export default function App() {
             // 0.206.0). PDF asks nobody to sign in; someone signed in to any
             // unisim.co.uk app is recognised through the shared cookie.
             accountInTune
-            personalTitle={(name) => (name ? t('app.personal_title', { name }) : t('app.personal_title_mine'))}
+            personalTitle={(name) => (name ? whose(t('app.personal_title', { name }), name) : t('app.personal_title_mine'))}
             // The SDK's "Delete my account" stays ON here (its default in a
             // native shell): this is the menu a phone opens first. It was
             // switched off to stop the row doubling — but the double was in
