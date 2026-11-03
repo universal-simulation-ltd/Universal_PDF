@@ -82,6 +82,16 @@ function svg({ wide = false, back = true, page = true } = {}) {
 </svg>`
 }
 
+// SVG_OUT=<file>: write the icon as one SVG (the 1024 square, every layer) and
+// stop. The suite's marks generator puts that file on every web surface once
+// the app is published beyond the web (James, 2026-11-03): the favicon, the
+// header logo, the app switcher, the portal and the marketing site. It lives
+// at backoffice/universal-platform/scripts/app-marks/own-icons/<id>.svg.
+if (process.env.SVG_OUT) {
+  writeFileSync(process.env.SVG_OUT, svg() + '\n')
+  process.exit(0)
+}
+
 const browser = await chromium.launch()
 
 /**
