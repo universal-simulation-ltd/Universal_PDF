@@ -1731,7 +1731,22 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     // ...unless "Stay on the last tool" is on and the pen or highlighter is
     // armed: then a press on a mark draws across it, as it would on paper.
     const drawThrough = DRAW_THROUGH_TOOLS.has(tool) && useToolPrefs.getState().stayOnTool
-    if (e.target !== stage && !redactTapTargetRef.current && !drawThrough) {
+    // ...and with Text in hand, a click on a signature, picture, shape or mark
+    // puts the text THERE, on top of it, rather than selecting the thing under
+    // the pointer (James, 2026-11-03: "place the text instead of selecting
+    // another item e.g. signature"). Typing a name or date beside or over a
+    // signature is the common case, and the old answer dropped the Text tool
+    // for Select. A click on existing TEXT still selects it, so a box can be
+    // picked up and moved without a stack of empty ones growing on it.
+    const textThrough =
+      tool === 'text' &&
+      e.target !== stage &&
+      (() => {
+        const id = getAnnotationIdFromTarget(e.target)
+        const under = id ? useAnnotationStore.getState().annotations.find((a) => a.id === id) : undefined
+        return !!under && under.type !== 'text'
+      })()
+    if (e.target !== stage && !redactTapTargetRef.current && !drawThrough && !textThrough) {
       const hitId = getAnnotationIdFromTarget(e.target)
       if (hitId) {
         // A locked signature box (baked into an exported page) is click-to-sign

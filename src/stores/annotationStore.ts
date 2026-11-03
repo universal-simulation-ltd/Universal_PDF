@@ -90,6 +90,11 @@ interface AnnotationState {
   // right after a page change (usePageNumberSync). Undo lands on the marks as
   // they were, and the sync puts them right again.
   quietUpdateMany: (patches: { id: string; patch: Partial<Annotation> }[]) => void
+  // Move these marks by (dx, dy) page units — the arrow keys (James,
+  // 2026-11-03). A run of presses on the same selection is ONE undo step, so
+  // holding an arrow down doesn't bury everything before it under a hundred
+  // one-pixel steps. Locked signature boxes stay where they were baked.
+  nudge: (ids: string[], dx: number, dy: number) => void
   clearPage: (pageIndex: number) => void
   clearAll: () => void
   // Hard reset for loading a different PDF: drops every annotation AND the
@@ -103,6 +108,18 @@ interface AnnotationState {
 }
 
 const MAX_HISTORY = 100
+
+// The run of arrow-key nudges in progress: which marks, and the annotations
+// array the last nudge produced. The next nudge joins the run (no new undo
+// step) only while both still match — any other change in between, or a
+// different selection, starts a fresh step.
+let nudgeRun: { key: string; after: Annotation[] } | null = null
+
+function nudged(a: Annotation, dx: number, dy: number): Annotation {
+  if (a.type === 'sigfield' && a.locked) return a
+  if (a.type === 'draw') return { ...a, points: a.points.map((v, i) => v + (i % 2 === 0 ? dx : dy)) }
+  return { ...a, x: a.x + dx, y: a.y + dy }
+}
 
 function pushPast(past: Annotation[][], current: Annotation[]): Annotation[][] {
   const next = [...past, current]
@@ -288,6 +305,16 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
         past: pushPast(s.past, s.annotations),
         future: []
       }
+    }),
+  nudge: (ids, dx, dy) =>
+    set((s) => {
+      const move = new Set(ids)
+      if (move.size === 0 || !s.annotations.some((a) => move.has(a.id))) return {}
+      const key = [...move].sort().join(',')
+      const sameRun = nudgeRun !== null && nudgeRun.key === key && nudgeRun.after === s.annotations
+      const annotations = s.annotations.map((a) => (move.has(a.id) ? nudged(a, dx, dy) : a))
+      nudgeRun = { key, after: annotations }
+      return sameRun ? { annotations, future: [] } : { annotations, past: pushPast(s.past, s.annotations), future: [] }
     }),
   swapMany: (removeIds, add) =>
     set((s) => {

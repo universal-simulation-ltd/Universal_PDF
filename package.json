@@ -57,6 +57,7 @@
     "test:link-click": "node e2e/link-click.e2e.mjs",
     "test:line-tap": "node e2e/line-tap.e2e.mjs",
     "test:shape-tap": "node e2e/shape-tap.e2e.mjs",
+    "test:text-over-nudge": "node e2e/text-over-nudge.e2e.mjs",
     "test:select-area": "node e2e/select-area-touch.e2e.mjs",
     "test:text-resize": "node e2e/text-box-resize.e2e.mjs",
     "test:mark-resize": "node e2e/mark-resize.e2e.mjs",

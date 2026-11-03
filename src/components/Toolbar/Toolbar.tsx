@@ -340,10 +340,18 @@ function selectGroupTool(tool: Tool): Tool {
   return tool === 'hand' || tool === 'marquee' || tool === 'selecttext' ? tool : 'select'
 }
 
+// Arrow key → direction a selection is nudged in.
+const ARROW_STEPS: Record<string, [number, number] | undefined> = {
+  ArrowLeft: [-1, 0],
+  ArrowRight: [1, 0],
+  ArrowUp: [0, -1],
+  ArrowDown: [0, 1]
+}
+
 // Module-level in-app clipboard for annotations (Ctrl+C/X/V)
 let clipboardAnnotation: Annotation | null = null
 
-// Shared keyboard shortcuts: Delete/Backspace, Ctrl+Z, Ctrl+C/X/V.
+// Shared keyboard shortcuts: Delete/Backspace, arrows (nudge), Ctrl+Z, Ctrl+C/X/V.
 // Mounted once at the App level whenever a PDF is loaded.
 export function useToolbarKeyboardShortcuts(enabled: boolean) {
   const selectedId = useAnnotationStore((s) => s.selectedId)
@@ -420,6 +428,20 @@ export function useToolbarKeyboardShortcuts(enabled: boolean) {
           e.preventDefault()
           pdf.setPresentOpen(true)
         }
+        return
+      }
+      // Arrow keys move what's selected one screen pixel at a time, for exact
+      // placement; Shift moves ten (James, 2026-11-03). Pixels, not page
+      // units, so a press moves the same distance on screen at any zoom. With
+      // nothing selected the keys are left alone and scroll the page.
+      const step = ARROW_STEPS[e.key]
+      if (step && !mod && !e.altKey) {
+        const ids = selectedIds.length > 0 ? selectedIds : selectedId ? [selectedId] : []
+        if (ids.length === 0) return
+        e.preventDefault()
+        const st = useAnnotationStore.getState()
+        const px = (e.shiftKey ? 10 : 1) / (st.viewScale || 1)
+        st.nudge(ids, step[0] * px, step[1] * px)
         return
       }
       if (e.key === 'Delete' || e.key === 'Backspace') {
