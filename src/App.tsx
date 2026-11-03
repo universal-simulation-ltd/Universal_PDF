@@ -293,6 +293,24 @@ export default function App() {
     })
   }, [loadFile])
 
+  // "Open in Universal PDF" from another Universal App (Universal Invoices'
+  // Sign window, 2026-11-03): it opens `/pdf/?receive` in a new tab, waits for
+  // this tab to say it is ready, then posts the PDF. Only a page of this same
+  // site that opened this tab is listened to — a stranger cannot push a file in.
+  useEffect(() => {
+    if (!new URLSearchParams(window.location.search).has('receive') || !window.opener) return
+    const trusted = (origin: string) => origin === window.location.origin || import.meta.env.DEV
+    const onMessage = (e: MessageEvent) => {
+      const m = e.data as { type?: string; name?: string; mime?: string; bytes?: ArrayBuffer } | null
+      if (e.source !== window.opener || !trusted(e.origin) || m?.type !== 'unisim-open/file' || !(m.bytes instanceof ArrayBuffer)) return
+      window.removeEventListener('message', onMessage)
+      void openFiles([new File([m.bytes], m.name || 'document.pdf', { type: m.mime || 'application/pdf' })])
+    }
+    window.addEventListener('message', onMessage)
+    ;(window.opener as Window).postMessage({ type: 'unisim-open/ready' }, import.meta.env.DEV ? '*' : window.location.origin)
+    return () => window.removeEventListener('message', onMessage)
+  }, [])
+
   // ⚠️ Native only, and it must be installed for the WHOLE session rather than
   // by the components that own the links: nearly every external link in the app
   // belongs to an `@unisim/sdk` dialog or to a PDF's own link annotations. See
