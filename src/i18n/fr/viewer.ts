@@ -147,6 +147,14 @@ const viewer: Messages['viewer'] = {
   'nav.move_up': 'Monter la page {page}',
   'nav.move_down_title': 'Descendre la page',
   'nav.move_down': 'Descendre la page {page}',
+  'nav.refresh': 'Actualiser les miniatures',
+  'nav.refresh_title': 'Redessiner les miniatures avec vos annotations',
+  'nav.refresh_failed': 'Impossible d’actualiser les miniatures',
+  'nav.turn': 'Faire pivoter la page {page} de 90° vers la droite',
+  'nav.turn_title': 'Pivoter de 90° vers la droite',
+  'nav.apply_changes': 'Appliquer les modifications',
+  'nav.delete_yes': 'Supprimer',
+  'nav.delete_dont_ask': 'Ne plus demander',
 
   // PlacementHint — "Tap" on a touchscreen, "Click" with a mouse
   'placement.tap_name': 'Touchez l’endroit où placer le nom',
@@ -177,6 +185,8 @@ const viewer: Messages['viewer'] = {
   'prefs.note_top_left_note': 'Sinon, le texte d’une nouvelle note est centré.',
   'prefs.note_set_size': 'Commencer les notes adhésives avec une taille de texte fixe', // off (default): new sticky notes fit their words to the card
   'prefs.note_set_size_note': 'Sinon, le texte d’une nouvelle note grandit ou rétrécit pour la remplir.',
+  'prefs.no_delete_confirm': 'Ne pas confirmer la suppression de pages',
+  'prefs.no_delete_confirm_note': 'Une page supprimée depuis la liste des pages disparaît aussitôt. Annuler la rétablit.',
   // Tune this app ▸ Page scrolling
   'scroll.label': 'Défilement des pages',
   'scroll.vertical': 'Vertical',

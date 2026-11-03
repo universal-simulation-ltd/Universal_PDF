@@ -59,6 +59,7 @@
     "test:shape-tap": "node e2e/shape-tap.e2e.mjs",
     "test:text-over-nudge": "node e2e/text-over-nudge.e2e.mjs",
     "test:print-pages": "node e2e/print-pages.e2e.mjs",
+    "test:pages-panel": "node e2e/pages-panel.e2e.mjs",
     "test:select-area": "node e2e/select-area-touch.e2e.mjs",
     "test:text-resize": "node e2e/text-box-resize.e2e.mjs",
     "test:mark-resize": "node e2e/mark-resize.e2e.mjs",

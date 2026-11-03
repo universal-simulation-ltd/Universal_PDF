@@ -4,8 +4,9 @@ import { useT } from '../../i18n'
 import { useToolPrefs } from '../../stores/toolPrefsStore'
 
 /**
- * Tune this app ▸ "Stay on the last tool", "Don't confirm annotations", and
- * how a new sticky note starts (James, 2026-10-13). All off by default, like
+ * Tune this app ▸ "Stay on the last tool", "Don't confirm annotations",
+ * how a new sticky note starts (James, 2026-10-13), and "Don't confirm page
+ * deletes" (2026-11-03). All off by default, like
  * every switch in the suite; what they do is in stores/toolPrefsStore.ts.
  * Same look as the "Lock saved signatures" row (SignatureVaultRow).
  */
@@ -19,6 +20,8 @@ export default function ToolBehaviourRows() {
   const noteSetSize = useToolPrefs((s) => s.noteSetSize)
   const setNoteTopLeft = useToolPrefs((s) => s.setNoteTopLeft)
   const setNoteSetSize = useToolPrefs((s) => s.setNoteSetSize)
+  const noDeleteConfirm = useToolPrefs((s) => s.noDeleteConfirm)
+  const setNoDeleteConfirm = useToolPrefs((s) => s.setNoDeleteConfirm)
   return (
     <>
       <SwitchRow
@@ -46,6 +49,14 @@ export default function ToolBehaviourRows() {
         note={t('viewer.prefs.note_set_size_note')}
         checked={noteSetSize}
         onChange={setNoteSetSize}
+      />
+      {/* Also ticked by "Don't ask again" on the delete question in the Pages
+          list, so this is the way to have the question back. */}
+      <SwitchRow
+        label={t('viewer.prefs.no_delete_confirm')}
+        note={t('viewer.prefs.no_delete_confirm_note')}
+        checked={noDeleteConfirm}
+        onChange={setNoDeleteConfirm}
       />
     </>
   )

@@ -147,6 +147,14 @@ const viewer: Messages['viewer'] = {
   'nav.move_up': 'Seite {page} nach oben verschieben',
   'nav.move_down_title': 'Seite nach unten verschieben',
   'nav.move_down': 'Seite {page} nach unten verschieben',
+  'nav.refresh': 'Vorschaubilder aktualisieren',
+  'nav.refresh_title': 'Vorschaubilder mit deinen Anmerkungen neu zeichnen',
+  'nav.refresh_failed': 'Vorschaubilder konnten nicht aktualisiert werden',
+  'nav.turn': 'Seite {page} um 90° im Uhrzeigersinn drehen',
+  'nav.turn_title': 'Um 90° im Uhrzeigersinn drehen',
+  'nav.apply_changes': 'Änderungen übernehmen',
+  'nav.delete_yes': 'Löschen',
+  'nav.delete_dont_ask': 'Nicht mehr fragen',
 
   // PlacementHint — "Tap" on a touchscreen, "Click" with a mouse
   'placement.tap_name': 'Tippe dorthin, wo der Name stehen soll',
@@ -177,6 +185,8 @@ const viewer: Messages['viewer'] = {
   'prefs.note_top_left_note': 'Sonst steht der Text einer neuen Notiz mittig.',
   'prefs.note_set_size': 'Haftnotizen mit fester Textgröße beginnen', // off (default): new sticky notes fit their words to the card
   'prefs.note_set_size_note': 'Sonst wird der Text einer neuen Notiz größer oder kleiner, bis er sie füllt.',
+  'prefs.no_delete_confirm': 'Löschen von Seiten nicht bestätigen',
+  'prefs.no_delete_confirm_note': 'Eine in der Seitenliste gelöschte Seite verschwindet sofort. Rückgängig holt sie zurück.',
   // Tune this app ▸ Page scrolling
   'scroll.label': 'Blätterrichtung',
   'scroll.vertical': 'Vertikal',

@@ -147,6 +147,14 @@ export default {
   'nav.move_up': 'Move page {page} up',
   'nav.move_down_title': 'Move page down',
   'nav.move_down': 'Move page {page} down',
+  'nav.refresh': 'Refresh thumbnails',
+  'nav.refresh_title': 'Redraw the thumbnails with your annotations on them',
+  'nav.refresh_failed': 'Couldn’t refresh the thumbnails',
+  'nav.turn': 'Turn page {page} 90° clockwise',
+  'nav.turn_title': 'Turn 90° clockwise',
+  'nav.apply_changes': 'Apply changes',
+  'nav.delete_yes': 'Delete',
+  'nav.delete_dont_ask': 'Don’t ask again',
 
   // PlacementHint — "Tap" on a touchscreen, "Click" with a mouse
   'placement.tap_name': 'Tap where the name should go',
@@ -177,6 +185,8 @@ export default {
   'prefs.note_top_left_note': 'Otherwise a new note’s words are centred on it.',
   'prefs.note_set_size': 'Start sticky notes at a set text size', // off (default): new sticky notes fit their words to the card
   'prefs.note_set_size_note': 'Otherwise a new note’s words grow or shrink to fill it.',
+  'prefs.no_delete_confirm': 'Don’t confirm page deletes',
+  'prefs.no_delete_confirm_note': 'A page deleted from the Pages list goes straight away. Undo still brings it back.',
   // Tune this app ▸ Page scrolling
   'scroll.label': 'Page scrolling',
   'scroll.vertical': 'Vertical',

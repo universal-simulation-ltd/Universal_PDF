@@ -16,6 +16,9 @@ import { persist } from 'zustand/middleware'
 //     (James, 2026-10-13: "have both enabled by default and in tuning this
 //     app have the default defined by user"). The note's own pill changes
 //     only that note.
+//   • `noDeleteConfirm` — Tune this app ▸ "Don't confirm page deletes", also
+//     set by "Don't ask again" on the Pages list's delete question (James,
+//     2026-11-03). Undo still brings a deleted page back.
 //   • `penColours` / `highlightColours` — the two colour shortcuts beside the
 //     pen and the highlighter in the toolbar. A custom colour picked from the
 //     rainbow goes in first and the older of the two drops out: two at most.
@@ -39,6 +42,7 @@ export type ColourKind = 'pen' | 'highlight'
 interface ToolPrefsState {
   stayOnTool: boolean
   noConfirm: boolean
+  noDeleteConfirm: boolean
   penColours: string[]
   highlightColours: string[]
   // How a NEW sticky note starts. Centred and fitted unless these are on —
@@ -49,6 +53,7 @@ interface ToolPrefsState {
   setNoteSetSize: (v: boolean) => void
   setStayOnTool: (v: boolean) => void
   setNoConfirm: (v: boolean) => void
+  setNoDeleteConfirm: (v: boolean) => void
   /** Pin a colour as a shortcut: first in line, the oldest drops out past two. */
   addPreferredColour: (kind: ColourKind, hex: string) => void
   reset: () => void
@@ -57,6 +62,7 @@ interface ToolPrefsState {
 const DEFAULTS = {
   stayOnTool: false,
   noConfirm: false,
+  noDeleteConfirm: false,
   penColours: DEFAULT_PEN_COLOURS,
   highlightColours: DEFAULT_HIGHLIGHT_COLOURS,
   noteTopLeft: false,
@@ -69,6 +75,7 @@ export const useToolPrefs = create<ToolPrefsState>()(
       ...DEFAULTS,
       setStayOnTool: (stayOnTool) => set({ stayOnTool }),
       setNoConfirm: (noConfirm) => set({ noConfirm }),
+      setNoDeleteConfirm: (noDeleteConfirm) => set({ noDeleteConfirm }),
       setNoteTopLeft: (noteTopLeft) => set({ noteTopLeft }),
       setNoteSetSize: (noteSetSize) => set({ noteSetSize }),
       addPreferredColour: (kind, hex) =>
@@ -87,6 +94,7 @@ export const useToolPrefs = create<ToolPrefsState>()(
       partialize: (s) => ({
         stayOnTool: s.stayOnTool,
         noConfirm: s.noConfirm,
+        noDeleteConfirm: s.noDeleteConfirm,
         penColours: s.penColours,
         highlightColours: s.highlightColours,
         noteTopLeft: s.noteTopLeft,

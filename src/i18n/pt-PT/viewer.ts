@@ -147,6 +147,14 @@ const viewer: Messages['viewer'] = {
   'nav.move_up': 'Mover a página {page} para cima',
   'nav.move_down_title': 'Mover página para baixo',
   'nav.move_down': 'Mover a página {page} para baixo',
+  'nav.refresh': 'Atualizar miniaturas',
+  'nav.refresh_title': 'Redesenhar as miniaturas com as suas anotações',
+  'nav.refresh_failed': 'Não foi possível atualizar as miniaturas',
+  'nav.turn': 'Rodar a página {page} 90° no sentido dos ponteiros do relógio',
+  'nav.turn_title': 'Rodar 90° no sentido dos ponteiros do relógio',
+  'nav.apply_changes': 'Aplicar alterações',
+  'nav.delete_yes': 'Eliminar',
+  'nav.delete_dont_ask': 'Não voltar a perguntar',
 
   // PlacementHint — "Tap" on a touchscreen, "Click" with a mouse
   'placement.tap_name': 'Toque onde o nome deve ficar',
@@ -177,6 +185,8 @@ const viewer: Messages['viewer'] = {
   'prefs.note_top_left_note': 'Caso contrário, o texto de uma nota nova fica centrado.',
   'prefs.note_set_size': 'Começar as notas adesivas com um tamanho de texto fixo', // off (default): new sticky notes fit their words to the card
   'prefs.note_set_size_note': 'Caso contrário, o texto de uma nota nova aumenta ou diminui até a preencher.',
+  'prefs.no_delete_confirm': 'Não confirmar a eliminação de páginas',
+  'prefs.no_delete_confirm_note': 'Uma página eliminada na lista de páginas desaparece logo. Anular repõe-na.',
   // Tune this app ▸ Page scrolling
   'scroll.label': 'Deslocamento das páginas',
   'scroll.vertical': 'Vertical',

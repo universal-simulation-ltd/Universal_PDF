@@ -147,6 +147,14 @@ const viewer: Messages['viewer'] = {
   'nav.move_up': '{page}. sayfayı yukarı taşı',
   'nav.move_down_title': 'Sayfayı aşağı taşı',
   'nav.move_down': '{page}. sayfayı aşağı taşı',
+  'nav.refresh': 'Küçük resimleri yenile',
+  'nav.refresh_title': 'Küçük resimleri notlarınızla yeniden çiz',
+  'nav.refresh_failed': 'Küçük resimler yenilenemedi',
+  'nav.turn': '{page}. sayfayı saat yönünde 90° döndür',
+  'nav.turn_title': 'Saat yönünde 90° döndür',
+  'nav.apply_changes': 'Değişiklikleri uygula',
+  'nav.delete_yes': 'Sil',
+  'nav.delete_dont_ask': 'Bir daha sorma',
 
   // PlacementHint — "Tap" on a touchscreen, "Click" with a mouse
   'placement.tap_name': 'Adın yerleşeceği yere dokunun',
@@ -177,6 +185,8 @@ const viewer: Messages['viewer'] = {
   'prefs.note_top_left_note': 'Aksi halde yeni notun metni ortalanır.',
   'prefs.note_set_size': 'Yapışkan notlar sabit metin boyutuyla başlasın', // off (default): new sticky notes fit their words to the card
   'prefs.note_set_size_note': 'Aksi halde yeni notun metni notu dolduracak şekilde büyür ya da küçülür.',
+  'prefs.no_delete_confirm': 'Sayfa silmeyi onaylatma',
+  'prefs.no_delete_confirm_note': 'Sayfalar listesinde silinen sayfa hemen gider. Geri al onu geri getirir.',
   // Tune this app ▸ Page scrolling
   'scroll.label': 'Sayfa kaydırma',
   'scroll.vertical': 'Dikey',

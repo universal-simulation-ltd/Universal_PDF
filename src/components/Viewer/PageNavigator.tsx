@@ -4,6 +4,9 @@ import { useT } from '../../i18n'
 import { scrollToPage } from '../../lib/links'
 import { usePageThumbnails } from '../../hooks/usePageThumbnails'
 import { notice } from '../../lib/notice'
+import { useAnnotatedThumbDoc } from '../../hooks/useAnnotatedThumbDoc'
+import { useTurned } from '../../hooks/useTurnedImage'
+import { useToolPrefs } from '../../stores/toolPrefsStore'
 
 // Thumbnails — when they are drawn, how big, and how many are kept — live in
 // `usePageThumbnails`. ⚠️ This component is ALWAYS mounted (App.tsx), so
@@ -19,9 +22,13 @@ export default function PageNavigator() {
   const setOpen = usePdfStore((s) => s.setPageNavOpen)
   const deletePage = usePdfStore((s) => s.deletePage)
   const applyPageOrder = usePdfStore((s) => s.applyPageOrder)
+  const applyPageChanges = usePdfStore((s) => s.applyPageChanges)
 
+  const isXfa = usePdfStore((s) => s.isXfa)
   const paneRef = useRef<HTMLElement>(null)
-  const thumbFor = usePageThumbnails(doc, numPages, open, paneRef)
+  // Refresh draws the thumbnails from an annotated copy — see the hook.
+  const { thumbDoc, refresh, refreshing } = useAnnotatedThumbDoc(doc, numPages)
+  const thumbFor = usePageThumbnails(thumbDoc ?? doc, numPages, open, paneRef)
   const [busy, setBusy] = useState(false)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [dropTarget, setDropTarget] = useState<{ index: number; pos: DropPosition } | null>(null)
@@ -37,12 +44,21 @@ export default function PageNavigator() {
   // document as it stands, which is exactly what applyPageOrder takes.
   const [order, setOrder] = useState<number[] | null>(null)
   const slots = order ?? Array.from({ length: numPages }, (_, i) => i)
-  const pending = order !== null
+  // Quarter turns clockwise, by page index, staged with the order and applied
+  // by the same tick (James, 2026-11-03: "like the mobile app need an option to
+  // rotate the page ... 90° all the way round"). A fourth turn is no turn.
+  const [turns, setTurns] = useState<Record<number, number>>({})
+  const turned = Object.values(turns).some((q) => q % 4 !== 0)
+  const pending = order !== null || turned
+  // The page waiting on "Delete page N?", when the question is up.
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null)
 
   // Staged moves belong to the document they were staged against — a delete
   // or reorder swaps the underlying PDFDocumentProxy.
   useEffect(() => {
     setOrder(null)
+    setTurns({})
+    setConfirmDelete(null)
   }, [doc, numPages])
 
   if (!doc || !open) return null
@@ -54,14 +70,20 @@ export default function PageNavigator() {
     }
   }
 
-  async function handleDelete(i: number) {
-    // Deleting mid-reorder would mean two rewrites and two sets of indices to
-    // keep straight. The pane asks for the order to be settled first.
+  // Deleting mid-reorder would mean two rewrites and two sets of indices to
+  // keep straight. The pane asks for the order to be settled first.
+  //
+  // The question is the app's own, not window.confirm, so it can carry
+  // "Don't ask again" (James, 2026-11-03). Ticked, that is Tune this app ▸
+  // "Don't confirm page deletes", which is also the way to have it back.
+  function handleDelete(i: number) {
     if (busy || numPages <= 1 || pending) return
-    const ok = window.confirm(
-      t('viewer.nav.delete_confirm', { page: i + 1 })
-    )
-    if (!ok) return
+    if (useToolPrefs.getState().noDeleteConfirm) void deleteNow(i)
+    else setConfirmDelete(i)
+  }
+
+  async function deleteNow(i: number) {
+    if (busy || numPages <= 1 || pending) return
     setBusy(true)
     try {
       await deletePage(i)
@@ -84,15 +106,33 @@ export default function PageNavigator() {
     setOrder(next.every((idx, i) => idx === i) ? null : next)
   }
 
+  // A quarter turn clockwise, staged. Four come back round to none.
+  function handleTurn(pageIndex: number) {
+    if (busy) return
+    setTurns((prev) => {
+      const q = ((prev[pageIndex] ?? 0) + 1) % 4
+      const next = { ...prev }
+      if (q) next[pageIndex] = q
+      else delete next[pageIndex]
+      return next
+    })
+  }
+
+  function discardChanges() {
+    setOrder(null)
+    setTurns({})
+  }
+
   async function applyOrder() {
-    if (!order || busy) return
+    if (!pending || busy) return
     setBusy(true)
     try {
-      await applyPageOrder(order)
+      if (turned) await applyPageChanges(slots, turns)
+      else if (order) await applyPageOrder(order)
       // applyPageOrder swaps the document, and the effect above clears the
       // staging with it — but it returns early for a no-op order, so clear it
       // here too rather than leaving a confirm bar over nothing to confirm.
-      setOrder(null)
+      discardChanges()
     } catch (err) {
       console.error(err)
       notice(t('viewer.nav.reorder_failed'))
@@ -161,6 +201,39 @@ export default function PageNavigator() {
           <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
             {t('viewer.bar.pages')}
           </div>
+          <div className="flex-1" />
+          {/* Thumbnails come from the PDF, which has no annotations in it until
+              export — this redraws them with the annotations baked in. Not for
+              XFA forms, which the annotate pass cannot build. */}
+          {!isXfa && (
+            <button
+              type="button"
+              onClick={() => {
+                void refresh().catch((err) => {
+                  console.error(err)
+                  notice(t('viewer.nav.refresh_failed'))
+                })
+              }}
+              disabled={refreshing}
+              title={t('viewer.nav.refresh_title')}
+              aria-label={t('viewer.nav.refresh')}
+              className="text-slate-400 hover:text-slate-700 w-7 h-7 flex items-center justify-center rounded-md hover:bg-slate-100 disabled:cursor-wait"
+            >
+              <svg
+                viewBox="0 0 16 16"
+                className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9" />
+                <path d="M13.5 2.5v3h-3" />
+              </svg>
+            </button>
+          )}
           <button
             onClick={() => setOpen(false)}
             className="md:hidden text-slate-400 hover:text-slate-700 w-7 h-7 flex items-center justify-center"
@@ -190,6 +263,7 @@ export default function PageNavigator() {
               total={numPages}
               pageIndex={pageIndex}
               thumb={thumbFor(pageIndex)}
+              turns={turns[pageIndex] ?? 0}
               busy={busy}
               pending={pending}
               dragging={dragIndex === i}
@@ -200,6 +274,7 @@ export default function PageNavigator() {
               // where the page still IS, not at the slot it is being dragged to.
               onClick={() => goToPage(pageIndex)}
               onDelete={() => handleDelete(i)}
+              onTurn={() => handleTurn(pageIndex)}
               onMoveUp={() => handleMove(i, i - 1)}
               onMoveDown={() => handleMove(i, i + 1)}
               onDragStart={(e) => onDragStart(e, i)}
@@ -216,7 +291,7 @@ export default function PageNavigator() {
           <div className="sticky bottom-0 z-10 bg-white border-t border-slate-200 px-2 py-2 flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setOrder(null)}
+              onClick={discardChanges}
               disabled={busy}
               title={t('viewer.nav.discard_order')}
               className="w-8 h-8 shrink-0 rounded-md border border-slate-300 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -230,12 +305,86 @@ export default function PageNavigator() {
               title={t('viewer.nav.apply_order_title')}
               className="flex-1 h-8 rounded-md bg-orange-700 hover:bg-orange-800 text-white text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-wait"
             >
-              {busy ? t('viewer.nav.applying') : (<><span aria-hidden="true">✓</span> {t('viewer.nav.apply_order')}</>)}
+              {busy ? t('viewer.nav.applying') : (<><span aria-hidden="true">✓</span> {turned ? t('viewer.nav.apply_changes') : t('viewer.nav.apply_order')}</>)}
             </button>
           </div>
         )}
       </aside>
+      {confirmDelete !== null && (
+        <DeleteQuestion
+          page={confirmDelete + 1}
+          onCancel={() => setConfirmDelete(null)}
+          onDelete={(dontAsk) => {
+            const i = confirmDelete
+            setConfirmDelete(null)
+            if (dontAsk) useToolPrefs.getState().setNoDeleteConfirm(true)
+            void deleteNow(i)
+          }}
+        />
+      )}
     </>
+  )
+}
+
+// "Delete page N?" with a "Don't ask again" tick, unticked like every tick
+// box in the suite.
+function DeleteQuestion({
+  page,
+  onCancel,
+  onDelete
+}: {
+  page: number
+  onCancel: () => void
+  onDelete: (dontAsk: boolean) => void
+}) {
+  const t = useT()
+  const [dontAsk, setDontAsk] = useState(false)
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onCancel()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onCancel])
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onCancel()
+      }}
+    >
+      <div role="alertdialog" aria-modal="true" aria-labelledby="delete-page-q" className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-sm">
+        <p id="delete-page-q" className="text-sm text-slate-800">
+          {t('viewer.nav.delete_confirm', { page })}
+        </p>
+        <label className="mt-4 flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={dontAsk}
+            onChange={(e) => setDontAsk(e.target.checked)}
+            className="h-4 w-4 accent-orange-700"
+          />
+          {t('viewer.nav.delete_dont_ask')}
+        </label>
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-medium text-slate-700"
+          >
+            {t('tools.common.cancel')}
+          </button>
+          <button
+            type="button"
+            autoFocus
+            onClick={() => onDelete(dontAsk)}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-medium text-white"
+          >
+            {t('viewer.nav.delete_yes')}
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -247,6 +396,8 @@ interface ThumbProps {
   pageIndex: number
   total: number
   thumb?: string
+  /** Quarter turns clockwise staged for this page. */
+  turns: number
   busy: boolean
   /** Moves are staged and unconfirmed — deleting is off until they settle. */
   pending: boolean
@@ -254,6 +405,7 @@ interface ThumbProps {
   dropIndicator: DropPosition | null
   onClick: () => void
   onDelete: () => void
+  onTurn: () => void
   onMoveUp: () => void
   onMoveDown: () => void
   onDragStart: (e: React.DragEvent) => void
@@ -267,12 +419,14 @@ function PageThumb({
   pageIndex,
   total,
   thumb,
+  turns,
   busy,
   pending,
   dragging,
   dropIndicator,
   onClick,
   onDelete,
+  onTurn,
   onMoveUp,
   onMoveDown,
   onDragStart,
@@ -281,6 +435,8 @@ function PageThumb({
   onDragEnd
 }: ThumbProps) {
   const t = useT()
+  const turnedThumb = useTurned(thumb, turns % 4)
+  const shown = turns % 4 ? turnedThumb : thumb
   const canDelete = total > 1 && !busy && !pending
   const canMoveUp = index > 0 && !busy
   const canMoveDown = index < total - 1 && !busy
@@ -316,9 +472,9 @@ function PageThumb({
         onClick={onClick}
         className="w-full flex flex-col items-center gap-1 rounded-md p-1.5 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-colors"
       >
-        {thumb ? (
+        {shown ? (
           <img
-            src={thumb}
+            src={shown}
             alt={t('viewer.nav.page', { page: index + 1 })}
             className="block w-full max-w-[180px] shadow-sm border border-slate-200"
             draggable={false}
@@ -342,6 +498,21 @@ function PageThumb({
           {/* SVG, not `✕` — see the note on the Close pages button above. */}
           <svg viewBox="0 0 16 16" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
             <path d="m4 4 8 8M12 4l-8 8" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          onClick={actionHandler(onTurn)}
+          disabled={busy}
+          title={t('viewer.nav.turn_title')}
+          aria-label={t('viewer.nav.turn', { page: index + 1 })}
+          className={`w-6 h-6 rounded-full border shadow text-xs leading-none flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed ${
+            turns % 4 ? 'bg-orange-600 text-white border-orange-600 hover:bg-orange-700' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-700 hover:text-white'
+          }`}
+        >
+          <svg viewBox="0 0 16 16" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M13 8a5 5 0 1 1-1.5-3.6" />
+            <path d="M13 2.5v3h-3" />
           </svg>
         </button>
       </div>
