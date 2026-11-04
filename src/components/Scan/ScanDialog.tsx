@@ -7,6 +7,7 @@ import { makeSearchablePdf } from '../../lib/ocr'
 import { openFiles } from '../../stores/tabStore'
 import { useT } from '../../i18n'
 import { notice } from '../../lib/notice'
+import { btnPrimary, btnSecondary } from '../buttons'
 
 export type ScanSource = 'camera' | 'photo'
 
@@ -440,7 +441,7 @@ export default function ScanDialog({ source, initialPages, onClose }: Props) {
                   type="button"
                   onClick={close}
                   disabled={working}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700 disabled:opacity-50"
+                  className={btnSecondary}
                 >
                   {t('tools.common.cancel')}
                 </button>
@@ -448,7 +449,7 @@ export default function ScanDialog({ source, initialPages, onClose }: Props) {
                   type="button"
                   onClick={() => void create()}
                   disabled={pages.length === 0 || working || decoding}
-                  className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                  className={btnPrimary}
                 >
                   {busy ?? (pages.length > 0 ? t.plural('tools.scan.create', pages.length) : t('tools.scan.create_empty'))}
                 </button>

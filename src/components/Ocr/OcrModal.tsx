@@ -3,6 +3,7 @@ import { OCR_LANGUAGES } from '../../lib/ocrLanguages'
 import { downloadPdfBytes } from '../../lib/download'
 import { useT } from '../../i18n'
 import { useOcr } from './useOcr'
+import { btnPrimary, btnSecondary } from '../buttons'
 
 interface Props {
   /** Original PDF bytes to make searchable. Kept intact (a copy is OCR'd). */
@@ -93,7 +94,7 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
             <div className="mt-4 flex items-center gap-2 justify-end">
               <button
                 onClick={onClose}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700"
+                className={btnSecondary}
               >
                 {t('tools.common.cancel')}
               </button>
@@ -102,7 +103,7 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
                   pickedRef.current = true
                   run('auto', lang)
                 }}
-                className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium"
+                className={btnPrimary}
               >
                 {t('tools.ocr.start')}
               </button>
@@ -151,14 +152,14 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
             <div className="mt-4 flex items-center gap-2 justify-end">
               <button
                 onClick={onClose}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700"
+                className={btnSecondary}
               >
                 {alreadySearchable ? t('tools.common.close') : t('tools.common.done')}
               </button>
               {alreadySearchable && mode === 'auto' && (
                 <button
                   onClick={() => run('all', lang)}
-                  className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium"
+                  className={btnPrimary}
                 >
                   {t('tools.ocr.run_anyway')}
                 </button>
@@ -166,7 +167,7 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
               {!alreadySearchable && (
                 <button
                   onClick={download}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700"
+                  className={btnSecondary}
                 >
                   {t('tools.compress.download')}
                 </button>
@@ -174,7 +175,7 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
               {!alreadySearchable && onOpen && (
                 <button
                   onClick={openResult}
-                  className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium"
+                  className={btnPrimary}
                 >
                   {t('tools.ocr.open')}
                 </button>
@@ -191,7 +192,7 @@ export default function OcrModal({ sourceBytes, fileName, onClose, onOpen }: Pro
             <div className="mt-4 flex justify-end">
               <button
                 onClick={onClose}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700"
+                className={btnSecondary}
               >
                 {t('tools.common.close')}
               </button>

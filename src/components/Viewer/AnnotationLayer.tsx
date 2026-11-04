@@ -51,6 +51,7 @@ import type { QrPlacement } from '../../lib/qr/design'
 import { getT, useT } from '../../i18n'
 import { askText, notice } from '../../lib/notice'
 import type { PDFDocumentProxy } from '../../lib/pdfjs'
+import { btnPrimary, btnQuiet } from '../buttons'
 
 // On-screen font stacks, keyed by family id (shared with the toolbar + export).
 const FONT_STACK = FONT_CSS
@@ -5121,14 +5122,14 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
                 <button
                   type="button"
                   onClick={fillAnyway}
-                  className="px-3 h-9 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-200"
+                  className={btnQuiet}
                 >
                   {t('annotate.fill_warning.fill_anyway')}
                 </button>
                 <button
                   type="button"
                   onClick={redactInstead}
-                  className="px-3 h-9 rounded-md text-sm font-medium text-white bg-orange-700 hover:bg-orange-800"
+                  className={btnPrimary}
                 >
                   {t('annotate.fill_warning.redact_instead')}
                 </button>
@@ -5527,7 +5528,7 @@ function SignatureOptionsModal({
             <button
               type="button"
               onClick={onRedraw}
-              className="px-3 h-9 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-200"
+              className={btnQuiet}
             >
               {t('annotate.sig_options.redraw')}
             </button>
@@ -5535,7 +5536,7 @@ function SignatureOptionsModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 h-9 rounded-md text-sm font-medium text-white bg-orange-700 hover:bg-orange-800"
+            className={btnPrimary}
           >
             {t('annotate.common.done')}
           </button>

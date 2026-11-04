@@ -6,6 +6,7 @@ import { useExitGuard } from '../../stores/exitGuard'
 import { useT } from '../../i18n'
 import { formatSize } from '../Export/formatSize'
 import { notice } from '../../lib/notice'
+import { btnPrimary, btnSecondary } from '../buttons'
 
 interface Props {
   onClose: () => void
@@ -237,21 +238,21 @@ export default function MergeDialog({ onClose, initialFile }: Props) {
           <button
             onClick={onClose}
             disabled={busy}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700 disabled:opacity-50"
+            className={btnSecondary}
           >
             {t('tools.common.cancel')}
           </button>
           <button
             onClick={onMergeOpen}
             disabled={!canMerge}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className={btnSecondary}
           >
             {t('tools.merge.merge_open')}
           </button>
           <button
             onClick={onMergeDownload}
             disabled={!canMerge}
-            className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+            className={btnPrimary}
           >
             {busy ? t('tools.merge.merging') : t('tools.merge.merge_download', { count: items.length || '' })}
           </button>

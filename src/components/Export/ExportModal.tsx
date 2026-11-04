@@ -17,6 +17,7 @@ import { printBytes } from '../../lib/printPdf'
 import { keepPages } from '../../lib/pdfPages'
 import { isWholeDocument, pageInView, pagesFor, type PagesChoice } from '../../lib/pageRange'
 import PagesPicker from './PagesPicker'
+import { btnPrimary, btnSecondary, Key } from '../buttons'
 
 // The plain export: here is your document, here is what it weighs, take it.
 //
@@ -232,17 +233,17 @@ export default function ExportModal({ open, onClose }: Props) {
                   onClose()
                 }}
                 disabled={!annotated}
-                className="px-4 py-2.5 bg-orange-700 hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
+                className={`${btnPrimary} justify-start`}
               >
-                <DownloadGlyph />
+                <Key><DownloadGlyph /></Key>
                 {t('tools.export.download_filled_form')}
               </button>
               <button
                 onClick={() => { void doPrint() }}
                 disabled={!annotated}
-                className="px-3.5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-slate-700 flex items-center justify-center gap-2"
+                className={`${btnSecondary} justify-start`}
               >
-                <PrintGlyph />
+                <Key><PrintGlyph /></Key>
                 {t('tools.export.print')}
               </button>
             </div>
@@ -255,7 +256,7 @@ export default function ExportModal({ open, onClose }: Props) {
                   disabled tabs is chrome that asks a question it already knows
                   the answer to. */}
               {showVariantTabs && (
-              <div className="flex bg-slate-50 border-b border-slate-200" role="tablist">
+              <div className="u-tabs m-2" role="tablist">
                 <VariantTab selected={effectiveTab === 'original'} onSelect={() => setTab('original')} label={t('tools.compress.original')}>
                   <span className="text-[11px] text-slate-400 tabular-nums font-normal">{formatSize(t, origSize)}</span>
                 </VariantTab>
@@ -403,9 +404,9 @@ export default function ExportModal({ open, onClose }: Props) {
               <button
                 onClick={() => download(effectiveTab)}
                 disabled={!ready || !redactConfirmed || (effectiveTab === 'flattened' && !flattened)}
-                className="flex-1 min-w-0 px-4 py-2.5 bg-orange-700 hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-l-lg text-sm font-medium flex items-center justify-center gap-2"
+                className={`${btnPrimary} min-w-0 flex-1 justify-start rounded-r-none`}
               >
-                <DownloadGlyph />
+                <Key><DownloadGlyph /></Key>
                 {/* Never "Download Original": the uncompressed copy still
                     carries the user's edits, so "original" reads as though
                     their changes would be thrown away. */}
@@ -420,7 +421,7 @@ export default function ExportModal({ open, onClose }: Props) {
                 onClick={openAdvanced}
                 title={t('tools.export.need_advanced')}
                 aria-label={t('tools.advanced.title')}
-                className="px-3 py-2.5 bg-orange-700 hover:bg-orange-800 text-white rounded-r-lg border-l border-white/30 flex items-center justify-center"
+                className={`${btnPrimary} -ml-px rounded-l-none px-3`}
               >
                 <AdvancedGlyph />
               </button>
@@ -428,17 +429,17 @@ export default function ExportModal({ open, onClose }: Props) {
               <button
                 onClick={openPrintPreview}
                 disabled={!ready || !redactConfirmed}
-                className="px-3.5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-slate-700 flex items-center justify-center gap-2"
+                className={`${btnSecondary} justify-start`}
               >
-                <PreviewGlyph />
+                <Key><PreviewGlyph /></Key>
                 {t('tools.export.preview')}
               </button>
               <button
                 onClick={() => { void doPrint() }}
                 disabled={!ready || !redactConfirmed || !pickedPages}
-                className="px-3.5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-slate-700 flex items-center justify-center gap-2"
+                className={`${btnSecondary} justify-start`}
               >
-                <PrintGlyph />
+                <Key><PrintGlyph /></Key>
                 {t('tools.export.print')}
               </button>
             </div>
@@ -451,7 +452,7 @@ export default function ExportModal({ open, onClose }: Props) {
         <div className="mt-5 flex shrink-0 items-center justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700"
+            className={btnSecondary}
           >
             {t('tools.common.cancel')}
           </button>
@@ -480,10 +481,8 @@ function VariantTab({
       role="tab"
       aria-selected={selected}
       onClick={onSelect}
-      className={[
-        'flex-1 min-w-0 px-2 py-2 text-sm font-medium border-b-2 -mb-px transition-colors flex flex-col items-center leading-tight',
-        selected ? 'border-orange-600 text-slate-900 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'
-      ].join(' ')}
+      // The suite's tray tabs (SDK 0.216): aria-selected selects.
+      className="u-tab min-w-0 flex-1 flex-col leading-tight"
     >
       {label}
       {children}

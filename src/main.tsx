@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { UniversalProvider } from '@unisim/sdk'
+import { UniversalProvider, installButtonStyles, installTabStyles } from '@unisim/sdk'
 import { I18nRoot } from './i18n'
 
 console.log(`build: ${import.meta.env.VITE_BUILD_SHA}`)
@@ -100,6 +100,10 @@ const certId = noAccounts ? null : params.get('cert')
 // Endless animations finish their loop and rest while the window is not
 // focused — see lib/pauseAnimationsOnBlur.
 installPauseAnimationsOnBlur()
+
+// The suite's key buttons and tray tabs, used as class strings (components/buttons.tsx).
+installButtonStyles()
+installTabStyles()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

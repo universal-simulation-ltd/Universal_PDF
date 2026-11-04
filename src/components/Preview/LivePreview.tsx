@@ -6,6 +6,7 @@ import { buildAnnotatedPdfBytes, downloadPdfBytes } from '../../lib/export'
 import { openPdf, type PDFDocumentProxy } from '../../lib/pdfjs'
 import { layerPixelRatio, pagePixelBudget } from '../../lib/renderBudget'
 import { getT, useT } from '../../i18n'
+import { btnPrimary, btnSecondary } from '../buttons'
 
 // 1:1 with the editor's PDF-point coordinate space — see ExportModal.tsx.
 const EXPORT_SCALE = 1.0
@@ -122,6 +123,7 @@ export default function LivePreview() {
       }}
     >
       <div
+        data-u-ground="dark"
         className="flex items-center gap-3 px-4 py-2 bg-slate-900 text-white border-b border-slate-700"
         style={{ paddingTop: 'calc(0.5rem + env(safe-area-inset-top))' }}
       >
@@ -133,13 +135,13 @@ export default function LivePreview() {
           <button
             onClick={onDownload}
             disabled={!bytes}
-            className="px-4 h-9 rounded bg-orange-700 hover:bg-orange-800 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium"
+            className={btnPrimary}
           >
             {t('app.preview_download')}
           </button>
           <button
             onClick={() => setOpen(false)}
-            className="px-3 h-9 rounded bg-slate-700 hover:bg-slate-600 text-sm"
+            className={btnSecondary}
             aria-label={t('app.preview_close_aria')}
           >
             {t('app.close')}

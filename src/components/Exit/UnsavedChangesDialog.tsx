@@ -7,6 +7,7 @@ import { countRedactions, isRedactConfirmed } from '../../lib/redactGate'
 import { RedactIcon } from '../icons/RedactIcon'
 import LockedOriginNote from '../Lock/LockedOriginNote'
 import { useT, type MessageKey } from '../../i18n'
+import { btnDanger, btnPrimary, btnSecondary } from '../buttons'
 
 // The one popup that stands between an amended document and every way out of
 // it — Close PDF, opening another, and the desktop window's × / ⌘Q. Three
@@ -187,14 +188,14 @@ export default function UnsavedChangesDialog() {
           <button
             onClick={cancel}
             disabled={saving}
-            className="px-4 py-2.5 rounded-lg text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={btnSecondary}
           >
             {t('app.cancel')}
           </button>
           <button
             onClick={exitWithoutSaving}
             disabled={saving}
-            className="px-4 py-2.5 rounded-lg text-sm font-medium text-red-700 bg-white ring-1 ring-red-200 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={btnDanger}
           >
             {t('app.unsaved_exit_without_saving')}
           </button>
@@ -202,7 +203,7 @@ export default function UnsavedChangesDialog() {
             onClick={() => void saveAndExit()}
             disabled={saving || !canSave}
             autoFocus
-            className="px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-orange-700 hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className={btnPrimary}
           >
             <span aria-hidden="true">⬇</span>
             {saving ? t('app.unsaved_saving') : t('app.unsaved_save_and_exit')}

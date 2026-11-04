@@ -3,6 +3,7 @@ import { useSignatureStore } from '../../stores/signatureStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { useT } from '../../i18n'
 import { STAMPS, STAMP_COLORS, STAMP_H, STAMP_W, renderStampDataUrl, type StampShape } from '../../lib/stamps'
+import { btnPrimary, btnQuiet } from '../buttons'
 
 type Shape = StampShape
 
@@ -166,7 +167,7 @@ export default function StampPicker() {
               <button
                 type="button"
                 onClick={() => resetCreator()}
-                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900"
+                className={btnQuiet}
               >
                 {t('sign.cancel')}
               </button>
@@ -174,7 +175,7 @@ export default function StampPicker() {
                 type="button"
                 onClick={saveCustomStamp}
                 disabled={!previewText}
-                className="px-4 py-2 text-sm font-medium rounded-md bg-orange-700 text-white hover:bg-orange-800 disabled:opacity-40 disabled:cursor-not-allowed"
+                className={btnPrimary}
               >
                 {t('sign.stamp_save_mine')}
               </button>

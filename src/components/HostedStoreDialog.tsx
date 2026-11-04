@@ -5,6 +5,7 @@ import { usePdfStore } from '../stores/pdfStore'
 import LockedOriginNote from './Lock/LockedOriginNote'
 import { downloadBackup, importBackup } from '../lib/pdfBackup'
 import { useT } from '../i18n'
+import { btnPrimary, btnSecondary, DownloadIcon, Key, UploadIcon } from './buttons'
 
 // "Back up this PDF" — both options are local: the automatic copy in this
 // browser (recents) and a backup file the person downloads and re-imports.
@@ -100,22 +101,18 @@ export default function HostedStoreDialog() {
                 type="button"
                 onClick={onDownloadBackup}
                 disabled={!doc || importBusy}
-                className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-black disabled:opacity-50"
+                className={btnPrimary}
               >
-                <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M10 3v10m0 0l-3.5-3.5M10 13l3.5-3.5M4 16h12" />
-                </svg>
+                <Key><DownloadIcon /></Key>
                 {t('sign.hosted_download_backup')}
               </button>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={importBusy}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-400 hover:bg-slate-50 disabled:opacity-50"
+                className={btnSecondary}
               >
-                <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M10 17V7m0 0L6.5 10.5M10 7l3.5 3.5M4 4h12" />
-                </svg>
+                <Key><UploadIcon /></Key>
                 {importBusy ? t('sign.hosted_importing') : t('sign.hosted_import_backup')}
               </button>
               <input

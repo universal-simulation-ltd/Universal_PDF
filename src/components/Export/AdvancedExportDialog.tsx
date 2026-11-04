@@ -21,6 +21,7 @@ import { PrintGlyph } from './ExportModal'
 import { printBytes } from '../../lib/printPdf'
 import { keepPages } from '../../lib/pdfPages'
 import { isWholeDocument, pageInView, pagesFor, type PagesChoice } from '../../lib/pageRange'
+import { btnPrimary, btnSecondary, DownloadIcon, Key, LockIcon } from '../buttons'
 
 // Actions ▸ Advanced ▸ Advanced export — the things that change what the
 // exported file IS, rather than how big it is: flatten, strip metadata, lock.
@@ -338,7 +339,7 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
                     {t('tools.advanced.image_quality')}
                   </div>
                   <div
-                    className="grid gap-1 p-1 bg-slate-100 rounded-lg"
+                    className="u-tabs grid gap-1"
                     style={{ gridTemplateColumns: `repeat(${offeredQualities.length}, minmax(0, 1fr))` }}
                   >
                     {offeredQualities.map((opt) => {
@@ -350,12 +351,7 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
                           onClick={() => setQuality(opt.value)}
                           disabled={building || compressing}
                           aria-pressed={active}
-                          className={[
-                            'rounded-md px-2 py-1.5 text-sm font-medium transition-colors disabled:cursor-wait',
-                            active
-                              ? 'bg-white text-orange-700 shadow-sm'
-                              : 'text-slate-600 hover:text-slate-900'
-                          ].join(' ')}
+                          className="u-tab disabled:cursor-wait"
                         >
                           {opt.label}
                         </button>
@@ -530,9 +526,9 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
               <button
                 onClick={() => { void download() }}
                 disabled={blocked}
-                className="w-full px-4 py-2.5 bg-orange-700 hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
+                className={`${btnPrimary} w-full justify-start`}
               >
-                <span aria-hidden="true">{lock.enabled ? '🔒' : '⬇'}</span>
+                <Key>{lock.enabled ? <LockIcon /> : <DownloadIcon />}</Key>
                 {locking
                   ? t('tools.advanced.locking')
                   : flatten && lock.enabled
@@ -546,9 +542,9 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
               <button
                 onClick={() => { void print() }}
                 disabled={!ready || !redactConfirmed || !pickedPages || (flatten && !compressed)}
-                className="px-3.5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-slate-700 flex items-center justify-center gap-2"
+                className={`${btnSecondary} justify-start`}
               >
-                <PrintGlyph />
+                <Key><PrintGlyph /></Key>
                 {t('tools.export.print')}
               </button>
             </div>
@@ -559,7 +555,7 @@ export default function AdvancedExportDialog({ open, onClose }: Props) {
         <div className="mt-5 flex shrink-0 items-center justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700"
+            className={btnSecondary}
           >
             {t('tools.common.cancel')}
           </button>

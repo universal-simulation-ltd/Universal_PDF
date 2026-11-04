@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useT } from '../../i18n'
+import { btnPrimary, btnSecondary } from '../buttons'
 
 /**
  * Asks for the password of a locked PDF somebody has just opened.
@@ -114,7 +115,7 @@ export default function LockedFilePrompt() {
           <button
             type="submit"
             disabled={!password || busy}
-            className="rounded-lg bg-orange-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-orange-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className={btnPrimary}
           >
             {busy ? t('tools.locked.unlocking') : t('tools.locked.unlock')}
           </button>
@@ -122,7 +123,7 @@ export default function LockedFilePrompt() {
             type="button"
             onClick={cancel}
             disabled={busy}
-            className="rounded-lg bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-200 disabled:opacity-50"
+            className={btnSecondary}
           >
             {t('tools.common.cancel')}
           </button>

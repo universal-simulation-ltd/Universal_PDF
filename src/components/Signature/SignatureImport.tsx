@@ -3,6 +3,7 @@ import { useSignatureStore } from '../../stores/signatureStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { importImageAsSignature, type ImportedSignature } from '../../lib/imageSignature'
 import { useT } from '../../i18n'
+import { btnPrimary, btnSecondary } from '../buttons'
 
 export default function SignatureImport() {
   const t = useT()
@@ -205,14 +206,14 @@ export default function SignatureImport() {
           />
           <button
             onClick={closeImport}
-            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm"
+            className={btnSecondary}
           >
             {t('sign.cancel')}
           </button>
           <button
             onClick={save}
             disabled={!preview || busy}
-            className="px-4 py-2 bg-orange-700 hover:bg-orange-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded text-sm font-medium"
+            className={btnPrimary}
           >
             {t('sign.save')}
           </button>

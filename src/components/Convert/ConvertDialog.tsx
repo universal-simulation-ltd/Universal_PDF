@@ -8,6 +8,7 @@ import { saveBlob } from '@unisim/media/save'
 import { useT } from '../../i18n'
 import { formatSize } from '../Export/formatSize'
 import { notice } from '../../lib/notice'
+import { btnPrimary, btnSecondary } from '../buttons'
 
 export type ConvertMode = 'pdf-to-images' | 'images-to-pdf'
 
@@ -206,14 +207,14 @@ export default function ConvertDialog({ initialMode, onClose, initialPdf }: Prop
               <button
                 onClick={onClose}
                 disabled={busy}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700 disabled:opacity-50"
+                className={btnSecondary}
               >
                 {t('tools.common.cancel')}
               </button>
               <button
                 onClick={runPdfToImages}
                 disabled={!pdf || busy}
-                className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                className={btnPrimary}
               >
                 {busy ? progress || t('tools.convert.converting') : t('tools.convert.convert_download')}
               </button>
@@ -271,21 +272,21 @@ export default function ConvertDialog({ initialMode, onClose, initialPdf }: Prop
               <button
                 onClick={onClose}
                 disabled={busy}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700 disabled:opacity-50"
+                className={btnSecondary}
               >
                 {t('tools.common.cancel')}
               </button>
               <button
                 onClick={() => runImagesToPdf(true)}
                 disabled={images.length === 0 || busy}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className={btnSecondary}
               >
                 {t('tools.convert.convert_open')}
               </button>
               <button
                 onClick={() => runImagesToPdf(false)}
                 disabled={images.length === 0 || busy}
-                className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                className={btnPrimary}
               >
                 {busy ? t('tools.convert.converting') : t('tools.convert.convert_download')}
               </button>

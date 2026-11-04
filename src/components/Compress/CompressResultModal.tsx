@@ -8,6 +8,7 @@ import {
 import { useT } from '../../i18n'
 import { formatNumber, formatSize } from '../Export/formatSize'
 import { qualityOptions } from './qualityOptions'
+import { btnPrimary, btnSecondary } from '../buttons'
 
 interface Props {
   /** Original (uncompressed) PDF bytes — used to re-compress at other qualities. */
@@ -169,14 +170,14 @@ export default function CompressResultModal({
         <div className="mt-5 flex shrink-0 items-center gap-2 justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700"
+            className={btnSecondary}
           >
             {discardLabel ?? t('tools.compress.discard')}
           </button>
           <button
             onClick={download}
             disabled={busy}
-            className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium disabled:opacity-60 disabled:cursor-wait"
+            className={btnPrimary}
           >
             {t('tools.compress.download')}
           </button>

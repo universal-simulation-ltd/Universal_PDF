@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { readPdfMetadata, type PdfMetadata } from '../../lib/pdfMetadata'
 import { usePdfStore } from '../../stores/pdfStore'
 import { getT, intlLocale, useT } from '../../i18n'
+import { btnPrimary, btnSecondary } from '../buttons'
 
 // "Advanced → Document metadata": show everything the open PDF says about
 // itself, then let the user strip it. Read and rewrite both run on the bytes
@@ -197,7 +198,7 @@ export default function MetadataDialog({ sourceBytes, onClose }: Props) {
           <button
             onClick={onClose}
             disabled={busy}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700 disabled:opacity-50"
+            className={btnSecondary}
           >
             {scrubbed ? t('tools.common.done') : t('tools.common.close')}
           </button>
@@ -205,7 +206,7 @@ export default function MetadataDialog({ sourceBytes, onClose }: Props) {
             <button
               onClick={onScrub}
               disabled={busy}
-              className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium disabled:opacity-50"
+              className={btnPrimary}
             >
               {phase === 'scrubbing' ? t('tools.metadata.stripping') : t('tools.metadata.scrub')}
             </button>

@@ -27,6 +27,7 @@ import {
   remindSignRequest,
 } from '../lib/signRequestClient'
 import { useT, intlLocale, type MessageKey } from '../i18n'
+import { btnPrimary, btnSecondary, btnSecondarySm } from './buttons'
 
 // Human labels for a request's signing state (either-order two-party flow).
 // A toned state is a Value chip (the tone fills its key); the neutral one is
@@ -399,7 +400,7 @@ export default function SendToSignDialog() {
               <button
                 type="button"
                 onClick={() => setSignInOpen(true)}
-                className="mt-3 inline-flex rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800"
+                className={`${btnPrimary} mt-3`}
               >
                 {t('sign.send_create_id')}
               </button>
@@ -422,7 +423,7 @@ export default function SendToSignDialog() {
                   type="button"
                   onClick={onResendConfirmation}
                   disabled={busy}
-                  className="rounded-lg bg-amber-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+                  className={btnPrimary}
                 >
                   {t('sign.send_resend')}
                 </button>
@@ -430,7 +431,7 @@ export default function SendToSignDialog() {
                   type="button"
                   onClick={onRecheckVerified}
                   disabled={busy}
-                  className="rounded-lg border border-amber-300 px-3.5 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+                  className={btnSecondary}
                 >
                   {t('sign.send_recheck')}
                 </button>
@@ -489,7 +490,7 @@ export default function SendToSignDialog() {
                       <button
                         type="button"
                         onClick={onCopyLink}
-                        className="shrink-0 rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white hover:bg-black"
+                        className={`${btnSecondarySm} shrink-0`}
                       >
                         {copied ? t('sign.send_copied') : t('sign.send_copy_link')}
                       </button>
@@ -621,7 +622,7 @@ export default function SendToSignDialog() {
                     type="button"
                     onClick={onCreateLink}
                     disabled={busy || !redactConfirmed || !canSendFrom}
-                    className="mt-3 w-full rounded-lg bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={`${btnPrimary} mt-3 w-full`}
                   >
                     {busy ? t('sign.send_storing') : t('sign.send_store_create')}
                   </button>
@@ -657,7 +658,7 @@ export default function SendToSignDialog() {
                       type="button"
                       onClick={onSendEmail}
                       disabled={!minted || busy || !email.trim()}
-                      className="shrink-0 rounded-lg bg-orange-700 px-3.5 py-2 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-50"
+                      className={`${minted ? btnPrimary : btnSecondary} shrink-0`}
                     >
                       {emailState === 'sending' ? t('sign.sending') : t('sign.send_send')}
                     </button>
@@ -698,7 +699,7 @@ export default function SendToSignDialog() {
                               href={certLink(r.cert_id)}
                               target="_blank"
                               rel="noreferrer"
-                              className="shrink-0 rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-black"
+                              className={`${btnSecondarySm} shrink-0`}
                               title={t('sign.send_cert_title')}
                             >
                               {t('sign.send_certificate')}

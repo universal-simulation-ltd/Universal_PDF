@@ -19,6 +19,7 @@ import {
 } from '../../lib/signQueue'
 import SignRequestGate from './SignRequestGate'
 import { useT, intlLocale } from '../../i18n'
+import { btnPrimary, btnSecondary } from '../buttons'
 
 /** The day a request completed now is deleted (platform 0262: signed_at + 7 years). */
 function sevenYearsFromNow(locale: string): string {
@@ -371,7 +372,7 @@ export default function SignRequestPage({ token }: { token: string }) {
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-3xl">🔏</div>
         <h1 className="text-lg font-semibold text-slate-900">{t('sign.request_cant_open')}</h1>
         <p className="max-w-sm text-sm text-slate-500">{error}</p>
-        <a href={import.meta.env.BASE_URL} className="mt-2 rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800">
+        <a href={import.meta.env.BASE_URL} className={`${btnPrimary} mt-2`}>
           {t('sign.open_universal_pdf')}
         </a>
       </main>
@@ -382,7 +383,7 @@ export default function SignRequestPage({ token }: { token: string }) {
     const doc = <strong className="text-slate-200">{docName}</strong>
     const state = queued.state
     return (
-      <main className="flex min-h-svh flex-col items-center justify-center gap-3 bg-slate-900 p-6 text-center text-white" data-sign-queued={state}>
+      <main className="flex min-h-svh flex-col items-center justify-center gap-3 bg-slate-900 p-6 text-center text-white" data-sign-queued={state} data-u-ground="dark">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/20 text-3xl">{state === 'stale' || state === 'failed' ? '!' : '⏳'}</div>
         <h1 className="text-lg font-semibold">{t('sign.offline_queued_title')}</h1>
         <p className="max-w-sm text-sm text-slate-400">
@@ -401,7 +402,7 @@ export default function SignRequestPage({ token }: { token: string }) {
               type="button"
               onClick={() => void trySend(queued)}
               disabled={syncing}
-              className="rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold hover:bg-orange-800 disabled:opacity-60"
+              className={btnPrimary}
             >
               {syncing ? t('sign.offline_sending') : t('sign.offline_send_now')}
             </button>
@@ -410,7 +411,7 @@ export default function SignRequestPage({ token }: { token: string }) {
             <button
               type="button"
               onClick={() => setReverify(true)}
-              className="rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold hover:bg-orange-800"
+              className={btnPrimary}
             >
               {t('sign.offline_confirm_send')}
             </button>
@@ -419,7 +420,7 @@ export default function SignRequestPage({ token }: { token: string }) {
             <button
               type="button"
               onClick={() => void openLatest()}
-              className="rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold hover:bg-orange-800"
+              className={btnPrimary}
             >
               {t('sign.offline_open_latest')}
             </button>
@@ -427,7 +428,7 @@ export default function SignRequestPage({ token }: { token: string }) {
           <button
             type="button"
             onClick={downloadCopy}
-            className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800"
+            className={btnSecondary}
           >
             {t('sign.request_download_copy')}
           </button>
@@ -438,7 +439,7 @@ export default function SignRequestPage({ token }: { token: string }) {
 
   if (phase === 'done') {
     return (
-      <main className="flex min-h-svh flex-col items-center justify-center gap-3 bg-slate-900 p-6 text-center text-white">
+      <main className="flex min-h-svh flex-col items-center justify-center gap-3 bg-slate-900 p-6 text-center text-white" data-u-ground="dark">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-600/20 text-3xl">✓</div>
         <h1 className="text-lg font-semibold">{outcome.completed ? t('sign.request_fully_signed') : t('sign.request_signature_in')}</h1>
         <p className="max-w-sm text-sm text-slate-400">
@@ -458,12 +459,12 @@ export default function SignRequestPage({ token }: { token: string }) {
           <button
             type="button"
             onClick={downloadCopy}
-            className="rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold hover:bg-orange-800"
+            className={btnPrimary}
           >
             {t('sign.request_download_copy')}
           </button>
           {outcome.certId && (
-            <a href={certLink(outcome.certId)} className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800">
+            <a href={certLink(outcome.certId)} className={btnSecondary}>
               {t('sign.request_view_cert')}
             </a>
           )}
@@ -515,7 +516,7 @@ export default function SignRequestPage({ token }: { token: string }) {
               type="button"
               onClick={() => { void onSubmit() }}
               disabled={phase === 'submitting'}
-              className="mt-3 w-full rounded-lg bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-60"
+              className={`${btnPrimary} mt-3 w-full`}
             >
               {phase === 'submitting' ? t('sign.request_sending_back') : t('sign.request_finish_send')}
             </button>
@@ -527,7 +528,7 @@ export default function SignRequestPage({ token }: { token: string }) {
         <button
           type="button"
           onClick={() => setBanner(true)}
-          className="fixed bottom-20 right-3 z-[60] rounded-full bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white shadow-2xl hover:bg-orange-800 md:bottom-4 md:right-4"
+          className={`${btnPrimary} fixed bottom-20 right-3 z-[60] shadow-2xl md:bottom-4 md:right-4`}
         >
           {t('sign.request_finish_signing')}
         </button>

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import type { PdfLinkVerdict, UrlWarning } from '../../lib/links'
 import { useT, type MessageKey } from '../../i18n'
+import { btnPrimary, btnSecondary } from '../buttons'
 
 // Asked before a PDF's link is followed, when there is something to notice.
 //
@@ -104,7 +105,7 @@ export default function LinkWarningDialog({
             ref={cancelRef}
             type="button"
             onClick={onClose}
-            className="rounded bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
+            className={btnSecondary}
           >
             {blocked ? t('tools.common.close') : t('viewer.common.cancel')}
           </button>
@@ -115,7 +116,7 @@ export default function LinkWarningDialog({
                 onOpen()
                 onClose()
               }}
-              className="rounded bg-orange-700 px-4 py-2 text-sm font-medium text-white hover:bg-orange-800"
+              className={btnPrimary}
             >
               {t('viewer.link.open_anyway')}
             </button>

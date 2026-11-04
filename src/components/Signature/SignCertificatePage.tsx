@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useUniversal, verifyPdfSignCert, ValueChip, type SignCertificate } from '@unisim/sdk'
 import { certificateDownload } from '../../lib/signRequestClient'
 import { useT, intlLocale, type MessageKey } from '../../i18n'
+import { btnPrimary, btnPrimarySm } from '../buttons'
 
 /**
  * Public tamper-evident certificate page for a signed document
@@ -80,7 +81,7 @@ export default function SignCertificatePage({ certId }: { certId: string }) {
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-200 text-3xl">🔏</div>
         <h1 className="text-lg font-semibold text-slate-900">{t('sign.cert_not_found')}</h1>
         <p className="max-w-sm text-sm text-slate-500">{t('sign.cert_not_found_body')}</p>
-        <a href={import.meta.env.BASE_URL} className="mt-2 rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800">{t('sign.open_universal_pdf')}</a>
+        <a href={import.meta.env.BASE_URL} className={`${btnPrimary} mt-2`}>{t('sign.open_universal_pdf')}</a>
       </main>
     )
   }
@@ -128,7 +129,7 @@ export default function SignCertificatePage({ certId }: { certId: string }) {
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold text-slate-900">{t('sign.cert_document')}</h2>
             {downloadUrl && (
-              <a href={downloadUrl} target="_blank" rel="noreferrer" className="rounded-lg bg-orange-700 px-3.5 py-2 text-xs font-semibold text-white hover:bg-orange-800">
+              <a href={downloadUrl} target="_blank" rel="noreferrer" className={btnPrimarySm}>
                 {t('sign.cert_download_pdf')}
               </a>
             )}

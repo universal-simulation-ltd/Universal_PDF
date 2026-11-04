@@ -13,6 +13,7 @@ import { formatAttestLocal } from '../../lib/phoneAttest'
 import { ACTIVE_CHIP, ActiveStroke, MobileToolFace } from '../Toolbar/toolLook'
 import { useDefaultView } from '@unisim/sdk'
 import { SIGN_MENU_TABS, SIGN_MENU_VIEW, type SignMenuTab } from '../../lib/defaultViews'
+import { btnPrimary, btnSoft } from '../buttons'
 
 interface SignatureMenuProps {
   // Retained for call-site compatibility; the compact panel always sits above
@@ -227,31 +228,23 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
   // (desktop). Kept in one place so both paths stay identical.
   const menuBody = (
     <>
-      {/* Tab bar. The tab the menu opens on is orange: filled while you are
-          on it, outlined while not (Jukebox's look, on this light panel). */}
-      <div className="flex border-b border-slate-100">
+      {/* Tab bar: the suite's tray tabs (SDK 0.216). aria-pressed selects, and
+          buttonProps' data-default-view draws the opens-here dot (it was an
+          orange fill / outline). */}
+      <div className="u-tabs m-2">
         {SIGN_MENU_TABS.map((v) => {
           const label =
             v === 'signatures' ? t('sign.menu_tab_signatures')
             : v === 'stamps' ? t('sign.menu_tab_stamps')
             : t('sign.menu_tab_request')
           const on = tab === v
-          const isDefault = dv.isSet && dv.defaultView === v
           return (
             <button
               key={v}
               {...dv.buttonProps(v, label)}
               aria-pressed={on}
               onClick={() => { dv.tap(v); setTab(v) }}
-              className={`flex-1 px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
-                on
-                  ? isDefault
-                    ? 'bg-linear-to-br from-[#FE8C01] to-[#E05504] text-white border-b-2 border-orange-600 -mb-px'
-                    : 'text-orange-700 border-b-2 border-orange-500 -mb-px'
-                  : isDefault
-                    ? 'text-orange-700 ring-1 ring-inset ring-orange-400/70 hover:bg-orange-50'
-                    : 'text-slate-400 hover:text-slate-600'
-              }`}
+              className="u-tab min-w-0 flex-1"
             >
               {label}
             </button>
@@ -264,7 +257,7 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
           <p className="text-sm text-slate-600">{t('sign.vault_locked')}</p>
           <button
             onClick={unlockVault}
-            className="w-full px-3 py-2.5 rounded-md bg-[#2353c9] hover:bg-[#173a94] text-white text-sm font-medium"
+            className={`${btnPrimary} w-full`}
           >
             {t('sign.vault_unlock')}
           </button>
@@ -294,7 +287,7 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
           </div>
           <button
             onClick={placeRequestField}
-            className="w-full px-3 py-2.5 rounded-md bg-orange-700 hover:bg-orange-800 text-white text-sm font-medium"
+            className={`${btnPrimary} w-full`}
           >
             {tool === 'sigfield' ? t('sign.menu_draw_box') : t('sign.menu_place_box')}
           </button>
@@ -311,7 +304,7 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
             <button
               onClick={() => { setSendForSignatureOpen(true); setOpen(false) }}
               disabled={!hasOpenBox}
-              className="w-full px-3 py-2.5 rounded-md border border-orange-300 bg-orange-50 enabled:hover:bg-orange-100 text-orange-800 text-sm font-medium flex items-center justify-center gap-2 disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+              className={`${btnSoft} w-full`}
             >
               <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M3 10.5c3-4.5 5-4.5 6 0s3 4.5 5-1.5" />

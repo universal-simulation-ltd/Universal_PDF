@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useUniversal } from '@unisim/sdk'
 import { requestAccessCode, verifyAccess } from '../../lib/signRequestClient'
 import { useT } from '../../i18n'
+import { btnPrimary } from '../buttons'
 
 /**
  * The holding page a protected signing link lands on, before the document
@@ -158,7 +159,7 @@ export default function SignRequestGate({
             <button
               type="submit"
               disabled={busy || !email.trim() || cooldown > 0 || !online}
-              className="w-full rounded-lg bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className={`${btnPrimary} w-full`}
             >
               {busy ? t('sign.sending') : cooldown > 0 ? t('sign.gate_wait', { seconds: cooldown }) : t('sign.gate_email_me')}
             </button>
@@ -212,7 +213,7 @@ export default function SignRequestGate({
             <button
               type="submit"
               disabled={busy || code.length < 6 || (hasPin && pin.length < 4) || !online}
-              className="w-full rounded-lg bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className={`${btnPrimary} w-full`}
             >
               {busy ? t('sign.gate_checking') : t('sign.gate_open')}
             </button>

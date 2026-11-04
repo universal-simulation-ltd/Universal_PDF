@@ -9,6 +9,7 @@ import { downloadZip } from '../../lib/zip'
 import { useT } from '../../i18n'
 import { formatNumber, formatSize } from '../Export/formatSize'
 import { qualityOptions } from './qualityOptions'
+import { btnPrimary, btnSecondary } from '../buttons'
 
 export interface BatchSource {
   /** Original (uncompressed) PDF bytes — kept so we can re-compress at other qualities. */
@@ -221,14 +222,14 @@ export default function BatchCompressModal({
         <div className="mt-4 flex items-center gap-2 justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700"
+            className={btnSecondary}
           >
             {t('tools.compress.discard')}
           </button>
           <button
             onClick={downloadAll}
             disabled={busy}
-            className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium disabled:opacity-60 disabled:cursor-wait"
+            className={btnPrimary}
           >
             {t('tools.compress.download_zip', { count: files.length })}
           </button>

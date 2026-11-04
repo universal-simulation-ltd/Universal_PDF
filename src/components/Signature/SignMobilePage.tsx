@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useUniversal } from '@unisim/sdk'
 import { mobileSignChannel } from '../../lib/mobileSign'
 import { useT } from '../../i18n'
+import { btnPrimary } from '../buttons'
 
 /**
  * Mobile signing handoff (opened via `?sign=<token>` from the QR on desktop).
@@ -142,7 +143,9 @@ export default function SignMobilePage({ token }: { token: string }) {
         type="button"
         onClick={submit}
         disabled={status === 'sending'}
-        className="mt-1 rounded-xl bg-orange-700 py-3 text-sm font-semibold hover:bg-orange-800 disabled:opacity-60"
+        // The page is dark, so the key button takes its dark ground.
+        data-u-ground="dark"
+        className={`${btnPrimary} mt-1`}
       >
         {status === 'sending' ? t('sign.sending') : t('sign.mobile_send')}
       </button>

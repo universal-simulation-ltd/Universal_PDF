@@ -31,19 +31,17 @@ export default function PagesPicker({
       role="radio"
       aria-checked={value.kind === kind}
       onClick={() => onChange(kind === 'custom' ? { kind, text } : { kind })}
-      className={[
-        'flex-1 min-w-0 px-2 py-1.5 text-xs font-medium rounded-md transition-colors',
-        value.kind === kind ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-      ].join(' ')}
+      // A radio, so the selected segment says so with the class (SDK 0.216 tray tabs).
+      className={`u-tab flex-1 ${value.kind === kind ? 'u-tab--current' : ''}`}
     >
       {label}
     </button>
   )
   return (
     <div className="mt-4" data-pages-picker>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <span className="text-xs font-medium text-slate-600 shrink-0">{heading}</span>
-        <div role="radiogroup" aria-label={heading} className="flex flex-1 gap-1 rounded-lg bg-slate-100 p-1">
+        <div role="radiogroup" aria-label={heading} className="u-tabs min-w-fit flex-1">
           {seg('all', t('tools.export.pages_all'))}
           {seg('current', t('tools.export.pages_current'))}
           {seg('custom', t('tools.export.pages_custom'))}

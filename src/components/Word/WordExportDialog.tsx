@@ -4,6 +4,7 @@ import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { useFormStore } from '../../stores/formStore'
 import { useT } from '../../i18n'
+import { btnPrimary, btnSecondary } from '../buttons'
 
 // "Advanced → Export to Word" (James, 2026-10-18: Word only, not Excel or
 // PowerPoint). The PDF's text as an editable .docx: headings, paragraphs,
@@ -97,14 +98,14 @@ export default function WordExportDialog({ onClose }: { onClose: () => void }) {
         {phase.kind === 'error' && <div className="mt-4 rounded-lg bg-red-50 text-red-700 px-3 py-2 text-sm">{phase.message}</div>}
 
         <div className="mt-5 flex items-center gap-2 justify-end">
-          <button onClick={close} disabled={busy} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700 disabled:opacity-50">
+          <button onClick={close} disabled={busy} className={btnSecondary}>
             {phase.kind === 'done' ? t('tools.common.done') : t('tools.common.cancel')}
           </button>
           {phase.kind !== 'done' && (
             <button
               onClick={() => void run()}
               disabled={busy || !sourceBytes}
-              className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium disabled:opacity-50"
+              className={btnPrimary}
             >
               {busy ? t('tools.word.working') : t('tools.word.export')}
             </button>

@@ -31,6 +31,7 @@ import PresetGlyph, { QR_PRESET_KEYS } from './PresetGlyph'
 import type { Annotation } from '../../types/annotations'
 import { formatNumber } from '../Export/formatSize'
 import { getT, intlLocale, useT, type MessageKey } from '../../i18n'
+import { btnPrimary, btnQuiet, btnSecondary, Key } from '../buttons'
 
 const QR_WHERE_KEYS: Record<'modules' | 'corners' | 'star', MessageKey> = {
   modules: 'tools.qr.where_modules',
@@ -496,9 +497,9 @@ export default function QrDialog() {
                 type="button"
                 onClick={download}
                 disabled={!data || downloading}
-                className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md border border-slate-300 text-sm font-medium text-slate-700 hover:border-orange-400 hover:bg-orange-50/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className={btnSecondary}
               >
-                <svg
+                <Key><svg
                   viewBox="0 0 20 20"
                   className="w-4 h-4"
                   fill="none"
@@ -509,14 +510,14 @@ export default function QrDialog() {
                   aria-hidden="true"
                 >
                   <path d="M10 3v10m0 0l-3.5-3.5M10 13l3.5-3.5M4 16h12" />
-                </svg>
+                </svg></Key>
                 {downloading ? t('tools.qr.preparing') : t('tools.qr.download_png')}
               </button>
               <button
                 type="button"
                 onClick={copy}
                 disabled={!data}
-                className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md border border-slate-300 text-sm font-medium text-slate-700 hover:border-orange-400 hover:bg-orange-50/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className={btnSecondary}
               >
                 {copied === 'ok'
                   ? t('tools.qr.copied')
@@ -728,7 +729,7 @@ export default function QrDialog() {
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900"
+              className={btnQuiet}
             >
               {t('tools.common.cancel')}
             </button>
@@ -736,7 +737,7 @@ export default function QrDialog() {
               type="button"
               onClick={qrEdit ? saveEdit : addToPage}
               disabled={!data || adding}
-              className="px-4 py-2 text-sm font-medium rounded-md bg-orange-700 text-white hover:bg-orange-800 disabled:opacity-40 disabled:cursor-not-allowed"
+              className={btnPrimary}
             >
               {qrEdit
                 ? adding

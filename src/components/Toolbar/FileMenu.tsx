@@ -10,6 +10,7 @@ import { PDF_OR_OFFICE_ACCEPT } from '../../lib/officeFiles'
 import { openFiles } from '../../stores/tabStore'
 import { RedactIcon } from '../icons/RedactIcon'
 import { translateNav, useCloseAppMenu, useLanguage } from '@unisim/sdk'
+import { btnPrimarySm, btnQuietSm } from '../buttons'
 
 /**
  * The one category the dropdown has expanded, or `null` for all collapsed.
@@ -398,7 +399,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
           <button
             type="button"
             onClick={() => setRenameOpen(false)}
-            className="px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-200 rounded"
+            className={btnQuietSm}
           >
             {t('menu.cancel')}
           </button>
@@ -406,7 +407,7 @@ export default function FileMenu({ variant = 'toolbar' }: Props) {
             type="button"
             onClick={commitRename}
             disabled={!renameDraft.trim() || renameDraft.trim() === fileName}
-            className="px-3 py-1 text-xs font-medium text-white bg-orange-700 hover:bg-orange-800 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+            className={btnPrimarySm}
           >
             {t('menu.save')}
           </button>

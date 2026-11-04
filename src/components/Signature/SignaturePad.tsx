@@ -31,6 +31,7 @@ import { formatAttestLocal, verifyPhoneAttestation, type PhoneAttestation } from
 import { usePhoneAttestStore } from '../../stores/phoneAttestStore'
 import { SIGN_PAD_MODES, SIGN_PAD_VIEW, type SignPadMode } from '../../lib/defaultViews'
 import { isNativeShell } from '../../lib/nativeOpen'
+import { btnPrimary, btnSecondary } from '../buttons'
 
 const PAD_W = 600
 const PAD_H = 240
@@ -633,42 +634,27 @@ export default function SignaturePad() {
           <div className="flex shrink-0 items-center gap-2">
             {/* Draw on its own is no choice, so the phone apps show no toggle. */}
             {phoneHandoff && (
-            <div className="flex whitespace-nowrap rounded-lg bg-slate-100 p-0.5 text-xs">
-              {/* The mode the pad opens on is orange: the suite's gradient
-                  while you are on it, an orange ring while not. */}
+            <div className="u-tabs whitespace-nowrap">
+              {/* The suite's tray tabs (SDK 0.216): aria-pressed selects, and
+                  buttonProps' data-default-view draws the opens-here dot (it
+                  was the gradient / an orange ring). */}
               <button
                 type="button"
                 {...dv.buttonProps('draw', t('sign.pad_mode_draw'))}
                 onClick={() => switchMode('draw')}
                 aria-pressed={mode === 'draw'}
-                className={`rounded-md px-2.5 py-1 transition ${
-                  dv.isSet && dv.defaultView === 'draw'
-                    ? mode === 'draw'
-                      ? 'bg-linear-to-br from-[#FE8C01] to-[#E05504] text-white shadow-sm'
-                      : 'text-orange-700 ring-1 ring-inset ring-orange-400/70 hover:bg-orange-50'
-                    : mode === 'draw' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                }`}
+                className="u-tab"
               >
                 {t('sign.pad_mode_draw')}
               </button>
-              {/* Orange + phone icon so the "send to sign" option is easy
-                  to spot — signing with a mouse on desktop is fiddly. It is
-                  orange already, so as the default it takes the gradient when
-                  on, and a ring (not just orange text) when not. */}
+              {/* A phone icon so the "send to sign" option is easy to spot —
+                  signing with a mouse on desktop is fiddly. */}
               <button
                 type="button"
                 {...dv.buttonProps('phone', t('sign.send_to_sign'))}
                 onClick={() => switchMode('phone')}
                 aria-pressed={mode === 'phone'}
-                className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition ${
-                  mode === 'phone'
-                    ? dv.isSet && dv.defaultView === 'phone'
-                      ? 'bg-linear-to-br from-[#FE8C01] to-[#E05504] text-white shadow-sm'
-                      : 'bg-orange-700 text-white'
-                    : dv.isSet && dv.defaultView === 'phone'
-                      ? 'text-orange-700 ring-1 ring-inset ring-orange-400/70 hover:bg-orange-50'
-                      : 'text-orange-700 hover:bg-orange-700/10 hover:text-orange-800'
-                }`}
+                className="u-tab gap-1"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <rect x="7" y="2" width="10" height="20" rx="2.5" /><line x1="11" y1="18" x2="13" y2="18" />
@@ -731,7 +717,7 @@ export default function SignaturePad() {
             <button
               type="button"
               onClick={cancel}
-              className="mt-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm"
+              className={`${btnSecondary} mt-1`}
             >
               {t('sign.cancel')}
             </button>
@@ -853,20 +839,20 @@ export default function SignaturePad() {
             />
             <button
               onClick={clear}
-              className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm"
+              className={btnSecondary}
             >
               {t('sign.clear')}
             </button>
             <button
               onClick={cancel}
-              className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm"
+              className={btnSecondary}
             >
               {t('sign.cancel')}
             </button>
             <button
               onClick={save}
               disabled={lines.length === 0}
-              className="px-4 py-2 bg-orange-700 hover:bg-orange-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded text-sm font-medium"
+              className={btnPrimary}
             >
               {t('sign.save')}
             </button>
@@ -918,12 +904,12 @@ export default function SignaturePad() {
 
                 <div className={hasExtras ? '' : 'opacity-50 pointer-events-none'}>
                   <div className="text-xs font-medium text-slate-500 mb-1">{t('sign.pad_when_placed')}</div>
-                  <div className="inline-flex rounded-md border border-slate-300 overflow-hidden text-sm">
+                  <div className="u-tabs inline-flex">
                     <button
                       type="button"
                       onClick={() => setSeparatePlacement(false)}
                       aria-pressed={!separatePlacement}
-                      className={`px-3 py-1.5 ${!separatePlacement ? 'bg-orange-700 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
+                      className="u-tab"
                     >
                       {t('sign.pad_with_signature')}
                     </button>
@@ -931,7 +917,7 @@ export default function SignaturePad() {
                       type="button"
                       onClick={() => setSeparatePlacement(true)}
                       aria-pressed={separatePlacement}
-                      className={`px-3 py-1.5 border-l border-slate-300 ${separatePlacement ? 'bg-orange-700 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
+                      className="u-tab"
                     >
                       {t('sign.pad_separate_click')}
                     </button>

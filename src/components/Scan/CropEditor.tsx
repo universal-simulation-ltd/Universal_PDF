@@ -3,6 +3,7 @@ import { defaultQuad, fullQuad, isConvexQuad, type Quad } from '../../lib/scanGe
 import { detectDocument, flattenPhoto, type ScanColour, type ScanPage } from '../../lib/scan'
 import { useT, type MessageKey } from '../../i18n'
 import { notice } from '../../lib/notice'
+import { btnPrimary, btnSecondary } from '../buttons'
 
 interface Props {
   /** The decoded photo (see `decodePhoto`). */
@@ -294,7 +295,7 @@ export default function CropEditor({ photo, initialQuad, colour, onColourChange,
           type="button"
           onClick={onSkip}
           disabled={busy}
-          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700 disabled:opacity-50"
+          className={btnSecondary}
         >
           {skipLabel ?? t('tools.scan.skip_photo')}
         </button>
@@ -302,7 +303,7 @@ export default function CropEditor({ photo, initialQuad, colour, onColourChange,
           type="button"
           onClick={addPage}
           disabled={!valid || busy || !url}
-          className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+          className={btnPrimary}
         >
           {busy ? t('tools.scan.straightening') : t('tools.scan.add_page')}
         </button>

@@ -11,6 +11,7 @@ import { certifiedSignatureHere, isDesktopApp } from '../../lib/accounts'
 import { REDACT_CONFIRM_WORD } from '../../lib/redactGate'
 import LockedOriginNote from '../Lock/LockedOriginNote'
 import { useT } from '../../i18n'
+import { btnPrimary, btnSecondary, btnSoft } from '../buttons'
 
 /**
  * "Send for signature" — the PLAIN route, and the default everywhere
@@ -112,9 +113,9 @@ export default function SendForSignatureDialog() {
   }
 
   const primaryClass =
-    'w-full rounded-lg bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed'
+    `${btnPrimary} w-full`
   const secondaryClass =
-    'w-full rounded-lg border border-orange-300 bg-orange-50 px-4 py-2.5 text-sm font-semibold text-orange-800 hover:bg-orange-100 disabled:opacity-50 disabled:cursor-not-allowed'
+    `${btnSoft} w-full`
 
   return createPortal(
     <div
@@ -205,7 +206,7 @@ export default function SendForSignatureDialog() {
               <button
                 type="button"
                 onClick={() => { close(); setCertifiedOpen(true) }}
-                className="mt-3 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100"
+                className={`${btnSecondary} mt-3`}
               >
                 {t('sign.sfs_certified_button')}
               </button>

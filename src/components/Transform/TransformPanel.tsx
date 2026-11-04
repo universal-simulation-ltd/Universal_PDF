@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { usePdfStore } from '../../stores/pdfStore'
 import type { Orientation } from '../../lib/markdownToPdf'
 import { useT } from '../../i18n'
+import { btnPrimarySm, btnQuietSm } from '../buttons'
 
 interface Props {
   open: boolean
@@ -194,7 +195,7 @@ export default function TransformPanel({ open, onClose }: Props) {
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 text-sm whitespace-nowrap text-slate-700 hover:bg-slate-200 rounded-lg transition-colors"
+              className={`${btnQuietSm} whitespace-nowrap`}
             >
               {t('annotate.common.cancel')}
             </button>
@@ -202,7 +203,7 @@ export default function TransformPanel({ open, onClose }: Props) {
               type="button"
               onClick={build}
               disabled={busy || !text.trim()}
-              className="px-4 py-1.5 text-sm font-medium whitespace-nowrap text-white bg-orange-700 hover:bg-orange-800 rounded-lg shadow-sm disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              className={`${btnPrimarySm} whitespace-nowrap`}
             >
               {busy ? t('annotate.transform.building') : t('annotate.transform.build')}
             </button>

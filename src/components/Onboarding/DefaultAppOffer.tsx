@@ -1,5 +1,6 @@
 import type { DefaultAppOffer as Offer } from '../../hooks/useDefaultPdfApp'
 import { useT, type Translator } from '../../i18n'
+import { btnPrimarySm, btnQuietSm } from '../buttons'
 
 // What the button will actually do. On Windows an app is not allowed to change
 // the association — see electron/defaultApp.cjs — so the label must not promise
@@ -60,14 +61,14 @@ export function DefaultAppBar({ offer }: { offer: Offer }) {
             type="button"
             onClick={() => void offer.makeDefault()}
             disabled={offer.busy}
-            className="inline-flex items-center rounded-lg bg-orange-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-orange-700 transition-colors disabled:opacity-60 disabled:cursor-wait"
+            className={btnPrimarySm}
           >
             {offer.busy ? t('app.default_working') : actionLabel(t, offer)}
           </button>
           <button
             type="button"
             onClick={offer.dismiss}
-            className="inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-orange-100/60 transition-colors"
+            className={btnQuietSm}
           >
             {t('app.default_not_now')}
           </button>

@@ -5,6 +5,7 @@ import { buildPageNumbers, isPageNumber, pageNumberText, type PageNumberAlign } 
 import type { PageSize } from '../../lib/everyPage'
 import { LINE_HEIGHT, textBoxSize } from '../../lib/textLayout'
 import { useT } from '../../i18n'
+import { btnDanger, btnPrimary, btnSecondary } from '../buttons'
 
 // "Advanced → Page numbers" (James, 2026-10-18): a number at the foot of every
 // page, left, centre or right, as "1" or "Page 1 of 3". They go on as ordinary
@@ -118,7 +119,7 @@ export default function PageNumbersDialog({ onClose }: Props) {
               type="button"
               disabled={busy}
               onClick={() => { removeMany(existing.map((a) => a.id)); onClose() }}
-              className="mr-auto px-3 py-2 rounded text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+              className={`${btnDanger} mr-auto`}
             >
               {t('tools.page_numbers.remove')}
             </button>
@@ -127,7 +128,7 @@ export default function PageNumbersDialog({ onClose }: Props) {
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700 disabled:opacity-50"
+            className={btnSecondary}
           >
             {t('tools.common.cancel')}
           </button>
@@ -135,7 +136,7 @@ export default function PageNumbersDialog({ onClose }: Props) {
             type="button"
             onClick={() => void apply()}
             disabled={busy || !doc}
-            className="px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium disabled:opacity-50"
+            className={btnPrimary}
           >
             {existing.length > 0 ? t('tools.page_numbers.update') : t('tools.page_numbers.add')}
           </button>

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { openPdf, type PDFDocumentProxy } from '../../lib/pdfjs'
 import { diffPixels, diffWords, joinWords, toHunks, tokenize, type DiffRun, type Word } from '../../lib/compare'
 import { useT } from '../../i18n'
+import { btnPrimary } from '../buttons'
 
 // Compare two PDFs: what changed between two versions of a document.
 //
@@ -218,7 +219,7 @@ export default function CompareDialog({
           {t('tools.compare.title')}
         </h2>
         {first && second && (
-          <div role="tablist" aria-label={t('tools.compare.title')} className="flex rounded-lg bg-slate-100 p-0.5 text-sm">
+          <div role="tablist" aria-label={t('tools.compare.title')} className="u-tabs">
             {(
               [
                 ['side', t('tools.compare.side_by_side')],
@@ -232,7 +233,7 @@ export default function CompareDialog({
                 aria-selected={mode === m}
                 data-compare-mode={m}
                 onClick={() => setMode(m)}
-                className={`rounded-md px-3 py-1.5 font-medium ${mode === m ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                className="u-tab"
               >
                 {label}
               </button>
@@ -269,7 +270,7 @@ export default function CompareDialog({
             <button
               onClick={() => inputRef.current?.click()}
               disabled={loading || !first}
-              className="rounded-lg bg-orange-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-orange-800 disabled:opacity-50"
+              className={btnPrimary}
             >
               {loading ? t('tools.compare.opening') : t('tools.compare.pick')}
             </button>

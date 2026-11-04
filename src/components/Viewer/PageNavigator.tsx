@@ -7,6 +7,7 @@ import { notice } from '../../lib/notice'
 import { useAnnotatedThumbDoc } from '../../hooks/useAnnotatedThumbDoc'
 import { useTurned } from '../../hooks/useTurnedImage'
 import { useToolPrefs } from '../../stores/toolPrefsStore'
+import { BinIcon, btnDanger, btnPrimarySm, btnSecondary, CheckIcon, Key } from '../buttons'
 
 // Thumbnails — when they are drawn, how big, and how many are kept — live in
 // `usePageThumbnails`. ⚠️ This component is ALWAYS mounted (App.tsx), so
@@ -303,9 +304,9 @@ export default function PageNavigator() {
               onClick={applyOrder}
               disabled={busy}
               title={t('viewer.nav.apply_order_title')}
-              className="flex-1 h-8 rounded-md bg-orange-700 hover:bg-orange-800 text-white text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-wait"
+              className={`${btnPrimarySm} flex-1 justify-start`}
             >
-              {busy ? t('viewer.nav.applying') : (<><span aria-hidden="true">✓</span> {turned ? t('viewer.nav.apply_changes') : t('viewer.nav.apply_order')}</>)}
+              {busy ? t('viewer.nav.applying') : (<><Key><CheckIcon /></Key>{turned ? t('viewer.nav.apply_changes') : t('viewer.nav.apply_order')}</>)}
             </button>
           </div>
         )}
@@ -370,7 +371,7 @@ function DeleteQuestion({
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-medium text-slate-700"
+            className={btnSecondary}
           >
             {t('tools.common.cancel')}
           </button>
@@ -378,8 +379,9 @@ function DeleteQuestion({
             type="button"
             autoFocus
             onClick={() => onDelete(dontAsk)}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-medium text-white"
+            className={btnDanger}
           >
+            <Key><BinIcon /></Key>
             {t('viewer.nav.delete_yes')}
           </button>
         </div>
