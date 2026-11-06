@@ -11,8 +11,11 @@
 //     SDK's device-language fallback reaches the app's own labels.
 //   • The language is chosen in the SDK's dialogs, not an Actions row (that
 //     row went 2026-09-17): App preferences sets THIS app's language, live,
-//     and <html lang> with it; Global preferences sets the suite's, which an
-//     app override outranks until "Follow global" removes it.
+//     and <html lang> with it; the suite's language (Global Tuning's, or any
+//     other app's) is outranked by that override until "Follow global"
+//     removes it.
+//   • Signed in, the account is "Your Universal ID" in Tune this app, in the
+//     app's language (accountInTune, e980221).
 //   • The choice survives a reload.
 //   • App preferences is light (the panel's theme, not the dark pill's) and
 //     says Universal PDF is always light.
@@ -133,15 +136,14 @@ async function openMenu() {
   await page.hover('button[aria-label*=" · "]')
   await page.waitForTimeout(400)
 }
-// Signed in, Global preferences sits in the account panel behind the menu's
-// identity header (the first expandable row); App preferences is in the list.
-async function openAccountPanel() {
-  await page.locator('[role="menu"] [role="menuitem"][aria-haspopup="true"][aria-expanded="false"]').first().click()
-  await page.waitForTimeout(300)
-}
+// ⚠️ No Global Tuning row since e980221. Signed in, it sat in the account
+// panel behind the menu's identity header; `accountInTune` gives everybody the
+// account-free menu (the account is in Tune this app instead), and the SDK
+// (0.216.3) only draws the Global Tuning row inside that panel. So the suite
+// language is set below the way another app or Global Tuning elsewhere would
+// leave it — in `universal:language` — and this app is checked to honour it.
 async function openPrefs(lang, kind) {
   await openMenu()
-  if (kind === 'global') await openAccountPanel()
   await prefsRow(lang, kind).click()
   await dialog(kind).waitFor({ timeout: 5000 })
 }
@@ -165,8 +167,6 @@ check('its File section is "' + fr.menu.file + '"', (await sectionButton(fr.menu
 check('there is no Actions Language row any more', (await page.getByTestId('menu-language').count()) === 0)
 check('one App preferences row', (await prefsRow('fr', 'app').count()) === 1)
 check('no language <select> in the panel itself', (await page.locator('[role="menu"] select').count()) === 0)
-await openAccountPanel()
-check('one Global preferences row, in the account panel', (await prefsRow('fr', 'global').count()) === 1)
 
 console.log('\nApp preferences: light, "always light", and a per-app language')
 await prefsRow('fr', 'app').click()
@@ -185,6 +185,12 @@ check(
   'Language defaults to "Follow global: Français"',
   (await appSelect.inputValue()) === '' &&
     (await appSelect.locator('option').first().innerText()).includes(sdk.t('fr', 'prefs.follow_global').replace('{value}', 'Français')),
+)
+
+check(
+  'the account is "' + sdk.t('fr', 'prefs.account') + '" in it, in French',
+  (await dialog('app').getByTestId('unisim-prefs-account').count()) === 1 &&
+    (await dialog('app').getByTestId('unisim-prefs-account').innerText()).toLowerCase().includes(sdk.t('fr', 'prefs.account').toLowerCase()),
 )
 
 console.log('\npicking Deutsch for this app translates the app (the reported bug)')
@@ -210,17 +216,20 @@ await page.setInputFiles('input[type=file]', { name: 'language.pdf', mimeType: '
 await page.waitForSelector('[data-page-index="0"] canvas', { timeout: 30000 })
 await page.waitForTimeout(600)
 
-console.log('\nGlobal preferences sets the suite language; the app override still wins')
-await openPrefs('de', 'global')
-await dialog('global').locator('select').selectOption('it')
-await page.waitForTimeout(400)
-check('saved as the suite language', (await stored('universal:language')) === 'it', await stored('universal:language'))
+console.log('\nthe suite language changes; the app override still wins')
+await page.evaluate(() => localStorage.setItem('universal:language', 'it'))
+await page.reload({ waitUntil: 'load' })
+await page.waitForTimeout(1200)
+check('the suite language is it', (await stored('universal:language')) === 'it', await stored('universal:language'))
 check('the app stays in German', (await htmlLang()) === 'de', await htmlLang())
+await page.setInputFiles('input[type=file]', { name: 'language.pdf', mimeType: 'application/pdf', buffer: pdf })
+await page.waitForSelector('[data-page-index="0"] canvas', { timeout: 30000 })
+await page.waitForTimeout(600)
+await openPrefs('de', 'app')
 check(
-  'and the dialog says why',
-  (await dialog('global').innerText()).includes(
-    sdk.t('de', 'prefs.app_uses_own_language').replace('{app}', 'Universal PDF').replace('{value}', 'Deutsch'),
-  ),
+  'and Tune this app offers to follow it',
+  (await dialog('app').locator('select').first().locator('option').first().innerText())
+    .includes(sdk.t('de', 'prefs.follow_global').replace('{value}', 'Italiano')),
 )
 await closePrefs()
 

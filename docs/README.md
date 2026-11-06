@@ -311,28 +311,23 @@ name and logo, and About + Reset to defaults moved from Actions ▸ Advanced to
 the foot of "Tune this app" (the navbars' `about` / `onResetDefaults`, config
 in `src/lib/aboutApp.ts`).
 
-### ⚠️ `useProfile()` is per-call-site state, so the display name went stale
+### Signed in = personalised — no profile pill
 
-`useProfile()` is a hook with its own `useState`, not a shared store. The
-display-name editor is the SDK's `<ProfileDialog>` — mounted inside
-`<UserProfile>` on desktop, where "View profile" cannot be a link to the hub —
-and it calls `useProfile()` for **itself**. So saving refreshed the dialog's
-copy and never `ToolbarUserProfile`'s, which is the copy feeding the `name` the
-dropdown prints. The name (and the pill's initials) stayed wrong until the app
-was reloaded.
+Since 2026-10-26 (e980221) nobody signed in sees a photo, initials or a
+greeting: the landing bar says "Jim's PDFs" ("My PDFs" with no name known —
+the SDK's `personalTitle`), the menu pill is a bare ⚙ for everyone, and the
+account — email, the hub, Sign out, "Call me" and the App name choice — is
+**Your Universal ID** in Tune this app (`accountInTune`), from the landing bar
+and from `ToolbarUserProfile` under an open document alike.
 
-There is no SDK event for the save, so `ToolbarUserProfile` re-reads the row as
-the pointer reaches the pill (`onPointerEnter` **and** `onPointerDownCapture` —
-hover-open would miss a pointerdown-only refresh) and on window focus, for the
-web build where the edit happens in a hub tab.
-
-⚠️ Two traps in that handler. `useProfile().refresh` is a **new arrow function
-every render**, so it is held in a ref rather than listed as an effect
-dependency — otherwise the focus listeners are torn down and rebuilt on every
-render. And the burst-throttle is **half a second**: at a second and a half it
-swallowed the very case it exists for (close the dialog, go straight back to
-the menu) and the fix looked like it had never worked. Pinned by
-`npm run test:profile`.
+That retired the old stale-display-name fix (`ToolbarUserProfile` re-reading
+`useProfile()` on pointer enter, because the hook is per-call-site state): the
+dropdown no longer prints a name. ⚠️ It also took the **Global Tuning** row out
+of the menu — the SDK draws it only inside the account panel `accountInTune`
+removes — so in split-preferences mode it is not reachable from this app
+(SDK 0.216.3). Pinned by `npm run test:profile` (title, Tune account, Call me
+live, sign out), `npm run test:personal-title` (the title on phone widths and
+for a guest) and `npm run test:language`.
 
 ### `?mockauth=1` — a signed-in app with no account
 
@@ -341,7 +336,7 @@ shipped) accepts `?mockauth=1`, which hands the SDK its offline fixture world:
 signed in as demo@example.invalid in org "UNI·SIM Demo", no network. Useful for
 eyeballing the signed-in chrome; `e2e/actions-menu.e2e.mjs` runs on it.
 
-⚠️ It cannot express a row **changing** — its `profiles` select returns one
+⚠️ It cannot express a row you control — its `profiles` select returns one
 frozen object — which is why `e2e/profile-identity.e2e.mjs` seeds a session
 into `universal-suite-auth` and stubs `/rest/v1/*` itself instead.
 

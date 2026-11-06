@@ -1,4 +1,5 @@
-// The profile popup's identity — the display name that went stale.
+// Who is signed in, and where their account lives — the bar's personal title
+// and "Your Universal ID" in Tune this app.
 //
 //   ./scripts/preview.ps1        # or preview.sh — Universal PDF is :5174
 //   npm run test:profile         # in another terminal
@@ -6,26 +7,26 @@
 // ── Why this one stubs the network instead of using `?mockauth=1` ────────────
 //
 // `e2e/actions-menu.e2e.mjs` runs on the SDK's offline fixture, which is right
-// for anything that only needs *a* signed-in user. It cannot serve this file:
-// its `profiles` select returns one frozen row, so "the display name changed"
-// is inexpressible there. So this context seeds a session into the SDK's
-// localStorage key and answers `/rest/v1/*` and `/auth/v1/*` itself — which
-// also means the name and the branding can be changed BETWEEN reads, which is
-// the whole bug.
+// for anything that only needs *a* signed-in user. This file needs a profile
+// row it controls (the name the title is made from) and a sign-out that
+// lands, so it seeds a session into the SDK's localStorage key and answers
+// `/rest/v1/*` and `/auth/v1/*` itself.
 //
-// ── The bug ─────────────────────────────────────────────────────────────────
+// ── What changed (e980221, 2026-10-26) ───────────────────────────────────────
 //
-// `useProfile()` is a hook with its own `useState` per call site, not a shared
-// store. The display-name editor is the SDK's <ProfileDialog>, mounted inside
-// <UserProfile>, and it calls `useProfile()` for itself — so saving refreshed
-// the dialog's copy and never the app's, and the dropdown went on showing the
-// old name until a reload. `ToolbarUserProfile` now re-reads the row as the
-// pointer reaches the pill (enter AND down — the panel opens on hover, so a
-// pointerdown-only refresh would miss anyone who never clicks it).
+// Signed in = personalised: no photo, initials or greeting in a pill and no
+// account rows in the menu. The landing bar says "Jim's PDFs" (SDK
+// `personalTitle`), and the account — the email, the hub, Sign out, "Call me"
+// and the App name choice — is "Your Universal ID" in Tune this app
+// (`accountInTune`), from the landing bar AND from the dark tools bar a
+// document opens under (`ToolbarUserProfile`).
 //
-// Negative control (2026-08-27, run): dropping the pointer handlers from
-// `ToolbarUserProfile` turns 3 checks red — every assertion about a name
-// changing.
+// Until then this spec pinned the stale-display-name fix in the pill's
+// dropdown (`useProfile()` is per-call-site state, so `ToolbarUserProfile`
+// re-read the row on pointer enter). The dropdown no longer prints a name and
+// that re-read went with it; the name that shows now is the bar's title, and
+// the in-app way to change it is Call me — so the "a renamed user sees the new
+// name with no reload" checks are re-aimed there.
 
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -102,8 +103,11 @@ const playwright = await loadPlaywright()
 const browser = await playwright.chromium.launch()
 const pdf = await testPdf()
 
-// The world this run serves. Mutating these between reads is how "somebody
-// just saved a new display name / uploaded a company logo" is simulated.
+const app = (await import(pathToFileURL(join(HERE, '../src/i18n/en/app.ts')).href)).default
+const titleFor = (name) => app.personal_title.replace('{name}', name)
+const ACCOUNT = sdk.t('en', 'prefs.account')
+
+// The world this run serves.
 const world = {
   displayName: 'Jim Original',
   orgName: 'Acme Ltd',
@@ -132,11 +136,14 @@ const context = await browser.newContext({ viewport: { width: 1400, height: 900 
 
 // `universal-suite-auth` is the storageKey the SDK gives its Supabase client
 // (provider.ts). With no cookieDomain — which is the case in a dev build — that
-// is a plain localStorage entry, so seeding it IS being signed in.
-await context.addInitScript(
-  (s) => window.localStorage.setItem('universal-suite-auth', JSON.stringify(s)),
-  session,
-)
+// is a plain localStorage entry, so seeding it IS being signed in. Seeded once:
+// an init script would put the session back on every load, and the sign-out
+// check at the end reloads.
+await context.addInitScript((s) => {
+  if (sessionStorage.getItem('seeded')) return
+  sessionStorage.setItem('seeded', '1')
+  window.localStorage.setItem('universal-suite-auth', JSON.stringify(s))
+}, session)
 
 const org = () => ({
   id: ORG_ID,
@@ -152,12 +159,12 @@ const org = () => ({
 })
 const profileRow = () => ({ id: UID, display_name: world.displayName, avatar_url: null, locale: 'en' })
 
-// `profileDelayMs` is what makes the re-read OBSERVABLE. Answered instantly,
-// `loading` goes true and false inside one React batch and a needless refresh
-// is invisible — which is exactly why the bug below sat there. A third of a
-// second is an ordinary round trip.
+// `profileDelayMs` is what makes a needless re-read OBSERVABLE (see the menu
+// checks below). Answered instantly, `loading` goes true and false inside one
+// React batch and the re-read is invisible.
 let profileReads = 0
 let profileDelayMs = 0
+let signedOut = false
 
 await context.route('**/rest/v1/**', async (route) => {
   const table = new URL(route.request().url()).pathname.split('/rest/v1/')[1]
@@ -171,13 +178,17 @@ await context.route('**/rest/v1/**', async (route) => {
   else if (table === 'organisations') body = [org()]
   await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) })
 })
-await context.route('**/auth/v1/**', (route) =>
-  route.fulfill({
+await context.route('**/auth/v1/**', (route) => {
+  if (new URL(route.request().url()).pathname.endsWith('/logout')) {
+    signedOut = true
+    return route.fulfill({ status: 204, body: '' })
+  }
+  return route.fulfill({
     status: 200,
     contentType: 'application/json',
     body: JSON.stringify({ user: session.user, session }),
-  }),
-)
+  })
+})
 
 const page = await context.newPage()
 page.on('pageerror', (e) => failures.push('page error: ' + e.message))
@@ -189,9 +200,88 @@ try {
   await browser.close()
   process.exit(2)
 }
+await page.waitForTimeout(1500)
 
-// The control only exists with a document open — the landing page uses the
-// SDK's own navbar instead.
+// ⚠️ HOVER, not click: the pill opens on mouseenter, so a click would open it
+// on the way in and toggle it straight back shut.
+const PILL = 'button[aria-label$="Profile"]'
+async function openMenu() {
+  // Park the pointer well away first, so the next hover is a real re-entry.
+  await page.mouse.move(20, 500)
+  await page.waitForTimeout(120)
+  await page.hover(PILL)
+  await page.waitForTimeout(600)
+}
+const tune = page.locator('[data-unisim-preferences="app"]')
+const account = tune.getByTestId('unisim-prefs-account')
+async function openTune() {
+  await openMenu()
+  await page.locator(`[role="menu"] [role="menuitem"][aria-haspopup="dialog"]:has-text("${APP_PREFS}")`).click()
+  await tune.waitFor({ timeout: 5000 })
+}
+async function closeTune() {
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(300)
+}
+// The landing bar's title: the identity cluster's one visible leaf <span>.
+const barTitle = () =>
+  page.evaluate(() => {
+    const identity = document.querySelector('header > div')
+    const el = identity && [...identity.querySelectorAll('span')].find(
+      (s) => s.children.length === 0 && s.textContent.trim() && s.getAttribute('aria-hidden') !== 'true'
+        && !s.closest('button'),
+    )
+    return el?.textContent.trim() ?? null
+  })
+const pillText = async () => (await page.locator(PILL).first().innerText()).trim()
+// Commit a Call me: it saves on blur (Enter blurs it).
+async function callMe(name) {
+  const input = account.locator(`input[placeholder="${sdk.t('en', 'prefs.call_me_placeholder')}"]`)
+  await input.fill(name)
+  await input.press('Enter')
+  await page.waitForTimeout(400)
+}
+
+console.log('\nthe bar names the app for them, and the pill names nobody')
+check(`the current display name is on screen, as "${titleFor('Jim')}"`, (await barTitle()) === titleFor('Jim'), await barTitle())
+check('the pill is the bare menu (no photo, initials or greeting)', (await pillText()) === '⚙', await pillText())
+await openMenu()
+const menu = await page.locator('[role="menu"]').first().innerText()
+check('the menu has no account rows (no email, no Sign out)', !menu.includes('james@unisim.co.uk') && !menu.includes(sdk.t('en', 'profile.sign_out')), menu.slice(0, 200))
+
+console.log(`\n"${ACCOUNT}" is in ${APP_PREFS}`)
+await openTune()
+check(`the "${ACCOUNT}" section is there`, (await account.count()) === 1)
+const accountText = (await account.count()) ? await account.innerText() : ''
+check('with the email', accountText.includes('james@unisim.co.uk'), accountText.slice(0, 200))
+check('a link to the hub', (await account.locator('a[href*="unisim.co.uk"]').count()) === 1)
+check('and Sign out', (await account.getByTestId('unisim-prefs-sign-out').count()) === 1)
+check(
+  `App name offers "${titleFor('Jim')}"`,
+  (await account.getByTestId('unisim-app-title-personal').innerText()).includes(titleFor('Jim')),
+)
+
+console.log('\na new name shows in the bar at once — no reload')
+await callMe('Jimbo')
+check('the new name is shown', (await barTitle()) === titleFor('Jimbo'), await barTitle())
+check('and the old one is gone', !(await barTitle())?.includes('Jim’'))
+
+console.log('\nand it keeps up with a second change')
+await callMe('Jimmy')
+check('the newest name is shown', (await barTitle()) === titleFor('Jimmy'), await barTitle())
+
+console.log('\nApp name: the product\'s own name instead')
+await account.getByTestId('unisim-app-title-product').click()
+await page.waitForTimeout(400)
+check('the bar says "Universal PDF" instead', (await barTitle()) === 'Universal PDF', await barTitle())
+await account.getByTestId('unisim-app-title-personal').click()
+await page.waitForTimeout(400)
+check('and picking it again brings it back', (await barTitle()) === titleFor('Jimmy'), await barTitle())
+await closeTune()
+
+// The rest runs with a document open: the landing bar gives way to the dark
+// tools bar, whose menu is `ToolbarUserProfile` — the same SDK pill, merged
+// with Actions.
 await page.setInputFiles('input[type=file]', {
   name: 'identity.pdf',
   mimeType: 'application/pdf',
@@ -200,64 +290,25 @@ await page.setInputFiles('input[type=file]', {
 await page.waitForSelector('[data-page-index="0"] canvas', { timeout: 30000 })
 await page.waitForTimeout(600)
 
-// ⚠️ HOVER, not click: the pill opens on mouseenter, so a click would open it
-// on the way in and toggle it straight back shut.
-const PILL = 'button[aria-label$="Profile"]'
-async function openMenu() {
-  // Park the pointer well away first, so the next hover is a real re-entry —
-  // that is the event the refresh hangs off, and moving to a spot the pointer
-  // is already on fires nothing.
-  await page.mouse.move(20, 500)
-  await page.waitForTimeout(120)
-  await page.hover(PILL)
-  await page.waitForTimeout(600)
-}
-const menuText = () => page.locator('[data-menu-panel], body').first().innerText()
+console.log(`\nwith a document open, the account is still in ${APP_PREFS}`)
+await openTune()
+check(`the "${ACCOUNT}" section is there`, (await account.count()) === 1)
+check('with the email', (await account.count()) > 0 && (await account.innerText()).includes('james@unisim.co.uk'))
+await closeTune()
 
-console.log('\nthe dropdown shows the name the profile row holds')
-await openMenu()
-check('the current display name is on screen', (await menuText()).includes('Jim Original'))
-
-console.log('\nsaving a new display name updates the dropdown — no reload (the reported bug)')
-world.displayName = 'Jim Renamed'
-await openMenu()
-const afterRename = await menuText()
-check('the new name is shown', afterRename.includes('Jim Renamed'), afterRename.slice(0, 200))
-check('and the old one is gone', !afterRename.includes('Jim Original'))
-
-console.log('\nand it keeps up with a second change')
-world.displayName = 'Jim Renamed Again'
-await openMenu()
-check('the newest name is shown', (await menuText()).includes('Jim Renamed Again'))
-
-// ⚠️ The company-badge checks that stood here (the org name, its initials
-// tile, the uploaded mark) went on 2026-10-02: the badge left this app's
-// `extras` for the SDK's "Plan & limits" box on 2026-09-27 (AccountLimits
-// `CompanyRow`), so they looked for a row the app no longer draws. The SDK
-// owns it now. What is left here is the display name, which is still the
-// app's wiring.
-
-// ── The other half of the same wire ─────────────────────────────────────────
+// ── The menu holds still ────────────────────────────────────────────────────
 //
-// The refresh above hangs off pointer events on the WRAPPER, and the dropdown
-// panel is a child of that same wrapper — so every click inside the open menu
-// fired one too, and while each was in flight the control fell back to its '·'
-// placeholder. Two visible faults from one cause (James, 2026-08-29):
-//
-//   • the avatar blinked to a dot on every click in the menu; and
-//   • the account rows the props drive left the panel with it, so everything
-//     below jumped ~83px — including the language row, which moved out from
-//     under the cursor mid-press and could not be used at all. (That row was
-//     the SDK's <select> until 1.0.3, then the Actions menu's Language row; the
-//     language is in the app / global preferences rows since 2026-09-17, so the
-//     row pinned below is the app one, `prefs.app_preferences` — see
-//     e2e/language.e2e.mjs, which asks for it the same way.)
-//
-// Both are pinned here rather than by the pill's appearance alone, because a
-// screenshot of the resting state looks identical either way.
+// Kept from the stale-name era (James, 2026-08-29): a profile re-read hung off
+// the pill's wrapper fired on every click INSIDE the open menu, and while each
+// was in flight the control fell back to its '·' placeholder — the pill
+// blinked, and the account rows the props drove left the panel, so everything
+// below jumped ~83px, including the row under the cursor mid-press. The
+// re-read and the account rows are gone now (e980221), so these are
+// regression guards: nothing in the menu should re-read the profile, blank the
+// pill or move the Tune this app row under a press.
 profileDelayMs = 350
 
-console.log('\nclicking inside the open menu does not re-read the profile (the reported bug)')
+console.log('\nclicking inside the open menu does not re-read the profile')
 await openMenu()
 const readsBefore = profileReads
 // ⚠️ Observe `document`, and from evaluate() — NOT addInitScript, which runs
@@ -325,6 +376,20 @@ if (atRest && selBox) {
     JSON.stringify({ atRest, pressed }),
   )
 }
+
+// ── Sign out, from Tune ─────────────────────────────────────────────────────
+console.log(`\nSign out in "${ACCOUNT}" signs out`)
+await page.mouse.move(20, 500)
+await page.waitForTimeout(300)
+if (!(await tune.isVisible())) await openTune()
+await account.getByTestId('unisim-prefs-sign-out').click()
+await page.waitForTimeout(800)
+check('the session is gone from this device', (await page.evaluate(() => localStorage.getItem('universal-suite-auth'))) === null)
+check('and the hub was told', signedOut)
+if (await tune.isVisible()) await closeTune()
+await openTune()
+check(`${APP_PREFS} no longer shows "${ACCOUNT}" for them`, (await account.count()) === 0)
+await closeTune()
 
 await browser.close()
 
