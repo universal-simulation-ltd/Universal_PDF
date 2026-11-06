@@ -3,6 +3,9 @@ import { phoneConfirm, prefersReducedMotion, useScrollHint } from '@unisim/sdk'
 import { useT } from '../i18n'
 import { usePdfStore } from '../stores/pdfStore'
 import { usePageThumbnails } from '../hooks/usePageThumbnails'
+import { useAnnotatedThumbDoc } from '../hooks/useAnnotatedThumbDoc'
+import { useAnnotationStore } from '../stores/annotationStore'
+import { useFormStore } from '../stores/formStore'
 import { useTurned } from '../hooks/useTurnedImage'
 import type { PDFDocumentProxy } from '../lib/pdfjs'
 import { requestRenderSlot } from '../lib/renderQueue'
@@ -38,6 +41,36 @@ interface Slot {
   q: number
 }
 
+/**
+ * The sheets' pictures, with the marks on them (James, 2026-11-06: the Pages
+ * page drew the bare PDF, so a signed or marked page looked blank there).
+ *
+ * Thumbnails are drawn from the PDF, and marks are not in it until export, so
+ * `useAnnotatedThumbDoc` builds the annotated copy the website's Refresh does.
+ * The phone asks for it by itself, every time the Pages page opens — no
+ * button — but only when there is something to show: with no marks and no
+ * form answers the copy would be the same file, built for nothing (it is a
+ * full pdf-lib pass, seconds on a long document).
+ *
+ * ⚠️ The bare thumbnails show first and stay until the marked ones are drawn.
+ * Handing `thumbDoc ?? doc` to ONE `usePageThumbnails`, as the website does,
+ * swaps the document under it, which throws every thumbnail away — the sheets
+ * would go blank for a moment as the copy lands. So there are two: the bare
+ * one stops drawing once the copy is in (`open` false keeps what it has), and
+ * each sheet shows the marked picture as soon as it exists, the bare one until
+ * then.
+ */
+function useMarkedThumbs(
+  doc: PDFDocumentProxy | null,
+  thumbDoc: PDFDocumentProxy | null,
+  numPages: number,
+  rootRef: React.RefObject<HTMLElement | null>,
+): (i: number) => string | undefined {
+  const bareFor = usePageThumbnails(doc, numPages, !thumbDoc, rootRef)
+  const markedFor = usePageThumbnails(thumbDoc, numPages, !!thumbDoc, rootRef)
+  return (i) => markedFor(i) ?? bareFor(i)
+}
+
 const sameSlots = (a: Slot[], b: Slot[]) => a.length === b.length && a.every((s, i) => s.src === b[i].src && s.q % 4 === b[i].q % 4)
 const identity = (n: number): Slot[] => Array.from({ length: n }, (_, i) => ({ src: i, q: 0 }))
 
@@ -48,7 +81,19 @@ export default function PagesScreen() {
   const fileName = usePdfStore((s) => s.fileName)
   const viewing = useNav((s) => topScreen(s.screens) === 'page-view')
   const rootRef = useRef<HTMLDivElement>(null)
-  const thumbFor = usePageThumbnails(doc, numPages, true, rootRef)
+  const { thumbDoc, refresh } = useAnnotatedThumbDoc(doc, numPages)
+  const thumbFor = useMarkedThumbs(doc, thumbDoc, numPages, rootRef)
+  // On opening, and for another file while open. Not after Apply changes:
+  // that swaps the document but keeps its name, and the hook rebuilds the copy
+  // for the new pages by itself — asking here too would build it twice.
+  const askedFor = useRef<string | null | undefined>(undefined)
+  useEffect(() => {
+    if (!doc || askedFor.current === fileName) return
+    askedFor.current = fileName
+    const marked = useAnnotationStore.getState().annotations.length > 0 || useFormStore.getState().values.length > 0
+    if (marked) void refresh().catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doc, fileName])
   const base = useMemo(() => identity(numPages), [numPages])
   const [slots, setSlots] = useState<Slot[]>(base)
   const [history, setHistory] = useState<Slot[][]>([])
@@ -325,6 +370,7 @@ export default function PagesScreen() {
       {viewing && doc && (
         <PageViewer
           doc={doc}
+          thumbDoc={thumbDoc}
           slots={slots}
           start={Math.min(viewAt, slots.length - 1)}
           onConfirm={(next) => {
@@ -427,7 +473,7 @@ function useBigPage(doc: PDFDocumentProxy, src: number, level = 1): { url: strin
  * One page large, over the Pages page. Its own copy of the staging: Confirm
  * hands it back (still staged, nothing written), Cancel and Back drop it.
  */
-function PageViewer({ doc, slots, start, onConfirm }: { doc: PDFDocumentProxy; slots: Slot[]; start: number; onConfirm: (next: Slot[]) => void }) {
+function PageViewer({ doc, thumbDoc, slots, start, onConfirm }: { doc: PDFDocumentProxy; thumbDoc: PDFDocumentProxy | null; slots: Slot[]; start: number; onConfirm: (next: Slot[]) => void }) {
   const t = useT()
   const [draft, setDraft] = useState<Slot[]>(slots)
   const [pos, setPos] = useState(Math.max(0, start))
@@ -442,7 +488,10 @@ function PageViewer({ doc, slots, start, onConfirm }: { doc: PDFDocumentProxy; s
   const [zoom, setZoom] = useState<Zoom>(FIT)
   const [live, setLive] = useState(false)
   const [level, setLevel] = useState(1)
-  const big = useBigPage(doc, slot.src, level)
+  // The marks on the large page too, once the Pages page has the annotated
+  // copy (useMarkedThumbs); the bare page until then — `useBigPage` keeps the
+  // picture it has while the next one draws, so the swap does not blank it.
+  const big = useBigPage(thumbDoc ?? doc, slot.src, level)
   // Pages taken out here, kept in the strip (dimmed) so a tap puts one back
   // where it was. Confirm drops them.
   const [outs, setOuts] = useState<{ slot: Slot; at: number }[]>([])
@@ -452,7 +501,7 @@ function PageViewer({ doc, slots, start, onConfirm }: { doc: PDFDocumentProxy; s
   // The small pictures the strip and the neighbours' slices show, drawn for
   // the strip's row as it scrolls.
   const stripRef = useRef<HTMLDivElement | null>(null)
-  const thumbFor = usePageThumbnails(doc, numPages, true, stripRef)
+  const thumbFor = useMarkedThumbs(doc, thumbDoc, numPages, stripRef)
 
   useLayoutEffect(() => {
     const el = stageRef.current

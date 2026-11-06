@@ -173,6 +173,95 @@ for (const [row, screen] of [
   await page.waitForTimeout(300)
 }
 
+console.log('\nPages: the sheets show the marks on them')
+// James, 2026-11-06: the Pages page drew the bare PDF, so a signed or marked
+// page looked blank there. The phone builds the annotated copy by itself as
+// the page opens (no Refresh button, unlike the website's list), shows the
+// bare pictures first and swaps each one when its marked picture is drawn.
+const ANN = '/src/stores/annotationStore.ts'
+// How dark the middle of a sheet's picture is (0 white … 255 black).
+const sheetDark = (i) =>
+  page.evaluate(async (i) => {
+    const img = document.querySelector(`ol li[data-thumb-page="${i}"] img`)
+    if (!img) return null
+    await img.decode().catch(() => {})
+    const c = document.createElement('canvas')
+    c.width = img.naturalWidth
+    c.height = img.naturalHeight
+    const ctx = c.getContext('2d')
+    ctx.drawImage(img, 0, 0)
+    const d = ctx.getImageData(Math.floor(c.width / 2) - 2, Math.floor(c.height / 2) - 2, 4, 4).data
+    let sum = 0
+    for (let k = 0; k < d.length; k += 4) sum += 255 - (d[k] + d[k + 1] + d[k + 2]) / 3
+    return Math.round(sum / 16)
+  }, i)
+const waitUntil = async (fn, ms = 15000) => {
+  const end = Date.now() + ms
+  for (;;) {
+    const v = await fn()
+    if (v || Date.now() > end) return v
+    await page.waitForTimeout(150)
+  }
+}
+// No marks: the plain page, and nothing built for it.
+await nav("n.push('pages')")
+const plain = await waitUntil(async () => { const v = await sheetDark(0); return v === null ? null : { v } })
+check('with no marks, page 1 is the plain page', plain && plain.v < 60, json(plain))
+await nav('n.pop()')
+await page.waitForTimeout(300)
+// A black box over the middle of page 1, then the Pages page again — watched
+// from the moment it opens, so a sheet that blanks between the bare picture
+// and the marked one is caught.
+await mod(ANN, "const s = m.useAnnotationStore.getState(); s.add({ id: 'markme', type: 'redact', pageIndex: 0, x: 150, y: 300, width: 300, height: 250, fill: '#000000' }); s.setSelected(null)")
+await page.evaluate(() => {
+  window.__sheet = []
+  const tick = () => {
+    const li = document.querySelector('ol li[data-thumb-page="0"]')
+    if (li) {
+      const img = li.querySelector('img')
+      const v = img ? img.src.slice(-24) : 'blank'
+      if (window.__sheet.at(-1) !== v) window.__sheet.push(v)
+    }
+    window.__sheetTimer = requestAnimationFrame(tick)
+  }
+  tick()
+})
+await nav("n.push('pages')")
+const marked = await waitUntil(async () => { const v = await sheetDark(0); return v !== null && v > 200 ? { v } : null })
+check('page 1’s sheet shows the black box, with no button pressed', !!marked, json({ marked, now: await sheetDark(0) }))
+const seen = await page.evaluate(() => { cancelAnimationFrame(window.__sheetTimer); return window.__sheet })
+const firstPicture = seen.findIndex((v) => v !== 'blank')
+check(
+  'once a picture is up the sheet never blanks (bare first, then marked)',
+  firstPicture >= 0 && !seen.slice(firstPicture).includes('blank'),
+  json(seen.map((v) => (v === 'blank' ? v : 'img'))),
+)
+check('the other pages keep their pictures', (await sheetDark(1)) !== null && (await sheetDark(2)) !== null)
+// Tapped, the page opens large — with the box on it too.
+await page.locator('ol li[data-thumb-page="0"] > button').first().click()
+const bigDark = await waitUntil(() =>
+  page.evaluate(async () => {
+    const img = document.querySelector('img[data-big-page]')
+    if (!img) return null
+    await img.decode().catch(() => {})
+    const c = document.createElement('canvas')
+    c.width = img.naturalWidth
+    c.height = img.naturalHeight
+    const ctx = c.getContext('2d')
+    ctx.drawImage(img, 0, 0)
+    const d = ctx.getImageData(Math.floor(c.width / 2) - 2, Math.floor(c.height / 2) - 2, 4, 4).data
+    let sum = 0
+    for (let k = 0; k < d.length; k += 4) sum += 255 - (d[k] + d[k + 1] + d[k + 2]) / 3
+    return sum / 16 > 200 ? Math.round(sum / 16) : null
+  }),
+)
+check('opened large, the page shows it too', (await top()) === 'page-view' && !!bigDark, json({ top: await top(), bigDark }))
+await nav('n.pop()')
+await page.waitForTimeout(300)
+await nav('n.pop()')
+await page.waitForTimeout(300)
+await mod(ANN, 'm.useAnnotationStore.getState().resetDocument()')
+
 console.log('\nPages: moves, take-outs and turns are staged until applied')
 await nav("n.push('pages')")
 await page.waitForTimeout(800)
