@@ -236,7 +236,14 @@ check(
   firstPicture >= 0 && !seen.slice(firstPicture).includes('blank'),
   json(seen.map((v) => (v === 'blank' ? v : 'img'))),
 )
-check('the other pages keep their pictures', (await sheetDark(1)) !== null && (await sheetDark(2)) !== null)
+// Waited for: the marked pictures draw one at a time, page 1's first, and a
+// slow runner (CI WebKit) has not reached pages 2 and 3 by the time page 1's
+// is up.
+const others = await waitUntil(async () => {
+  const v = [await sheetDark(1), await sheetDark(2)]
+  return v.every((d) => d !== null) ? v : null
+})
+check('the other pages get their pictures too', !!others, json([await sheetDark(1), await sheetDark(2)]))
 // Tapped, the page opens large — with the box on it too.
 await page.locator('ol li[data-thumb-page="0"] > button').first().click()
 const bigDark = await waitUntil(() =>
