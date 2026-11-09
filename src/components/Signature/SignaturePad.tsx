@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { Stage, Layer, Line, Shape } from 'react-konva'
 import type Konva from 'konva'
-import { UnisimQr, useDefaultView, useUniversal } from '@unisim/sdk'
+import { GrowingTextarea, UnisimQr, useDefaultView, useUniversal } from '@unisim/sdk'
 import { useSignatureStore, type SignatureExtras } from '../../stores/signatureStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { inkColorFor, pressureWidth, renderInkSignature } from '../../lib/renderInk'
@@ -882,7 +882,7 @@ export default function SignaturePad() {
                   onChange={toggleIncludeDetails}
                   label={t('sign.pad_add_details')}
                 />
-                <textarea
+                <GrowingTextarea
                   value={detailBlock}
                   onChange={(e) => setDetailBlock(e.target.value)}
                   rows={4}

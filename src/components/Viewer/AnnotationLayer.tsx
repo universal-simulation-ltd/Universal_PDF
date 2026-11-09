@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { FILL_WARNING_KEY } from '../../lib/resetDefaults'
 import { createPortal } from 'react-dom'
+import { GrowingTextarea } from '@unisim/sdk'
 import {
   Stage,
   Layer,
@@ -5485,7 +5486,7 @@ function SignatureOptionsModal({
           {/* One box for every line under the signature — the first is set
               larger, being almost always the name. Same control as the pad. */}
           <ModalToggle checked={showDetails} onChange={toggleDetails} label={t('annotate.sig_options.add_details')} />
-          <textarea
+          <GrowingTextarea
             value={detailBlock}
             onChange={(e) => changeDetailBlock(e.target.value)}
             rows={4}
