@@ -85,7 +85,10 @@ jobs:
           # `script` is the FALLBACK here — the signing step below overrides it
           # when the certificate secrets are present.
           - name: macOS DMGs
-            os: macos-14
+            # macos-14 was retired: from 2026-11-18 GitHub answers "The
+            # configuration 'macos-14-arm64-us-default' is not supported" and the
+            # job is cancelled before its first step (v1.0.19's first run).
+            os: macos-15
             script: dist:mac:unsigned
             artifacts: universal-pdf-macos
           - name: Linux AppImage + deb
@@ -142,7 +145,7 @@ jobs:
 
       - name: Decide whether the macOS build can be signed
         id: signing
-        if: matrix.os == 'macos-14'
+        if: matrix.os == 'macos-15'
         env:
           HAVE_CERT: ${{ secrets.CSC_LINK != '' }}
           HAVE_APPLE_ID: ${{ secrets.APPLE_ID != '' && secrets.APPLE_APP_SPECIFIC_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
@@ -291,7 +294,7 @@ jobs:
       # ⚠️ Do NOT "simplify" this to `pgrep ... | head`: head exits 0 on empty
       # input, so the check passes whether or not the app is running.
       - name: Smoke-check the packaged app launches (macOS)
-        if: matrix.os == 'macos-14'
+        if: matrix.os == 'macos-15'
         run: |
           APP="release/mac-arm64/Universal PDF.app/Contents/MacOS/Universal PDF"
           test -x "$APP"
@@ -315,7 +318,7 @@ jobs:
       # ticket is attached rather than merely issued — an un-stapled app has to
       # reach Apple to launch, so it fails on an offline machine.
       - name: Verify the macOS build is signed and notarized
-        if: matrix.os == 'macos-14' && steps.signing.outputs.signed == 'true'
+        if: matrix.os == 'macos-15' && steps.signing.outputs.signed == 'true'
         run: |
           APP="release/mac-arm64/Universal PDF.app"
           codesign --verify --deep --strict --verbose=2 "$APP"
@@ -334,7 +337,7 @@ jobs:
       # scary dialog for an app that is in fact perfectly notarized. Submitting
       # the DMG is quick: its contents are already known-good to the notary.
       - name: Staple the notarization ticket to the DMGs
-        if: matrix.os == 'macos-14' && steps.signing.outputs.signed == 'true'
+        if: matrix.os == 'macos-15' && steps.signing.outputs.signed == 'true'
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
