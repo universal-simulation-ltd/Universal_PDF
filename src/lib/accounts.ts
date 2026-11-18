@@ -14,9 +14,11 @@ import { isNativeShell } from './nativeOpen'
 // The WEBSITE and the DESKTOP app keep an optional Universal ID, for the two
 // things that need one: the "Certified signature" route (the PDF is stored,
 // the signer is emailed a link, and a certificate and audit trail are kept),
-// and the main signature saved in your Universal ID. On desktop, sign-in is
-// the SDK's in-app dialog, and hub pages open signed in through
-// `installHubHandoff` (electron/main.cjs, `npm run test:handoff`).
+// and the main signature saved in your Universal ID. On desktop, sign-in goes
+// through the system browser (SDK 0.221.0 `installBrowserSignIn`: the SDK's
+// dialog becomes one "Sign in with your browser" button, with the in-app form
+// one click away), and hub pages open signed in through `installHubHandoff`
+// (electron/main.cjs, `npm run test:handoff`).
 //
 // Which build is which:
 //   • `--mode desktop` is the desktop app, both phone apps (build:mobile) and

@@ -7,7 +7,7 @@ const previewPane = require('./previewPane.cjs')
 const libreOffice = require('./libreOffice.cjs')
 const downloads = require('./downloads.cjs')
 const strings = require('./strings.cjs')
-const { installHubHandoff } = require('@unisim/sdk/electron')
+const { installBrowserSignIn, installHubHandoff } = require('@unisim/sdk/electron')
 
 // Set by `npm run electron:dev` to load the live Vite dev server. When unset
 // (the packaged app), we load the built bundle from disk over `file://`.
@@ -576,6 +576,11 @@ if (!gotLock) {
     // system browser as a stranger — the desktop app's session lives here and
     // nowhere else.
     installHubHandoff({ icon: path.join(__dirname, '..', 'public', 'icon-512.png') })
+    // Sign-in goes through the system browser (SDK 0.221.0): the desktop app
+    // can't see the browser's UNI·SIM session, so this is how a person already
+    // signed in there gets greeted by name here, in one click on the hub's
+    // Continue. `pdf` is how the hub's /desktop-sign-in page names this app.
+    installBrowserSignIn({ app: 'pdf' })
     // Every export the page hands out — the Export dialog, a compressed copy,
     // a converted document — leaves the renderer as an ordinary browser
     // download, because that is the one path that also works in the web build.

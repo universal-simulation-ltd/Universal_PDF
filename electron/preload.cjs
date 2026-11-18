@@ -34,6 +34,11 @@ function channel(name) {
 // them to the system browser, which has never seen the session and shows a
 // signed-out page. The main process does the work; see @unisim/sdk/electron.
 //
+// And "Sign in with your browser" (SDK 0.221.0): the SDK's sign-in dialog
+// opens the hub's sign-in page in the system browser, so someone already
+// signed in to UNI·SIM there presses Continue once and comes back signed in.
+// The main process runs the loopback listener (`installBrowserSignIn`).
+//
 // ⚠️ Spelled out rather than required from the SDK on purpose: Electron
 // sandboxes preloads, and a sandboxed `require` resolves only a few built-ins
 // — requiring the package here would throw at load and take the bridge with
@@ -41,6 +46,8 @@ function channel(name) {
 contextBridge.exposeInMainWorld('unisimDesktop', {
   openHub: (url, session) => ipcRenderer.invoke('unisim:open-hub', { url, session }),
   clearHub: () => ipcRenderer.invoke('unisim:clear-hub'),
+  signInWithBrowser: (opts) => ipcRenderer.invoke('unisim:browser-sign-in', opts),
+  cancelSignInWithBrowser: () => ipcRenderer.invoke('unisim:browser-sign-in-cancel'),
 })
 
 contextBridge.exposeInMainWorld('desktop', {
