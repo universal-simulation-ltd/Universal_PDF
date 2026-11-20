@@ -7,14 +7,24 @@
 //                and the square's peek (backoffice/opensource-portal
 //                scripts/spotlight-art.sh). Built the way Jukebox's
 //                sleeve-header is: the icon's own idea blown up on a two-tone
-//                join, one phone either side. Here the icon's cream page,
+//                join, with the app either side of it — but a laptop on the
+//                left and a phone on the right (James, 2026-11-20: PDF is
+//                web-first, unlike Jukebox). Here the icon's cream page,
 //                tilted as it is on the icon, stands on the paper / PDF-blue
 //                join with its orange highlighter stroke, filled-in lines and
 //                a signature, and bleeds off the bottom as the icon's does.
 //                No words, so one render serves every language and nothing
 //                fights the name and Get button the store lays over it.
 //
-// `raw` is [left phone, right phone]. Geometry is in stage pixels.
+// `raw` is [phone]; the laptop shows LAPTOP, a capture from generate.mjs's
+// opt-in laptop device (DEVICE=laptop node store-assets/generate.mjs 04).
+// Geometry is in stage pixels.
+
+const LAPTOP = '/app/raw/laptop/04-signed.png'
+// Where the page's centre sits, and the laptop and phone either side of it.
+// spotlight/scenes.js pdf() in the open-source portal repeats svgLeft below
+// (from PAGE_CX): change both together.
+export const PAGE_CX = 2260
 
 /** The icon's page (1024 space, the icon's own coordinates), with its content. */
 function page(moving = true) {
@@ -68,8 +78,8 @@ function stage(ctx, inner) {
  * The scene draws the moving parts between them, from the same geometry, so
  * its finished state is the flat header.
  */
-function pageHeader(ctx, t, [l, r], layer = 'full') {
-  const { device } = ctx.kit
+function pageHeader(ctx, t, [r], layer = 'full') {
+  const { device, laptop } = ctx.kit
   const c = ctx.cls, [W, H] = c.stage
   if (c.frame !== 'iphone' || W !== 3840) throw new Error('page-header is drawn for the 3840×1646 header class only')
   const cx = W / 2
@@ -79,15 +89,16 @@ function pageHeader(ctx, t, [l, r], layer = 'full') {
   const S = 1380
   const k = S / 1024
   const pageHalf = Math.round((750 * k) / 2)
-  const svgLeft = Math.round(cx - 525 * k)
+  const svgLeft = Math.round(PAGE_CX - 525 * k)
   const svgTop = Math.round(H * 0.075 - 130 * k)
   const devW = 600, top = Math.round(H * 0.13)
+  const lapW = 1500, overlap = 70
   const [size, inset] = c.mark
   return stage(ctx, `
     ${layer === 'front' ? '' : `<div class="pdf-paper" style="left:0;width:${W / 2}px"></div><div class="pdf-blue" style="left:${W / 2}px;width:${W / 2}px"></div>
     <div class="pdf-page-wrap" style="left:${svgLeft}px;top:${svgTop}px;width:${S}px;height:${S}px">${page(layer === 'full')}</div>`}
-    ${layer === 'back' ? '' : `${device(ctx, l, { w: devW, left: Math.round(cx - pageHalf - devW * 0.86), top, rot: -6, z: 3 })}
-    ${device(ctx, r, { w: devW, left: Math.round(cx + pageHalf - devW * 0.14), top, rot: 6, z: 3 })}
+    ${layer === 'back' ? '' : `${laptop(LAPTOP, { w: lapW, left: PAGE_CX - pageHalf + overlap - lapW, top: Math.round(H * 0.14), z: 3 })}
+    ${device(ctx, r, { w: devW, left: Math.round(PAGE_CX + pageHalf - devW * 0.14), top, rot: 6, z: 3 })}
     <img class="unisim-mark" src="/kit/brand/unisim-icon-white.png" alt="UNI·SIM" style="width:${size}px;right:${inset}px;top:${inset}px">`}`)
 }
 

@@ -47,6 +47,10 @@ const DEVICES = [
   { key: 'iphone', dir: 'raw/iphone', width: 440, height: 860, dpr: 3 },
   { key: 'ipad', dir: 'raw/ipad', width: 1032, height: 1332, dpr: 2 },
   { key: 'android', dir: 'raw/android', width: 360, height: 724, dpr: 3 },
+  // Not a store device: the web app on a 1440 × 900 laptop, a desktop browser
+  // (no touch), for the store header's laptop (store-assets/layouts.mjs), as
+  // the app is web-first. Only rendered when asked for: DEVICE=laptop.
+  { key: 'laptop', dir: 'raw/laptop', width: 1440, height: 900, dpr: 1.5, desk: true, optIn: true },
 ]
 const ORIGIN = 'https://app.test'
 const TYPES = {
@@ -179,7 +183,7 @@ async function samplePdf() {
 }
 
 // ── Driving the editor ─────────────────────────────────────────────────────
-const desktop = (dev) => dev.key === 'ipad' // lg and up gets the desktop toolbar
+const desktop = (dev) => dev.key === 'ipad' || dev.desk // lg and up gets the desktop toolbar
 
 async function open(page, pdf) {
   await page.locator('input[type=file]').first().setInputFiles({
@@ -375,7 +379,7 @@ async function serve(ctx) {
 }
 
 const only = process.argv.slice(2)
-const devices = DEVICES.filter((d) => !process.env.DEVICE || process.env.DEVICE.split(',').includes(d.key))
+const devices = DEVICES.filter((d) => (process.env.DEVICE ? process.env.DEVICE.split(',').includes(d.key) : !d.optIn))
 const browser = await chromium.launch()
 const pdf = await samplePdf()
 let bad = 0
@@ -385,7 +389,7 @@ for (const dev of devices) {
     if (only.length && !only.some((p) => name.startsWith(p))) continue
     const ctx = await browser.newContext({
       viewport: { width: dev.width, height: dev.height }, deviceScaleFactor: dev.dpr,
-      isMobile: true, hasTouch: true, colorScheme: 'light', locale: LOCALE,
+      isMobile: !dev.desk, hasTouch: !dev.desk, colorScheme: 'light', locale: LOCALE,
     })
     // The one-off "welcome" toast a phone sees on its first document: dismissed,
     // as it would be after the first open, so it doesn't sit over the page.
