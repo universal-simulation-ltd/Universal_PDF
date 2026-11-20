@@ -9,10 +9,11 @@
 //   • The download marks are still there, and the sign-up sits under them as
 //     a quiet link that opens a one-field form (website build).
 //   • A bad address shows its message and makes NO network call.
-//   • A good address sends exactly one register_app_interest call carrying
-//     ('pdf', email, 'desktop') and nothing else; true shows "on the list",
-//     and pressing again shows "already on the list" with no second call.
-//   • False (refused / hourly cap) shows "try later" with inbox@; a failed
+//   • A good address sends exactly one request_launch_notification call
+//     carrying ('pdf-desktop', email, language) and nothing else (the one
+//     launch list, universal-platform 0334); a 204 shows "on the list", and
+//     pressing again shows "already on the list" with no second call.
+//   • A refusal (400: rate limit) shows "try later" with inbox@; a failed
 //     fetch shows "offline".
 //   • Nothing overflows at 390 px.
 //
@@ -65,11 +66,12 @@ async function open(width, height, answer) {
   const ctx = await b.newContext({ viewport: { width, height } })
   const page = await ctx.newPage()
   const calls = []
-  await page.route('**/rest/v1/rpc/register_app_interest', async (route) => {
+  await page.route('**/rest/v1/rpc/request_launch_notification', async (route) => {
     calls.push(route.request().postDataJSON())
     const a = answer()
     if (a === 'abort') return route.abort('internetdisconnected')
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(a) })
+    if (a === false) return route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ code: '54000', message: 'launch_notify_busy' }) })
+    return route.fulfill({ status: 204, body: '' })
   })
   await page.goto(BASE)
   await page.waitForSelector('text=Try with example PDF')
@@ -106,8 +108,8 @@ await input.fill('  Someone@Example.com ')
 await section.getByRole('button', { name: 'Notify me' }).click()
 await page.waitForFunction(() => /on the list/.test(document.querySelector('section[aria-labelledby="get-the-app"] [role="status"]')?.textContent ?? ''))
 check('one call', calls.length === 1, calls)
-check("carrying ('pdf', email, 'desktop') and nothing else",
-  JSON.stringify(calls[0]) === JSON.stringify({ p_product: 'pdf', p_email: 'someone@example.com', p_what: 'desktop' }), calls[0])
+check("carrying ('pdf-desktop', email, language) and nothing else",
+  JSON.stringify(calls[0]) === JSON.stringify({ p_product: 'pdf-desktop', p_email: 'someone@example.com', p_language: 'en-gb' }), calls[0])
 check('says you are on the list', (await msg(page).textContent())?.startsWith("You're on the list."))
 check('the field is cleared', (await input.inputValue()) === '')
 await input.fill('someone@example.com')
@@ -121,7 +123,7 @@ answer = false
 await input.fill('other@example.com')
 await section.getByRole('button', { name: 'Notify me' }).click()
 await page.waitForFunction(() => /inbox@unisim\.co\.uk/.test(document.querySelector('section[aria-labelledby="get-the-app"] [role="status"]')?.textContent ?? ''))
-check('false -> try later, with inbox@', true)
+check('refused -> try later, with inbox@', true)
 answer = 'abort'
 await input.fill('third@example.com')
 await section.getByRole('button', { name: 'Notify me' }).click()

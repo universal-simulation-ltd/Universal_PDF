@@ -182,7 +182,7 @@ const app: Messages['app'] = {
   'notify_desktop_bad': "Bu bir e-posta adresine benzemiyor. Lütfen kontrol edip yeniden deneyin.",
   'notify_desktop_later': "Şu anda eklenemediniz. Lütfen daha sonra yeniden deneyin ya da inbox@unisim.co.uk adresine yazın.",
   'notify_desktop_offline': "Sunucumuza ulaşılamadı. Bağlantınızı kontrol edip yeniden deneyin.",
-  'notify_desktop_small_print': "Bilgisayar uygulaması erken bir sürüm. Yalnızca e-posta adresinizi saklarız, uygulama hazır olduğunda tek bir e-posta göndeririz ve adresi bundan sonraki 30 gün içinde sileriz. Uygulama 24 ay içinde hazır olmazsa adres yine de silinir. Çerez yok, başka hiçbir bilgi de yok.",
+  'notify_desktop_small_print': "Bilgisayar uygulaması erken bir sürüm. Yalnızca e-posta adresinizi ve dilinizi saklarız, uygulama hazır olduğunda tek bir e-posta göndeririz ve adresi gönderirken sileriz. Uygulama 24 ay içinde hazır olmazsa adres yine de silinir. Çerez yok, başka hiçbir bilgi de yok.",
 
   // LivePreview
   'preview_failed': 'Önizleme başarısız oldu',

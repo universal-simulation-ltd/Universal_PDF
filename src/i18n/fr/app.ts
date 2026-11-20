@@ -182,7 +182,7 @@ const app: Messages['app'] = {
   'notify_desktop_bad': "Cela ne ressemble pas à une adresse e-mail. Vérifiez-la et réessayez.",
   'notify_desktop_later': "Impossible de vous inscrire pour le moment. Réessayez plus tard, ou écrivez à inbox@unisim.co.uk.",
   'notify_desktop_offline': "Impossible de joindre notre serveur. Vérifiez votre connexion et réessayez.",
-  'notify_desktop_small_print': "L’application pour ordinateur est une version préliminaire. Nous ne conservons que votre adresse e-mail, vous envoyons un seul e-mail quand l’application sera prête, puis supprimons l’adresse dans les 30 jours qui suivent. Si l’application n’est pas prête d’ici 24 mois, nous supprimons l’adresse quand même. Aucun cookie, et rien d’autre sur vous.",
+  'notify_desktop_small_print': "L’application pour ordinateur est une version préliminaire. Nous ne conservons que votre adresse e-mail et votre langue, vous envoyons un seul e-mail quand l’application sera prête et supprimons l’adresse au moment de l’envoi. Si l’application n’est pas prête d’ici 24 mois, nous supprimons l’adresse quand même. Aucun cookie, et rien d’autre sur vous.",
 
   // LivePreview
   'preview_failed': 'Échec de l’aperçu',

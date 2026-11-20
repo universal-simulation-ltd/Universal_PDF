@@ -182,7 +182,7 @@ const app: Messages['app'] = {
   'notify_desktop_bad': "Isto não parece um endereço de email. Verifique-o e tente novamente.",
   'notify_desktop_later': "Não foi possível adicionar o endereço agora. Tente novamente mais tarde ou escreva para inbox@unisim.co.uk.",
   'notify_desktop_offline': "Não foi possível contactar o nosso servidor. Verifique a ligação e tente novamente.",
-  'notify_desktop_small_print': "A app para computador é uma versão inicial. Guardamos apenas o endereço de email, enviamos um único email quando a app estiver pronta e eliminamos o endereço até 30 dias depois. Se a app não estiver pronta dentro de 24 meses, o endereço é eliminado na mesma. Sem cookies e mais nada sobre si.",
+  'notify_desktop_small_print': "A app para computador é uma versão inicial. Guardamos apenas o endereço de email e o idioma, enviamos um único email quando a app estiver pronta e eliminamos o endereço ao enviá-lo. Se a app não estiver pronta dentro de 24 meses, o endereço é eliminado na mesma. Sem cookies e mais nada sobre si.",
 
   // LivePreview
   'preview_failed': 'Falha na pré-visualização',

@@ -183,7 +183,7 @@ export default {
   'notify_desktop_bad': "That doesn't look like an email address. Please check it and try again.",
   'notify_desktop_later': "We couldn't add you just now. Please try again later, or write to inbox@unisim.co.uk.",
   'notify_desktop_offline': "We couldn't reach our server. Check your connection and try again.",
-  'notify_desktop_small_print': "The desktop app is an early release. We keep only your email address, send you one email when it's ready, and delete it within 30 days of that. If it isn't ready within 24 months, we delete it anyway. No cookies, and nothing else about you.",
+  'notify_desktop_small_print': "The desktop app is an early release. We keep only your email address and the language you're using, send you one email when it's ready, and delete the address as we send it. If it isn't ready within 24 months, we delete it anyway. No cookies, and nothing else about you.",
 
   // LivePreview
   'preview_failed': 'Preview failed',

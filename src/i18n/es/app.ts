@@ -182,7 +182,7 @@ const app: Messages['app'] = {
   'notify_desktop_bad': "Eso no parece una dirección de correo electrónico. Revísala y vuelve a intentarlo.",
   'notify_desktop_later': "No hemos podido apuntarte ahora mismo. Vuelve a intentarlo más tarde o escribe a inbox@unisim.co.uk.",
   'notify_desktop_offline': "No hemos podido conectar con nuestro servidor. Comprueba tu conexión y vuelve a intentarlo.",
-  'notify_desktop_small_print': "La aplicación de escritorio es una versión preliminar. Solo guardamos tu dirección de correo, te enviamos un solo correo cuando la aplicación esté lista y borramos la dirección en los 30 días siguientes. Si la aplicación no está lista en 24 meses, borramos la dirección igualmente. Sin cookies y nada más sobre ti.",
+  'notify_desktop_small_print': "La aplicación de escritorio es una versión preliminar. Solo guardamos tu dirección de correo y tu idioma, te enviamos un solo correo cuando la aplicación esté lista y borramos la dirección al enviarlo. Si la aplicación no está lista en 24 meses, borramos la dirección igualmente. Sin cookies y nada más sobre ti.",
 
   // LivePreview
   'preview_failed': 'Error en la vista previa',

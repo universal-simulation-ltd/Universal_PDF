@@ -182,7 +182,7 @@ const app: Messages['app'] = {
   'notify_desktop_bad': "Das sieht nicht nach einer E-Mail-Adresse aus. Bitte prüfe sie und versuche es noch einmal.",
   'notify_desktop_later': "Wir konnten dich gerade nicht eintragen. Bitte versuche es später noch einmal oder schreib an inbox@unisim.co.uk.",
   'notify_desktop_offline': "Wir konnten unseren Server nicht erreichen. Prüfe deine Verbindung und versuche es noch einmal.",
-  'notify_desktop_small_print': "Die Desktop-App ist eine frühe Version. Wir speichern nur deine E-Mail-Adresse, schicken dir eine einzige E-Mail, sobald die App fertig ist, und löschen die Adresse innerhalb von 30 Tagen danach. Ist die App nach 24 Monaten noch nicht fertig, löschen wir die Adresse trotzdem. Keine Cookies und sonst nichts über dich.",
+  'notify_desktop_small_print': "Die Desktop-App ist eine frühe Version. Wir speichern nur deine E-Mail-Adresse und deine Sprache, schicken dir eine einzige E-Mail, sobald die App fertig ist, und löschen die Adresse beim Versand. Ist die App nach 24 Monaten noch nicht fertig, löschen wir die Adresse trotzdem. Keine Cookies und sonst nichts über dich.",
 
   // LivePreview
   'preview_failed': 'Vorschau fehlgeschlagen',

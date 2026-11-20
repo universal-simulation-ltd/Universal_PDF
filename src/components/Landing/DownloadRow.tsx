@@ -229,7 +229,7 @@ function DesktopNotify() {
       return
     }
     setState('busy')
-    const outcome = await registerDesktopInterest(supabase, address)
+    const outcome = await registerDesktopInterest(supabase, address, t.lang)
     if (outcome === 'ok') {
       sent.current.add(address)
       setEmail('')
