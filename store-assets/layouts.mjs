@@ -21,10 +21,36 @@
 // Geometry is in stage pixels.
 
 const LAPTOP = '/app/raw/laptop/04-signed.png'
-// Where the page's centre sits, and the laptop and phone either side of it.
-// spotlight/scenes.js pdf() in the open-source portal repeats svgLeft below
-// (from PAGE_CX): change both together.
-export const PAGE_CX = 2260
+
+// ── Geometry (James, 2026-11-20: "it doesn't look quite right") ─────────────
+// What was wrong with the first laptop version, and the rule each fix keeps:
+//   - The page sat off the paper / blue join. Jukebox's record sits ON its
+//     join; that is what makes the two-tone ground mean something. So the join
+//     follows the page (JOIN = PAGE_CX), wherever the group puts it.
+//   - The phone stood taller than the laptop. Devices are drawn near true
+//     scale: the phone about 0.85 of the lid's height (a 6.9" phone beside a
+//     13" laptop is about 0.78; a touch generous so its screen still reads).
+//   - Laptop and phone floated at different heights and angles. Both stand
+//     upright on one baseline, each with a contact shadow, as on a desk; only
+//     the page (the icon, not an object) tilts.
+//   - The group hung right of centre. It is centred as a whole (the laptop's
+//     base overhang included), so the page lands right of centre instead, and
+//     the portal points the grid square's crop at it (background-position).
+// spotlight/scenes.js pdf() in the open-source portal repeats svgLeft (from
+// PAGE_CX below): change both together.
+const W = 3840, H = 1646
+const S = 1380, K = S / 1024
+const PAGE_HALF = Math.round((750 * K) / 2)
+const LAP_W = 1500, PHONE_W = 400, OVERLAP = 60
+const BASELINE = Math.round(H * 0.86)
+const lapBase = (w) => Math.round(w * 1.14)
+const GROUP = (lapBase(LAP_W) - LAP_W) / 2 + LAP_W + (2 * PAGE_HALF - OVERLAP) + (PHONE_W - OVERLAP)
+const LAP_LEFT = Math.round((W - GROUP) / 2 + (lapBase(LAP_W) - LAP_W) / 2)
+export const PAGE_CX = LAP_LEFT + LAP_W - OVERLAP + PAGE_HALF
+export const SVG_LEFT = Math.round(PAGE_CX - 525 * K)
+// Where the grid square's crop centres (CSS background-position x), so it
+// shows the page as Jukebox's shows its record.
+export const PEEK_X = `${Math.round((100 * (PAGE_CX - H / 2)) / (W - H))}%`
 
 /** The icon's page (1024 space, the icon's own coordinates), with its content. */
 function page(moving = true) {
@@ -79,26 +105,23 @@ function stage(ctx, inner) {
  * its finished state is the flat header.
  */
 function pageHeader(ctx, t, [r], layer = 'full') {
-  const { device, laptop } = ctx.kit
-  const c = ctx.cls, [W, H] = c.stage
-  if (c.frame !== 'iphone' || W !== 3840) throw new Error('page-header is drawn for the 3840×1646 header class only')
-  const cx = W / 2
-  // The icon's page spans x 150–900 of its 1024 box (centre ≈ 525) and starts
-  // at y 130; S scales the box so the page fills the middle third and its top
-  // sits just under the stage's top edge.
-  const S = 1380
-  const k = S / 1024
-  const pageHalf = Math.round((750 * k) / 2)
-  const svgLeft = Math.round(PAGE_CX - 525 * k)
-  const svgTop = Math.round(H * 0.075 - 130 * k)
-  const devW = 600, top = Math.round(H * 0.13)
-  const lapW = 1500, overlap = 70
+  const { device, deviceHeight, laptop } = ctx.kit
+  const c = ctx.cls
+  if (c.frame !== 'iphone' || c.stage[0] !== W) throw new Error('page-header is drawn for the 3840×1646 header class only')
+  const svgTop = Math.round(H * 0.075 - 130 * K)
+  // laptop()'s own proportions: lid = bezel + 16:10 screen + chin, then base.
+  const bezel = Math.round(LAP_W * 0.024), chin = Math.round(LAP_W * 0.034)
+  const lidH = bezel + Math.round((LAP_W - 2 * bezel) * 0.625) + chin, baseH = Math.round(LAP_W * 0.028)
+  const phoneH = deviceHeight(c.frame, PHONE_W, r.aspect)
+  const phoneLeft = PAGE_CX + PAGE_HALF - OVERLAP
+  const floor = (cx, w, h) => `<div class="floor pdf-floor" style="left:${Math.round(cx - w / 2)}px;top:${Math.round(BASELINE - h / 2)}px;width:${Math.round(w)}px;height:${Math.round(h)}px"></div>`
   const [size, inset] = c.mark
   return stage(ctx, `
-    ${layer === 'front' ? '' : `<div class="pdf-paper" style="left:0;width:${W / 2}px"></div><div class="pdf-blue" style="left:${W / 2}px;width:${W / 2}px"></div>
-    <div class="pdf-page-wrap" style="left:${svgLeft}px;top:${svgTop}px;width:${S}px;height:${S}px">${page(layer === 'full')}</div>`}
-    ${layer === 'back' ? '' : `${laptop(LAPTOP, { w: lapW, left: PAGE_CX - pageHalf + overlap - lapW, top: Math.round(H * 0.14), z: 3 })}
-    ${device(ctx, r, { w: devW, left: Math.round(PAGE_CX + pageHalf - devW * 0.14), top, rot: 6, z: 3 })}
+    ${layer === 'front' ? '' : `<div class="pdf-paper" style="left:0;width:${PAGE_CX}px"></div><div class="pdf-blue" style="left:${PAGE_CX}px;width:${W - PAGE_CX}px"></div>
+    <div class="pdf-page-wrap" style="left:${SVG_LEFT}px;top:${svgTop}px;width:${S}px;height:${S}px">${page(layer === 'full')}</div>`}
+    ${layer === 'back' ? '' : `${floor(LAP_LEFT + LAP_W / 2, lapBase(LAP_W) * 1.1, 90)}${floor(phoneLeft + PHONE_W / 2, PHONE_W * 1.5, 60)}
+    ${laptop(LAPTOP, { w: LAP_W, left: LAP_LEFT, top: BASELINE - lidH - baseH, z: 3 })}
+    ${device(ctx, r, { w: PHONE_W, left: phoneLeft, top: Math.round(BASELINE - phoneH), rot: 0, z: 3 })}
     <img class="unisim-mark" src="/kit/brand/unisim-icon-white.png" alt="UNI·SIM" style="width:${size}px;right:${inset}px;top:${inset}px">`}`)
 }
 

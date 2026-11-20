@@ -7,3 +7,4 @@
 .pdf-blue { background: radial-gradient(110% 80% at 82% 0%, #4a8af5 0%, #2457c4 55%, #15327f 100%); }
 .pdf-page-wrap { position: absolute; z-index: 1; }
 .pdf-page { width: 100%; height: 100%; display: block; overflow: visible; }
+.pdf-floor { z-index: 2; background: radial-gradient(closest-side, rgba(25, 18, 10, .38), rgba(25, 18, 10, 0)); }
