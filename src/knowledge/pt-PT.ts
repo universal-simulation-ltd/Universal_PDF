@@ -222,7 +222,7 @@ Ao mudar para Horizontal com um documento já aberto, este mantém o zoom atual.
 
 ## Onde a escolha fica guardada
 
-A definição fica guardada no armazenamento do browser, apenas neste dispositivo, pelo que cada dispositivo pode ter a sua. Não é guardada na conta. **Repor predefinições**, no fundo de Ajustar esta aplicação, volta a pô-la no valor inicial do dispositivo: Horizontal num telemóvel, Vertical num computador.`,
+A definição fica guardada no armazenamento do browser, neste dispositivo. Com sessão iniciada, também é guardada na sua conta, e os seus outros dispositivos seguem-na: vale a alteração mais recente. Sem sessão iniciada, fica neste dispositivo. **Repor predefinições**, no fundo de Ajustar esta aplicação, volta a pô-la em Horizontal e, com sessão iniciada, os seus outros dispositivos também a seguem.`,
   },
   {
     id: 'select-several',

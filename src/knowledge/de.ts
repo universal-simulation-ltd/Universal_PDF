@@ -222,7 +222,7 @@ Wechseln Sie bei einem bereits geöffneten Dokument zu Horizontal, behält es se
 
 ## Wo die Einstellung gespeichert wird
 
-Die Einstellung wird im Speicher Ihres Browsers gespeichert, nur auf diesem Gerät. Jedes Ihrer Geräte kann also seine eigene haben. In Ihrem Konto wird sie nicht gespeichert. **Auf Standard zurücksetzen**, unten in Diese App anpassen, stellt sie wieder auf den Ausgangswert des Geräts: Horizontal auf einem Smartphone, Vertikal auf einem Computer.`,
+Die Einstellung wird im Speicher Ihres Browsers auf diesem Gerät gespeichert. Sind Sie angemeldet, wird sie auch in Ihrem Konto gespeichert, sodass Ihre anderen Geräte ihr folgen; die neueste Änderung gilt. Abgemeldet bleibt sie auf diesem Gerät. **Auf Standard zurücksetzen**, unten in Diese App anpassen, stellt sie wieder auf Horizontal, und angemeldet folgen Ihre anderen Geräte auch darin.`,
   },
   {
     id: 'select-several',

@@ -222,7 +222,7 @@ If you switch to Horizontal with a document already open, it keeps its current z
 
 ## Where the choice is kept
 
-The setting is remembered in your browser's storage on this device only, so each of your devices can have its own. It is not saved to your account. **Reset to defaults**, at the foot of Tune this app, puts it back to what this device starts with: Horizontal on a phone, Vertical on a computer.`,
+The setting is kept in your browser's storage on this device. If you are signed in, it is also saved to your account, so your other devices follow it, the newest change winning; signed out, it stays on this device. **Reset to defaults**, at the foot of Tune this app, puts it back to Horizontal, and signed in your other devices follow that too.`,
   },
   {
     id: 'select-several',

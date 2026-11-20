@@ -222,7 +222,7 @@ Si vous passez en Horizontal avec un document déjà ouvert, celui-ci garde son 
 
 ## Où ce choix est conservé
 
-Le réglage est mémorisé dans le stockage de votre navigateur, sur cet appareil uniquement : chacun de vos appareils peut donc avoir le sien. Il n’est pas enregistré dans votre compte. **Rétablir les réglages par défaut**, en bas de Régler cette application, le remet sur la valeur de départ de l’appareil : Horizontal sur un téléphone, Vertical sur un ordinateur.`,
+Le réglage est conservé dans le stockage de votre navigateur, sur cet appareil. Si vous êtes connecté, il est aussi enregistré dans votre compte, et vos autres appareils le suivent : le changement le plus récent l’emporte. Déconnecté, il reste sur cet appareil. **Rétablir les réglages par défaut**, en bas de Régler cette application, le remet sur Horizontal, et, connecté, vos autres appareils suivent aussi.`,
   },
   {
     id: 'select-several',

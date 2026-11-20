@@ -222,7 +222,7 @@ Se você mudar para Horizontal com um documento já aberto, ele mantém o zoom a
 
 ## Onde a escolha fica guardada
 
-A configuração fica guardada no armazenamento do seu navegador, só neste aparelho, então cada um dos seus aparelhos pode ter a sua. Ela não é salva na sua conta. **Restaurar padrões**, no fim de Ajustar este app, volta para o que o aparelho usa de início: Horizontal no celular, Vertical no computador.`,
+A configuração fica guardada no armazenamento do seu navegador, neste aparelho. Se você fez login, ela também é salva na sua conta, e os seus outros aparelhos a seguem: vale a mudança mais recente. Sem login, ela fica neste aparelho. **Restaurar padrões**, no fim de Ajustar este app, volta para Horizontal e, com login, os seus outros aparelhos também seguem.`,
   },
   {
     id: 'select-several',

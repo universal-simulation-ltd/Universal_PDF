@@ -222,7 +222,7 @@ Se passi a Orizzontale con un documento già aperto, il documento mantiene lo zo
 
 ## Dove viene conservata la scelta
 
-L’impostazione viene memorizzata nello spazio di archiviazione del browser, solo su questo dispositivo, quindi ciascuno dei tuoi dispositivi può averne una diversa. Non viene salvata nel tuo account. **Ripristina impostazioni predefinite**, in fondo a Regola questa app, la riporta all’impostazione iniziale del dispositivo: Orizzontale su un telefono, Verticale su un computer.`,
+L’impostazione viene conservata nello spazio di archiviazione del browser, su questo dispositivo. Se hai effettuato l’accesso, viene salvata anche nel tuo account, così gli altri dispositivi la seguono: vince la modifica più recente. Senza accesso, resta su questo dispositivo. **Ripristina impostazioni predefinite**, in fondo a Regola questa app, la riporta su Orizzontale e, con l’accesso effettuato, anche gli altri dispositivi la seguono.`,
   },
   {
     id: 'select-several',

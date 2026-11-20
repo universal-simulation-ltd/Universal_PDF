@@ -222,7 +222,7 @@ Bir belge açıkken Yatay’a geçerseniz belge mevcut yakınlaştırma düzeyin
 
 ## Seçim nerede saklanır
 
-Ayar yalnızca bu cihazda, tarayıcınızın depolama alanında hatırlanır; bu yüzden her cihazınızın kendi ayarı olabilir. Hesabınıza kaydedilmez. Bu uygulamayı ayarla’nın en altındaki **Varsayılanlara sıfırla**, ayarı cihazın başlangıç değerine döndürür: telefonda Yatay, bilgisayarda Dikey.`,
+Ayar bu cihazda, tarayıcınızın depolama alanında saklanır. Oturum açtıysanız hesabınıza da kaydedilir ve diğer cihazlarınız onu izler; en yeni değişiklik geçerlidir. Oturum kapalıyken bu cihazda kalır. Bu uygulamayı ayarla’nın en altındaki **Varsayılanlara sıfırla**, ayarı Yatay’a döndürür; oturum açıksa diğer cihazlarınız da bunu izler.`,
   },
   {
     id: 'select-several',
