@@ -13,6 +13,8 @@
     { "id": "04-sign", "layout": "feature", "raw": "03-draw-signature", "hot": 0 },
     { "id": "05-mark-up", "layout": "feature", "raw": "05-annotate", "hot": 0 },
     { "id": "06-private", "layout": "feature", "raw": "01-start", "hot": 0 },
-    { "id": "header", "layout": "page-header", "raw": ["04-signed", "06-more-tools"], "strings": "01-hero", "on": ["header"] }
+    { "id": "header", "layout": "page-header", "raw": ["04-signed", "06-more-tools"], "strings": "01-hero", "on": ["header"] },
+    { "id": "header-back", "layout": "page-header-back", "raw": ["04-signed", "06-more-tools"], "strings": "01-hero", "on": ["header"] },
+    { "id": "header-front", "layout": "page-header-front", "raw": ["04-signed", "06-more-tools"], "strings": "01-hero", "on": ["header"], "alpha": true }
   ]
 }
