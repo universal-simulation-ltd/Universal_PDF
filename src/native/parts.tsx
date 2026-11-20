@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useId, useLayoutEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 import { BottomSheet, SwipeRow as KitSwipeRow, type GripProps, type SwipeAction as KitSwipeAction } from '@unisim/sdk'
 import { Icon, PATHS } from './icons'
 
@@ -360,16 +360,6 @@ export function Card({ children }: { children: ReactNode }) {
 
 export type SwipeAction = { label: string; icon: string; color: string; run: () => void }
 
-// The one row left open, so opening another (or touching anywhere else)
-// closes it, as in Mail. The SDK's row closes the others itself but leaves an
-// open one alone when a finger lands elsewhere, so PDF keeps that part.
-let closeOpenRow: (() => void) | null = null
-if (typeof document !== 'undefined') {
-  document.addEventListener('touchstart', (e) => {
-    if (closeOpenRow && !(e.target as Element | null)?.closest?.('[data-swipe-open]')) closeOpenRow()
-  }, { passive: true, capture: true })
-}
-
 /**
  * A list row that slides sideways to show its actions (James, 2026-10-22:
  * "on the PDF main menu, allow a side swipe to reveal a delete button" and
@@ -382,6 +372,9 @@ if (typeof document !== 'undefined') {
  * this file's own copy went); this is PDF's look on it: 88px buttons in the
  * cobalt and the red, on paper. A first swipe only uncovers (no second swipe
  * that runs it), and no focus-only buttons, as the ⋯ already does every job.
+ * One row open at a time, and a finger landing anywhere else shuts it, as in
+ * Mail: the kit's (`closeOnTouchElsewhere`, 0.231.0, where PDF's own went).
+ * A pull down may start on a row (the kit's `data-swipe-x="row"`, 0.230.2).
  */
 export function SwipeRow({
   start,
@@ -394,31 +387,6 @@ export function SwipeRow({
   background?: string
   children: ReactNode
 }) {
-  const [open, setOpen] = useState<'left' | 'right' | null>(null)
-  // ⚠️ ONE function for the life of the row: `closeOpenRow` is compared against it.
-  const shut = useRef<() => void>(null as unknown as () => void)
-  if (!shut.current) {
-    shut.current = () => {
-      setOpen(null)
-      if (closeOpenRow === shut.current) closeOpenRow = null
-    }
-  }
-  useEffect(() => () => { if (closeOpenRow === shut.current) closeOpenRow = null }, [])
-  const onOpenChange = (side: 'left' | 'right' | null) => {
-    setOpen(side)
-    if (side) {
-      if (closeOpenRow && closeOpenRow !== shut.current) closeOpenRow()
-      closeOpenRow = shut.current
-    } else if (closeOpenRow === shut.current) closeOpenRow = null
-  }
-  // ⚠️ The kit marks its row `data-swipe-x`, which the PullDrawer refuses
-  // outright, so a pull down that starts on a recent file (most of the desk)
-  // would no longer open the search. The row only ever claims a sideways drag
-  // (the drawer already turns those down), so the mark comes off.
-  const box = useRef<HTMLDivElement>(null)
-  useLayoutEffect(() => {
-    box.current?.firstElementChild?.removeAttribute('data-swipe-x')
-  }, [])
   // The colours ride in on custom properties: the kit takes a class for an
   // action, not a style.
   const action = (a: SwipeAction, side: 'start' | 'end'): KitSwipeAction => ({
@@ -432,15 +400,13 @@ export function SwipeRow({
   })
   return (
     <div
-      ref={box}
       className="contents"
       style={{ '--np-swipe-start': start?.color, '--np-swipe-end': end?.color, '--np-swipe-bg': background } as CSSProperties}
     >
       <KitSwipeRow
         left={start && action(start, 'start')}
         right={end && action(end, 'end')}
-        open={open}
-        onOpenChange={onOpenChange}
+        closeOnTouchElsewhere
         actionWidth={88}
         fireOnSecondSwipe={false}
         focusActions={false}

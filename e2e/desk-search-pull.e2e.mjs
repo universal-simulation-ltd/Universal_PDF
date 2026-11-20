@@ -224,7 +224,9 @@ try {
     t = await state(page)
     check('a sideways swipe is not a pull', t.drawer === 'shut' && t.height === 0, json(t))
 
-    const cards = await page.locator('[data-swipe-x]').boundingBox()
+    // (The carousel's mark, not a recent file's: those are data-swipe-x="row",
+    // where a pull may start — SDK 0.230.2.)
+    const cards = await page.locator('[data-swipe-x]:not([data-swipe-x="row"])').boundingBox()
     await pull(page, cdp, { y: cards.y + cards.height / 2, dy: 170 })
     t = await state(page)
     check('a pull on the carousel of cards (data-swipe-x) is not a pull', t.drawer === 'shut' && t.height === 0, json(t))
