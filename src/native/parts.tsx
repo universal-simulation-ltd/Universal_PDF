@@ -1,5 +1,5 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { BottomSheet, type GripProps } from '@unisim/sdk'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { BottomSheet, SwipeRow as KitSwipeRow, type GripProps, type SwipeAction as KitSwipeAction } from '@unisim/sdk'
 import { Icon, PATHS } from './icons'
 
 // The page / sheet / gesture plumbing is the SDK's phone kit (`@unisim/sdk`,
@@ -361,7 +361,8 @@ export function Card({ children }: { children: ReactNode }) {
 export type SwipeAction = { label: string; icon: string; color: string; run: () => void }
 
 // The one row left open, so opening another (or touching anywhere else)
-// closes it, as in Mail.
+// closes it, as in Mail. The SDK's row closes the others itself but leaves an
+// open one alone when a finger lands elsewhere, so PDF keeps that part.
 let closeOpenRow: (() => void) | null = null
 if (typeof document !== 'undefined') {
   document.addEventListener('touchstart', (e) => {
@@ -375,8 +376,12 @@ if (typeof document !== 'undefined') {
  * "a right swipe, reveal a share button"). Swipe left for `end` (Delete),
  * right for `start` (Share); past half the button's width it stays open, short
  * of it it slides back. A tap on the open row closes it rather than opening it.
- * `touch-action: pan-y` keeps the list's own scrolling with the browser. The
- * actions are also in the row's ⋯, which is where VoiceOver finds them.
+ * The actions are also in the row's ⋯, which is where VoiceOver finds them.
+ *
+ * The gesture is the SDK phone kit's `<SwipeRow>` (@unisim/sdk 0.230.0, where
+ * this file's own copy went); this is PDF's look on it: 88px buttons in the
+ * cobalt and the red, on paper. A first swipe only uncovers (no second swipe
+ * that runs it), and no focus-only buttons, as the ⋯ already does every job.
  */
 export function SwipeRow({
   start,
@@ -389,107 +394,60 @@ export function SwipeRow({
   background?: string
   children: ReactNode
 }) {
-  const W = 88
-  const slide = useRef<HTMLDivElement>(null)
-  const [open, setOpen] = useState<0 | 1 | -1>(0)
-  const g = useRef<{ x: number; y: number; base: number; off: number; lock: 'x' | 'y' | null } | null>(null)
-  const swallow = useRef(0)
-  const place = (x: number, animate: boolean) => {
-    const el = slide.current
-    if (!el) return
-    el.style.transition = animate ? 'transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1)' : 'none'
-    el.style.transform = x ? `translateX(${x}px)` : ''
-  }
-  // ⚠️ ONE function for the life of the row. `closeOpenRow` is compared
-  // against it, and a fresh one per render left a stale close registered that
-  // fired on the next touch anywhere, mid-swipe, so the second swipe on a row
-  // never opened it.
+  const [open, setOpen] = useState<'left' | 'right' | null>(null)
+  // ⚠️ ONE function for the life of the row: `closeOpenRow` is compared against it.
   const shut = useRef<() => void>(null as unknown as () => void)
   if (!shut.current) {
     shut.current = () => {
-      setOpen(0)
-      const el = slide.current
-      if (el) {
-        el.style.transition = 'transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1)'
-        el.style.transform = ''
-      }
+      setOpen(null)
       if (closeOpenRow === shut.current) closeOpenRow = null
     }
   }
   useEffect(() => () => { if (closeOpenRow === shut.current) closeOpenRow = null }, [])
-
-  const run = (a: SwipeAction) => {
-    shut.current()
-    a.run()
+  const onOpenChange = (side: 'left' | 'right' | null) => {
+    setOpen(side)
+    if (side) {
+      if (closeOpenRow && closeOpenRow !== shut.current) closeOpenRow()
+      closeOpenRow = shut.current
+    } else if (closeOpenRow === shut.current) closeOpenRow = null
   }
-  const button = (a: SwipeAction, side: 'left' | 'right') => (
-    <button
-      type="button"
-      tabIndex={-1}
-      aria-hidden="true"
-      onClick={() => run(a)}
-      className="absolute top-0 bottom-0 flex flex-col items-center justify-center gap-1 text-white text-[13px] font-semibold"
-      style={{ [side]: 0, width: W, background: a.color }}
-    >
-      <Icon d={a.icon} size={22} stroke="#fff" />
-      {a.label}
-    </button>
-  )
+  // ⚠️ The kit marks its row `data-swipe-x`, which the PullDrawer refuses
+  // outright, so a pull down that starts on a recent file (most of the desk)
+  // would no longer open the search. The row only ever claims a sideways drag
+  // (the drawer already turns those down), so the mark comes off.
+  const box = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    box.current?.firstElementChild?.removeAttribute('data-swipe-x')
+  }, [])
+  // The colours ride in on custom properties: the kit takes a class for an
+  // action, not a style.
+  const action = (a: SwipeAction, side: 'start' | 'end'): KitSwipeAction => ({
+    text: a.label,
+    label: a.label,
+    icon: <Icon d={a.icon} size={22} stroke="#fff" />,
+    onAction: a.run,
+    className: `px-0 gap-1 text-[13px] [line-height:inherit] [&>svg]:size-[22px] ${
+      side === 'start' ? 'bg-[var(--np-swipe-start)]' : 'bg-[var(--np-swipe-end)]'
+    }`,
+  })
   return (
-    <div className="relative overflow-hidden" data-swipe-open={open ? '' : undefined}>
-      {start && open >= 0 && button(start, 'left')}
-      {end && open <= 0 && button(end, 'right')}
-      <div
-        ref={slide}
-        style={{ background, touchAction: 'pan-y', position: 'relative' }}
-        onTouchStart={(e) => {
-          const tt = e.touches[0]
-          g.current = { x: tt.clientX, y: tt.clientY, base: open * W, off: open * W, lock: null }
-        }}
-        onTouchMove={(e) => {
-          const d = g.current
-          if (!d) return
-          const tt = e.touches[0]
-          const dx = tt.clientX - d.x
-          const dy = tt.clientY - d.y
-          if (d.lock === null) {
-            if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return
-            d.lock = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'
-          }
-          if (d.lock !== 'x') return
-          const min = end ? -W * 1.2 : 0
-          const max = start ? W * 1.2 : 0
-          d.off = Math.max(min, Math.min(max, d.base + dx))
-          place(d.off, false)
-        }}
-        onTouchEnd={() => {
-          const d = g.current
-          g.current = null
-          if (!d) return
-          if (d.lock === 'x') {
-            swallow.current = Date.now() + 400
-            const next: 0 | 1 | -1 = d.off <= -W / 2 && end ? -1 : d.off >= W / 2 && start ? 1 : 0
-            setOpen(next)
-            place(next * W, true)
-            if (next) {
-              if (closeOpenRow && closeOpenRow !== shut.current) closeOpenRow()
-              closeOpenRow = shut.current
-            } else if (closeOpenRow === shut.current) closeOpenRow = null
-          } else if (d.lock === null && open) {
-            // A tap on an open row closes it.
-            swallow.current = Date.now() + 400
-            shut.current()
-          }
-        }}
-        onClickCapture={(e) => {
-          if (Date.now() < swallow.current) {
-            e.preventDefault()
-            e.stopPropagation()
-          }
-        }}
+    <div
+      ref={box}
+      className="contents"
+      style={{ '--np-swipe-start': start?.color, '--np-swipe-end': end?.color, '--np-swipe-bg': background } as CSSProperties}
+    >
+      <KitSwipeRow
+        left={start && action(start, 'start')}
+        right={end && action(end, 'end')}
+        open={open}
+        onOpenChange={onOpenChange}
+        actionWidth={88}
+        fireOnSecondSwipe={false}
+        focusActions={false}
+        frontClassName="bg-[var(--np-swipe-bg)] ease-[cubic-bezier(0.2,0.8,0.2,1)]"
       >
         {children}
-      </div>
+      </KitSwipeRow>
     </div>
   )
 }
