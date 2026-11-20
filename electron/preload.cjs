@@ -48,6 +48,16 @@ contextBridge.exposeInMainWorld('unisimDesktop', {
   clearHub: () => ipcRenderer.invoke('unisim:clear-hub'),
   signInWithBrowser: (opts) => ipcRenderer.invoke('unisim:browser-sign-in', opts),
   cancelSignInWithBrowser: () => ipcRenderer.invoke('unisim:browser-sign-in-cancel'),
+  // One sign-in for every UNI·SIM desktop app on this computer (SDK 0.232.0):
+  // signed in to another suite app here, this one signs itself in on start,
+  // with a session of its own; "Sign out of every UNI·SIM app on this
+  // computer" reaches it too. The grant never leaves the main process.
+  suiteSession: (opts) => ipcRenderer.invoke('unisim:suite-session', opts),
+  onSuiteSessionChange: (cb) => {
+    const h = () => cb()
+    ipcRenderer.on('unisim:suite-session-changed', h)
+    return () => ipcRenderer.removeListener('unisim:suite-session-changed', h)
+  },
 })
 
 contextBridge.exposeInMainWorld('desktop', {
