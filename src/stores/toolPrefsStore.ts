@@ -1,5 +1,10 @@
-import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import {
+  DEFAULT_HIGHLIGHT_COLOURS,
+  DEFAULT_PEN_COLOURS,
+  MAX_PREFERRED,
+  usePdfSettings,
+  type PdfSettings,
+} from './pdfSettings'
 
 // How the drawing tools behave, as the reader has tuned them (James,
 // 2026-10-13):
@@ -24,31 +29,24 @@ import { persist } from 'zustand/middleware'
 //     rainbow goes in first and the older of the two drops out: two at most.
 //     The first one is the colour the tool is picked up with.
 //
-// Both switches start OFF, like every switch in the suite.
+// Every switch starts OFF, like every switch in the suite.
 //
-// ⚠️ A zustand store in its own localStorage key, not the SDK's
-// `useUserPrefs` bag. Each `useUserPrefs()` call keeps its own copy of the
-// bag and writes the whole copy back, so a toggle in the Tune this app dialog
-// and a colour pinned from the toolbar (two separate copies) would overwrite
-// each other. "Reset to defaults" reaches this through `reset()` (see
-// lib/resetDefaults.ts).
+// Since 2026-11-20 these live in the app's one synced settings store
+// (pdfSettings.ts, @unisim/sdk createSyncedSettings): on the device, and
+// signed in, on the account, newest change wins. This file keeps the
+// zustand-style `useToolPrefs(selector)` / `useToolPrefs.getState()` the
+// toolbar and the viewer already use, with the setters beside the values.
+// "Reset to defaults" reaches it through the SDK's useResetAppDefaults (and
+// `reset()` below, which the app's reset handlers still call).
 
-export const DEFAULT_PEN_COLOURS = ['#000000', '#ffffff']
-export const DEFAULT_HIGHLIGHT_COLOURS = ['#eab308', '#16a34a']
-const MAX_PREFERRED = 2
+export { DEFAULT_HIGHLIGHT_COLOURS, DEFAULT_PEN_COLOURS }
 
 export type ColourKind = 'pen' | 'highlight'
 
-interface ToolPrefsState {
-  stayOnTool: boolean
-  noConfirm: boolean
-  noDeleteConfirm: boolean
-  penColours: string[]
-  highlightColours: string[]
-  // How a NEW sticky note starts. Centred and fitted unless these are on —
-  // worded as the exceptions so the switches start off (see above).
-  noteTopLeft: boolean
-  noteSetSize: boolean
+type ToolValues = Pick<PdfSettings,
+  'stayOnTool' | 'noConfirm' | 'noDeleteConfirm' | 'penColours' | 'highlightColours' | 'noteTopLeft' | 'noteSetSize'>
+
+interface ToolPrefsActions {
   setNoteTopLeft: (v: boolean) => void
   setNoteSetSize: (v: boolean) => void
   setStayOnTool: (v: boolean) => void
@@ -59,50 +57,54 @@ interface ToolPrefsState {
   reset: () => void
 }
 
-const DEFAULTS = {
-  stayOnTool: false,
-  noConfirm: false,
-  noDeleteConfirm: false,
-  penColours: DEFAULT_PEN_COLOURS,
-  highlightColours: DEFAULT_HIGHLIGHT_COLOURS,
-  noteTopLeft: false,
-  noteSetSize: false
+export type ToolPrefsState = ToolValues & ToolPrefsActions
+
+const set = usePdfSettings.set
+
+const actions: ToolPrefsActions = {
+  setStayOnTool: (stayOnTool) => set({ stayOnTool }),
+  setNoConfirm: (noConfirm) => set({ noConfirm }),
+  setNoDeleteConfirm: (noDeleteConfirm) => set({ noDeleteConfirm }),
+  setNoteTopLeft: (noteTopLeft) => set({ noteTopLeft }),
+  setNoteSetSize: (noteSetSize) => set({ noteSetSize }),
+  addPreferredColour: (kind, hex) =>
+    set((s) => {
+      const key = kind === 'pen' ? 'penColours' : 'highlightColours'
+      const h = hex.toLowerCase()
+      // Already a shortcut: leave the pair where it is, so a swatch never
+      // jumps sideways under the pointer.
+      if (s[key].some((c) => c.toLowerCase() === h)) return {}
+      return { [key]: [h, ...s[key]].slice(0, MAX_PREFERRED) }
+    }),
+  // The tool switches and colours only; the phone's own switches have their
+  // own reset (native/prefs.ts). Reset to defaults resets the lot anyway.
+  reset: () => set({
+    stayOnTool: false,
+    noConfirm: false,
+    noDeleteConfirm: false,
+    noteTopLeft: false,
+    noteSetSize: false,
+    penColours: DEFAULT_PEN_COLOURS,
+    highlightColours: DEFAULT_HIGHLIGHT_COLOURS,
+  }),
 }
 
-export const useToolPrefs = create<ToolPrefsState>()(
-  persist(
-    (set) => ({
-      ...DEFAULTS,
-      setStayOnTool: (stayOnTool) => set({ stayOnTool }),
-      setNoConfirm: (noConfirm) => set({ noConfirm }),
-      setNoDeleteConfirm: (noDeleteConfirm) => set({ noDeleteConfirm }),
-      setNoteTopLeft: (noteTopLeft) => set({ noteTopLeft }),
-      setNoteSetSize: (noteSetSize) => set({ noteSetSize }),
-      addPreferredColour: (kind, hex) =>
-        set((s) => {
-          const key = kind === 'pen' ? 'penColours' : 'highlightColours'
-          const h = hex.toLowerCase()
-          // Already a shortcut: leave the pair where it is, so a swatch never
-          // jumps sideways under the pointer.
-          if (s[key].some((c) => c.toLowerCase() === h)) return {}
-          return { [key]: [h, ...s[key]].slice(0, MAX_PREFERRED) }
-        }),
-      reset: () => set(DEFAULTS)
-    }),
-    {
-      name: 'universal-pdf-tool-prefs',
-      partialize: (s) => ({
-        stayOnTool: s.stayOnTool,
-        noConfirm: s.noConfirm,
-        noDeleteConfirm: s.noDeleteConfirm,
-        penColours: s.penColours,
-        highlightColours: s.highlightColours,
-        noteTopLeft: s.noteTopLeft,
-        noteSetSize: s.noteSetSize
-      })
-    }
-  )
-)
+function withActions(s: PdfSettings): ToolPrefsState {
+  return { ...s, ...actions }
+}
+
+interface ToolPrefsStore {
+  <U>(selector: (s: ToolPrefsState) => U): U
+  getState(): ToolPrefsState
+}
+
+function useToolPrefsSlice<U>(selector: (s: ToolPrefsState) => U): U {
+  return usePdfSettings((s) => selector(withActions(s)))
+}
+
+export const useToolPrefs: ToolPrefsStore = Object.assign(useToolPrefsSlice, {
+  getState: () => withActions(usePdfSettings.getState()),
+})
 
 /** The kind of colour the tool draws with: the highlighter keeps its own pair, and a sticky note shares it. */
 export function colourKindFor(tool: string): ColourKind {

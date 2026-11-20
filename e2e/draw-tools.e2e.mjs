@@ -76,7 +76,7 @@ const page = await context.newPage()
 page.on('pageerror', (e) => failures.push('page error: ' + e.message))
 await context.addInitScript(() => {
   window.localStorage.setItem('universal:mock_session', 'james')
-  window.localStorage.removeItem('universal-pdf-tool-prefs')
+  window.localStorage.removeItem('unisim:settings:pdf')
 })
 try {
   await page.goto(`${BASE}?mockauth=1`, { waitUntil: 'load' })
