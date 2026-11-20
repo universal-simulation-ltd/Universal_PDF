@@ -8,6 +8,8 @@ import {
   modalIsOpen,
   openThenFocus,
   phoneConfirm,
+  useHold,
+  useLeaveSelection,
   usePullHint,
   useSearchRequests,
   useSelection,
@@ -18,7 +20,7 @@ import { usePdfStore } from '../stores/pdfStore'
 import { getRecent, getRecentEdits, type RecentMeta } from '../lib/recents'
 import { formatSize } from '../components/Export/formatSize'
 import { AppMark, Dots, Icon, PATHS } from './icons'
-import { Hl, Sheet, SwipeRow, useHold, useLeaveSelection } from './parts'
+import { Hl, Sheet, SwipeRow } from './parts'
 import { useNav } from './nav'
 import { jobCards, runJob, useJobs, type JobCard, type JobId } from './jobs'
 import { examplePreview } from './examplePreview'

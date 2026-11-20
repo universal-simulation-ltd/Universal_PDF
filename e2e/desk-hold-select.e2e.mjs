@@ -2,7 +2,7 @@
 // swipes", owner rule 2026-10-25: "a tap and hold should select the item"),
 // into the same select-several bar Recent files has on the website (SDK
 // <SelectionBar action="remove">, 0.228.0). See src/native/DeskScreen.tsx and
-// useHold / useLeaveSelection in src/native/parts.tsx.
+// useHold / useLeaveSelection (the SDK phone kit's since @unisim/sdk 0.229.0).
 //
 //   ./scripts/preview.sh              # or preview.ps1 — Universal PDF is :5174
 //   npm run test:desk-hold            # in another terminal
