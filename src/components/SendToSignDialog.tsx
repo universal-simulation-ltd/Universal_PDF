@@ -11,6 +11,10 @@ import {
   SignInDialog,
   Chip,
   ValueChip,
+  SelectCheckbox,
+  SelectionBar,
+  phoneConfirm,
+  useSelection,
   type SignRequest,
 } from '@unisim/sdk'
 import { usePdfStore } from '../stores/pdfStore'
@@ -129,6 +133,15 @@ export default function SendToSignDialog() {
   // dialog rendered one hook fewer and React took the whole page down
   // ("Rendered fewer hooks than expected", e2e/send-for-signature).
   const [reminders, setReminders] = useState<Record<string, { busy?: boolean; text?: string; ok?: boolean }>>({})
+  // Select several, then act (new-universal-app.md §2; SDK 0.227): a tick box
+  // on every request that can still be revoked, Select all, then the count,
+  // Delete selected and Clear. Delete, not Remove: each one goes for good —
+  // its links stop working and its stored copy is deleted, exactly what the
+  // row's own Revoke does. A finished request has no tick box (and no Revoke):
+  // its certificate is the record of the signing. Above the early return, like
+  // every hook here.
+  const isDone = (r: SignRequest) => r.status === 'completed' || r.status === 'signed'
+  const sel = useSelection(requests.filter((r) => !isDone(r)).map((r) => r.id))
   if (!open) return null
 
   const signedIn = !!session?.user && session.user.is_anonymous !== true
@@ -338,28 +351,53 @@ export default function SendToSignDialog() {
     if (res.code === 'completed' || res.code === 'expired') refreshList()
   }
 
+  /** Revoke one request: the row goes (every party link with it) and so does its stored copy. Null, or what went wrong. */
+  async function revokeOne(req: SignRequest): Promise<string | null> {
+    // Read before the row goes: the signed copy's path lives only on it.
+    const { data: row } = await supabase
+      .from('pdf_sign_requests')
+      .select('latest_storage_path')
+      .eq('id', req.id)
+      .maybeSingle()
+    const res = await deleteSignRequest(supabase, req.id)
+    if (!res.ok) return res.error ?? t('sign.send_could_not_revoke')
+    if (minted?.id === req.id) setMinted(null)
+    // A revoked request's document is not kept: nothing else stores PDFs.
+    removeSignRequestFiles(supabase, req.upload_id, (row?.latest_storage_path as string | null) ?? null).catch(() => {})
+    return null
+  }
+
   async function onRevoke(req: SignRequest) {
     if (busy) return
     setBusy(true)
     setError(null)
     try {
-      // Read before the row goes: the signed copy's path lives only on it.
-      const { data: row } = await supabase
-        .from('pdf_sign_requests')
-        .select('latest_storage_path')
-        .eq('id', req.id)
-        .maybeSingle()
-      const res = await deleteSignRequest(supabase, req.id)
-      if (!res.ok) setError(res.error ?? t('sign.send_could_not_revoke'))
-      else {
-        if (minted?.id === req.id) setMinted(null)
-        refreshList()
-        // A revoked request's document is not kept: nothing else stores PDFs.
-        removeSignRequestFiles(supabase, req.upload_id, (row?.latest_storage_path as string | null) ?? null).catch(() => {})
-      }
+      const failed = await revokeOne(req)
+      if (failed) setError(failed)
+      else refreshList()
     } finally {
       setBusy(false)
     }
+  }
+
+  // Delete selected: each ticked request the way its own Revoke goes, one
+  // after another; the ones that fail stay ticked and are counted.
+  async function onRevokeMany(ids: string[]) {
+    setBusy(true)
+    setError(null)
+    const failed: string[] = []
+    try {
+      for (const id of ids) {
+        const req = requests.find((r) => r.id === id)
+        if (!req) continue
+        const err = await revokeOne(req)
+        if (err) failed.push(err)
+      }
+    } finally {
+      refreshList()
+      setBusy(false)
+    }
+    if (failed.length) setError(t('sign.send_delete_many_failed', { count: failed.length, error: failed[0] }))
   }
 
   return createPortal(
@@ -676,15 +714,40 @@ export default function SendToSignDialog() {
                 ) : requests.length === 0 ? (
                   <p className="text-xs text-slate-400">{t('sign.none_yet')}</p>
                 ) : (
+                  <>
+                  <SelectionBar
+                    sel={sel}
+                    noun={{ one: t('sign.send_noun_one'), other: t('sign.send_noun_other') }}
+                    confirm={(_message, count) =>
+                      phoneConfirm({
+                        message: t.plural('sign.send_delete_many', count),
+                        confirmLabel: t('sign.send_delete_many_button'),
+                        danger: true,
+                      })
+                    }
+                    onDelete={onRevokeMany}
+                    className="mb-2"
+                  />
                   <ul className="space-y-2">
                     {requests.map((r) => {
                       const ui = STATUS_UI[r.status] ?? STATUS_UI.pending
-                      const done = r.status === 'completed' || r.status === 'signed'
+                      const done = isDone(r)
                       const expired = new Date(r.expires_at).getTime() < Date.now()
                       const reminder = reminders[r.id]
                       return (
-                        <li key={r.id} className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+                        <li key={r.id} className="rounded-lg border border-slate-200 bg-slate-50 p-2" data-sign-request={r.id}>
                          <div className="flex items-center gap-2">
+                          {done ? (
+                            // Lines the names up with the rows that have a tick box.
+                            <span className="w-5 shrink-0" aria-hidden="true" />
+                          ) : (
+                            <SelectCheckbox
+                              checked={sel.has(r.id)}
+                              onChange={() => sel.toggle(r.id)}
+                              label={t('sign.send_select_aria', { name: r.doc_name || 'document.pdf' })}
+                              className="shrink-0"
+                            />
+                          )}
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-xs font-medium text-slate-700">{r.doc_name || 'document.pdf'}</span>
                             <span className="block text-[10px] text-slate-400">
@@ -737,6 +800,7 @@ export default function SendToSignDialog() {
                       )
                     })}
                   </ul>
+                  </>
                 )}
               </div>
             </>

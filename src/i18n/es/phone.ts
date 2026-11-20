@@ -191,6 +191,7 @@ const phone: Messages['phone'] = {
   'reverted': 'De vuelta al original. Deshacer recupera tus cambios.',
   'revert_failed': 'No hay una copia original de este PDF a la que volver.',
   'doc_share': 'Compartir',
+  'doc_select': 'Seleccionar',
   'swipe_delete': 'Eliminar',
   'swipe_share': 'Compartir',
   'more_clear': 'Borrar todas las anotaciones',

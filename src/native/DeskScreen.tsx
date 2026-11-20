@@ -1,12 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { PullDrawer, insideScrolledChild, modalIsOpen, openThenFocus, usePullHint, useSearchRequests } from '@unisim/sdk'
+import {
+  Button,
+  PullDrawer,
+  SelectCheckbox,
+  SelectionBar,
+  insideScrolledChild,
+  modalIsOpen,
+  openThenFocus,
+  phoneConfirm,
+  usePullHint,
+  useSearchRequests,
+  useSelection,
+} from '@unisim/sdk'
 import { useT, intlLocale, getT } from '../i18n'
 import { DESK_PULL_HINT_KEY } from '../lib/resetDefaults'
 import { usePdfStore } from '../stores/pdfStore'
 import { getRecent, getRecentEdits, type RecentMeta } from '../lib/recents'
 import { formatSize } from '../components/Export/formatSize'
 import { AppMark, Dots, Icon, PATHS } from './icons'
-import { Hl, Sheet, SwipeRow } from './parts'
+import { Hl, Sheet, SwipeRow, useHold, useLeaveSelection } from './parts'
 import { useNav } from './nav'
 import { jobCards, runJob, useJobs, type JobCard, type JobId } from './jobs'
 import { examplePreview } from './examplePreview'
@@ -156,6 +168,33 @@ export default function DeskScreen() {
     return q ? sorted.filter((r) => r.name.toLocaleLowerCase().includes(q)) : sorted
   }, [recents, query])
 
+  // Press and hold selects (BRANDING.md ▸ "A deletable row swipes": "a tap
+  // and hold should select the item"). The hold ticks the row and puts the
+  // list in selection mode: a tick box on every row, a tap ticks instead of
+  // opening, and the suite's select-several bar (the same one Recent files has
+  // on the website) with the count, Remove selected, Clear and Done. Done,
+  // Back and a swipe in from the left edge leave; so does the ⋯ sheet's Select
+  // the other way in, for VoiceOver and TalkBack. Removing leaves it too.
+  const [selecting, setSelecting] = useState(false)
+  const sel = useSelection(shown.map((r) => r.id))
+  const selRef = useRef(sel)
+  selRef.current = sel
+  const leaveSelecting = useCallback(() => {
+    setSelecting(false)
+    selRef.current.clear()
+  }, [])
+  const startSelecting = useCallback((id: string) => {
+    setSelecting(true)
+    selRef.current.setMany([id], true)
+  }, [])
+  useLeaveSelection(selecting, leaveSelecting)
+  const holdStart = useHold(startSelecting)
+  // Nothing left to select (the search filtered everything out, or the last
+  // file went): out of selection mode.
+  useEffect(() => {
+    if (selecting && shown.length === 0) leaveSelecting()
+  }, [selecting, shown.length, leaveSelecting])
+
   function onScroll(e: React.UIEvent<HTMLDivElement>) {
     const el = e.currentTarget
     const max = el.scrollWidth - el.clientWidth
@@ -292,6 +331,34 @@ export default function DeskScreen() {
             <span aria-hidden="true">↓</span> {t('phone.pull_to_search')}
           </button>
         )}
+        {selecting && (
+          // Remove, not Delete: the entry leaves the desk and the file it was
+          // opened from stays; the confirm says the copy kept here goes too,
+          // the same words as the website's Recent files.
+          <SelectionBar
+            sel={sel}
+            action="remove"
+            noun={{ one: t('app.recent_noun_one'), other: t('app.recent_noun_other') }}
+            confirm={(_message, count) =>
+              phoneConfirm({
+                message: t.plural('app.recent_remove_many', count),
+                confirmLabel: t('app.recent_remove_many_button'),
+                danger: true,
+              })
+            }
+            onDelete={async (ids) => {
+              const removeRecent = usePdfStore.getState().removeRecent
+              for (const id of ids) await removeRecent(id)
+              setSelecting(false)
+            }}
+            extra={
+              <Button size="sm" onClick={leaveSelecting} data-desk-select-done>
+                {t('phone.done')}
+              </Button>
+            }
+            className="flex-none flex-wrap pb-2.5"
+          />
+        )}
         <div
           ref={listRef}
           data-desk-list
@@ -376,7 +443,30 @@ export default function DeskScreen() {
           ) : (
             <ul className="m-0 p-0 list-none flex flex-col">
               {shown.map((r, i) => (
-                <li key={r.id} style={{ borderTop: i ? '1px solid #e6e0d4' : 0 }}>
+                <li
+                  key={r.id}
+                  style={{ borderTop: i ? '1px solid #e6e0d4' : 0, WebkitTouchCallout: 'none' }}
+                  onTouchStart={selecting ? undefined : holdStart(r.id)}
+                >
+                  {selecting ? (
+                    // The whole row is the tick box's label: a tap anywhere on
+                    // it ticks or unticks, and nothing opens.
+                    <label className="flex items-center gap-3.5 py-2.5 cursor-pointer" data-desk-selecting>
+                      <SelectCheckbox
+                        checked={sel.has(r.id)}
+                        onChange={() => sel.toggle(r.id)}
+                        label={t('app.recent_select_aria', { name: r.name })}
+                        className="flex-none"
+                      />
+                      <DocThumb tilt={DOC_TILTS[i % 4]} />
+                      <span className="flex-1 min-w-0 flex flex-col gap-1">
+                        <span className="text-[16px] font-semibold truncate">{r.name.replace(/\.pdf$/i, '')}</span>
+                        <span className="text-[13px] text-[color:var(--np-muted)]">
+                          {formatSize(t, r.size)} · {whenText(t, r.lastOpened)}
+                        </span>
+                      </span>
+                    </label>
+                  ) : (
                   <SwipeRow
                     start={{ label: t('phone.swipe_share'), icon: PATHS.share, color: 'var(--np-cobalt)', run: () => void shareRecent(r) }}
                     end={{ label: t('phone.swipe_delete'), icon: PATHS.trash, color: '#b42318', run: () => void usePdfStore.getState().removeRecent(r.id) }}
@@ -405,6 +495,7 @@ export default function DeskScreen() {
                   </button>
                   </div>
                   </SwipeRow>
+                  )}
                 </li>
               ))}
             </ul>
@@ -443,6 +534,20 @@ export default function DeskScreen() {
           >
             <Icon d={PATHS.share} size={20} />
             {t('phone.doc_share')}
+          </button>
+          {/* Hold's equivalent for VoiceOver, TalkBack and anyone who
+              doesn't know to hold: into selection mode with this one ticked. */}
+          <button
+            type="button"
+            onClick={() => {
+              const id = options.id
+              setOptions(null)
+              startSelecting(id)
+            }}
+            className="min-h-[54px] rounded-[18px] text-[16px] font-semibold"
+            style={{ background: 'var(--np-slip)', border: '1px solid var(--np-line)', color: 'var(--np-ink)' }}
+          >
+            {t('phone.doc_select')}
           </button>
           <button
             type="button"

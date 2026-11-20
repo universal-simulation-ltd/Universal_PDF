@@ -10,9 +10,15 @@
 // clear from the personalisation — 'Bradley's Book' — as opposed to the
 // traditional profile button"). Since e980221 the landing bar passes the SDK's
 // <UniversalAppsNavBar accountInTune personalTitle>: the product lockup
-// becomes "<first name>'s PDFs" ("My PDFs" when no name is known), the pill is
-// the bare ⚙ menu with no photo and no greeting, and the account lives in Tune
-// this app (pinned by e2e/profile-identity.e2e.mjs).
+// becomes "<first name>'s PDFs" ("My PDFs" when no name is known), the pill
+// has no greeting and no name, and the account lives in Tune this app (pinned
+// by e2e/profile-identity.e2e.mjs).
+//
+// The pill itself: a guest's is the bare ⚙ menu; a signed-in person's wears
+// their photo — their initials ("JO" for Jim Original) with none — in place of
+// the cog (James, 2026-11-11: "use their logo on the icon (replacing the cog
+// wheel)"; SDK 0.219.0, UniversalAppsNavBar `accountInTune`). Until
+// 2026-11-20 this spec still expected the cog for everyone and failed on main.
 //
 // This spec replaced phone-greeting.e2e.mjs, which pinned the rotating
 // "Hi Jim" label beside the avatar — the thing the personal title removed.
@@ -20,7 +26,8 @@
 //
 //   • missing — a signed-in phone still showing "UNIVERSAL PDF", or a guest
 //     shown somebody's name;
-//   • leaking — a greeting or a name creeping back into the pill; and
+//   • leaking — a greeting or a name creeping back into the pill (the
+//     initials are the photo, not a greeting); and
 //   • greedy — a long name pushing the row into a horizontal scroll or eating
 //     the clearance before the menu.
 //
@@ -185,7 +192,7 @@ console.log('\na signed-in phone names the app for them')
   const bar = await readBar(page)
   check(`the bar says "${titleFor('Jim')}"`, bar.title === titleFor('Jim'), JSON.stringify(bar))
   check('not truncated to fit', bar.titleTruncated === false)
-  check('the pill is the bare menu — no greeting, no name', bar.pill === '⚙', JSON.stringify(bar.pill))
+  check('the pill wears their initials — no greeting, no name', bar.pill === 'JO', JSON.stringify(bar.pill))
   check('and the row does not scroll sideways', bar.scrolls === false)
   check('the menu keeps its clearance', bar.gap >= 12, `gap ${bar.gap}px`)
   await context.close()
@@ -207,7 +214,7 @@ console.log('\na guest gets the product, not a stranger’s name')
   const bar = await readBar(page)
   check('no personal title', bar.title === null, JSON.stringify(bar))
   check('the "UNIVERSAL PDF" lockup is up', bar.product === 'UNIVERSAL PDF', JSON.stringify(bar.product))
-  check('the pill is the same bare menu', bar.pill === '⚙', JSON.stringify(bar.pill))
+  check('the pill is the bare ⚙ menu', bar.pill === '⚙', JSON.stringify(bar.pill))
   await context.close()
 }
 
@@ -251,7 +258,7 @@ console.log('\nand a desktop says the same')
   const { context, page } = await phone(1400, JIM)
   const bar = await readBar(page)
   check(`the bar says "${titleFor('Jim')}" above the breakpoint`, bar.title === titleFor('Jim'), JSON.stringify(bar))
-  check('with no greeting in the pill', bar.pill === '⚙', JSON.stringify(bar.pill))
+  check('with their initials and no greeting in the pill', bar.pill === 'JO', JSON.stringify(bar.pill))
   await context.close()
 }
 

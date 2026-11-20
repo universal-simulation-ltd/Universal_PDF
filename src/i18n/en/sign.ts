@@ -297,6 +297,13 @@ export default {
   'send_certificate': 'Certificate',
   'send_revoke_title': 'Revoke this signing request',
   'send_revoke': 'Revoke',
+  'send_noun_one': 'sign request', // a row in Your sign requests, for Select all / Delete selected
+  'send_noun_other': 'sign requests',
+  'send_select_aria': 'Select {name}',
+  'send_delete_many_one': 'Delete {count} sign request? Its link stops working and the copy stored online is deleted. This cannot be undone.', // Delete selected's confirm: deleting a request revokes its links and deletes the stored PDF
+  'send_delete_many_other': 'Delete {count} sign requests? Their links stop working and the copies stored online are deleted. This cannot be undone.',
+  'send_delete_many_button': 'Delete',
+  'send_delete_many_failed': '{count} could not be deleted: {error}', // after Delete selected, when some failed
   'send_remind': 'Remind',
   'send_reminding': 'Sending…',
   'send_reminded': 'Reminder sent',

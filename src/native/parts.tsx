@@ -1,5 +1,5 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { BottomSheet, type GripProps } from '@unisim/sdk'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode, type TouchEvent as ReactTouchEvent } from 'react'
+import { BottomSheet, usePhoneLayer, type GripProps } from '@unisim/sdk'
 import { Icon, PATHS } from './icons'
 
 // The page / sheet / gesture plumbing is the SDK's phone kit (`@unisim/sdk`,
@@ -492,4 +492,99 @@ export function SwipeRow({
       </div>
     </div>
   )
+}
+
+/**
+ * Press and hold selects (BRANDING.md ▸ "A deletable row swipes", owner rule
+ * 2026-10-25: "a tap and hold should select the item"). Spread
+ * `holdStart(id)` as a row's `onTouchStart`: a still finger for 0.45 s calls
+ * `onHold(id)`. Any movement first (the row's swipe, the list's scroll)
+ * cancels it. The click the lifting finger makes is swallowed wherever it
+ * lands, so neither the row's own tap (open the file) nor whatever slides in
+ * under the finger (the selection bar) is pressed.
+ *
+ * From Universal BlackBook's `useHold` (src/components/SwipeActions.tsx),
+ * which the rule names as the reference; it belongs in the SDK's phone kit
+ * once a third app needs it.
+ */
+export function useHold(onHold: (id: string) => void): (id: string) => (e: ReactTouchEvent) => void {
+  const hold = useRef<{ timer: ReturnType<typeof setTimeout>; x: number; y: number } | null>(null)
+  const cb = useRef(onHold)
+  cb.current = onHold
+  useEffect(() => {
+    const cancel = (e: TouchEvent) => {
+      const h = hold.current
+      if (!h) return
+      const t0 = e.touches[0]
+      if (e.type !== 'touchmove' || !t0 || Math.hypot(t0.clientX - h.x, t0.clientY - h.y) > 8) {
+        clearTimeout(h.timer)
+        hold.current = null
+      }
+    }
+    document.addEventListener('touchmove', cancel, { passive: true })
+    document.addEventListener('touchend', cancel)
+    document.addEventListener('touchcancel', cancel)
+    return () => {
+      if (hold.current) clearTimeout(hold.current.timer)
+      document.removeEventListener('touchmove', cancel)
+      document.removeEventListener('touchend', cancel)
+      document.removeEventListener('touchcancel', cancel)
+    }
+  }, [])
+  return (id) => (e) => {
+    if (e.touches.length !== 1) return
+    const t0 = e.touches[0]
+    if (hold.current) clearTimeout(hold.current.timer)
+    hold.current = {
+      x: t0.clientX,
+      y: t0.clientY,
+      timer: setTimeout(() => {
+        hold.current = null
+        // The finger is still down: its click comes after this. One click,
+        // swallowed in the capture phase before anything under it sees it.
+        const swallow = (ev: Event) => {
+          ev.preventDefault()
+          ev.stopPropagation()
+        }
+        document.addEventListener('click', swallow, { capture: true, once: true })
+        setTimeout(() => document.removeEventListener('click', swallow, { capture: true }), 1500)
+        navigator.vibrate?.(12)
+        cb.current(id)
+      }, 450),
+    }
+  }
+}
+
+/**
+ * Selection mode is left the phone's ways as well as by its Done button:
+ * Android's back gesture (a layer on the SDK's stack while `selecting`) and a
+ * swipe in from the left edge (BRANDING.md ▸ "Press and hold selects": "Done
+ * / Back / an edge swipe leaves").
+ */
+export function useLeaveSelection(selecting: boolean, leave: () => void): void {
+  const cb = useRef(leave)
+  cb.current = leave
+  usePhoneLayer('page', () => cb.current(), { open: selecting })
+  useEffect(() => {
+    if (!selecting) return
+    let from: { x: number; y: number } | null = null
+    const down = (e: TouchEvent) => {
+      const t0 = e.touches[0]
+      from = t0 && t0.clientX < 24 ? { x: t0.clientX, y: t0.clientY } : null
+    }
+    const move = (e: TouchEvent) => {
+      const t0 = e.touches[0]
+      if (!from || !t0) return
+      if (t0.clientX - from.x > 70 && Math.abs(t0.clientY - from.y) < 50) {
+        from = null
+        cb.current()
+      }
+    }
+    document.addEventListener('touchstart', down, { passive: true })
+    document.addEventListener('touchmove', move, { passive: true })
+    return () => {
+      document.removeEventListener('touchstart', down)
+      document.removeEventListener('touchmove', move)
+    }
+  }, [selecting])
 }

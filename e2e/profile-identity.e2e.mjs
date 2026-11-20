@@ -14,12 +14,21 @@
 //
 // ── What changed (e980221, 2026-10-26) ───────────────────────────────────────
 //
-// Signed in = personalised: no photo, initials or greeting in a pill and no
-// account rows in the menu. The landing bar says "Jim's PDFs" (SDK
-// `personalTitle`), and the account — the email, the hub, Sign out, "Call me"
-// and the App name choice — is "Your Universal ID" in Tune this app
-// (`accountInTune`), from the landing bar AND from the dark tools bar a
-// document opens under (`ToolbarUserProfile`).
+// Signed in = personalised: no greeting in the pill. The landing bar says
+// "Jim's PDFs" (SDK `personalTitle`), and the account — the email, the hub,
+// Sign out, "Call me" and the App name choice — is "Your Universal ID" in Tune
+// this app (`accountInTune`), from the landing bar AND from the dark tools bar
+// a document opens under (`ToolbarUserProfile`).
+//
+// ── And since 2026-11-11 (SDK 0.219.0) ───────────────────────────────────────
+//
+// James: "if you are signed in then show the sign in panel directly in the
+// actions dropdown and use their logo on the icon (replacing the cog wheel)".
+// So signed in, the landing bar's menu wears their photo — initials ("JO")
+// with none — and opens with their name and email above the rows; a guest
+// keeps the ⚙. This spec still expected the cog and no account in the menu,
+// and failed on main until 2026-11-20 (the menu check passed only because it
+// read an empty, hidden [role=menu]).
 //
 // Until then this spec pinned the stale-display-name fix in the pill's
 // dropdown (`useProfile()` is per-call-site state, so `ToolbarUserProfile`
@@ -242,12 +251,18 @@ async function callMe(name) {
   await page.waitForTimeout(400)
 }
 
-console.log('\nthe bar names the app for them, and the pill names nobody')
+console.log('\nthe bar names the app for them; the pill wears their initials, with no greeting')
 check(`the current display name is on screen, as "${titleFor('Jim')}"`, (await barTitle()) === titleFor('Jim'), await barTitle())
-check('the pill is the bare menu (no photo, initials or greeting)', (await pillText()) === '⚙', await pillText())
+check('the pill is their initials, in place of the ⚙ (no greeting)', (await pillText()) === 'JO', await pillText())
 await openMenu()
-const menu = await page.locator('[role="menu"]').first().innerText()
-check('the menu has no account rows (no email, no Sign out)', !menu.includes('james@unisim.co.uk') && !menu.includes(sdk.t('en', 'profile.sign_out')), menu.slice(0, 200))
+// Read what is visible, not the first [role=menu]: that one read empty, which
+// let the old "no account rows" check pass on nothing.
+const seen = (text) => page.getByText(text, { exact: true }).first().isVisible().catch(() => false)
+check('the menu opens with their account: name and email', (await seen('Jim Original')) && (await seen('james@unisim.co.uk')))
+check(
+  '…and Tune this app is still in it',
+  await page.locator(`[role="menuitem"][aria-haspopup="dialog"]:has-text("${APP_PREFS}")`).first().isVisible().catch(() => false),
+)
 
 console.log(`\n"${ACCOUNT}" is in ${APP_PREFS}`)
 await openTune()

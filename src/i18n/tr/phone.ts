@@ -191,6 +191,7 @@ const phone: Messages['phone'] = {
   'reverted': 'Orijinale dönüldü. Geri al değişikliklerinizi geri getirir.',
   'revert_failed': 'Bu PDF’in dönülecek orijinal bir kopyası yok.',
   'doc_share': 'Paylaş',
+  'doc_select': 'Seç',
   'swipe_delete': 'Sil',
   'swipe_share': 'Paylaş',
   'more_clear': 'Tüm notları sil',

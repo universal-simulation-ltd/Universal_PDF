@@ -196,6 +196,7 @@ export default {
   'reverted': 'Back to the original. Undo puts your changes back.',
   'revert_failed': 'There is no original copy of this PDF to go back to.',
   'doc_share': 'Share',
+  'doc_select': 'Select', // ⋯ sheet: into selection mode with this file ticked (what a press and hold does)
   'swipe_delete': 'Delete',
   'swipe_share': 'Share',
   'more_clear': 'Clear all annotations',

@@ -27,15 +27,17 @@ export default function RecentFilesList({ className = 'mt-8 w-full max-w-md' }: 
   const openRecent = usePdfStore((s) => s.openRecent)
   const removeRecent = usePdfStore((s) => s.removeRecent)
   // The suite's "every list: select several, then act" (SDK 0.227): a tick
-  // box per row, Select all, then the count, Delete selected and Clear.
+  // box per row, Select all, then the count, Remove selected (`action=
+  // "remove"`, SDK 0.228: the entry leaves the list, the file it was opened
+  // from stays) and Clear.
   const sel = useSelection(recents.map((r) => r.id))
 
   if (recents.length === 0) return null
 
-  // Delete selected does what each row's Remove does — forgets the entry and
+  // Remove selected does what each row's Remove does — forgets the entry and
   // the copy (and unexported marks) this app keeps of it — so the confirm says
   // that, and that the file it was opened from is left alone, rather than the
-  // SDK's generic "Delete 3 files? This cannot be undone."
+  // SDK's generic "Remove 3 files from this list?"
   const confirmRemove = (_message: string, count: number) =>
     phoneConfirm({
       message: t.plural('app.recent_remove_many', count),
@@ -54,6 +56,7 @@ export default function RecentFilesList({ className = 'mt-8 w-full max-w-md' }: 
         onDelete={async (ids) => {
           for (const id of ids) await removeRecent(id)
         }}
+        action="remove"
         confirm={confirmRemove}
         className="mb-2 px-1"
       />

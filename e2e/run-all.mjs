@@ -46,6 +46,11 @@ export const SKIP = {
   'tabs-desktop': 'Electron desktop spec (needs a desktop build and a display)',
   'download-staging': 'Electron desktop spec (npm run test:download-staging:desktop)',
   'hub-handoff': 'launches the Electron app for its desktop half (no display on a CI runner)',
+  // Added with the desktop's browser sign-in (757e167) but never listed here,
+  // so CI's chromium job ran it and it died at launch ("Missing X server or
+  // $DISPLAY") on every push since. Run it on a desktop:
+  // npm run build:desktop && npm run test:browser-sign-in.
+  'browser-sign-in': 'Electron desktop spec (npm run build:desktop, then npm run test:browser-sign-in)',
   // Needs the real Realtime relay: CI builds against a placeholder Supabase,
   // so the pad never joins its channel there. Run it by hand against the dev
   // server (npm run test:phone-attest).

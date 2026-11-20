@@ -191,6 +191,7 @@ const phone: Messages['phone'] = {
   'reverted': 'Zurück zum Original. Rückgängig holt deine Änderungen zurück.',
   'revert_failed': 'Von diesem PDF gibt es kein Original, zu dem es zurückgehen kann.',
   'doc_share': 'Teilen',
+  'doc_select': 'Auswählen',
   'swipe_delete': 'Löschen',
   'swipe_share': 'Teilen',
   'more_clear': 'Alle Kommentare löschen',
