@@ -358,11 +358,15 @@ export default function ScanDialog({ source, initialPages, onClose }: Props) {
                 </button>
               ) : (
                 <>
+                  {/* Where the photos come in, the scanner's capture area: the
+                      suite's Viewfinder box (BRANDING.md → Boxes, D). Nothing
+                      in frame until a page is added (all four corners muted);
+                      then its leading corner lights. */}
                   <button
                     type="button"
                     onClick={() => inputRef.current?.click()}
                     disabled={working || decoding}
-                    className="w-full flex items-center gap-3 p-3 rounded-lg border border-slate-200 text-left hover:border-orange-400 hover:bg-orange-50/50 transition-colors disabled:opacity-60"
+                    className={`u-box u-box--frame u-box--row ${pages.length === 0 ? 'u-box--empty' : ''} w-full flex items-center gap-3 bg-slate-50 p-3 text-left transition-colors hover:bg-orange-50/50 disabled:opacity-60`}
                   >
                     <span className="shrink-0 w-9 h-9 rounded bg-slate-100 text-slate-600 flex items-center justify-center">
                       🖼

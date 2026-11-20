@@ -129,7 +129,12 @@ export default function CompressResultModal({
           </div>
         </div>
 
-        <div className="rounded-lg border border-slate-200 overflow-hidden">
+        {/* The outcome: a record carrying a value, so the suite's Key box
+            (BRANDING.md → Boxes, C). The tab stays neutral and names what it
+            is; the green stays on the saving's line, which says it in words.
+            No overflow-hidden: the tab sits half above the top edge. */}
+        <div className="u-box u-box--key mt-5 p-0 pt-3">
+          <span className="u-box__key">{t('tools.compress.result_key')}</span>
           <div className="grid grid-cols-2 divide-x divide-slate-200">
             <div className="p-4">
               <div className="text-xs uppercase tracking-wide text-slate-500 font-medium">{t('tools.compress.original')}</div>
@@ -146,7 +151,7 @@ export default function CompressResultModal({
           </div>
           <div
             className={[
-              'px-4 py-2.5 text-sm font-medium border-t border-slate-200',
+              'px-4 py-2.5 text-sm font-medium border-t border-slate-200 rounded-b-[9px]',
               busy
                 ? 'bg-slate-50 text-slate-600'
                 : didShrink

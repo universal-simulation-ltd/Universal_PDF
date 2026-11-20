@@ -68,7 +68,12 @@ const app: Messages['app'] = {
   'recent_hours_ago': '{n} sa önce',
   'recent_days_ago': '{n} gün önce',
   'recent_heading': 'Son',
-  'recent_more': 'Bir belge açtığınızda Dosya menüsünde +{count} tane daha',
+  'recent_noun_one': 'dosya',
+  'recent_noun_other': 'dosya',
+  'recent_select_aria': 'Seç: {name}',
+  'recent_remove_many_one': '{count} dosya son dosyalardan kaldırılsın mı? Burada tutulan kopya da dışa aktarmadığınız değişikliklerle birlikte silinir. Açtığınız asıl dosyaya dokunulmaz.',
+  'recent_remove_many_other': '{count} dosya son dosyalardan kaldırılsın mı? Burada tutulan kopyalar da dışa aktarmadığınız değişikliklerle birlikte silinir. Açtığınız asıl dosyalara dokunulmaz.',
+  'recent_remove_many_button': 'Kaldır',
   'recent_remove': 'Son dosyalardan kaldır',
   'recent_remove_aria': 'Son dosyalardan kaldır: {name}',
 

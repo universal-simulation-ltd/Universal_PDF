@@ -68,7 +68,12 @@ const app: Messages['app'] = {
   'recent_hours_ago': 'hace {n} h',
   'recent_days_ago': 'hace {n} d',
   'recent_heading': 'Recientes',
-  'recent_more': '+{count} más en el menú Archivo cuando abras un documento',
+  'recent_noun_one': 'archivo',
+  'recent_noun_other': 'archivos',
+  'recent_select_aria': 'Seleccionar {name}',
+  'recent_remove_many_one': '¿Quitar {count} archivo de recientes? También se borra la copia guardada aquí, con los cambios que no hayas exportado. El archivo que abriste no se toca.',
+  'recent_remove_many_other': '¿Quitar {count} archivos de recientes? También se borran las copias guardadas aquí, con los cambios que no hayas exportado. Los archivos que abriste no se tocan.',
+  'recent_remove_many_button': 'Quitar',
   'recent_remove': 'Quitar de recientes',
   'recent_remove_aria': 'Quitar {name} de recientes',
 

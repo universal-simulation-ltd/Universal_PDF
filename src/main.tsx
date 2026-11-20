@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { UniversalProvider, installButtonStyles, installTabStyles } from '@unisim/sdk'
+import { UniversalProvider, installBoxStyles, installButtonStyles, installTabStyles } from '@unisim/sdk'
 import { I18nRoot } from './i18n'
 
 console.log(`build: ${import.meta.env.VITE_BUILD_SHA}`)
@@ -104,6 +104,10 @@ installPauseAnimationsOnBlur()
 // The suite's key buttons and tray tabs, used as class strings (components/buttons.tsx).
 installButtonStyles()
 installTabStyles()
+// The suite's box marks (BRANDING.md → Boxes), also as class strings
+// (u-box u-box--orbit / --key / --frame): the sheet goes in once. Web and
+// desktop screens only; the phone screens (src/native) keep their own design.
+installBoxStyles()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

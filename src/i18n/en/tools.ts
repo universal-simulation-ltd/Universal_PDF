@@ -37,6 +37,10 @@ export default {
   'compress.kept_lossless': 'Kept the lossless version — turning these pages into images would have made the file bigger.',
   'compress.already_optimised_one': 'Already optimised — this PDF is as small as it goes.',
   'compress.result_title': 'Compression result',
+  // The key tab on the result panel (the suite's Key box); shown in capitals
+  'compress.result_key': 'Result · PDF',
+  'compress.batch_result_key_one': 'Result · {count} PDF',
+  'compress.batch_result_key_other': 'Result · {count} PDFs',
   'compress.compression': 'Compression', // section heading above the level picker
   'compress.original': 'Original', // the uncompressed file
   'compress.compressed': 'Compressed', // the compressed file

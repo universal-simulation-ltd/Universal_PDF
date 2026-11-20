@@ -68,7 +68,12 @@ const app: Messages['app'] = {
   'recent_hours_ago': 'vor {n} Std.',
   'recent_days_ago': 'vor {n} T.',
   'recent_heading': 'Zuletzt verwendet',
-  'recent_more': '+{count} weitere im Menü „Datei“, sobald du ein Dokument öffnest',
+  'recent_noun_one': 'Datei',
+  'recent_noun_other': 'Dateien',
+  'recent_select_aria': '{name} auswählen',
+  'recent_remove_many_one': '{count} Datei aus der Liste entfernen? Die hier gespeicherte Kopie wird mit allen nicht exportierten Änderungen gelöscht. Die Datei, die du geöffnet hattest, bleibt unberührt.',
+  'recent_remove_many_other': '{count} Dateien aus der Liste entfernen? Die hier gespeicherten Kopien werden mit allen nicht exportierten Änderungen gelöscht. Die Dateien, die du geöffnet hattest, bleiben unberührt.',
+  'recent_remove_many_button': 'Entfernen',
   'recent_remove': 'Aus Liste entfernen',
   'recent_remove_aria': '{name} aus der Liste der zuletzt verwendeten Dateien entfernen',
 

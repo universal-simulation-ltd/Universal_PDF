@@ -95,12 +95,15 @@ export default function SignCertificatePage({ certId }: { certId: string }) {
   return (
     <main className="min-h-svh bg-slate-100 py-8 px-4">
       <div className="mx-auto w-full max-w-3xl space-y-5">
-        {/* Header */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        {/* Header: the certificate itself, a record with a standing, so the
+            suite's Key box (BRANDING.md → Boxes, C). The tab names it, in
+            place of the orange eyebrow it replaces (its 🔏 dropped: the tab
+            is words); the tab stays neutral and the status keeps its chip. */}
+        <div className="u-box u-box--key mt-3 bg-white p-5 pt-6 shadow-sm">
+          <span className="u-box__key">{t('sign.cert_heading').replace(/^[^\p{L}]+/u, '')}</span>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-orange-700">{t('sign.cert_heading')}</div>
-              <h1 className="mt-1 truncate text-xl font-bold text-slate-900">{cert.doc_name ?? 'document.pdf'}</h1>
+              <h1 className="truncate text-xl font-bold text-slate-900">{cert.doc_name ?? 'document.pdf'}</h1>
               <p className="mt-0.5 text-xs text-slate-400">{t('sign.cert_issued', { date: fmt(cert.created_at, locale) })}</p>
             </div>
             <ValueChip tone={completed ? 'good' : 'warn'} className="shrink-0">

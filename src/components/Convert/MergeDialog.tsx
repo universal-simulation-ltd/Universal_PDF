@@ -185,14 +185,16 @@ export default function MergeDialog({ onClose, initialFile }: Props) {
           }}
         />
 
-        {/* Ordered list */}
+        {/* Ordered list. Before any file is added it is an empty state, so
+            the suite's Viewfinder box with nothing in frame (BRANDING.md →
+            Boxes, D): all four corners muted, no outline. */}
+        {items.length === 0 ? (
+          <div className="u-box u-box--frame u-box--empty mt-3 px-3 py-6 text-sm text-slate-500">
+            {t('tools.merge.empty')}
+          </div>
+        ) : (
         <div className="mt-3 flex-1 overflow-y-auto rounded-lg border border-slate-200 divide-y divide-slate-100 min-h-[3rem]">
-          {items.length === 0 ? (
-            <div className="px-3 py-6 text-center text-sm text-slate-400">
-              {t('tools.merge.empty')}
-            </div>
-          ) : (
-            items.map((it, i) => (
+          {items.map((it, i) => (
               <div key={it.key} className="flex items-center gap-2 px-3 py-2 text-sm">
                 <span className="w-5 text-right tabular-nums text-slate-400">{i + 1}</span>
                 <div className="min-w-0 flex-1">
@@ -230,9 +232,9 @@ export default function MergeDialog({ onClose, initialFile }: Props) {
                   </button>
                 </div>
               </div>
-            ))
-          )}
+          ))}
         </div>
+        )}
 
         <div className="mt-4 flex items-center gap-2 justify-end">
           <button

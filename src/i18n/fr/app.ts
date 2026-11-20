@@ -68,7 +68,12 @@ const app: Messages['app'] = {
   'recent_hours_ago': 'il y a {n} h',
   'recent_days_ago': 'il y a {n} j',
   'recent_heading': 'Récents',
-  'recent_more': '+{count} autres dans le menu Fichier une fois un document ouvert',
+  'recent_noun_one': 'fichier',
+  'recent_noun_other': 'fichiers',
+  'recent_select_aria': 'Sélectionner {name}',
+  'recent_remove_many_one': 'Retirer {count} fichier des récents ? La copie conservée ici est supprimée aussi, avec les modifications que vous n’avez pas exportées. Le fichier que vous aviez ouvert n’est pas touché.',
+  'recent_remove_many_other': 'Retirer {count} fichiers des récents ? Les copies conservées ici sont supprimées aussi, avec les modifications que vous n’avez pas exportées. Les fichiers que vous aviez ouverts ne sont pas touchés.',
+  'recent_remove_many_button': 'Retirer',
   'recent_remove': 'Retirer des récents',
   'recent_remove_aria': 'Retirer {name} des récents',
 

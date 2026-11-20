@@ -68,7 +68,13 @@ export default {
   'recent_hours_ago': '{n}h ago', // compact: hours ago
   'recent_days_ago': '{n}d ago', // compact: days ago
   'recent_heading': 'Recent', // heading over recently opened files; shown in capitals
-  'recent_more': '+{count} more in File menu once you open one', // "once you open one" = once you open a document
+  'recent_noun_one': 'file', // what a row in Recent files is, for Select all / Delete selected
+  'recent_noun_other': 'files',
+  'recent_select_aria': 'Select {name}',
+  // Delete selected's confirm: honest that it forgets the copy kept in the app, not the file on disk
+  'recent_remove_many_one': 'Remove {count} file from recents? The copy kept here goes too, with any changes you haven’t exported. The file you opened it from is not touched.',
+  'recent_remove_many_other': 'Remove {count} files from recents? The copies kept here go too, with any changes you haven’t exported. The files you opened them from are not touched.',
+  'recent_remove_many_button': 'Remove',
   'recent_remove': 'Remove from recents',
   'recent_remove_aria': 'Remove {name} from recents',
 

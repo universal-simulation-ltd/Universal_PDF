@@ -373,8 +373,14 @@ export default function LandingPage() {
                 more options. Compress and the power-user tools used to sit in
                 a second card below this one, which read as a separate, lesser
                 panel — Universal Images keeps everything in a single card and
-                this now matches it. */}
-            <div className="mt-7 bg-white border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6">
+                this now matches it.
+
+                It is where the PDF comes in, with nothing in frame yet: the
+                suite's Viewfinder box, empty (BRANDING.md → Boxes, D), all four
+                corners muted and no outline, as on Universal Compress's and
+                Universal Video's front doors. It keeps its white fill, which
+                the drop circle is drawn for. */}
+            <div className="u-box u-box--frame u-box--empty mt-7 rounded-lg bg-white p-5 text-left sm:p-6">
               {/* Open existing — primary action, wearing the suite's shared
                   drop circle (`DropRing` + `useFileDrop` from @unisim/sdk)
                   rather than a copy, so it is the same front door Universal

@@ -68,7 +68,12 @@ const app: Messages['app'] = {
   'recent_hours_ago': 'há {n} h',
   'recent_days_ago': 'há {n} d',
   'recent_heading': 'Recentes',
-  'recent_more': '+{count} no menu Arquivo depois que você abrir um documento',
+  'recent_noun_one': 'arquivo',
+  'recent_noun_other': 'arquivos',
+  'recent_select_aria': 'Selecionar {name}',
+  'recent_remove_many_one': 'Remover {count} arquivo dos recentes? A cópia guardada aqui também é apagada, com as alterações que você não exportou. O arquivo que você abriu não é alterado.',
+  'recent_remove_many_other': 'Remover {count} arquivos dos recentes? As cópias guardadas aqui também são apagadas, com as alterações que você não exportou. Os arquivos que você abriu não são alterados.',
+  'recent_remove_many_button': 'Remover',
   'recent_remove': 'Remover dos recentes',
   'recent_remove_aria': 'Remover {name} dos recentes',
 
