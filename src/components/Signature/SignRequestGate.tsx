@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useUniversal } from '@unisim/sdk'
-import { requestAccessCode, verifyAccess } from '../../lib/signRequestClient'
+import { requestAccessCode, verifyAccess, verifyUniversalId } from '../../lib/signRequestClient'
 import { useT } from '../../i18n'
 import { btnPrimary } from '../buttons'
 
@@ -20,23 +20,32 @@ import { btnPrimary } from '../buttons'
  * Defender Safe Links and Proofpoint fetch every URL in an email before a human
  * sees it, so an auto-send on mount would mean a code going out — and being
  * spent — on every scanned message.
+ *
+ * SIGNED IN WITH THE RIGHT ACCOUNT (`universalId`, platform 0338): the server
+ * has said the visitor's Universal ID has the confirmed address this was sent
+ * to, so the page starts on a one-press step with no code — just the sender's
+ * PIN if there is one. The emailed code stays one tap away, and is where any
+ * refusal from the server sends them.
  */
 export default function SignRequestGate({
   token,
   docName,
   maskedEmail,
   hasPin,
+  universalId = false,
   onVerified,
 }: {
   token: string
   docName: string
   maskedEmail: string | null
   hasPin: boolean
-  onVerified: (session: string) => void
+  /** The server matched the signed-in Universal ID to the stored address. */
+  universalId?: boolean
+  onVerified: (session: string, via?: 'universal_id' | 'universal_id+pin') => void
 }) {
   const t = useT()
   const { supabase } = useUniversal()
-  const [step, setStep] = useState<'email' | 'code'>('email')
+  const [step, setStep] = useState<'uid' | 'email' | 'code'>(universalId ? 'uid' : 'email')
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [pin, setPin] = useState('')
@@ -90,6 +99,27 @@ export default function SignRequestGate({
     setNotice(t.plural('sign.gate_code_sent', res.expiresInMinutes ?? 10, { email: res.maskedEmail ?? maskedEmail ?? t('sign.gate_your_email') }))
   }
 
+  async function onUniversalId(e: React.FormEvent) {
+    e.preventDefault()
+    if (busy || !online || (hasPin && pin.length < 4)) return
+    setBusy(true)
+    setError(null)
+    const res = await verifyUniversalId(supabase, token, { pin: hasPin ? pin : undefined })
+    setBusy(false)
+    if (!res.ok || !res.session) {
+      setError(res.error ?? t('sign.gate_did_not_work'))
+      // Only a wrong PIN is worth retrying here. Anything else — the account
+      // no longer matches, or the tries are used up (a new code resets them) —
+      // goes to the emailed code.
+      if (res.code !== 'bad_credentials') {
+        setStep('email')
+        setPin('')
+      }
+      return
+    }
+    onVerified(res.session, res.verifiedVia ?? 'universal_id')
+  }
+
   async function onVerify(e: React.FormEvent) {
     e.preventDefault()
     if (busy || code.length < 6 || !online) return
@@ -137,7 +167,54 @@ export default function SignRequestGate({
           </p>
         )}
 
-        {step === 'email' ? (
+        {step === 'uid' ? (
+          <form onSubmit={onUniversalId} className="mt-5 space-y-3" data-gate-universal-id>
+            <p className="rounded-md bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+              {t('sign.gate_uid_verified')}
+            </p>
+
+            {hasPin && (
+              <div>
+                <label htmlFor="sr-uid-pin" className="mb-1 block text-xs font-medium text-slate-700">
+                  {t('sign.gate_pin_label')}
+                </label>
+                <input
+                  id="sr-uid-pin"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  autoFocus
+                  maxLength={6}
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+                  disabled={busy}
+                  placeholder="000000"
+                  className={`${field} text-center text-lg tracking-[0.4em]`}
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  {t('sign.gate_pin_hint')}
+                </p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={busy || (hasPin && pin.length < 4) || !online}
+              className={`${btnPrimary} w-full`}
+            >
+              {busy ? t('sign.gate_checking') : t('sign.gate_open')}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setStep('email'); setPin(''); setError(null); setNotice(null) }}
+              disabled={busy}
+              className="w-full text-xs text-slate-500 underline underline-offset-2 hover:text-slate-800"
+            >
+              {t('sign.gate_use_code')}
+            </button>
+          </form>
+        ) : step === 'email' ? (
           <form onSubmit={onSendCode} className="mt-5 space-y-3">
             <div>
               <label htmlFor="sr-email" className="mb-1 block text-xs font-medium text-slate-700">

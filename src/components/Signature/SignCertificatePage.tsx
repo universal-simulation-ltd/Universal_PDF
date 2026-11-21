@@ -22,6 +22,16 @@ const ACTION_LABEL: Record<string, MessageKey> = {
   text: 'sign.cert_action_text',
   other: 'sign.cert_action_other',
   completed: 'sign.cert_action_completed',
+  verified: 'sign.cert_action_verified',
+}
+
+// How the signer proved who they are (platform 0338: the 'verified' event's
+// method, or a signature's verified_via). Codes stored, wording translated.
+const METHOD_LABEL: Record<string, MessageKey> = {
+  'universal_id': 'sign.cert_method_universal_id',
+  'universal_id+pin': 'sign.cert_method_universal_id_pin',
+  'email_code': 'sign.cert_method_email_code',
+  'email_code+pin': 'sign.cert_method_email_code_pin',
 }
 
 const ACTION_TONE: Record<string, string> = {
@@ -32,6 +42,7 @@ const ACTION_TONE: Record<string, string> = {
   text: 'text-amber-700',
   other: 'text-rose-700',
   opened: 'text-slate-500',
+  verified: 'text-emerald-700',
 }
 
 function shortHash(h?: string | null): string {
@@ -176,7 +187,21 @@ export default function SignCertificatePage({ certId }: { certId: string }) {
                   <tr key={i} className="border-b border-slate-100 last:border-0">
                     <td className="py-2 pr-3 tabular-nums text-slate-600">{fmt(e.occurred_at, locale)}</td>
                     <td className="py-2 pr-3 text-slate-600">{e.actor_email || '—'}</td>
-                    <td className={`py-2 pr-3 font-medium ${ACTION_TONE[e.action] ?? 'text-slate-600'}`}>{ACTION_LABEL[e.action] ? t(ACTION_LABEL[e.action]) : e.action}</td>
+                    <td className={`py-2 pr-3 font-medium ${ACTION_TONE[e.action] ?? 'text-slate-600'}`}>
+                      {(() => {
+                        // `method` arrived with platform 0338; older SDK types don't list it.
+                        const method = (e as { method?: string | null }).method
+                        const how = method && METHOD_LABEL[method] ? t(METHOD_LABEL[method]) : null
+                        // A 'verified' row IS the method; elsewhere it is a note under the action.
+                        if (e.action === 'verified') return how ?? t('sign.cert_action_verified')
+                        return (
+                          <>
+                            {ACTION_LABEL[e.action] ? t(ACTION_LABEL[e.action]) : e.action}
+                            {how && <span className="block text-[10px] font-normal text-slate-500" data-cert-method>{how}</span>}
+                          </>
+                        )
+                      })()}
+                    </td>
                     <td className="py-2 pr-3 text-slate-500">{e.ip_country || '—'}</td>
                     <td className="py-2 font-mono text-[10px] text-slate-500">{shortHash(e.pdf_sha256)}</td>
                   </tr>

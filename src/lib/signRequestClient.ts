@@ -248,6 +248,10 @@ export interface BeginSignRequestResult {
   role?: 'requester' | 'recipient'
   alreadySigned?: boolean
   completed?: boolean
+  /** The signer is signed in to a Universal ID whose confirmed email is the
+   *  address this was sent to (the server checks the session; platform 0338).
+   *  On a protected request `verifyUniversalId` then skips the emailed code. */
+  universalIdMatch?: boolean
 }
 
 /** Recipient: what the holding page needs. Returns no document and no signed
@@ -319,6 +323,44 @@ export async function verifyAccess(
     return { ok: false, error: body.error ?? error.message, code: body.code }
   }
   return (data ?? { ok: false, error: getT()('lib.no_response') }) as VerifyAccessResult
+}
+
+export interface VerifyUniversalIdResult {
+  ok: boolean
+  /** The function could not be reached (offline). */
+  network?: boolean
+  error?: string
+  /** 'universal_id_mismatch' ⇒ show the emailed-code page instead. */
+  code?: 'universal_id_mismatch' | 'bad_credentials' | 'too_many_attempts' | 'expired' | 'completed' | 'already_signed' | (string & {})
+  session?: string
+  verifiedVia?: 'universal_id' | 'universal_id+pin'
+  triesLeft?: number
+}
+
+/**
+ * Recipient, signed in: "my Universal ID is the address this was sent to."
+ *
+ * Nothing is typed and no code is emailed. supabase-js sends the signed-in
+ * session with the call and the SERVER decides (platform 0338): a real account
+ * whose confirmed email equals the stored address gets the same session
+ * `verifyAccess` would give. Anything else answers `universal_id_mismatch` and
+ * the emailed code is the way in, exactly as before. The sender's PIN, if they
+ * set one, is still asked for.
+ */
+export async function verifyUniversalId(
+  supabase: Supabase,
+  token: string,
+  input: { pin?: string } = {},
+): Promise<VerifyUniversalIdResult> {
+  const { data, error } = await supabase.functions.invoke('pdf-sign-request', {
+    body: { action: 'verify_universal_id', token, pin: input.pin, geo: await geoToken() },
+  })
+  if (error) {
+    if (isNetworkError(error)) return { ok: false, network: true, error: error.message }
+    const body = await parseFunctionError(error)
+    return { ok: false, error: body.error ?? error.message, code: body.code }
+  }
+  return (data ?? { ok: false, error: getT()('lib.no_response') }) as VerifyUniversalIdResult
 }
 
 // ── Sender side: turning the protection on ──────────────────────────────────

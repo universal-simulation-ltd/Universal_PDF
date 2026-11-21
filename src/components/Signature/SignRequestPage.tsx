@@ -5,7 +5,7 @@ import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { currentPdfBytes } from '../../lib/hostedStore'
 import { downloadPdfBytes } from '../../lib/download'
-import { beginSignRequest, loadSignRequest, submitSignedPdf, certLink, queueSubmitter } from '../../lib/signRequestClient'
+import { beginSignRequest, loadSignRequest, submitSignedPdf, certLink, queueSubmitter, verifyUniversalId } from '../../lib/signRequestClient'
 import {
   cacheSignDoc,
   enqueueSubmission,
@@ -63,7 +63,11 @@ export default function SignRequestPage({ token }: { token: string }) {
   // True when the document came from this device because there was no
   // connection: the banner says signing will be sent later.
   const [offlineCopy, setOfflineCopy] = useState(false)
-  const [gate, setGate] = useState<{ docName: string; maskedEmail: string | null; hasPin: boolean } | null>(null)
+  const [gate, setGate] = useState<{ docName: string; maskedEmail: string | null; hasPin: boolean; universalId: boolean } | null>(null)
+  // Signed in with the Universal ID this was sent to (platform 0338).
+  // 'verified' = a protected link opened without the emailed code;
+  // 'recorded' = an open link, where the signature is recorded as verified by it.
+  const [uidNote, setUidNote] = useState<'verified' | 'recorded' | null>(null)
   // ⚠️ Held in React state only — deliberately NOT in localStorage or the URL.
   // It is a bearer credential for this document, and the whole point of the
   // gate is that possession of a link is not enough; leaving the session behind
@@ -110,6 +114,7 @@ export default function SignRequestPage({ token }: { token: string }) {
           docName: pre.docName ?? 'document.pdf',
           maskedEmail: pre.maskedEmail ?? null,
           hasPin: !!pre.hasPin,
+          universalId: pre.universalIdMatch === true,
         })
       }
       if (waiting) {
@@ -128,11 +133,32 @@ export default function SignRequestPage({ token }: { token: string }) {
           docName: pre.docName ?? 'document.pdf',
           maskedEmail: pre.maskedEmail ?? null,
           hasPin: !!pre.hasPin,
+          universalId: pre.universalIdMatch === true,
         })
         setDocName(pre.docName ?? 'document.pdf')
+        // Signed in with the matching Universal ID and no PIN to type: no
+        // code step at all. ⚠️ Safe to do on open, unlike sending a code: a
+        // link scanner has no Universal ID session, so `universalIdMatch` is
+        // never true for one. Any refusal falls through to the gate as before.
+        if (pre.universalIdMatch && !pre.hasPin) {
+          const v = await verifyUniversalId(supabase, token)
+          if (v.ok && v.session) {
+            setSession(v.session)
+            setUidNote('verified')
+            await openDocument(v.session)
+            return
+          }
+          setGate({
+            docName: pre.docName ?? 'document.pdf',
+            maskedEmail: pre.maskedEmail ?? null,
+            hasPin: !!pre.hasPin,
+            universalId: false,
+          })
+        }
         setPhase('gate')
         return
       }
+      if (pre.ok && pre.universalIdMatch) setUidNote('recorded')
       await openDocument(undefined)
     })()
   }, [supabase, token, loadFile])
@@ -325,8 +351,10 @@ export default function SignRequestPage({ token }: { token: string }) {
         docName={gate.docName}
         maskedEmail={gate.maskedEmail}
         hasPin={gate.hasPin}
-        onVerified={(s) => {
+        universalId={gate.universalId}
+        onVerified={(s, via) => {
           setSession(s)
+          if (via) setUidNote('verified')
           setReverify(false)
           void trySend({ ...queued, state: 'queued' }, s)
         }}
@@ -340,8 +368,10 @@ export default function SignRequestPage({ token }: { token: string }) {
         docName={gate.docName}
         maskedEmail={gate.maskedEmail}
         hasPin={gate.hasPin}
-        onVerified={(s) => {
+        universalId={gate.universalId}
+        onVerified={(s, via) => {
           setSession(s)
+          if (via) setUidNote('verified')
           setReverify(false)
           setError(null)
           void onSubmit(s)
@@ -357,8 +387,10 @@ export default function SignRequestPage({ token }: { token: string }) {
         docName={gate.docName}
         maskedEmail={gate.maskedEmail}
         hasPin={gate.hasPin}
-        onVerified={(s) => {
+        universalId={gate.universalId}
+        onVerified={(s, via) => {
           setSession(s)
+          if (via) setUidNote('verified')
           void openDocument(s)
         }}
       />
@@ -506,6 +538,11 @@ export default function SignRequestPage({ token }: { token: string }) {
             <p className="mt-2 text-xs text-slate-500">
               {t.rich('sign.request_hint', { box: <strong>{t('sign.request_sign_here')}</strong> })}
             </p>
+            {uidNote && (
+              <p className="mt-2 rounded-md bg-emerald-50 px-2 py-1.5 text-xs text-emerald-800" data-sign-universal-id>
+                {uidNote === 'verified' ? t('sign.request_uid_verified') : t('sign.request_uid_recorded')}
+              </p>
+            )}
             {(offlineCopy || !online) && (
               <p className="mt-2 rounded-md bg-amber-50 px-2 py-1.5 text-xs text-amber-800" data-sign-offline-banner>
                 {t('sign.offline_banner')}

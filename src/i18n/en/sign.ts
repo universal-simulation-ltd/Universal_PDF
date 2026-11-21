@@ -157,6 +157,8 @@ export default {
   'gate_open': 'Open the document',
   'gate_different': 'Use a different address, or send another code',
   'gate_forwarded': 'The sender asked that only the person this was addressed to can open it. If you were forwarded this link, ask them to send it to you directly.',
+  'gate_uid_verified': 'You’re signed in with the Universal ID this was sent to, so you don’t need an emailed code.', // signed in with the matching account: the emailed-code step is skipped
+  'gate_use_code': 'Use an emailed code instead',
 
   // SignRequestPage
   'request_expired': 'This signing link has expired. Ask the sender for a fresh one.',
@@ -187,6 +189,8 @@ export default {
   'request_sending_back': 'Sending back…',
   'request_finish_send': 'Finish & send back to sender',
   'request_finish_signing': 'Finish signing →',
+  'request_uid_verified': 'Verified by your Universal ID — no emailed code needed.',
+  'request_uid_recorded': 'You’re signed in with the Universal ID this was sent to, so your signature is recorded as verified by it.',
   'offline_banner': 'You’re offline. You can still sign — it will be sent back as soon as you’re online.',
   'offline_not_cached': 'You’re offline, and this document hasn’t been opened on this device before. Connect to the internet and open the link again.',
   'offline_queued_title': 'Signed — waiting to send',
@@ -210,6 +214,11 @@ export default {
   'cert_action_text': 'Text added',
   'cert_action_other': 'Other edit',
   'cert_action_completed': 'Completed — all parties signed',
+  'cert_action_verified': 'Confirmed their email address',
+  'cert_method_universal_id': 'Verified by Universal ID', // how the signer proved who they are, on the certificate (platform 0338)
+  'cert_method_universal_id_pin': 'Verified by Universal ID and PIN',
+  'cert_method_email_code': 'Verified by emailed code',
+  'cert_method_email_code_pin': 'Verified by emailed code and PIN',
   'cert_loading': 'Loading certificate…',
   'cert_not_found': 'Certificate not found',
   'cert_not_found_body': 'This certificate link is invalid or has been removed.',
