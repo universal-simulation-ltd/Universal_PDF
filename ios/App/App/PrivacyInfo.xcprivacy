@@ -4,13 +4,28 @@
 <!--
   Apple's privacy manifest, required for App Store submission.
 
-  "Data Not Collected" (2026-10-12). The phone app collects nothing:
+  Updated 2026-11-21 (James: the phone app recognises the suite sign-in).
+  It was "Data Not Collected" from 2026-10-12. What it collects now, and only
+  when the phone already holds a UNI·SIM session that ANOTHER suite app made
+  (the shared Keychain group co.uk.unisim.suite):
 
-  - No sign-in. The phone, desktop and extension builds set @unisim/sdk's
-    `noAccounts` (src/main.tsx, src/lib/accounts.ts), so there is no Universal
-    ID, no email, no account id, and the SDK never reads a suite session the
-    device holds (Keychain). No "the app was opened" event either: the SDK's
-    <UsageTracker /> sends one only for a signed-in account.
+  - No sign-in of its own. The phone build sets @unisim/sdk's `noAccounts`
+    and `signInInTune: false` (src/main.tsx, src/lib/accounts.ts): no Sign in,
+    no account screens, no "the app was opened" event (<UsageTracker /> stays
+    off). It reads the session the device holds and follows it.
+  - Name and Email Address, linked, App Functionality + Product
+    Personalization: the desk's title becomes "Bradley's PDFs"
+    (src/native/personalTitle.ts, the SDK's useCallMe: Global Tuning's Call
+    me, else the profile's name, else a name-shaped email).
+  - User ID, linked, App Functionality: the account id the session carries,
+    which keys the reads and writes below.
+  - Other Data Types, linked, App Functionality: Tune this app's choices
+    (colour scheme, language, default views) are saved to the account's
+    `tune:pdf` row and read back (the SDK's TuneSync), with the account's
+    Global Tuning and its choice of the app's title.
+
+  Nothing else changes:
+
   - No uploads. Signing and "Send for signature" happen on the phone: each
     "Sign here" box becomes a real PDF signature field and the file leaves
     through the system share sheet, to wherever the user sends it, never to
@@ -35,8 +50,9 @@
   and it ships no manifest of its own. Capacitor's core frameworks carry their
   own manifests for what they use, so they are not repeated here.
 
-  Keep this in step with the App Store Connect privacy answers ("Data Not
-  Collected") and PRIVACY.md.
+  Keep this in step with the App Store Connect privacy answers (Name, Email
+  Address, User ID, Other Data Types: linked, not tracking; see
+  Docs_UNI_SIM/store-listings/universal-pdf.md) and PRIVACY.md.
 -->
 <dict>
 	<key>NSPrivacyTracking</key>
@@ -56,6 +72,61 @@
 		</dict>
 	</array>
 	<key>NSPrivacyCollectedDataTypes</key>
-	<array/>
+	<array>
+		<dict>
+			<!-- The name in the desk's title, from a suite session the phone holds. -->
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeName</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+				<string>NSPrivacyCollectedDataTypePurposeProductPersonalization</string>
+			</array>
+		</dict>
+		<dict>
+			<!-- The session's email: the name falls back to it. -->
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+				<string>NSPrivacyCollectedDataTypePurposeProductPersonalization</string>
+			</array>
+		</dict>
+		<dict>
+			<!-- The account id the session carries. -->
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeUserID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<!-- Tune this app settings kept with the account (TuneSync). -->
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeOtherDataTypes</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

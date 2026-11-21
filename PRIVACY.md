@@ -102,7 +102,7 @@ like a lie.
   delete it from inside the app: **Delete my account** at the foot of Global Tuning,
   in the profile menu. That deletes it in every UNI·SIM app, not only this one.
   **The phone apps and the browser extension have no account features** (no certified signature, no main signature saved to an account). If the device is already signed in to UNI·SIM
-  elsewhere, they recognise it so your suite-wide settings (colour scheme, language) come with you, and the extension's Tune this app offers a discreet Sign in. See `noAccounts` in
+  elsewhere, they recognise it: your suite-wide settings (colour scheme, language) come with you, what you pick in this app's Tune this app is kept with your account (so it follows you to your other devices), and on the phone the app's name becomes yours ("Bradley's PDFs"), using the name and email your Universal ID already holds. The phone apps offer no sign-in of their own and show nothing else about accounts; the extension's Tune this app offers a discreet Sign in. See `noAccounts` and `signInInTune` in
   [`src/main.tsx`](src/main.tsx) and [`src/lib/accounts.ts`](src/lib/accounts.ts).
 - **"You opened the app".** When you are signed in (on the website or in the
   desktop app), the app records one event saying the app was opened, so your
@@ -174,6 +174,8 @@ like a lie.
 
 **The iPhone, iPad and Android apps work fully offline.** No account needed, no
 open count, and every OCR model on board: nothing in them needs a connection.
+(Only if the phone is already signed in to UNI·SIM through another of our apps
+do they talk to your account, for your name and your Tune this app settings.)
 Only links you choose to follow (help guides, this page) open the web.
 
 **There is no third-party analytics, no tracking pixel, and no advertising

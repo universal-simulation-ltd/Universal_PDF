@@ -59,7 +59,7 @@ const universalConfig = {
   // anonymous daily open count (product + kind of device, no identifier), on
   // by default. It stays on the website only: the phone apps send nothing
   // (James, 2026-10-12: the App Store and Play figures already count
-  // installs, and the store labels say the phone app collects nothing), and
+  // installs, and the store labels declare no usage data for the phone app), and
   // nor do the desktop app or the browser extension. Every one of those builds
   // is Vite mode 'desktop' (build:desktop, build:mobile and build:extension),
   // so `isDesktop` covers all three; `isNativeShell()` stays as a second guard
@@ -75,6 +75,11 @@ const universalConfig = {
   // and the desktop app keep an optional Universal ID for the certified
   // signature and the saved main signature. See lib/accounts.ts.
   noAccounts: accountsOff(),
+  // The phone apps show NOTHING about accounts (James, 2026-11-21): no Sign
+  // in, no Your Universal ID. They only recognise a session another suite app
+  // made, and say so by the desk's title: "Bradley's PDFs"
+  // (src/native/personalTitle.ts). The extension keeps Tune's discreet Sign in.
+  signInInTune: !isNativeShell(),
   // No "Sign in" in the profile menu for a guest (James, 2026-10-26: "there
   // really isn't much need to sign in", and signing in pulls the account's
   // Global Tuning over what the guest had set). The one thing that needs an
@@ -117,7 +122,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           {/* Website and desktop only: the phone apps and the extension send
               nothing, even when they recognise a session (James,
               2026-10-31: "we see downloads anyway"; the store labels say
-              the phone app collects nothing). */}
+              the phone app sends no usage data). */}
           {!noAccounts && <UsageTracker />}
           {signToken ? <SignMobilePage token={signToken} />
             : signDocToken ? <SignRequestPage token={signDocToken} />

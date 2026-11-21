@@ -7,8 +7,12 @@ import { isNativeShell } from './nativeOpen'
 // nothing. `@unisim/sdk`'s `noAccounts` is set for them (src/main.tsx). Since
 // SDK 0.211.0 that no longer keeps them signed out: a suite session the device
 // already holds is read and followed (Global Tuning comes with it), and the
-// extension's Tune this app offers a discreet Sign in (the phone screens draw
-// no SDK navbar, so offer none). The certified signature and the saved main
+// extension's Tune this app offers a discreet Sign in. The phone apps offer
+// none (`signInInTune: false` there): a recognised session shows only as the
+// desk's title, "Bradley's PDFs" (src/native/personalTitle.ts; James,
+// 2026-11-21), and Tune this app's choices are kept with the account (the
+// SDK's TuneSync). The store labels declare that (PrivacyInfo.xcprivacy,
+// store-assets/data-safety.json). The certified signature and the saved main
 // signature stay off here whatever the session (`accountsOff()`).
 //
 // The WEBSITE and the DESKTOP app keep an optional Universal ID, for the two

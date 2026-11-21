@@ -24,6 +24,7 @@ import { Hl, Sheet, SwipeRow } from './parts'
 import { useNav } from './nav'
 import { jobCards, runJob, useJobs, type JobCard, type JobId } from './jobs'
 import { examplePreview } from './examplePreview'
+import { usePhoneAppTitle } from './personalTitle'
 import { KEEP_FOCUS, leaveIfEmptyOnBlur, useSearchMode } from './searchMode'
 import { EXAMPLE_PAGES } from '../lib/exampleMeta'
 
@@ -76,6 +77,7 @@ function whenText(t: ReturnType<typeof useT>, ms: number): string {
 
 export default function DeskScreen() {
   const t = useT()
+  const appTitle = usePhoneAppTitle()
   const cards = useMemo(() => jobCards(), [t])
   const busy = useJobs((s) => s.busy)
   const recents = usePdfStore((s) => s.recents)
@@ -216,7 +218,7 @@ export default function DeskScreen() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AppMark size={26} />
-            <span className="text-[15px] font-bold tracking-[-0.01em]">{t('phone.app_name')}</span>
+            <span data-app-title className="text-[15px] font-bold tracking-[-0.01em]">{appTitle}</span>
           </div>
           {/* The keyboard and screen-reader way in: it takes no room until it
               is focused, and then looks like the button that used to be here. */}
