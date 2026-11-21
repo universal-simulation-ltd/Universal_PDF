@@ -1,6 +1,7 @@
 import { useId, useLayoutEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 import { BottomSheet, SwipeRow as KitSwipeRow, type GripProps, type SwipeAction as KitSwipeAction } from '@unisim/sdk'
 import { Icon, PATHS } from './icons'
+import { useThemeStore } from '../stores/themeStore'
 
 // The page / sheet / gesture plumbing is the SDK's phone kit (`@unisim/sdk`,
 // README ▸ "Phone pages, sheets and gestures") since SDK 0.203 — it was
@@ -40,13 +41,14 @@ export function Sheet({
   /** False for a sheet the page above must stay usable under (Send to sign). */
   scrim?: boolean
 }) {
+  const theme = useThemeStore((s) => s.effective)
   return (
     <BottomSheet
       label={label}
       onClose={onClose}
       scrim={scrim}
       portal={false}
-      theme="light"
+      theme={theme}
       className="np-sheet"
       style={{ background }}
       // ⚠️ `overflow-y-auto` is the kit's already; named here as well because
@@ -80,7 +82,7 @@ export function BackLink({ label, onClick }: { label: string; onClick: () => voi
     <button
       type="button"
       onClick={onClick}
-      className="min-h-[44px] px-2 flex items-center gap-0.5 text-[16px] text-[color:var(--np-cobalt)] max-w-full"
+      className="min-h-[44px] px-2 flex items-center gap-0.5 text-[16px] text-[color:var(--np-cobalt-ink)] max-w-full"
     >
       <Icon d={PATHS.back} size={22} width={2.4} />
       <span className="truncate">{label}</span>
@@ -157,10 +159,10 @@ export function LinkRow({
       className="w-full flex items-center gap-3 min-h-[52px] px-3.5 text-left"
       style={{ borderTop: first ? 0 : ROW_RULE }}
     >
-      {icon && <Icon d={icon} size={22} stroke={danger ? '#b42318' : 'var(--np-cobalt)'} />}
-      <span className={`flex-1 text-[16px] ${danger ? 'text-[#b42318]' : ''}`}>{label}</span>
+      {icon && <Icon d={icon} size={22} stroke={danger ? 'var(--np-red)' : 'var(--np-cobalt-ink)'} />}
+      <span className={`flex-1 text-[16px] ${danger ? 'text-[color:var(--np-red)]' : ''}`}>{label}</span>
       {value && <span className="text-[15px] text-[color:var(--np-muted)]">{value}</span>}
-      <Icon d={PATHS.chevron} size={16} stroke="#9a9ca3" width={2.4} />
+      <Icon d={PATHS.chevron} size={16} stroke="var(--np-hint)" width={2.4} />
     </button>
   )
 }
@@ -192,7 +194,7 @@ export function Slip({
         style={{
           transform: `rotate(${tilt})`,
           boxShadow: '0 8px 18px rgba(60,45,20,0.16)',
-          ['--np-row-rule' as string]: '1.5px dashed #ddd6c8',
+          ['--np-row-rule' as string]: '1.5px dashed var(--np-dash)',
         }}
       >
         {children}
@@ -279,7 +281,7 @@ export function Segmented<T extends string>({
   disabled?: boolean
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="grid rounded-xl p-[3px]" style={{ background: '#e8e3d8', gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+    <div role="radiogroup" aria-label={label} className="grid rounded-xl p-[3px]" style={{ background: 'var(--np-well)', gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
       {options.map((o) => (
         <button
           key={o.id}
@@ -307,7 +309,7 @@ export function Progress({ fraction, label }: { fraction: number; label: string 
   const pct = Math.round(Math.max(0, Math.min(1, fraction)) * 100)
   return (
     <div className="flex flex-col gap-1.5" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={label}>
-      <div className="h-3 rounded-[3px_8px_5px_3px] overflow-hidden" style={{ background: '#e8e3d8' }}>
+      <div className="h-3 rounded-[3px_8px_5px_3px] overflow-hidden" style={{ background: 'var(--np-well)' }}>
         <div className="h-full transition-[width] duration-300 ease-out" style={{ width: `${Math.max(4, pct)}%`, background: 'rgba(249,115,22,0.85)' }} />
       </div>
       <div className="flex justify-between text-[13px] text-[color:var(--np-muted)]">

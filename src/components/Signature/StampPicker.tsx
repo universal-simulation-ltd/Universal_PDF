@@ -216,7 +216,7 @@ export default function StampPicker() {
                         onClick={() => pickSignature(s.id)}
                         className="w-full border-2 border-slate-200 rounded-lg p-3 hover:bg-slate-50 transition-colors flex items-center justify-center min-h-[72px]"
                       >
-                        <img src={s.dataUrl} alt={shownName(s.name)} className="h-12 max-w-full object-contain" />
+                        <img src={s.dataUrl} alt={shownName(s.name)} data-paper className="h-12 max-w-full object-contain bg-white" />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); removeSignature(s.id) }}

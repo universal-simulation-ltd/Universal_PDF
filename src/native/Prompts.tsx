@@ -83,7 +83,7 @@ export function LockedSheet() {
             placeholder={t('tools.locked.password_or_pin')}
             aria-invalid={locked.error ? true : undefined}
             className="min-w-0 flex-1 h-12 px-3 rounded-xl text-[16px] outline-none bg-white"
-            style={{ border: `1px solid ${locked.error ? '#b42318' : 'var(--np-line)'}` }}
+            style={{ border: `1px solid ${locked.error ? 'var(--np-red)' : 'var(--np-line)'}` }}
           />
           <button
             type="button"
@@ -96,7 +96,7 @@ export function LockedSheet() {
             {reveal ? t('tools.common.hide') : t('tools.common.show')}
           </button>
         </div>
-        {locked.error && <p role="alert" className="m-0 text-[14px] text-[#b42318]">{locked.error}</p>}
+        {locked.error && <p role="alert" className="m-0 text-[14px] text-[color:var(--np-red)]">{locked.error}</p>}
         <p className="np-hand np-tilt m-0 text-[21px] leading-tight text-[color:var(--np-orange-ink)]" style={{ transform: 'rotate(-1deg)' }}>
           {t('tools.locked.no_recovery')}
         </p>

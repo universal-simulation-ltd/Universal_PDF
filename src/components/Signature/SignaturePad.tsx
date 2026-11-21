@@ -726,6 +726,9 @@ export default function SignaturePad() {
         <>
         <div
           ref={containerRef}
+          // Ink is drawn here, in the colour it will have on the page: paper
+          // in every theme (styles/dark.css).
+          data-paper
           className="relative border-2 border-dashed border-slate-300 rounded bg-slate-50 w-full transition-[height] duration-200"
           style={{ height: previewHeight }}
         >

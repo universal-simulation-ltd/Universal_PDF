@@ -1879,6 +1879,39 @@ pinch along the row jumped sideways as it landed):
 Still open here: no windowed rendering for very long documents —
 `renderBudget`'s `MIN_MAX_ZOOM` comment notes it.
 
+## Colour scheme — Light, Dark or Match my device
+
+Tune this app ▸ **Colour scheme** (2026-11-21): Light (the default), Dark or
+Match my device, or follow the account's Global Tuning. On the website, the
+desktop app and the extension it is the SDK's row (`themeStore` on both navbars,
+the landing `UniversalAppsNavBar` and the toolbar's `UserProfile`); the phone
+app's own Tune page has a segmented Light / Dark / Match my device slip.
+
+- **The store** is the SDK's `createThemeStore('unisim-pdf-theme')`
+  (`src/stores/themeStore.ts`). `public/theme-prepaint.js`, loaded as a classic
+  script in index.html's `<head>`, puts `.dark` on `<html>` before the first
+  paint. It is a file, not inline, because the CSP and the extension's MV3 page
+  both refuse inline scripts; it has its own line in `_redirects`.
+  `npm run test:theme` keeps the key the same in both and checks the wiring.
+- **Only the chrome goes dark.** Pages stay white paper on a dark desk:
+  anything that is the document or ink that must read on white (a page and
+  everything on it, the export preview, Present, Compare's pages, the signature
+  pad and saved signatures, the QR preview) carries `data-paper`, and the dark
+  rules skip it and everything inside it. Nothing inverts document content.
+- **Web: `src/styles/dark.css`.** Each light utility in use (`bg-white`,
+  `text-slate-700`, `hover:bg-slate-100` …) gets its dark value once, as
+  `:where(.dark) .utility`, which has the utility's own specificity and wins by
+  order. A utility newly used on a light surface needs a line there.
+- **Phone: `src/native/native.css`.** The `--np-*` paper-on-a-desk variables
+  have a `.dark .np` set (an ink-cobalt desk, a blotter ground, dim warm slips);
+  `[data-paper]` puts the light inks back inside documents, and the pastel
+  cards keep their colours a shade dimmer (`data-dim`).
+- **Status bar.** `setStatusBarOverDarkChrome(dark, theme)` asks for light
+  glyphs on every screen in Dark and repaints Android's window strip through the
+  SDK's `setAndroidWindowTheme` (`unisimWindowBackgroundDark` in
+  `android/.../values/colors.xml`); on an older WebView the glyphs follow that
+  strip and turn light only once it really was repainted (`npm run test:status-bar`).
+
 ## Page scrolling — vertical or horizontal
 
 Tune this app ▸ **Page scrolling** (both the landing navbar's dialog and the

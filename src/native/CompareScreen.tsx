@@ -58,7 +58,7 @@ function ComparePage({ bytes, name }: { bytes: ArrayBuffer; name: string }) {
         )}
       </div>
 
-      {error && <p className="m-0 text-[14px] text-[#b42318]">{error}</p>}
+      {error && <p className="m-0 text-[14px] text-[color:var(--np-red)]">{error}</p>}
 
       {both && (
         <>
@@ -96,7 +96,7 @@ function ComparePage({ bytes, name }: { bytes: ArrayBuffer; name: string }) {
             className="w-12 h-12 rounded-full flex items-center justify-center disabled:opacity-30"
             style={{ background: 'var(--np-slip)', boxShadow: '0 2px 6px rgba(60,45,20,0.12)' }}
           >
-            <Icon d={PATHS.back} size={22} width={2.4} stroke="var(--np-cobalt)" />
+            <Icon d={PATHS.back} size={22} width={2.4} stroke="var(--np-cobalt-ink)" />
           </button>
           <span className="min-w-[120px] text-center text-[15px] font-semibold tabular-nums" data-compare-page>
             {t('tools.compare.page_of', { page: pageNo, total })}
@@ -109,7 +109,7 @@ function ComparePage({ bytes, name }: { bytes: ArrayBuffer; name: string }) {
             className="w-12 h-12 rounded-full flex items-center justify-center disabled:opacity-30"
             style={{ background: 'var(--np-slip)', boxShadow: '0 2px 6px rgba(60,45,20,0.12)' }}
           >
-            <Icon d={PATHS.chevron} size={22} width={2.4} stroke="var(--np-cobalt)" />
+            <Icon d={PATHS.chevron} size={22} width={2.4} stroke="var(--np-cobalt-ink)" />
           </button>
         </div>
         <div className="flex flex-wrap items-center justify-center gap-1.5 text-[13px]" data-compare-summary>

@@ -17,8 +17,9 @@
 //   • Signed in, the account is "Your Universal ID" in Tune this app, in the
 //     app's language (accountInTune, e980221).
 //   • The choice survives a reload.
-//   • App preferences is light (the panel's theme, not the dark pill's) and
-//     says Universal PDF is always light.
+//   • App preferences is light (the panel's theme, not the dark pill's) and,
+//     since the app has Light / Dark / Match my device (2026-11-21), offers the
+//     colour scheme instead of saying the app is always light.
 //   • window.__pdfSetLanguage (store-assets/generate.mjs) still switches it.
 //
 // Expected words are read from src/i18n and the SDK's dictionary, not copied
@@ -168,15 +169,17 @@ check('there is no Actions Language row any more', (await page.getByTestId('menu
 check('one App preferences row', (await prefsRow('fr', 'app').count()) === 1)
 check('no language <select> in the panel itself', (await page.locator('[role="menu"] select').count()) === 0)
 
-console.log('\nApp preferences: light, "always light", and a per-app language')
+console.log('\nApp preferences: light, a colour scheme, and a per-app language')
 await prefsRow('fr', 'app').click()
 await dialog('app').waitFor({ timeout: 5000 })
 const bg = await dialog('app').evaluate((el) => getComputedStyle(el).backgroundColor)
 const rgb = (bg.match(/\d+/g) ?? []).map(Number)
 check('the dialog is light, not the dark pill', rgb.length >= 3 && rgb[0] > 200 && rgb[1] > 200 && rgb[2] > 200, bg)
+const appText = await dialog('app').innerText()
+check('it offers the colour scheme', appText.includes(sdk.t('fr', 'prefs.color_scheme')))
 check(
-  'it says Universal PDF is always light',
-  (await dialog('app').innerText()).includes(sdk.t('fr', 'prefs.always_light').replace('{app}', 'Universal PDF')),
+  'and no longer says Universal PDF is always light',
+  !appText.includes(sdk.t('fr', 'prefs.always_light').replace('{app}', 'Universal PDF')),
 )
 // .first(): the app's own rows (Page scrolling, the double-tap defaults) are
 // selects too, after the SDK's Language row.

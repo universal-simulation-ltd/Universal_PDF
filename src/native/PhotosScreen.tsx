@@ -175,7 +175,7 @@ function PhotosPage({ mode: startMode, initialPdf }: { mode: ConvertMode; initia
               {images.map((f, i) => (
                 <li
                   key={`${f.name}-${i}`}
-                  className="np-tilt relative bg-white p-1.5 pb-5"
+                  data-paper className="np-tilt relative bg-white p-1.5 pb-5"
                   style={{ transform: `rotate(${TILTS[i % TILTS.length]})`, boxShadow: '0 6px 14px rgba(60,45,20,0.18)' }}
                 >
                   <img src={thumbs[i]} alt={f.name} className="block w-full aspect-[3/4] object-cover bg-[#eee]" />
@@ -273,7 +273,7 @@ function PhotosPage({ mode: startMode, initialPdf }: { mode: ConvertMode; initia
         </>
       )}
 
-      {error && <p className="m-0 text-[14px] text-[#b42318]">{error}</p>}
+      {error && <p className="m-0 text-[14px] text-[color:var(--np-red)]">{error}</p>}
     </JobPage>
   )
 }

@@ -1,0 +1,316 @@
+/* ---------- Dark (Light / Dark / Match my device, 2026-11-21) ----------------
+
+   The website, desktop app and extension. `.dark` is on <html> when the theme
+   store (src/stores/themeStore.ts) or the pre-paint script
+   (public/theme-prepaint.js) says so. The phone screens' own dark look is in
+   src/native/native.css; this sheet reaches them only through the website
+   parts they borrow (the viewer, the Scan corner editor, Compare).
+
+   WHAT GOES DARK IS THE CHROME. The PDF pages stay exactly as rendered: white
+   paper on a dark desk, the way Acrobat and Preview do it. Anything that IS
+   the document, or ink that must be seen on white (a page, the annotations on
+   it, a signature, the signature pad, a QR code), carries `data-paper`, and
+   every rule below skips it and everything inside it. Nothing here inverts,
+   filters or recolours document content.
+
+   HOW. The app is styled with Tailwind's light-theme utilities (`bg-white`,
+   `text-slate-700`, `hover:bg-slate-100` …) across ~26k lines; rather than add
+   a `dark:` twin to each of them in eighty files, each utility in use is given
+   its dark value here, once. The rules are `:where(.dark) .utility`, so they
+   have EXACTLY the specificity of the utility they shadow and win on order
+   alone (this sheet loads after index.css, into the same `utilities` layer).
+   A variant keeps its own extra weight (`hover:` over the base), and a variant
+   not listed here still beats the base rule as it always did.
+
+   Left alone on purpose: the slate-900 tools bar and everything already dark
+   (slate-700/800/900 grounds, `text-white`, `bg-white/10` overlays), the
+   orange and cobalt fills under white text, the scrims, and the switch knobs.
+
+   ⚠️ A utility newly used on a light surface needs its line here, or it stays
+   light in Dark. The table that produced these rules: white → panel,
+   slate-50/100/200 → panel-2/well/well-2, slate-500…900 text → the light inks,
+   slate-100…400 borders → the dark lines, the -50 tints → translucent tints
+   of the same hue, and the -600…900 accent texts → their lifted shades. */
+
+:root.dark {
+  color-scheme: dark;
+  /* Suite tokens (BRANDING.md → Theme tokens / Semantic), plus the in-between
+     steps a panel-and-desk app needs. Measured (WCAG) on --pdf-panel: ink
+     14.1:1, slate-700 text 11.5:1, ink-soft 7.7:1, slate-400 text 6.6:1,
+     orange-ink 7.5:1, cobalt text 7.4:1, good 7.3:1, critical 5.4:1; ink on
+     the well 12.1:1, ink-soft on the desk 8.7:1. */
+  --pdf-desk: #0a0e16;
+  --pdf-panel: #131c2e;
+  --pdf-panel-2: #182236;
+  --pdf-lift: #1d2840;
+  --pdf-well: #1e293b;
+  --pdf-well-2: #273449;
+  --pdf-line-soft: #1e293b;
+  --pdf-line: #2a3850;
+  --pdf-line-strong: #5b6b85; /* field outlines: 3.2:1 on the panel */
+  --pdf-ink: #e6eaf2;
+  --pdf-ink-soft: #9fb0c6;
+  --pdf-orange-ink: #fb923c;
+  --pdf-critical: #f0645a;
+  --pdf-good: #4bbf78;
+}
+
+/* The ground everything sits on: the shell, the viewer's scroller, the
+   loading veil. A deep desk, so white pages stand off it. Unlayered, so it
+   beats the bg-slate-100/200 those elements also carry for Light. */
+:where(.dark) .pdf-desk {
+  background-color: var(--pdf-desk);
+}
+
+/* index.css gives text fields slate-900 in the base layer; in Dark that
+   would be ink on the dark panel. Inside a page (a form field) it stays. */
+@layer base {
+  :where(.dark) :is(input, textarea, select):not(:where([data-paper] *)) {
+    color: var(--pdf-ink);
+  }
+}
+
+@layer utilities {
+  :where(.dark) .ring-slate-400:not(:where([data-paper], [data-paper] *)) {
+    --tw-ring-color: #52627a;
+  }
+  :where(.dark) .ring-slate-200:not(:where([data-paper], [data-paper] *)) {
+    --tw-ring-color: var(--pdf-line);
+  }
+  :where(.dark) .bg-slate-300:not(:where([data-paper], [data-paper] *)) {
+    background-color: #334155;
+  }
+  :where(.dark) .bg-white\/90:not(:where([data-paper], [data-paper] *)) {
+    background-color: rgb(19 28 46 / 0.92);
+  }
+  :where(.dark) .bg-white\/95:not(:where([data-paper], [data-paper] *)) {
+    background-color: rgb(19 28 46 / 0.95);
+  }
+  :where(.dark) .bg-slate-50\/60:not(:where([data-paper], [data-paper] *)) {
+    background-color: rgb(23 32 51 / 0.6);
+  }
+  :where(.dark) .bg-red-50:not(:where([data-paper], [data-paper] *)) {
+    background-color: rgb(240 100 90 / 0.14);
+  }
+  :where(.dark) .bg-amber-50:not(:where([data-paper], [data-paper] *)) {
+    background-color: rgb(245 158 11 / 0.13);
+  }
+  :where(.dark) .bg-amber-100:not(:where([data-paper], [data-paper] *)) {
+    background-color: rgb(245 158 11 / 0.2);
+  }
+  :where(.dark) .bg-orange-50:not(:where([data-paper], [data-paper] *)) {
+    background-color: rgb(249 115 22 / 0.14);
+  }
+  :where(.dark) .bg-emerald-50:not(:where([data-paper], [data-paper] *)) {
+    background-color: rgb(75 191 120 / 0.13);
+  }
+  :where(.dark) .bg-cobalt-tint:not(:where([data-paper], [data-paper] *)) {
+    background-color: rgb(91 127 224 / 0.2);
+  }
+  :where(.dark) .bg-white:not(:where([data-paper], [data-paper] *)) {
+    background-color: var(--pdf-panel);
+  }
+  :where(.dark) .bg-slate-50:not(:where([data-paper], [data-paper] *)) {
+    background-color: var(--pdf-panel-2);
+  }
+  :where(.dark) .bg-slate-100:not(:where([data-paper], [data-paper] *)) {
+    background-color: var(--pdf-well);
+  }
+  :where(.dark) .bg-slate-200:not(:where([data-paper], [data-paper] *)) {
+    background-color: var(--pdf-well-2);
+  }
+  :where(.dark) .border-slate-400:not(:where([data-paper], [data-paper] *)) {
+    border-color: #52627a;
+  }
+  :where(.dark) .border-cobalt:not(:where([data-paper], [data-paper] *)) {
+    border-color: #5b7fe0;
+  }
+  :where(.dark) .border-red-200:not(:where([data-paper], [data-paper] *)) {
+    border-color: rgb(240 100 90 / 0.45);
+  }
+  :where(.dark) .border-red-300:not(:where([data-paper], [data-paper] *)) {
+    border-color: rgb(240 100 90 / 0.55);
+  }
+  :where(.dark) .border-amber-200:not(:where([data-paper], [data-paper] *)) {
+    border-color: rgb(245 158 11 / 0.4);
+  }
+  :where(.dark) .border-orange-200:not(:where([data-paper], [data-paper] *)) {
+    border-color: rgb(249 115 22 / 0.4);
+  }
+  :where(.dark) .border-slate-900:not(:where([data-paper], [data-paper] *)) {
+    border-color: var(--pdf-ink);
+  }
+  :where(.dark) .border-slate-200:not(:where([data-paper], [data-paper] *)),
+  :where(.dark) .divide-slate-200:not(:where([data-paper], [data-paper] *)) > :not(:last-child) {
+    border-color: var(--pdf-line);
+  }
+  :where(.dark) .border-slate-100:not(:where([data-paper], [data-paper] *)),
+  :where(.dark) .divide-slate-100:not(:where([data-paper], [data-paper] *)) > :not(:last-child) {
+    border-color: var(--pdf-line-soft);
+  }
+  :where(.dark) .border-slate-300:not(:where([data-paper], [data-paper] *)) {
+    border-color: var(--pdf-line-strong);
+  }
+  :where(.dark) .text-green-600:not(:where([data-paper], [data-paper] *)) {
+    color: #4ade80;
+  }
+  :where(.dark) .text-emerald-800:not(:where([data-paper], [data-paper] *)) {
+    color: #6ee7a0;
+  }
+  :where(.dark) .text-green-800:not(:where([data-paper], [data-paper] *)) {
+    color: #86efac;
+  }
+  :where(.dark) .text-cobalt:not(:where([data-paper], [data-paper] *)) {
+    color: #8fa9f0;
+  }
+  :where(.dark) .text-emerald-900:not(:where([data-paper], [data-paper] *)) {
+    color: #a7f3d0;
+  }
+  :where(.dark) .text-cobalt-deep:not(:where([data-paper], [data-paper] *)) {
+    color: #a9bdf5;
+  }
+  :where(.dark) .text-slate-600:not(:where([data-paper], [data-paper] *)) {
+    color: #b6c2d2;
+  }
+  :where(.dark) .text-slate-700:not(:where([data-paper], [data-paper] *)) {
+    color: #cbd5e1;
+  }
+  :where(.dark) .text-slate-800:not(:where([data-paper], [data-paper] *)) {
+    color: #dde3ec;
+  }
+  :where(.dark) .text-red-700:not(:where([data-paper], [data-paper] *)) {
+    color: #f87171;
+  }
+  :where(.dark) .text-rose-600:not(:where([data-paper], [data-paper] *)) {
+    color: #fb7185;
+  }
+  :where(.dark) .text-amber-600:not(:where([data-paper], [data-paper] *)),
+  :where(.dark) .text-amber-700:not(:where([data-paper], [data-paper] *)) {
+    color: #fbbf24;
+  }
+  :where(.dark) .text-red-800:not(:where([data-paper], [data-paper] *)) {
+    color: #fca5a5;
+  }
+  :where(.dark) .text-amber-800:not(:where([data-paper], [data-paper] *)) {
+    color: #fcd34d;
+  }
+  :where(.dark) .text-rose-700:not(:where([data-paper], [data-paper] *)) {
+    color: #fda4af;
+  }
+  :where(.dark) .text-orange-800:not(:where([data-paper], [data-paper] *)) {
+    color: #fdba74;
+  }
+  :where(.dark) .text-amber-900:not(:where([data-paper], [data-paper] *)) {
+    color: #fde68a;
+  }
+  :where(.dark) .text-red-900:not(:where([data-paper], [data-paper] *)) {
+    color: #fecaca;
+  }
+  :where(.dark) .text-emerald-900\/80:not(:where([data-paper], [data-paper] *)) {
+    color: rgb(167 243 208 / 0.85);
+  }
+  :where(.dark) .text-red-600:not(:where([data-paper], [data-paper] *)) {
+    color: var(--pdf-critical);
+  }
+  :where(.dark) .text-emerald-600:not(:where([data-paper], [data-paper] *)),
+  :where(.dark) .text-emerald-700:not(:where([data-paper], [data-paper] *)) {
+    color: var(--pdf-good);
+  }
+  :where(.dark) .text-slate-900:not(:where([data-paper], [data-paper] *)) {
+    color: var(--pdf-ink);
+  }
+  :where(.dark) .text-slate-500:not(:where([data-paper], [data-paper] *)) {
+    color: var(--pdf-ink-soft);
+  }
+  :where(.dark) .text-orange-600:not(:where([data-paper], [data-paper] *)),
+  :where(.dark) .text-orange-700:not(:where([data-paper], [data-paper] *)) {
+    color: var(--pdf-orange-ink);
+  }
+  :where(.dark) .hover\:bg-red-50:hover:not(:where([data-paper], [data-paper] *)) {
+    background-color: rgb(240 100 90 / 0.14);
+  }
+  :where(.dark) .hover\:bg-amber-100:hover:not(:where([data-paper], [data-paper] *)) {
+    background-color: rgb(245 158 11 / 0.2);
+  }
+  :where(.dark) .hover\:bg-orange-50\/40:hover:not(:where([data-paper], [data-paper] *)) {
+    background-color: rgb(249 115 22 / 0.08);
+  }
+  :where(.dark) .hover\:bg-orange-50\/50:hover:not(:where([data-paper], [data-paper] *)) {
+    background-color: rgb(249 115 22 / 0.09);
+  }
+  :where(.dark) .hover\:bg-orange-50:hover:not(:where([data-paper], [data-paper] *)) {
+    background-color: rgb(249 115 22 / 0.14);
+  }
+  :where(.dark) .hover\:bg-cobalt-tint:hover:not(:where([data-paper], [data-paper] *)) {
+    background-color: rgb(91 127 224 / 0.2);
+  }
+  :where(.dark) .hover\:bg-white:hover:not(:where([data-paper], [data-paper] *)) {
+    background-color: var(--pdf-lift);
+  }
+  :where(.dark) .hover\:bg-slate-50:hover:not(:where([data-paper], [data-paper] *)) {
+    background-color: var(--pdf-panel-2);
+  }
+  :where(.dark) .disabled\:bg-slate-100:disabled:not(:where([data-paper], [data-paper] *)),
+  :where(.dark) .focus\:bg-slate-100:focus:not(:where([data-paper], [data-paper] *)),
+  :where(.dark) .hover\:bg-slate-100:hover:not(:where([data-paper], [data-paper] *)) {
+    background-color: var(--pdf-well);
+  }
+  :where(.dark) .hover\:bg-slate-200:hover:not(:where([data-paper], [data-paper] *)) {
+    background-color: var(--pdf-well-2);
+  }
+  :where(.dark) .hover\:border-slate-400:hover:not(:where([data-paper], [data-paper] *)) {
+    border-color: #52627a;
+  }
+  :where(.dark) .focus\:border-cobalt:focus:not(:where([data-paper], [data-paper] *)) {
+    border-color: #5b7fe0;
+  }
+  :where(.dark) .hover\:border-red-300:hover:not(:where([data-paper], [data-paper] *)) {
+    border-color: rgb(240 100 90 / 0.55);
+  }
+  :where(.dark) .hover\:border-slate-900:hover:not(:where([data-paper], [data-paper] *)) {
+    border-color: var(--pdf-ink);
+  }
+  :where(.dark) .hover\:border-slate-200:hover:not(:where([data-paper], [data-paper] *)) {
+    border-color: var(--pdf-line);
+  }
+  :where(.dark) .hover\:border-slate-300:hover:not(:where([data-paper], [data-paper] *)) {
+    border-color: var(--pdf-line-strong);
+  }
+  :where(.dark) .hover\:text-slate-700:hover:not(:where([data-paper], [data-paper] *)) {
+    color: #cbd5e1;
+  }
+  :where(.dark) .hover\:text-slate-800:hover:not(:where([data-paper], [data-paper] *)) {
+    color: #dde3ec;
+  }
+  :where(.dark) .hover\:text-red-700:hover:not(:where([data-paper], [data-paper] *)) {
+    color: #f87171;
+  }
+  :where(.dark) .hover\:text-rose-600:hover:not(:where([data-paper], [data-paper] *)) {
+    color: #fb7185;
+  }
+  :where(.dark) .hover\:text-amber-700:hover:not(:where([data-paper], [data-paper] *)) {
+    color: #fbbf24;
+  }
+  :where(.dark) .hover\:text-orange-800:hover:not(:where([data-paper], [data-paper] *)) {
+    color: #fdba74;
+  }
+  :where(.dark) .hover\:text-orange-900:hover:not(:where([data-paper], [data-paper] *)) {
+    color: #fed7aa;
+  }
+  :where(.dark) .hover\:text-red-600:hover:not(:where([data-paper], [data-paper] *)) {
+    color: var(--pdf-critical);
+  }
+  :where(.dark) .hover\:text-slate-900:hover:not(:where([data-paper], [data-paper] *)) {
+    color: var(--pdf-ink);
+  }
+  :where(.dark) .hover\:text-orange-700:hover:not(:where([data-paper], [data-paper] *)),
+  :where(.dark) :where(.group):hover .group-hover\:text-orange-700:not(:where([data-paper], [data-paper] *)) {
+    color: var(--pdf-orange-ink);
+  }
+  :where(.dark) .disabled\:hover\:bg-white:disabled:hover:not(:where([data-paper], [data-paper] *)) {
+    background-color: var(--pdf-panel);
+  }
+  :where(.dark) .disabled\:hover\:border-slate-200:disabled:hover:not(:where([data-paper], [data-paper] *)) {
+    border-color: var(--pdf-line);
+  }
+}

@@ -70,7 +70,7 @@ export default function PdfIllustration() {
   useIllustrationClock(ref, { sweepMs: SWEEP_MS })
 
   return (
-    <div ref={ref} className="pdf-illu group relative w-full max-w-[480px] aspect-[5/6] select-none">
+    <div ref={ref} data-paper className="pdf-illu group relative w-full max-w-[480px] aspect-[5/6] select-none">
       <svg
         viewBox="0 0 500 600"
         xmlns="http://www.w3.org/2000/svg"

@@ -70,6 +70,7 @@ import PageScrollPreference from './components/Viewer/PageScrollPreference'
 import ToolBehaviourRows from './components/Viewer/ToolBehaviourRows'
 import { useToolPrefs } from './stores/toolPrefsStore'
 import { phoneScreens } from './native/shell'
+import { useThemeStore } from './stores/themeStore'
 import { usePageNumberSync } from './components/PageNumbers/usePageNumberSync'
 
 const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_PDF'
@@ -132,6 +133,9 @@ export default function App() {
   // The landing navbar's "Reset to defaults" (foot of Tune this app) — the
   // same reset the open-document bar's ToolbarUserProfile offers; see there.
   const { reset: resetPrefs } = useUserPrefs()
+  // Light / Dark / Match my device, resolved: what the chrome is painted in.
+  // The choice itself is the SDK's App preferences (`themeStore` on the bars).
+  const theme = useThemeStore((s) => s.effective)
   const loadFile = usePdfStore((s) => s.loadFile)
   const doc = usePdfStore((s) => s.doc)
   const loading = usePdfStore((s) => s.loading)
@@ -373,13 +377,14 @@ export default function App() {
 
   // Keep the system clock/battery legible against whichever chrome is at the
   // top right now — dark strip with a document open, the SDK bar's white
-  // surface on the landing page. See `setStatusBarOverDarkChrome`.
+  // surface on the landing page (dark too in the Dark theme). See
+  // `setStatusBarOverDarkChrome`.
   // The phone screens set it themselves (NativeApp), per screen; this effect
   // runs after theirs, so it must stand down there or it wins every time.
   useEffect(() => {
     if (native) return
-    void setStatusBarOverDarkChrome(!showLanding)
-  }, [showLanding, native])
+    void setStatusBarOverDarkChrome(!showLanding || theme === 'dark', theme)
+  }, [showLanding, native, theme])
 
   // ── Leaving a document that has amendments ───────────────────────────────
   // Three ways out, one question. `requestExit` runs its action outright when
@@ -519,7 +524,7 @@ export default function App() {
     // It lives here rather than in @unisim/sdk's UniversalAppsNavBar because
     // that bar is shared by every Universal App, and the padding belongs to
     // whichever of them is wrapped for a phone — currently only this one.
-    <div className="flex flex-col h-full bg-slate-100">
+    <div className="flex flex-col h-full bg-slate-100 pdf-desk">
       {/* ⚠️ THE NOTCH SPACER IS DARK ON PURPOSE, and the reason is the system
           clock rather than taste. Android and iOS draw the status bar's own
           clock/signal/battery glyphs over whatever the app paints up there,
@@ -576,6 +581,11 @@ export default function App() {
             // articles, bundled from ./knowledge so they read offline.
             knowledgeBase={KNOWLEDGE_BASE}
             onResetDefaults={() => { clearDismissedPrompts(); useToolPrefs.getState().reset(); void resetPrefs() }}
+            // Tune this app ▸ Colour scheme (Light / Dark / Match my device, or
+            // follow Global Tuning). `theme` is the RESOLVED value the bar
+            // paints with; `themeStore` is the choice.
+            theme={theme}
+            themeStore={useThemeStore}
             // Tune this app ▸ Page scrolling, then the double-tap defaults' rows
             // (SDK 0.170.0) — the same rows ToolbarUserProfile passes, so they
             // can be set before a document is opened. Reset to defaults clears
@@ -717,6 +727,7 @@ export default function App() {
                     iconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
                     productFilter="pdf"
                     appVersion={APP_BUILD_LABEL}
+                    theme={theme}
                   />
               </div>
             </div>
@@ -780,7 +791,7 @@ export default function App() {
             z-[100] dialogs, and bg-slate-100 because that is the shell colour
             this placeholder has always sat on. */}
         {(loading || launching || (doc && !firstPaint)) && (
-          <div className="absolute inset-0 z-[120] bg-slate-100 flex items-center justify-center text-slate-500">
+          <div className="absolute inset-0 z-[120] bg-slate-100 pdf-desk flex items-center justify-center text-slate-500">
             {t('app.loading_pdf')}
           </div>
         )}

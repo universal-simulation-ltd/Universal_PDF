@@ -384,7 +384,7 @@ export default function MarkupSheet() {
                 else s.setStrokeWidth(v)
               }}
               className="flex-1"
-              style={{ accentColor: 'var(--np-cobalt)' }}
+              style={{ accentColor: 'var(--np-cobalt-ink)' }}
             />
           </div>
         )}

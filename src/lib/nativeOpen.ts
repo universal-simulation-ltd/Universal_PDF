@@ -212,19 +212,36 @@ export async function subscribeNativeOpenPdf(
  *
  * ⚠️ ONLY WHERE THE PAGE IS UNDER THE BAR. On Android with a WebView older than
  * Chromium 140, SystemBars pads the web view natively instead: the notch spacer
- * collapses to nothing and the glyphs sit over the window background that
- * values/styles.xml pins WHITE on every screen. Light glyphs there would be the
- * white-on-white clock all over again, so that case always keeps dark glyphs.
- * The decision lives in `statusBarGlyphs.ts`, where it is unit-tested.
+ * collapses to nothing and the glyphs sit over the WINDOW background. That
+ * strip follows the app's theme (2026-11-21): `theme` is handed to
+ * @unisim/sdk's `setAndroidWindowTheme`, which repaints it to colors.xml's
+ * light or dark colour, and the glyphs turn light there only once it says the
+ * repaint happened — a failed one leaves dark glyphs on the light strip rather
+ * than the white-on-white clock. The decision lives in `statusBarGlyphs.ts`,
+ * where it is unit-tested.
+ *
+ * Callers pass `dark` = true for every screen while the theme is Dark: the
+ * chrome is dark everywhere then.
  *
  * No-ops off a native shell, and swallows its own failure — a status bar that
  * cannot be styled is a cosmetic loss, never a reason to break a render.
  */
-export async function setStatusBarOverDarkChrome(dark: boolean): Promise<void> {
+let glyphsCall = 0
+export async function setStatusBarOverDarkChrome(dark: boolean, theme: 'light' | 'dark' = 'light'): Promise<void> {
   if (!isNativeShell()) return
+  // Screens change faster than the native calls answer: only the latest wins.
+  const call = ++glyphsCall
   try {
-    const { Capacitor, SystemBars, SystemBarsStyle } = await import('@capacitor/core')
-    const style = statusBarStyleFor(dark, Capacitor.getPlatform(), navigator.userAgent)
+    // ⚠️ Both dynamic: this module stays free of static imports (but the leaf
+    // statusBarGlyphs), which is what lets the node tests load it.
+    const [{ Capacitor, SystemBars, SystemBarsStyle }, { setAndroidWindowTheme }] = await Promise.all([
+      import('@capacitor/core'),
+      import('@unisim/sdk'),
+    ])
+    // Resolves false off Android and never throws.
+    const repainted = await setAndroidWindowTheme(theme)
+    if (call !== glyphsCall) return
+    const style = statusBarStyleFor(dark, Capacitor.getPlatform(), navigator.userAgent, theme === 'dark' && repainted)
     await SystemBars.setStyle({ style: style === 'DARK' ? SystemBarsStyle.Dark : SystemBarsStyle.Light })
   } catch {
     /* The plugin is absent (web/desktop) or the platform refused. Cosmetic. */

@@ -23,6 +23,17 @@
   --np-ink-2: #3d4048;
   --np-muted: #5d6068;
   --np-sticky: #fde68a;
+  /* Named for Dark (2026-11-21), the same colours they were in Light: the
+     white slips, the warning red, the chevrons' grey, the wells behind a
+     segmented control, cobalt as TEXT (as against a fill under white text),
+     a slip's pencilled dashes and an off switch. */
+  --np-white: #ffffff;
+  --np-red: #b42318;
+  --np-hint: #9a9ca3;
+  --np-well: #e8e3d8;
+  --np-cobalt-ink: #2353c9;
+  --np-dash: #ddd6c8;
+  --np-switch-off: #d6d0c3;
   position: fixed;
   inset: 0;
   display: flex;
@@ -121,7 +132,7 @@
 /* The SDK phone kit's layers (its BottomSheet, and phonePrompt's sheet) in
    PDF's paper and cobalt. The kit's own tokens are in :where() (and in a layer
    since SDK 0.203.1), so these win;
-   this file only loads in the phone app. Light only, like the rest of it. */
+   this file only loads in the phone app. Dark's copy is at the end. */
 .unisim-phone-layer {
   --uph-bg: #f4f1ea;
   --uph-surface: #fffdf8;
@@ -164,7 +175,7 @@
   width: 40px;
   height: 5px;
   border-radius: 3px;
-  background: #d6d0c3;
+  background: var(--np-switch-off);
   align-self: center;
   margin: 8px 0 6px;
   flex: none;
@@ -220,7 +231,7 @@
   width: 46px;
   height: 28px;
   border-radius: 14px;
-  background: #d6d0c3;
+  background: var(--np-switch-off);
   position: relative;
   transition: background 160ms ease;
   cursor: pointer;
@@ -272,7 +283,7 @@
 }
 .np-borrowed .bg-slate-100,
 .np-compare .bg-slate-100 {
-  background-color: #e8e3d8 !important;
+  background-color: var(--np-well) !important;
 }
 .np-borrowed .rounded-md.bg-white,
 .np-borrowed [aria-pressed='true'] {
@@ -316,4 +327,76 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .np-collapse, .np-search-move { transition: none; }
+}
+
+/* ---------- Dark (Light / Dark / Match my device, 2026-11-21) ----------------
+
+   Still paper on a desk, at night: a deep ink-cobalt desk, the screens' ground
+   the colour of a dark blotter, and the slips dim warm paper in lamplight
+   with cream ink. Documents stay WHITE: a page, a thumbnail, a scan, a photo,
+   a signature and the pad it is drawn on, the little documents in the
+   moments, and the pastel cards on the desk carry `data-paper`, which puts the
+   light inks back inside them and keeps every rule here off them.
+
+   Measured (WCAG): on a slip, ink 12.8:1, ink-2 10.0:1, muted 6.3:1,
+   orange-ink 7.0:1, cobalt-ink 6.9:1, red 5.0:1, the chevrons 4.4:1 (an icon:
+   3:1); on the ground, ink 14.7:1, cobalt-deep 9.8:1, muted 7.3:1; white on
+   the desk 16.2:1 and on the cobalt fill 6.0:1. */
+.dark .np {
+  --np-desk: #0e1d4a;
+  --np-cobalt: #2c5ad4;
+  --np-cobalt-deep: #a9bdf5;
+  --np-cobalt-ink: #8fa9f0;
+  --np-orange-ink: #fb923c;
+  --np-paper: #12151c;
+  --np-slip: #24221e;
+  --np-white: #28251f;
+  --np-sheet: #1a1917;
+  --np-grey-desk: #0b0d12;
+  --np-line: #3a362f;
+  --np-rule: #34302a;
+  --np-ink: #ece6da;
+  --np-ink-2: #d4cdbf;
+  --np-muted: #aaa396;
+  --np-red: #f0645a;
+  --np-hint: #8c877d;
+  --np-well: #16140f;
+  --np-dash: #4a453c;
+  --np-switch-off: #4f4a41;
+  color-scheme: dark;
+}
+.dark .np .bg-white:not(:where([data-paper], [data-paper] *)) {
+  background-color: var(--np-white);
+}
+/* Paper is paper: the light inks again, inside anything that is a document. */
+.dark .np [data-paper] {
+  --np-ink: #1b1d22;
+  --np-ink-2: #3d4048;
+  --np-muted: #5d6068;
+  --np-white: #ffffff;
+  --np-red: #b42318;
+  --np-hint: #9a9ca3;
+  --np-cobalt-ink: #2353c9;
+  --np-cobalt-deep: #173a94;
+  --np-orange-ink: #c2410c;
+  color: var(--np-ink);
+  color-scheme: light;
+}
+/* The pastel cards on the desk and in More stay paper, a shade dimmer so they
+   do not glare off the night desk. */
+.dark .np [data-paper][data-dim] {
+  filter: brightness(0.88);
+}
+.dark .unisim-phone-layer {
+  --uph-bg: #12151c;
+  --uph-surface: #24221e;
+  --uph-sheet: #1a1917;
+  --uph-text: #ece6da;
+  --uph-muted: #aaa396;
+  --uph-line: #3a362f;
+  --uph-accent: #8fa9f0;
+  --uph-primary: #2c5ad4;
+  --uph-on-primary: #ffffff;
+  --uph-scrim: rgba(0, 0, 0, 0.6);
+  --uph-grip: #4f4a41;
 }

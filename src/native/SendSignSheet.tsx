@@ -102,7 +102,7 @@ export default function SendSignSheet() {
         </div>
       )}
 
-      {error && <p className="m-0 text-[14px] text-[#b42318]">{error}</p>}
+      {error && <p className="m-0 text-[14px] text-[color:var(--np-red)]">{error}</p>}
 
       <button type="button" className={BTN_PRIMARY} style={BTN_PRIMARY_STYLE} disabled={!ready} onClick={() => void share()} data-sfs-share>
         {busy ? t('sign.sfs_preparing') : t('phone.sendsign_share')}

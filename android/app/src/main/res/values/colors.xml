@@ -1,11 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The window background behind the web view.
 
-     It only shows once `android.adjustMarginsForEdgeToEdge` is on (in
-     capacitor.config.ts): Capacitor then insets the web view by the status-bar,
-     navigation-bar and camera-cutout margins, and those strips show the
-     WINDOW's background, not the page's. Universal PDF has no dark colourway,
-     so its navbar is white on every phone and the strips are white to match. -->
+     It shows where Capacitor 8's SystemBars (capacitor.config.ts) insets the
+     web view by the status-bar, navigation-bar and camera-cutout margins,
+     which it does on a WebView older than Chromium 140; those strips show the
+     WINDOW's background, not the page's. On a WebView from Chromium 140 there
+     is no strip: the page is drawn under the bars and pads itself by
+     env(safe-area-inset-*).
+
+     Two colours, one per app theme (Light / Dark / Match my device in Tune,
+     2026-11-21). The light one is the app's default; @unisim/sdk's
+     UnisimWindowTheme plugin switches to the dark one (the phone screens'
+     dark ground, `--np-paper` under `.dark` in src/native/native.css) when
+     the app is Dark, through `setStatusBarOverDarkChrome` in
+     src/lib/nativeOpen.ts. Same names as the SDK's own defaults
+     (unisim_window_theme.xml); the app's win when resources are merged. -->
 <resources>
     <color name="unisimWindowBackground">#ffffff</color>
+    <color name="unisimWindowBackgroundDark">#12151c</color>
 </resources>

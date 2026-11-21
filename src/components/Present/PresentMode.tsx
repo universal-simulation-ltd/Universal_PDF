@@ -367,6 +367,7 @@ function Slide({
     <div ref={wrapRef} className="w-full h-full flex items-center justify-center">
       <canvas
         ref={canvasRef}
+        data-paper
         className="block shadow-2xl bg-white"
         style={size ? { width: size.width, height: size.height } : undefined}
       />

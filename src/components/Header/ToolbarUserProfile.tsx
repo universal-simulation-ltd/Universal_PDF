@@ -9,6 +9,7 @@ import ToolBehaviourRows from '../Viewer/ToolBehaviourRows'
 import { useToolPrefs } from '../../stores/toolPrefsStore'
 import SignatureDefaultViewRows from '../Signature/SignatureDefaultViewRows'
 import SignatureVaultRow from '../Signature/SignatureVaultRow'
+import { useThemeStore } from '../../stores/themeStore'
 
 /**
  * The suite menu, extracted from UniversalAppsNavBar so it can live in the
@@ -43,6 +44,7 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
   // dismissals (the fill-isn't-redaction warning among them) are cleared
   // beside it — see lib/resetDefaults.
   const { reset: resetPrefs } = useUserPrefs()
+  const theme = useThemeStore((s) => s.effective)
 
   return (
     <>
@@ -78,11 +80,16 @@ export default function ToolbarUserProfile({ actions }: { actions?: ReactNode })
         // The bar this sits in is slate-900, so the pill takes the dark
         // treatment — otherwise it reads as a white chip punched into it.
         pillTheme="dark"
+        // The panel follows the theme; the pill stays dark (the tools bar is
+        // dark in both). `themeStore` puts the colour scheme in Tune this app.
+        theme={theme}
+        themeStore={useThemeStore}
       />
       <KnowledgeBaseDialog
         {...KNOWLEDGE_BASE}
         open={knowledgeBaseOpen}
         onClose={() => setKnowledgeBaseOpen(false)}
+        theme={theme}
       />
     </>
   )

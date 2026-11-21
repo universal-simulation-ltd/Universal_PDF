@@ -242,16 +242,16 @@ export default function DocumentScreen() {
               type="button"
               onClick={undo}
               disabled={!canUndo}
-              className="min-h-[44px] px-3 mr-1 flex items-center gap-1 text-[16px] font-semibold text-[color:var(--np-cobalt)] disabled:opacity-40"
+              className="min-h-[44px] px-3 mr-1 flex items-center gap-1 text-[16px] font-semibold text-[color:var(--np-cobalt-ink)] disabled:opacity-40"
             >
-              <Icon d={PATHS.undo} size={20} width={2.2} stroke="var(--np-cobalt)" />
+              <Icon d={PATHS.undo} size={20} width={2.2} stroke="var(--np-cobalt-ink)" />
               {t('phone.undo')}
             </button>
           </>
         ) : (
           <>
             <button type="button" aria-label={t('phone.back_to_desk')} onClick={leaveDocument} className="w-11 h-11 flex items-center justify-center">
-              <Icon d={PATHS.back} size={24} width={2.4} stroke="var(--np-cobalt)" />
+              <Icon d={PATHS.back} size={24} width={2.4} stroke="var(--np-cobalt-ink)" />
             </button>
             <div className="flex-1 min-w-0 flex flex-col items-center">
               <span className="np-serif text-[17px] font-bold truncate max-w-full">{(fileName ?? '').replace(/\.pdf$/i, '')}</span>
@@ -260,7 +260,7 @@ export default function DocumentScreen() {
             {/* Balances the back chevron, so the name stays centred now Share is in the bar. */}
             <span aria-hidden="true" className="w-11 h-11" />
             <button type="button" aria-label={t('phone.more_aria')} onClick={() => openSheet('more')} className="w-11 h-11 flex items-center justify-center">
-              <Dots size={22} fill="var(--np-cobalt)" />
+              <Dots size={22} fill="var(--np-cobalt-ink)" />
             </button>
           </>
         )}

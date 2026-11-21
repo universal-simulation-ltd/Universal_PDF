@@ -295,7 +295,7 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
           {t('phone.sign_lead')} <Hl>{t('phone.sign_hl')}</Hl>
         </h1>
 
-        <div role="tablist" aria-label={t('phone.sign_how_aria')} className="grid rounded-xl p-[3px]" style={{ background: '#e8e3d8', gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
+        <div role="tablist" aria-label={t('phone.sign_how_aria')} className="grid rounded-xl p-[3px]" style={{ background: 'var(--np-well)', gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -360,7 +360,7 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
           <div className="np-tilt bg-white rounded-[3px] px-5 py-5 flex flex-col gap-4" style={{ boxShadow: '0 10px 24px rgba(23,30,50,0.14)', transform: 'rotate(-1deg)' }}>
             {photoFile ? (
               <div
-                className="h-[120px] rounded-[2px] flex items-center justify-center p-2"
+                data-paper className="h-[120px] rounded-[2px] flex items-center justify-center p-2"
                 style={{ background: keepWhite ? '#ffffff' : 'repeating-conic-gradient(#f3efe6 0% 25%, #ffffff 0% 50%) 50% / 14px 14px' }}
               >
                 {photoBusy ? (
@@ -372,12 +372,12 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
             ) : (
               <p className="m-0 text-[15px] leading-[1.45] text-[color:var(--np-ink-2)]">{t('phone.photo_note')}</p>
             )}
-            {photoError && <p className="m-0 text-[14px] text-[#b42318]">{photoError}</p>}
+            {photoError && <p className="m-0 text-[14px] text-[color:var(--np-red)]">{photoError}</p>}
             <button
               type="button"
               onClick={photo}
               className="min-h-[50px] rounded-2xl text-[16px] font-bold"
-              style={{ background: 'var(--np-slip)', border: '1.5px solid var(--np-cobalt)', color: 'var(--np-cobalt-deep)' }}
+              style={{ background: 'var(--np-slip)', border: '1.5px solid var(--np-cobalt-ink)', color: 'var(--np-cobalt-deep)' }}
             >
               {photoFile ? t('sign.import_choose_different') : t('phone.photo_button')}
             </button>
@@ -420,7 +420,7 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
                 checked={dateUnder}
                 onChange={(e) => setDateUnder(e.target.checked)}
                 className="w-[22px] h-[22px]"
-                style={{ accentColor: 'var(--np-cobalt)' }}
+                style={{ accentColor: 'var(--np-cobalt-ink)' }}
               />
               {t('phone.sign_date_label', { date: dateLineSeed() })}
             </label>
@@ -439,7 +439,7 @@ export default function SignScreen({ mode = 'document', onDone }: { mode?: 'docu
                 checked={keep}
                 onChange={(e) => setKeep(e.target.checked)}
                 className="w-[22px] h-[22px]"
-                style={{ accentColor: 'var(--np-cobalt)' }}
+                style={{ accentColor: 'var(--np-cobalt-ink)' }}
               />
               {t('phone.keep_in_drawer')}
             </label>
@@ -482,7 +482,7 @@ function SavedRow({ saved, onPick }: { saved: { id: string; name: string; dataUr
             type="button"
             aria-label={t('phone.use_saved_aria', { name: s.name })}
             onClick={() => onPick(s.id)}
-            className="np-tilt flex-none snap-start bg-white rounded-[3px] w-[100px] h-[62px] flex items-center justify-center p-2"
+            data-paper className="np-tilt flex-none snap-start bg-white rounded-[3px] w-[100px] h-[62px] flex items-center justify-center p-2"
             style={{ boxShadow: '0 4px 10px rgba(23,30,50,0.12)', transform: `rotate(${['-2deg', '1.5deg', '-1deg'][i % 3]})` }}
           >
             <img src={s.dataUrl} alt="" className="max-w-full max-h-full object-contain" />
@@ -580,7 +580,7 @@ function DrawPad({
   }
 
   return (
-    <div className="np-tilt bg-white rounded-[3px] relative flex-none" style={{ height: PAD_H, boxShadow: '0 10px 24px rgba(23,30,50,0.14)', transform: 'rotate(-1deg)' }}>
+    <div data-paper className="np-tilt bg-white rounded-[3px] relative flex-none" style={{ height: PAD_H, boxShadow: '0 10px 24px rgba(23,30,50,0.14)', transform: 'rotate(-1deg)' }}>
       <span aria-hidden="true" className="np-hand absolute left-[22px] bottom-[50px] text-[30px] text-[color:var(--np-orange-ink)]">×</span>
       <div aria-hidden="true" className="absolute left-11 right-6 bottom-[58px]" style={{ borderBottom: '1.5px solid var(--np-ink)' }} />
       {lines.length === 0 && (
@@ -597,7 +597,7 @@ function DrawPad({
         onPointerCancel={onUp}
       />
       {lines.length > 0 && (
-        <button type="button" onClick={onClear} className="absolute top-2.5 right-3 min-h-9 px-2.5 text-[14px] text-[color:var(--np-cobalt)]">
+        <button type="button" onClick={onClear} className="absolute top-2.5 right-3 min-h-9 px-2.5 text-[14px] text-[color:var(--np-cobalt-ink)]">
           {t('phone.start_again')}
         </button>
       )}
@@ -713,7 +713,7 @@ function StampsTab({
               aria-label={t('sign.stamp_colour_named', { color: c })}
               onClick={() => setColor(c)}
               className="w-9 h-9 rounded-full"
-              style={{ background: c, boxShadow: color === c ? '0 0 0 3px #ffffff, 0 0 0 5px var(--np-ink)' : undefined }}
+              style={{ background: c, boxShadow: color === c ? '0 0 0 3px var(--np-white), 0 0 0 5px var(--np-ink)' : undefined }}
             />
           ))}
         </div>
@@ -742,6 +742,7 @@ function StampsTab({
             type="button"
             aria-label={t(def.label)}
             onClick={() => onPreset(t(def.text), def.color, def.shape, t(def.label))}
+            data-paper
             className={slip}
             style={{ boxShadow: '0 4px 10px rgba(23,30,50,0.12)', transform: `rotate(${['-1.2deg', '1deg', '0.8deg', '-0.8deg'][i % 4]})` }}
           >
@@ -768,7 +769,7 @@ function StampsTab({
                   type="button"
                   aria-label={shownName(s.name)}
                   onClick={() => onSaved(s.id)}
-                  className={`${slip} w-full`}
+                  data-paper className={`${slip} w-full`}
                   style={{ boxShadow: '0 4px 10px rgba(23,30,50,0.12)' }}
                 >
                   <img src={s.dataUrl} alt="" className="h-12 max-w-full object-contain" />
@@ -778,7 +779,7 @@ function StampsTab({
                   aria-label={t('sign.stamp_remove_named', { name: shownName(s.name) })}
                   onClick={() => useSignatureStore.getState().remove(s.id)}
                   className="absolute -top-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center"
-                  style={{ background: 'var(--np-slip)', border: '1px solid var(--np-line)', color: '#b42318' }}
+                  style={{ background: 'var(--np-slip)', border: '1px solid var(--np-line)', color: 'var(--np-red)' }}
                 >
                   <Icon d={PATHS.close} size={14} width={2.4} />
                 </button>

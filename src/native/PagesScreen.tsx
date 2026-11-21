@@ -277,7 +277,7 @@ export default function PagesScreen() {
             ) : pending ? (
               <>
                 {t('phone.pages_pending')}{' '}
-                <button type="button" onClick={putBack} disabled={busy} className="underline font-semibold text-[color:var(--np-cobalt)]">
+                <button type="button" onClick={putBack} disabled={busy} className="underline font-semibold text-[color:var(--np-cobalt-ink)]">
                   {t('phone.pages_put_back')}
                 </button>
               </>
@@ -296,7 +296,7 @@ export default function PagesScreen() {
                   setSelecting((v) => !v)
                   setPicked(new Set())
                 }}
-                className="min-h-[44px] px-3 text-[16px] font-semibold text-[color:var(--np-cobalt)] disabled:opacity-50"
+                className="min-h-[44px] px-3 text-[16px] font-semibold text-[color:var(--np-cobalt-ink)] disabled:opacity-50"
               >
                 {selecting ? t('phone.done') : t('phone.pages_select')}
               </button>
@@ -319,11 +319,11 @@ export default function PagesScreen() {
                       aria-pressed={selecting ? isPicked : undefined}
                       aria-current={lit ? 'page' : undefined}
                       data-flash={lit ? '' : undefined}
-                      className="np-tilt relative bg-white block"
+                      data-paper className="np-tilt relative bg-white block"
                       style={{
                         transform: `rotate(${TILTS[i % 4]})`,
                         boxShadow: isPicked
-                          ? '0 0 0 3px var(--np-cobalt), 0 8px 18px rgba(60,45,20,0.2)'
+                          ? '0 0 0 3px var(--np-cobalt-ink), 0 8px 18px rgba(60,45,20,0.2)'
                           : lit
                             ? '0 0 0 4px var(--np-orange), 0 8px 18px rgba(60,45,20,0.2)'
                             : '0 8px 18px rgba(60,45,20,0.2)',
@@ -336,7 +336,7 @@ export default function PagesScreen() {
                         <span
                           aria-hidden="true"
                           className="absolute left-2 top-2 w-7 h-7 rounded-full flex items-center justify-center"
-                          style={{ background: isPicked ? 'var(--np-cobalt)' : 'rgba(255,255,255,0.9)', border: isPicked ? 0 : '2px solid #9a9ca3' }}
+                          style={{ background: isPicked ? 'var(--np-cobalt)' : 'rgba(255,255,255,0.9)', border: isPicked ? 0 : '2px solid var(--np-hint)' }}
                         >
                           {isPicked && <Icon d={PATHS.tick} size={16} stroke="#ffffff" width={2.6} />}
                         </span>
@@ -392,7 +392,7 @@ function SheetAction({ label, disabled, onClick, danger, children }: { label: st
       disabled={disabled}
       onClick={onClick}
       className="w-11 h-11 rounded-full flex items-center justify-center disabled:opacity-30"
-      style={{ background: 'var(--np-slip)', boxShadow: '0 1px 4px rgba(60,45,20,0.14)', color: danger ? '#b42318' : 'var(--np-cobalt)' }}
+      style={{ background: 'var(--np-slip)', boxShadow: '0 1px 4px rgba(60,45,20,0.14)', color: danger ? 'var(--np-red)' : 'var(--np-cobalt-ink)' }}
     >
       {children}
     </button>
@@ -403,7 +403,7 @@ function SheetAction({ label, disabled, onClick, danger, children }: { label: st
 function Thumb({ src, q }: { src: string | undefined; q: number }) {
   const turned = useTurned(src, q % 4)
   const shown = q % 4 ? turned : src
-  return shown ? <img src={shown} alt="" draggable={false} className="block w-full" /> : <span className="block w-full aspect-[1/1.41] bg-white" />
+  return shown ? <img src={shown} alt="" draggable={false} className="block w-full" /> : <span data-paper className="block w-full aspect-[1/1.41] bg-white" />
 }
 
 /** The most pixels one drawing of a page may have, zoomed or not (as the export's rasters). */
@@ -752,7 +752,7 @@ function PageViewer({ doc, thumbDoc, slots, start, onConfirm }: { doc: PDFDocume
             src={big.url}
             alt={t('viewer.nav.page', { page: at + 1 })}
             draggable={false}
-            className="absolute left-1/2 top-1/2 bg-white max-w-none"
+            data-paper className="absolute left-1/2 top-1/2 bg-white max-w-none"
             style={{
               width: size.w,
               height: size.h,
@@ -780,7 +780,7 @@ function PageViewer({ doc, thumbDoc, slots, start, onConfirm }: { doc: PDFDocume
             onClick={a.run}
             data-view-action={a.id}
             className="min-w-0 min-h-[58px] rounded-2xl flex flex-col items-center justify-center gap-1 disabled:opacity-35"
-            style={{ background: 'var(--np-slip)', boxShadow: '0 1px 4px rgba(60,45,20,0.14)', color: a.danger ? '#b42318' : 'var(--np-cobalt-deep)' }}
+            style={{ background: 'var(--np-slip)', boxShadow: '0 1px 4px rgba(60,45,20,0.14)', color: a.danger ? 'var(--np-red)' : 'var(--np-cobalt-deep)' }}
           >
             <Icon d={a.icon} size={22} width={2.2} />
             <FitLabel size={13} className="font-semibold">{a.label}</FitLabel>
@@ -817,7 +817,7 @@ function Peek({ side, slot, url: thumb, height }: { side: 'left' | 'right'; slot
     <div
       aria-hidden="true"
       data-peek={side}
-      className="absolute top-1/2 bg-white overflow-hidden"
+      data-paper className="absolute top-1/2 bg-white overflow-hidden"
       style={{
         [side]: 0,
         width: PEEK,
@@ -932,7 +932,7 @@ function StripThumb({ slot, n, url, current = false, out = false, label, onClick
         aria-label={label}
         aria-current={current ? 'page' : undefined}
         onClick={onClick}
-        className="relative block bg-white"
+        data-paper className="relative block bg-white"
         style={{
           width: w,
           transform: current ? 'translateY(-3px)' : undefined,
@@ -941,10 +941,10 @@ function StripThumb({ slot, n, url, current = false, out = false, label, onClick
           transition: 'width 200ms ease, transform 200ms ease',
         }}
       >
-        {shown ? <img src={shown} alt="" draggable={false} className="block w-full" /> : <span className="block w-full aspect-[1/1.41] bg-white" />}
+        {shown ? <img src={shown} alt="" draggable={false} className="block w-full" /> : <span data-paper className="block w-full aspect-[1/1.41] bg-white" />}
         {out && (
           <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center">
-            <span className="block w-[130%] h-[2px] rotate-[-50deg]" style={{ background: '#b42318' }} />
+            <span className="block w-[130%] h-[2px] rotate-[-50deg]" style={{ background: 'var(--np-red)' }} />
           </span>
         )}
       </button>
@@ -973,7 +973,7 @@ function RoundButton({ label, disabled, onClick, children }: { label: string; di
       disabled={disabled}
       onClick={onClick}
       className="flex-none w-11 h-11 rounded-full flex items-center justify-center disabled:opacity-30"
-      style={{ background: 'var(--np-slip)', boxShadow: '0 1px 4px rgba(60,45,20,0.14)', color: 'var(--np-cobalt)' }}
+      style={{ background: 'var(--np-slip)', boxShadow: '0 1px 4px rgba(60,45,20,0.14)', color: 'var(--np-cobalt-ink)' }}
     >
       {children}
     </button>

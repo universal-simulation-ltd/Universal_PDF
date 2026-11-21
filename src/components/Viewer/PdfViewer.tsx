@@ -1550,7 +1550,7 @@ export default function PdfViewer() {
       <div ref={viewerBoxRef} className="relative flex-1 min-h-0">
         <div
           ref={scrollRef}
-          className="absolute inset-0 overflow-auto bg-slate-200 flex flex-col"
+          className="absolute inset-0 overflow-auto bg-slate-200 pdf-desk flex flex-col"
           style={{ cursor: handCursor }}
         >
           {/* ⚠️ CENTRED WITH AUTO MARGINS, NOT `justify-center`. A document

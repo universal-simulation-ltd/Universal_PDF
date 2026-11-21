@@ -293,6 +293,9 @@ function PdfPage({ doc, pageIndex, scale, isXfa, active, onSized }: Props) {
   return (
     <div
       data-page-index={pageIndex}
+      // The page is paper in every theme: src/styles/dark.css leaves it and
+      // everything on it (annotations, form fields) exactly as in Light.
+      data-paper
       className="relative shadow-lg mx-auto bg-white scroll-mt-4"
       style={size ? { width: size.width, height: size.height } : undefined}
     >

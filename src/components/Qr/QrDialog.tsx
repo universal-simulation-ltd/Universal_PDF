@@ -433,6 +433,9 @@ export default function QrDialog() {
           {/* Preview — click it to enlarge for scanning, as in Universal QR. */}
           <div className="flex flex-col items-center gap-2 shrink-0">
             <div
+              // The code as it will print: on paper in every theme, so a
+              // transparent background still reads (styles/dark.css).
+              data-paper
               className={`group relative rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden ${
                 preview ? 'cursor-zoom-in' : ''
               }`}
@@ -647,7 +650,7 @@ export default function QrDialog() {
                     className="relative shrink-0 w-20 border-2 border-orange-200 rounded-lg p-1.5 hover:border-orange-400 hover:bg-orange-50/50 transition-colors"
                   >
                     {entry.thumbnail ? (
-                      <img src={entry.thumbnail} alt="" className="w-full aspect-square object-contain" />
+                      <img src={entry.thumbnail} alt="" data-paper className="w-full aspect-square object-contain bg-white" />
                     ) : (
                       <div className="w-full aspect-square bg-slate-100 rounded" />
                     )}
@@ -675,7 +678,7 @@ export default function QrDialog() {
                     className="shrink-0 w-20 border-2 border-slate-200 rounded-lg p-1.5 hover:border-orange-400 hover:bg-slate-50 transition-colors"
                   >
                     {entry.thumbnail ? (
-                      <img src={entry.thumbnail} alt="" className="w-full aspect-square object-contain" />
+                      <img src={entry.thumbnail} alt="" data-paper className="w-full aspect-square object-contain bg-white" />
                     ) : (
                       <div className="w-full aspect-square bg-slate-100 rounded" />
                     )}
@@ -697,7 +700,7 @@ export default function QrDialog() {
                     className="relative shrink-0 w-20 border-2 border-slate-200 rounded-lg p-1.5 hover:border-orange-400 hover:bg-slate-50 transition-colors"
                   >
                     {entry.thumbnail ? (
-                      <img src={entry.thumbnail} alt="" className="w-full aspect-square object-contain" />
+                      <img src={entry.thumbnail} alt="" data-paper className="w-full aspect-square object-contain bg-white" />
                     ) : (
                       <div className="w-full aspect-square bg-slate-100 rounded" />
                     )}

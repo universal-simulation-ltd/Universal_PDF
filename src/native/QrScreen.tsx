@@ -167,7 +167,7 @@ export default function QrScreen() {
                   className="min-h-[76px] rounded-2xl flex flex-col items-center justify-center gap-1.5 px-1"
                   style={
                     on
-                      ? { background: 'var(--np-slip)', boxShadow: '0 0 0 2px var(--np-cobalt)' }
+                      ? { background: 'var(--np-slip)', boxShadow: '0 0 0 2px var(--np-cobalt-ink)' }
                       : { background: 'var(--np-slip)', border: '1px solid var(--np-line)' }
                   }
                 >

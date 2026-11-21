@@ -13,6 +13,7 @@ import { goBack, isJobPage, isKnowledge, overTabs as canStandOverTabs, topScreen
 import { FitLabel } from './parts'
 import { currentFile, openJob, useJobs } from './jobs'
 import { usePhonePrefs } from './prefs'
+import { useThemeStore } from '../stores/themeStore'
 import DeskScreen from './DeskScreen'
 import DocumentScreen, { leaveDocument } from './DocumentScreen'
 import SignScreen from './SignScreen'
@@ -92,11 +93,14 @@ export default function NativeApp({ launching }: { launching: boolean }) {
   useKnowledgeBaseRequests()
 
   // The clock and battery stay legible: light glyphs over the cobalt desk and
-  // the moments, dark ones over paper.
-  const darkTop = inDocument ? isMoment(top) : tab === 'desk' && !overTabs && !deskSearching
+  // the moments, dark ones over paper — and light everywhere in Dark, where
+  // every screen's top is dark. The theme also repaints Android's window strip
+  // (setStatusBarOverDarkChrome → the SDK's setAndroidWindowTheme).
+  const theme = useThemeStore((s) => s.effective)
+  const darkTop = theme === 'dark' || (inDocument ? isMoment(top) : tab === 'desk' && !overTabs && !deskSearching)
   useEffect(() => {
-    void setStatusBarOverDarkChrome(darkTop)
-  }, [darkTop])
+    void setStatusBarOverDarkChrome(darkTop, theme)
+  }, [darkTop, theme])
 
   return (
     <div className={`np${plainPaper ? ' np--plain' : ''}`} style={{ background: 'var(--np-paper)' }}>
@@ -151,7 +155,7 @@ export default function NativeApp({ launching }: { launching: boolean }) {
       <Toast />
       <LockedSheet />
       {/* The shared code's one-line questions (Prompts.tsx), as the kit's sheet. */}
-      <PhoneDialogHost theme="light" />
+      <PhoneDialogHost theme={theme} />
       {/* Kept in case anything still asks before leaving a document; nothing
           on the phone does (leaving keeps the work, DocumentScreen). */}
       <UnsavedChangesDialog />

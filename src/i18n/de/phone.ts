@@ -266,6 +266,11 @@ const phone: Messages['phone'] = {
   // Added 2026-10-22: the job pages, the Blacked out and Sent moments, Send to sign's sheet.
   'credit_team': 'das UNI·SIM-Team', // a link inside `credit` (to unisim.co.uk)
   'tune_how': 'wie es sich verhält…', // handwritten word above the first slip in Tune
+  'theme_how': 'wie es aussieht…', // handwritten word above the colour scheme slip in Tune
+  'theme_aria': 'Farbschema',
+  'theme_light': 'Hell',
+  'theme_dark': 'Dunkel',
+  'theme_system': 'Wie das Gerät',
   'put_in_box': 'In das Feld setzen',
   'ocr_lead': 'Mach den Text', // heading, split so the second part carries the highlighter
   'ocr_hl': 'durchsuchbar',

@@ -13,9 +13,12 @@
 //   landing page. The glyphs must follow the screen.
 // - Android with an older WebView: SystemBars pads the web view natively and
 //   `env(safe-area-inset-top)` reads 0, so the spacer has no height and the
-//   glyphs sit over the WINDOW background, which values/styles.xml pins white
-//   on every screen. Light glyphs there are white on white — the clock gone —
-//   so the answer is dark glyphs, always.
+//   glyphs sit over the WINDOW background. values/styles.xml starts it light;
+//   in Dark (2026-11-21) @unisim/sdk's `setAndroidWindowTheme` repaints it to
+//   colors.xml's dark colour. So the glyphs follow THAT strip, not the screen:
+//   light only once it has really been repainted dark (`stripDark`), dark
+//   otherwise. Light glyphs on the light strip are white on white, the clock
+//   gone.
 
 /** Is the page drawn under the status bar (so the app's chrome is behind the glyphs)? */
 export function pageUnderStatusBar(platform: string, userAgent: string): boolean {
@@ -34,7 +37,9 @@ export function statusBarStyleFor(
   darkChrome: boolean,
   platform: string,
   userAgent: string,
+  /** The Android window strip has been repainted dark (Dark theme, `setAndroidWindowTheme` said true). */
+  stripDark = false,
 ): 'DARK' | 'LIGHT' {
-  if (!pageUnderStatusBar(platform, userAgent)) return 'LIGHT'
+  if (!pageUnderStatusBar(platform, userAgent)) return stripDark ? 'DARK' : 'LIGHT'
   return darkChrome ? 'DARK' : 'LIGHT'
 }

@@ -52,7 +52,7 @@ export default function SignaturesScreen() {
             {saved.map((s, i) => (
               <li
                 key={s.id}
-                className="np-tilt bg-white rounded-[3px] relative h-[110px] flex items-center justify-center p-3"
+                data-paper className="np-tilt bg-white rounded-[3px] relative h-[110px] flex items-center justify-center p-3"
                 style={{ boxShadow: '0 6px 14px rgba(23,30,50,0.12)', transform: `rotate(${TILTS[i % 4]})` }}
               >
                 <img src={s.dataUrl} alt={s.name} className="max-w-full max-h-[70px] object-contain" />

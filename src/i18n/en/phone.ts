@@ -271,6 +271,11 @@ export default {
   // Added 2026-10-22: the job pages, the Blacked out and Sent moments, Send to sign's sheet.
   'credit_team': 'the UNI·SIM team', // a link inside `credit` (to unisim.co.uk)
   'tune_how': 'how it behaves…', // handwritten word above the first slip in Tune
+  'theme_how': 'how it looks…', // handwritten word above the colour scheme slip in Tune
+  'theme_aria': 'Colour scheme',
+  'theme_light': 'Light',
+  'theme_dark': 'Dark',
+  'theme_system': 'Match my device',
   'put_in_box': 'Put it in the box',
   'ocr_lead': 'Make the text', // heading, split so the second part carries the highlighter
   'ocr_hl': 'searchable',

@@ -20,6 +20,11 @@ import { useSignatureStore } from './stores/signatureStore'
 import './index.css'
 import './styles/xfa.css'
 import './styles/textlayer.css'
+// After index.css, on purpose: its rules shadow index.css's utilities by order.
+import './styles/dark.css'
+// Made here, at start-up, so every page (the editor, the phone screens, the
+// signing and certificate pages) is themed before React renders.
+import './stores/themeStore'
 
 if (import.meta.env.DEV) {
   ;(window as unknown as { __stores: unknown }).__stores = {

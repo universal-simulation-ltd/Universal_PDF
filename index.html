@@ -5,6 +5,10 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/icon-180.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Dark mode before the first paint (Light / Dark / Match my device, in
+         Tune this app). A file rather than an inline script, so the CSP needs
+         no 'unsafe-inline'; see public/theme-prepaint.js. -->
+    <script src="/theme-prepaint.js"></script>
     <meta name="theme-color" content="#0f172a" />
     <meta name="description" content="Universal PDF — free, open-source PDF viewer, annotator, signer and redactor that runs entirely in your browser. No uploads, no tracking, forever free." />
     <title>Universal PDF — open source, browser-based PDF editor</title>

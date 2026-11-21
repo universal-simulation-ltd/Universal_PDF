@@ -23,6 +23,8 @@
 # _headers needs no 'unsafe-inline'). Without this line the SPA fallback below
 # would answer with index.html and the fallback would never run.
 /pdf/boot-fallback.js     /boot-fallback.js     200
+# The pre-paint theme script (index.html's <head>), for the same reason.
+/pdf/theme-prepaint.js    /theme-prepaint.js    200
 
 # The fallback font (@unisim/doc embeds it so Cyrillic, Greek and Hebrew stop
 # converting to '?'). ⚠️ It was missing from this list for the whole of the day

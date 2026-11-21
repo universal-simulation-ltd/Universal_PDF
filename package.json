@@ -81,6 +81,7 @@
     "test:heic-sniff": "node --experimental-strip-types scripts/heicSniff.test.mjs",
     "test:jpeg-orientation": "node --experimental-strip-types scripts/jpegOrientation.test.mjs",
     "test:status-bar": "node --experimental-strip-types scripts/statusBarGlyphs.test.mjs",
+    "test:theme": "node scripts/theme.test.mjs",
     "test:external-links": "node --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/externalLinks.test.mjs",
     "test:build-env": "node --experimental-strip-types scripts/buildEnv.test.mjs",
     "test:render-queue": "node --experimental-strip-types scripts/renderQueue.test.mjs",

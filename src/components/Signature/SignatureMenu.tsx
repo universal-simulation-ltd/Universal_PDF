@@ -351,6 +351,7 @@ export default function SignatureMenu({ compact = false }: SignatureMenuProps) {
               <img
                 src={s.dataUrl}
                 alt={shownName(s.name)}
+                data-paper
                 className="h-10 max-w-32 object-contain bg-white"
               />
               <div className="flex-1 min-w-0">

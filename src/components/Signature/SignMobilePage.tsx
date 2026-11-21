@@ -113,6 +113,7 @@ export default function SignMobilePage({ token }: { token: string }) {
 
       <canvas
         ref={canvasRef}
+        data-paper
         className="h-56 w-full touch-none rounded-lg bg-white"
         onPointerDown={start}
         onPointerMove={move}

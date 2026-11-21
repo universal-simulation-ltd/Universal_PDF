@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Dark is a class on <html> (the SDK's theme store and public/theme-prepaint.js
+   put it there), not the OS setting: the user picks Light / Dark / Match my
+   device in Tune this app. Most of the dark look is src/styles/dark.css. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Universal PDF's own colours, from its app icon (a cobalt page with an orange
    highlighter), 2026-10-12. Used sparingly on purpose — the active tool, the
    example button, the "?" — so the app reads as a sibling of the phone app

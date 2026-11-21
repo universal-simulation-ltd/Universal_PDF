@@ -255,6 +255,7 @@ function PreviewPage({
 
   return (
     <div
+      data-paper
       className="relative shadow-lg mx-auto bg-white"
       style={size ? { width: size.width, height: size.height } : undefined}
     >

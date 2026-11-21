@@ -89,7 +89,7 @@ function OcrPage({ bytes, name }: { bytes: ArrayBuffer; name: string }) {
             <span className="text-[15px] text-[color:var(--np-muted)] truncate max-w-[45%]">
               {OCR_LANGUAGES.find((l) => l.code === lang)?.label ?? lang}
             </span>
-            <Icon d={PATHS.chevron} size={16} stroke="#9a9ca3" width={2.4} />
+            <Icon d={PATHS.chevron} size={16} stroke="var(--np-hint)" width={2.4} />
             <select
               id={langId}
               data-testid="ocr-language"
@@ -122,7 +122,7 @@ function OcrPage({ bytes, name }: { bytes: ArrayBuffer; name: string }) {
         </div>
       )}
 
-      {phase === 'error' && <p className="m-0 text-[15px] text-[#b42318]">{t('tools.ocr.failed', { message: error ?? '' })}</p>}
+      {phase === 'error' && <p className="m-0 text-[15px] text-[color:var(--np-red)]">{t('tools.ocr.failed', { message: error ?? '' })}</p>}
     </JobPage>
   )
 }

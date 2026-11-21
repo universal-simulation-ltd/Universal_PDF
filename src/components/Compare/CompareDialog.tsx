@@ -460,6 +460,7 @@ function CanvasHost({ canvas }: { canvas: HTMLCanvasElement }) {
     const host = ref.current
     if (!host) return
     canvas.className = 'block max-w-full h-auto bg-white shadow'
+    canvas.dataset.paper = '' // a page: white in every theme (styles/dark.css)
     host.replaceChildren(canvas)
   }, [canvas])
   return <div ref={ref} />

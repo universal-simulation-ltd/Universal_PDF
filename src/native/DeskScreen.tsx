@@ -256,7 +256,7 @@ export default function DeskScreen() {
                   onClick={() => void runJob(c.id)}
                   disabled={busy !== null}
                   aria-busy={busy === c.id}
-                  className="np-tilt flex-none w-[140px] h-[138px] rounded-md p-3 box-border flex flex-col justify-between text-left relative overflow-hidden disabled:cursor-wait"
+                  data-paper data-dim className="np-tilt flex-none w-[140px] h-[138px] rounded-md p-3 box-border flex flex-col justify-between text-left relative overflow-hidden disabled:cursor-wait"
                   style={{
                     scrollSnapAlign: 'start',
                     background: look.bg,
@@ -330,7 +330,7 @@ export default function DeskScreen() {
             type="button"
             onClick={openDrawer}
             className="np-hand np-pull-hint self-center -mt-1 mb-1.5 px-3 min-h-[36px] flex items-center gap-1 text-[21px] leading-none"
-            style={{ color: 'var(--np-cobalt)' }}
+            style={{ color: 'var(--np-cobalt-ink)' }}
           >
             <span aria-hidden="true">↓</span> {t('phone.pull_to_search')}
           </button>
@@ -426,7 +426,7 @@ export default function DeskScreen() {
                 data-search-cancel
                 {...KEEP_FOCUS}
                 onClick={clearAndClose}
-                className="flex-none min-h-[44px] px-1 text-[16px] font-semibold text-[color:var(--np-cobalt)]"
+                className="flex-none min-h-[44px] px-1 text-[16px] font-semibold text-[color:var(--np-cobalt-ink)]"
               >
                 {t('phone.cancel')}
               </button>
@@ -449,7 +449,7 @@ export default function DeskScreen() {
               {shown.map((r, i) => (
                 <li
                   key={r.id}
-                  style={{ borderTop: i ? '1px solid #e6e0d4' : 0, WebkitTouchCallout: 'none' }}
+                  style={{ borderTop: i ? '1px solid var(--np-line)' : 0, WebkitTouchCallout: 'none' }}
                   onTouchStart={selecting ? undefined : holdStart(r.id)}
                 >
                   {selecting ? (
@@ -495,7 +495,7 @@ export default function DeskScreen() {
                     onClick={() => setOptions(r)}
                     className="w-11 h-11 flex-none flex items-center justify-center"
                   >
-                    <Dots size={20} fill="#5d6068" />
+                    <Dots size={20} fill="var(--np-muted)" />
                   </button>
                   </div>
                   </SwipeRow>
@@ -534,7 +534,7 @@ export default function DeskScreen() {
               void shareRecent(r)
             }}
             className="min-h-[54px] rounded-[18px] text-[16px] font-semibold flex items-center justify-center gap-2"
-            style={{ background: 'var(--np-slip)', border: '1px solid var(--np-line)', color: 'var(--np-cobalt)' }}
+            style={{ background: 'var(--np-slip)', border: '1px solid var(--np-line)', color: 'var(--np-cobalt-ink)' }}
           >
             <Icon d={PATHS.share} size={20} />
             {t('phone.doc_share')}
@@ -561,7 +561,7 @@ export default function DeskScreen() {
               void usePdfStore.getState().removeRecent(id)
             }}
             className="min-h-[54px] rounded-[18px] text-[16px] font-semibold flex flex-col items-center justify-center"
-            style={{ background: 'var(--np-slip)', border: '1px solid var(--np-line)', color: '#b42318' }}
+            style={{ background: 'var(--np-slip)', border: '1px solid var(--np-line)', color: 'var(--np-red)' }}
           >
             {t('phone.doc_remove')}
           </button>
@@ -638,7 +638,7 @@ function ExampleEntry({ busy }: { busy: JobId | null }) {
           src={src}
           alt=""
           aria-hidden="true"
-          className="np-tilt flex-none bg-white rounded-sm"
+          data-paper className="np-tilt flex-none bg-white rounded-sm"
           style={{ width: PREVIEW_W, height: Math.round(PREVIEW_W * 1.414), boxShadow: '0 2px 6px rgba(23,30,50,0.16)', transform: `rotate(${DOC_TILTS[0]})` }}
         />
       ) : (
@@ -651,7 +651,7 @@ function ExampleEntry({ busy }: { busy: JobId | null }) {
         </span>
       </span>
       <span className="w-11 h-11 flex-none flex items-center justify-center" aria-hidden="true">
-        <Icon d={PATHS.chevron} size={20} stroke="#5d6068" />
+        <Icon d={PATHS.chevron} size={20} stroke="var(--np-muted)" />
       </span>
     </button>
   )
@@ -662,7 +662,7 @@ export function DocThumb({ tilt }: { tilt: string }) {
   return (
     <span
       aria-hidden="true"
-      className="np-tilt w-10 h-[52px] flex-none bg-white rounded-sm box-border px-1.5 py-[9px] flex flex-col gap-1 relative"
+      data-paper className="np-tilt w-10 h-[52px] flex-none bg-white rounded-sm box-border px-1.5 py-[9px] flex flex-col gap-1 relative"
       style={{ boxShadow: '0 2px 6px rgba(23,30,50,0.16)', transform: `rotate(${tilt})` }}
     >
       <span className="h-[3px] w-[80%] rounded-sm" style={{ background: '#c9cfdc' }} />

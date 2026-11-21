@@ -146,7 +146,7 @@ export default function MoreSheet() {
             key={b.label}
             type="button"
             onClick={b.run}
-            className="np-tilt relative overflow-hidden rounded-md p-3.5 min-h-[108px] flex flex-col justify-between text-left gap-2"
+            data-paper data-dim className="np-tilt relative overflow-hidden rounded-md p-3.5 min-h-[108px] flex flex-col justify-between text-left gap-2"
             style={{ background: b.tint, transform: `rotate(${BIG_TILTS[i % 4]})`, boxShadow: '0 6px 14px rgba(60,45,20,0.18), 0 1px 2px rgba(60,45,20,0.16)' }}
           >
             <span aria-hidden="true" className="absolute top-0 right-0 w-[16px] h-[16px]" style={{ background: 'rgba(0,0,0,0.08)', clipPath: 'polygon(0 0, 100% 100%, 0 100%)' }} />

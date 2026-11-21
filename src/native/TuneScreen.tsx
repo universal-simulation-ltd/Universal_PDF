@@ -8,7 +8,8 @@ import { ABOUT_APP } from '../lib/aboutApp'
 import { disableSignatureLock, enableSignatureLock } from '../lib/signatureLock'
 import { useVaultStore, vaultAvailability, type Biometry } from '../lib/signatureVault'
 import { Icon, PATHS } from './icons'
-import { Hl, LinkRow, Sheet, Slip, SwitchRow } from './parts'
+import { Hl, LinkRow, Segmented, Sheet, Slip, SwitchRow } from './parts'
+import { useThemeStore, type ThemePref } from '../stores/themeStore'
 import { usePhonePrefs } from './prefs'
 import { useNav } from './nav'
 
@@ -37,13 +38,19 @@ export default function TuneScreen() {
   const [aboutOpen, setAboutOpen] = useState(false)
   const [freeOpen, setFreeOpen] = useState(false)
   const languageId = useId()
+  // Light / Dark / Match my device (2026-11-21). `pref` is what applies: this
+  // app's own choice, else the account's Global Tuning, else Light. Picking
+  // one sets this app's override; Reset to defaults clears it.
+  const themePref = useThemeStore((s) => s.pref)
+  const setThemeOverride = useThemeStore((s) => s.setOverride)
+  const themeNow = useThemeStore((s) => s.effective)
 
   const resetAll = useResetAppDefaults(() => {
     clearDismissedPrompts()
     useToolPrefs.getState().reset()
     usePhonePrefs.getState().reset()
     void resetUserPrefs()
-  })
+  }, useThemeStore)
 
   useEffect(() => {
     let live = true
@@ -113,11 +120,26 @@ export default function TuneScreen() {
           )}
         </Slip>
 
+        <Slip label={t('phone.theme_how')} tilt="0.4deg">
+          <div className="px-3.5 py-3">
+            <Segmented<ThemePref>
+              label={t('phone.theme_aria')}
+              value={themePref}
+              options={[
+                { id: 'light', label: t('phone.theme_light') },
+                { id: 'dark', label: t('phone.theme_dark') },
+                { id: 'system', label: t('phone.theme_system') },
+              ]}
+              onChange={setThemeOverride}
+            />
+          </div>
+        </Slip>
+
         <Slip tilt="0.5deg">
           <label htmlFor={languageId} className="relative w-full flex items-center gap-3 min-h-[52px] px-3.5">
             <span className="flex-1 text-[16px]">{t('phone.language')}</span>
             <span className="text-[15px] text-[color:var(--np-muted)]">{LANGUAGE_LABELS[language as Language]}</span>
-            <Icon d={PATHS.chevron} size={16} stroke="#9a9ca3" width={2.4} />
+            <Icon d={PATHS.chevron} size={16} stroke="var(--np-hint)" width={2.4} />
             <select
               id={languageId}
               value={language}
@@ -140,7 +162,7 @@ export default function TuneScreen() {
             resetAll()
             useNav.getState().say(t('phone.reset_done'))
           }}
-          className="np-tilt min-h-[50px] rounded-[3px] text-[16px] text-[#b42318] bg-white"
+          className="np-tilt min-h-[50px] rounded-[3px] text-[16px] text-[color:var(--np-red)] bg-white"
           style={{ transform: 'rotate(-0.4deg)', boxShadow: '0 6px 14px rgba(60,45,20,0.14)' }}
         >
           {t('phone.reset')}
@@ -157,7 +179,7 @@ export default function TuneScreen() {
               aria-label={t('app.landing_free_open')}
               onClick={() => setFreeOpen(true)}
               className="flex-none w-[30px] h-[30px] rounded-full bg-white text-[15px] font-extrabold"
-              style={{ border: '1.5px solid var(--np-cobalt)', color: 'var(--np-cobalt-deep)' }}
+              style={{ border: '1.5px solid var(--np-cobalt-ink)', color: 'var(--np-cobalt-deep)' }}
             >
               ?
             </button>
@@ -172,7 +194,7 @@ export default function TuneScreen() {
         </div>
       </div>
 
-      <AboutAppDialog {...ABOUT_APP} open={aboutOpen} onClose={() => setAboutOpen(false)} />
+      <AboutAppDialog {...ABOUT_APP} open={aboutOpen} onClose={() => setAboutOpen(false)} theme={themeNow} />
       {freeOpen && <FreeSheet onClose={() => setFreeOpen(false)} />}
     </div>
   )
@@ -202,7 +224,7 @@ function FreeSheet({ onClose }: { onClose: () => void }) {
       <Slip tilt="-0.4deg">
         {FREE.map((k, i) => (
           <div key={k} className="flex items-center gap-3.5 min-h-[44px] px-3.5" style={{ borderTop: i ? '1px solid var(--np-rule)' : 0 }}>
-            <Icon d={PATHS.tick} size={18} width={3} stroke="var(--np-cobalt)" />
+            <Icon d={PATHS.tick} size={18} width={3} stroke="var(--np-cobalt-ink)" />
             <span className="text-[15px]">{t(k)}</span>
           </div>
         ))}

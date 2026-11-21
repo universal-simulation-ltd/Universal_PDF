@@ -125,7 +125,7 @@ function MergePage({ initial }: { initial: File | null }) {
 
       <AddSlip label={t('phone.merge_add')} note={items.length < 2 ? t('phone.merge_need_two') : undefined} onClick={add} disabled={busy} />
 
-      {error && <p className="m-0 text-[14px] text-[#b42318]">{error}</p>}
+      {error && <p className="m-0 text-[14px] text-[color:var(--np-red)]">{error}</p>}
     </JobPage>
   )
 }
@@ -137,7 +137,7 @@ function RowButton({ label, disabled, onClick, children }: { label: string; disa
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="flex-none w-11 h-11 flex items-center justify-center text-[20px] text-[color:var(--np-cobalt)] disabled:opacity-25"
+      className="flex-none w-11 h-11 flex items-center justify-center text-[20px] text-[color:var(--np-cobalt-ink)] disabled:opacity-25"
     >
       {children}
     </button>

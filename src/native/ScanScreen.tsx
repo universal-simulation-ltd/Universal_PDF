@@ -134,7 +134,7 @@ function ScanPageView({ source, initialPages }: { source: 'camera' | 'photo'; in
         <ol className="m-0 p-0 list-none grid grid-cols-3 gap-x-3 gap-y-4" aria-label={t.plural('tools.scan.pages', s.pages.length)}>
           {s.pages.map((e, i) => (
             <li key={e.id} className="flex flex-col gap-1.5 items-stretch">
-              <div className="np-tilt relative bg-white p-1" style={{ transform: `rotate(${TILTS[i % TILTS.length]})`, boxShadow: '0 6px 14px rgba(60,45,20,0.2)' }}>
+              <div data-paper className="np-tilt relative bg-white p-1" style={{ transform: `rotate(${TILTS[i % TILTS.length]})`, boxShadow: '0 6px 14px rgba(60,45,20,0.2)' }}>
                 <img src={e.url} alt={t('tools.scan.page_n', { n: i + 1 })} className="block w-full aspect-[3/4] object-contain bg-white" />
                 <span className="np-hand absolute left-1.5 top-0 text-[20px] text-[color:var(--np-orange-ink)]">{i + 1}</span>
               </div>

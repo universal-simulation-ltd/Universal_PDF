@@ -79,7 +79,7 @@ export function SignedMoment() {
         <div aria-hidden="true" className="np-tilt absolute w-[238px] h-[320px] rounded-sm" style={{ background: '#e9e2d2', transform: 'rotate(5deg) translate(14px, 6px)', boxShadow: '0 10px 24px rgba(5,15,50,0.35)' }} />
         <div
           aria-hidden="true"
-          className="np-tilt relative w-[250px] h-[340px] bg-white rounded-sm px-5 pt-[22px] pb-[22px] box-border flex flex-col gap-[9px] text-[color:var(--np-ink)]"
+          data-paper className="np-tilt relative w-[250px] h-[340px] bg-white rounded-sm px-5 pt-[22px] pb-[22px] box-border flex flex-col gap-[9px] text-[color:var(--np-ink)]"
           style={{ transform: 'rotate(-3deg)', boxShadow: '0 20px 44px rgba(5,15,50,0.5)' }}
         >
           <div className="h-[22px] -mx-5 -mt-[22px] mb-1.5" style={{ background: '#2f6b3a' }} />
@@ -178,7 +178,7 @@ export function SmallerMoment() {
           ].map((p, i) => (
             <div key={i} className="np-tilt absolute w-32 h-[172px] rounded-sm" style={{ left: p.l, top: p.tp, background: p.bg, transform: `rotate(${p.r})`, boxShadow: '0 8px 18px rgba(5,15,50,0.35)' }} />
           ))}
-          <div className="np-tilt absolute left-0 top-0 w-32 h-[172px] bg-white rounded-sm px-3 box-border flex flex-col gap-[7px] overflow-hidden" style={{ transform: 'rotate(-2deg)', boxShadow: '0 10px 22px rgba(5,15,50,0.45)' }}>
+          <div data-paper className="np-tilt absolute left-0 top-0 w-32 h-[172px] bg-white rounded-sm px-3 box-border flex flex-col gap-[7px] overflow-hidden" style={{ transform: 'rotate(-2deg)', boxShadow: '0 10px 22px rgba(5,15,50,0.45)' }}>
             <div className="h-4 -mx-3 mb-1.5" style={{ background: '#2f6b3a' }} />
             <Lines widths={['80%', '65%', '75%', '55%']} />
           </div>
@@ -194,7 +194,7 @@ export function SmallerMoment() {
         </svg>
 
         <div
-          className="np-tilt absolute right-2 top-[130px] w-28 h-[150px] bg-white rounded-sm px-2.5 box-border flex flex-col gap-1.5"
+          data-paper className="np-tilt absolute right-2 top-[130px] w-28 h-[150px] bg-white rounded-sm px-2.5 box-border flex flex-col gap-1.5"
           style={{ transform: 'rotate(4deg)', boxShadow: '0 18px 36px rgba(5,15,50,0.5)', opacity: smaller ? 1 : 0.35, transition: 'opacity 300ms' }}
         >
           <div className="h-3.5 -mx-2.5 mb-1" style={{ background: '#2f6b3a' }} />
@@ -271,7 +271,7 @@ export function BlackedMoment() {
       <div className="flex-1 min-h-0 relative flex items-center justify-center" aria-hidden="true">
         <div className="np-tilt absolute w-[238px] h-[320px] rounded-sm" style={{ background: '#e9e2d2', transform: 'rotate(-5deg) translate(-14px, 6px)', boxShadow: '0 10px 24px rgba(5,15,50,0.35)' }} />
         <div
-          className="np-tilt relative w-[250px] h-[340px] bg-white rounded-sm px-5 pt-[22px] pb-[22px] box-border flex flex-col gap-[11px]"
+          data-paper className="np-tilt relative w-[250px] h-[340px] bg-white rounded-sm px-5 pt-[22px] pb-[22px] box-border flex flex-col gap-[11px]"
           style={{ transform: 'rotate(2.5deg)', boxShadow: '0 20px 44px rgba(5,15,50,0.5)' }}
         >
           <div className="h-[22px] -mx-5 -mt-[22px] mb-1.5" style={{ background: '#2f6b3a' }} />
@@ -285,7 +285,7 @@ export function BlackedMoment() {
           ))}
           <div
             className="np-tilt absolute right-3 top-[150px] rounded-[10px] px-3 py-2 flex flex-col items-center"
-            style={{ border: '4px double #b42318', color: '#b42318', transform: 'rotate(-12deg)', background: 'rgba(255,255,255,0.8)' }}
+            style={{ border: '4px double #b42318', color: 'var(--np-red)', transform: 'rotate(-12deg)', background: 'rgba(255,255,255,0.8)' }}
           >
             <span className="text-[22px] font-black tracking-[0.12em]">{t('phone.stamp_blacked')}</span>
           </div>
@@ -324,7 +324,7 @@ export function SentMoment() {
           <path d="M6 50c22-6 40-22 58-40M50 8l16 2-3 16" />
         </svg>
         <div
-          className="np-tilt relative w-[250px] h-[340px] bg-white rounded-sm px-5 pt-[22px] pb-[22px] box-border flex flex-col gap-[9px]"
+          data-paper className="np-tilt relative w-[250px] h-[340px] bg-white rounded-sm px-5 pt-[22px] pb-[22px] box-border flex flex-col gap-[9px]"
           style={{ transform: 'rotate(-4deg) translate(-6px, 10px)', boxShadow: '0 20px 44px rgba(5,15,50,0.5)' }}
         >
           <div className="h-[22px] -mx-5 -mt-[22px] mb-1.5" style={{ background: '#2f6b3a' }} />

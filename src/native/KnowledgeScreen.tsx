@@ -249,7 +249,7 @@ function ListPage({
             data-search-cancel
             {...KEEP_FOCUS}
             onClick={leave}
-            className="flex-none min-h-[44px] px-1 text-[16px] font-semibold text-[color:var(--np-cobalt)]"
+            className="flex-none min-h-[44px] px-1 text-[16px] font-semibold text-[color:var(--np-cobalt-ink)]"
           >
             {t('phone.cancel')}
           </button>
@@ -292,7 +292,7 @@ function ListPage({
                         <span className="text-[16px] font-semibold leading-snug">{a.title}</span>
                         {a.summary && <span className="text-[13.5px] leading-[1.4] text-[color:var(--np-muted)]">{a.summary}</span>}
                       </span>
-                      <Icon d={PATHS.chevron} size={16} stroke="#9a9ca3" width={2.4} />
+                      <Icon d={PATHS.chevron} size={16} stroke="var(--np-hint)" width={2.4} />
                     </button>
                   ))}
                 </div>
@@ -333,7 +333,7 @@ function ArticlePage({ article, list, hue }: { article: Article; list: Article[]
         <div className="flex flex-col gap-2 items-start">
           {article.group && (
             <span
-              className="np-tilt px-2.5 py-1 rounded-[3px] text-[12px] font-bold uppercase tracking-[0.06em]"
+              data-paper data-dim className="np-tilt px-2.5 py-1 rounded-[3px] text-[12px] font-bold uppercase tracking-[0.06em]"
               style={{ background: hue.bg, color: hue.ink, transform: 'rotate(-1.5deg)' }}
             >
               {article.group}
@@ -444,7 +444,7 @@ function TurnButton({ label, title, onClick, right = false }: { label: string; t
       className={`rounded-2xl px-3.5 py-3 flex flex-col gap-0.5 min-w-0 ${right ? 'text-right items-end' : 'text-left items-start'}`}
       style={{ background: 'var(--np-slip)', border: '1px solid var(--np-line)' }}
     >
-      <span className="text-[13px] font-semibold text-[color:var(--np-cobalt)]">{label}</span>
+      <span className="text-[13px] font-semibold text-[color:var(--np-cobalt-ink)]">{label}</span>
       <span className="text-[14px] font-semibold leading-snug max-w-full">{title}</span>
     </button>
   )

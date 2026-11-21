@@ -44,6 +44,16 @@ check('Android 140, landing page → dark glyphs', statusBarStyleFor(false, 'and
 check('Android 124, document open → dark glyphs (white strip)', statusBarStyleFor(true, 'android', android(124)), 'LIGHT')
 check('Android 124, landing page → dark glyphs', statusBarStyleFor(false, 'android', android(124)), 'LIGHT')
 
+// ── Dark theme (2026-11-21) ──────────────────────────────────────────────────
+// Where the page is under the bar, the caller passes darkChrome = true for
+// every screen in Dark (the chrome is dark everywhere then). Where it is not,
+// the strip is the window background, and only a REPAINTED strip is dark.
+check('Android 124, Dark, strip repainted → light glyphs', statusBarStyleFor(false, 'android', android(124), true), 'DARK')
+check('Android 124, Dark, repaint failed → dark glyphs (light strip)', statusBarStyleFor(true, 'android', android(124), false), 'LIGHT')
+check('Android 140, Dark chrome → light glyphs whatever the strip', statusBarStyleFor(true, 'android', android(140), false), 'DARK')
+check('iOS, Dark chrome → light glyphs', statusBarStyleFor(true, 'ios', iphone, false), 'DARK')
+check('iOS ignores the strip: light chrome → dark glyphs', statusBarStyleFor(false, 'ios', iphone, true), 'LIGHT')
+
 if (failed) {
   console.error(`\n${failed} check(s) failed`)
   process.exit(1)

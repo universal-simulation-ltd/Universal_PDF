@@ -171,7 +171,7 @@ export default function ShareScreen() {
         <div className="flex gap-[18px] items-center">
           <div aria-hidden="true" className="flex-none relative w-[104px] h-[136px]">
             <div className="np-tilt absolute inset-0 rounded-sm" style={{ background: '#f6f2e8', transform: 'rotate(5deg) translate(6px, 2px)', boxShadow: '0 6px 14px rgba(60,45,20,0.18)' }} />
-            <div className="np-tilt absolute inset-0 bg-white rounded-sm px-2.5 pb-2.5 box-border flex flex-col gap-1.5 overflow-hidden" style={{ transform: 'rotate(-3deg)', boxShadow: '0 10px 22px rgba(60,45,20,0.24)' }}>
+            <div data-paper className="np-tilt absolute inset-0 bg-white rounded-sm px-2.5 pb-2.5 box-border flex flex-col gap-1.5 overflow-hidden" style={{ transform: 'rotate(-3deg)', boxShadow: '0 10px 22px rgba(60,45,20,0.24)' }}>
               <div className="h-3.5 -mx-2.5 mb-1" style={{ background: '#2f6b3a' }} />
               <div className="h-1 w-[80%] rounded-sm" style={{ background: '#d5d9e2' }} />
               <div className="h-1 w-[65%] rounded-sm" style={{ background: '#d5d9e2' }} />
@@ -244,7 +244,7 @@ export default function ShareScreen() {
               <input type="checkbox" role="switch" className="np-switch" checked={ink} onChange={(e) => setInk(e.target.checked)} />
             </label>
           )}
-          <label className="flex items-center gap-3 min-h-[54px] px-4" style={{ borderTop: hasForm ? '1.5px dashed #d6d0c3' : 0 }}>
+          <label className="flex items-center gap-3 min-h-[54px] px-4" style={{ borderTop: hasForm ? '1.5px dashed var(--np-dash)' : 0 }}>
             <span className="flex-1 text-[16px]">{t('phone.needs_password')}</span>
             <input type="checkbox" role="switch" className="np-switch" checked={lock} onChange={(e) => setLock(e.target.checked)} />
           </label>
@@ -293,7 +293,7 @@ export default function ShareScreen() {
 
         <SigningRecordNote className="m-0 bg-white rounded-[3px] px-4 py-3 text-[14px] text-[color:var(--np-ink-2)] shadow-[0_8px_18px_rgba(60,45,20,0.18)]" />
 
-        {error && <p className="m-0 text-[14px] text-[#b42318]">{t('phone.failed', { message: error })}</p>}
+        {error && <p className="m-0 text-[14px] text-[color:var(--np-red)]">{t('phone.failed', { message: error })}</p>}
         {lock && password.length > 0 && !passwordOk && (
           <p className="m-0 text-[14px] text-[color:var(--np-orange-ink)]">{t('phone.password_short')}</p>
         )}
@@ -343,7 +343,7 @@ function SizeSlip({
     <label
       className="np-tilt rounded-[3px] p-3.5 flex flex-col gap-3 relative cursor-pointer"
       style={{
-        background: checked ? '#ffffff' : 'var(--np-slip)',
+        background: checked ? 'var(--np-white)' : 'var(--np-slip)',
         transform: `rotate(${tilt})`,
         boxShadow: checked ? '0 8px 18px rgba(60,45,20,0.2)' : '0 4px 10px rgba(60,45,20,0.14)',
       }}
@@ -354,19 +354,19 @@ function SizeSlip({
         checked={checked}
         onChange={onPick}
         className="absolute top-3 right-3 w-5 h-5"
-        style={{ accentColor: 'var(--np-cobalt)' }}
+        style={{ accentColor: 'var(--np-cobalt-ink)' }}
       />
       <span aria-hidden="true" className="relative h-[54px]">
         {art === 'stack' ? (
           <>
-            <span className="absolute left-1 top-0 w-[38px] h-[50px]" style={{ background: '#f6f2e8', boxShadow: '0 2px 5px rgba(23,30,50,0.2)', transform: 'rotate(-6deg)' }} />
-            <span className="absolute left-3 top-0.5 w-[38px] h-[50px]" style={{ background: '#f6f2e8', boxShadow: '0 2px 5px rgba(23,30,50,0.2)', transform: 'rotate(3deg)' }} />
-            <span className="absolute left-5 top-1 w-[38px] h-[50px] bg-white" style={{ boxShadow: '0 2px 5px rgba(23,30,50,0.2)' }} />
+            <span data-paper className="absolute left-1 top-0 w-[38px] h-[50px]" style={{ background: '#f6f2e8', boxShadow: '0 2px 5px rgba(23,30,50,0.2)', transform: 'rotate(-6deg)' }} />
+            <span data-paper className="absolute left-3 top-0.5 w-[38px] h-[50px]" style={{ background: '#f6f2e8', boxShadow: '0 2px 5px rgba(23,30,50,0.2)', transform: 'rotate(3deg)' }} />
+            <span data-paper className="absolute left-5 top-1 w-[38px] h-[50px] bg-white" style={{ boxShadow: '0 2px 5px rgba(23,30,50,0.2)' }} />
           </>
         ) : art === 'sheet' ? (
-          <span className="absolute left-2.5 top-3.5 w-7 h-9 bg-white" style={{ boxShadow: '0 2px 5px rgba(23,30,50,0.2)', transform: 'rotate(-3deg)' }} />
+          <span data-paper className="absolute left-2.5 top-3.5 w-7 h-9 bg-white" style={{ boxShadow: '0 2px 5px rgba(23,30,50,0.2)', transform: 'rotate(-3deg)' }} />
         ) : (
-          <span className="absolute left-2.5 top-3.5 w-7 h-9 bg-white p-[3px]" style={{ boxShadow: '0 2px 5px rgba(23,30,50,0.2)', transform: 'rotate(2deg)' }}>
+          <span data-paper className="absolute left-2.5 top-3.5 w-7 h-9 bg-white p-[3px]" style={{ boxShadow: '0 2px 5px rgba(23,30,50,0.2)', transform: 'rotate(2deg)' }}>
             <span className="block w-full h-full" style={{ background: 'linear-gradient(160deg, #9fb7e6 0%, #d5d9e2 100%)' }} />
           </span>
         )}
