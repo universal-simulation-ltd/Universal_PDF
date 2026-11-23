@@ -469,6 +469,20 @@ it is equally a point of no return for redactions. Any future surface that
 launches the dialog inherits the gate for free, which is the point of it living
 on the action rather than the launcher.
 
+### Two-step owed: nothing personal is read before the code (2026-11-23)
+
+Since platform 0345/0346 a session whose account has an authenticator app but
+has not entered its code (aal1) is refused the personal `pdf_sign_*` rows and
+its own `signatures`, and a refused read is **empty, not an error**. Two
+readers treated that empty answer as a fact: the Send-to-sign list, and
+`MainSignatureSync`, which took "no row" as "deleted" and removed the account's
+signature from the library. Both now wait for the SDK's `useTwoStepDue` to say
+`'clear'` and read straight after the code, without a reload: the list inside
+the SDK's `useSignRequests()` (0.242.0), the sync in
+`src/components/Signature/MainSignatureSync.tsx` (`0249f7d`, which returns
+early while the answer is `'checking'` or `'due'`: unknown is not none). Any
+new read of a person's own signing data needs the same wait.
+
 ### Signing offline (2026-10-04)
 
 The recipient side works with no connection, in the installed web app
