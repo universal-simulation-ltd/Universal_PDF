@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useUniversal } from '@unisim/sdk'
+import { useTwoStepDue, useUniversal } from '@unisim/sdk'
 import { useSignatureStore } from '../../stores/signatureStore'
 import { useT } from '../../i18n'
 
@@ -17,11 +17,17 @@ import { useT } from '../../i18n'
 // and it removes the entry an older signed-in version of the app put in the
 // library, so a signature from an account the app no longer knows about is
 // not left on offer.
+//
+// Not read while the session still owes its two-step code (SDK
+// `useTwoStepDue`): since platform 0346 the account's own `signatures` rows are
+// refused to it, and a refused read is EMPTY — which would take the signature
+// out of the library as if it had been deleted. It reads once the code is in.
 export default function MainSignatureSync() {
   const t = useT()
   const { supabase, session, loading, noAccounts } = useUniversal()
   const sync = useSignatureStore((s) => s.syncUniversalIdSignature)
   const userId = session?.user && session.user.is_anonymous !== true ? session.user.id : null
+  const twoStep = useTwoStepDue(supabase, noAccounts ? null : userId)
   const name = t('sign.main_signature_name')
   const [tick, setTick] = useState(0)
 
@@ -35,6 +41,7 @@ export default function MainSignatureSync() {
     if (noAccounts) { sync(null); return }
     if (loading) return
     if (!userId) { sync(null); return }
+    if (twoStep !== 'clear') return // unknown ≠ none, as below
     // The offline mock client has no real tables to read.
     if (typeof (supabase as { from?: unknown }).from !== 'function') return
     let cancelled = false
@@ -56,7 +63,7 @@ export default function MainSignatureSync() {
         img.src = row.image_data
       })
     return () => { cancelled = true }
-  }, [supabase, userId, loading, noAccounts, name, sync, tick])
+  }, [supabase, userId, loading, noAccounts, twoStep, name, sync, tick])
 
   return null
 }
