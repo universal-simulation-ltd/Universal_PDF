@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useHostedUploads, useOrg, useOrgBranding, useUniversal, useUser } from '@unisim/sdk'
+import { useHostedUploads, useOrg, useOrgBranding, useUniversal, useUser, useTwoStepVerifiedTick } from '@unisim/sdk'
 import { usePdfStore } from '../../stores/pdfStore'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import {
@@ -183,6 +183,9 @@ export default function QrDialog() {
 
   // Resolve the account saves (sidecar design or stored PNG per upload) while
   // the dialog is up. `cancelled` guards the async gap across a close/reopen.
+  // Re-read once a two-step code is accepted: platform 0347 hides a company's
+  // rows from a session that owes one, and a refused read is just empty.
+  const twoStepTick = useTwoStepVerifiedTick()
   useEffect(() => {
     if (!open || !signedIn || qrUploads.length === 0) {
       setHosted([])
@@ -195,7 +198,7 @@ export default function QrDialog() {
     return () => {
       cancelled = true
     }
-  }, [open, signedIn, supabase, qrUploads])
+  }, [open, signedIn, supabase, qrUploads, twoStepTick])
 
   // The dynamic codes, on their own effect: they hang off no upload ledger, so
   // an account with zero hosted saves can still have codes to list here.
@@ -211,7 +214,7 @@ export default function QrDialog() {
     return () => {
       cancelled = true
     }
-  }, [open, signedIn, supabase])
+  }, [open, signedIn, supabase, twoStepTick])
 
   // Until the user edits the branding themselves it simply TRACKS the company's
   // — which also covers the mark arriving a moment after the dialog opened,
