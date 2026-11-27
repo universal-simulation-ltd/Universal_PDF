@@ -135,6 +135,9 @@ const app: Messages['app'] = {
   'landing_drop_to_compress': 'Rilascia per comprimere',
   'landing_compress': 'Comprimi PDF: riduci uno o più file',
   'landing_more_tools': 'Altri strumenti',
+  'landing_jobs_title': 'Parti dal lavoro da fare', // heading over the row of job cards on the landing page (the phone app's carousel, on the web)
+  'landing_jobs_next': 'Altre attività', // arrow button at the end of that row
+  'landing_jobs_prev': 'Attività precedenti',
   'landing_hide_advanced': 'Nascondi altri strumenti',
   'landing_show_advanced': 'Mostra altri strumenti',
   'landing_advanced_title': 'Altri strumenti: comprimi, unisci, converti, OCR, oscura, Markdown',

@@ -12,8 +12,8 @@ import { currentFile, openJob } from './jobs'
 import { DocThumb } from './DeskScreen'
 
 // Board 6 · ⋯ What else: a sheet over the document in place of the website's
-// Actions menu. Four big jobs on coloured paper, as the Desk's carousel has
-// them, then the rest on a paper slip (round 4, James: "go ahead"). Every row
+// Actions menu. Two big jobs on coloured paper (four until 2026-11-27, see
+// `big` below), then the rest on a paper slip (round 4, James: "go ahead"). Every row
 // opens a page of the phone's own — none of the website's dialogs is left.
 
 const BIG_TILTS = ['-1.4deg', '1.1deg', '0.8deg', '-1deg']
@@ -59,24 +59,22 @@ export default function MoreSheet() {
     if (file && bytes) run(file, bytes.slice(0))
   }
 
-  function arm(tool: 'sigfield' | 'redact', colour?: string) {
+  function arm(tool: 'sigfield') {
     const a = useAnnotationStore.getState()
     a.setSelected(null)
-    if (colour) a.setColor(colour)
     a.setTool(tool)
   }
 
+  // Two cards, not four (James, 2026-11-27: shrink it to what makes sense once
+  // a document is open, now the Desk has every job). What went is what the bar
+  // under the document already does: Make it smaller and Lock it are both on
+  // the Share page (its sizes, "Needs a password"), and Black out is in Mark
+  // up's tools. What stays is what the bar has no door to.
   const big = [
     {
-      label: t('phone.more_smaller'), note: t('phone.more_smaller_note'), tint: '#dfe7fb', ink: '#173a94', icon: PATHS.compress,
-      run: () => nav.push('smaller'),
-    },
-    {
-      label: t('phone.more_lock'), note: t('phone.more_lock_note'), tint: '#fde3cf', ink: '#b4480a', icon: PATHS.lock,
-      run: () => {
-        nav.setSharePassword(true)
-        nav.push('share')
-      },
+      // Pages lives here, not in the bar (James, 2026-10-18).
+      label: t('phone.job_pages'), note: t('phone.job_pages_note'), tint: '#dfe7fb', ink: '#173a94', icon: PATHS.pages,
+      run: () => nav.push('pages'),
     },
     {
       label: t('phone.more_send_sign'), note: t('phone.more_send_sign_note'), tint: '#dcefd9', ink: '#2f6b3a', icon: PATHS.mail,
@@ -87,19 +85,9 @@ export default function MoreSheet() {
         nav.openSheet('send-sign')
       },
     },
-    {
-      label: t('phone.more_blackout'), note: t('phone.more_blackout_note'), tint: '#fde68a', ink: '#6b4f00', icon: PATHS.blackout,
-      run: () => {
-        arm('redact', '#000000')
-        nav.openSheet('markup')
-      },
-    },
   ]
 
   const rows = [
-    // Pages lives here, not in the bar (James, 2026-10-18: "fill mark up sign
-    // share and pages in …").
-    { label: t('phone.job_pages'), icon: PATHS.pages, run: () => nav.push('pages') },
     { label: t('phone.more_ocr'), icon: PATHS.search, run: () => withFile((f, b) => openJob({ kind: 'ocr', bytes: b, name: f.name })) },
     { label: t('phone.more_compare'), icon: PATHS.compare, run: () => withFile((f, b) => openJob({ kind: 'compare', bytes: b, name: f.name })) },
     { label: t('phone.more_merge'), icon: PATHS.merge, run: () => openJob({ kind: 'merge', initialFile: currentFile() }) },

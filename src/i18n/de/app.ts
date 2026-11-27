@@ -135,6 +135,9 @@ const app: Messages['app'] = {
   'landing_drop_to_compress': 'Zum Komprimieren loslassen',
   'landing_compress': 'PDF(s) komprimieren – eine oder mehrere verkleinern',
   'landing_more_tools': 'Weitere Tools',
+  'landing_jobs_title': 'Mit der Aufgabe starten', // heading over the row of job cards on the landing page (the phone app's carousel, on the web)
+  'landing_jobs_next': 'Weitere Aufgaben', // arrow button at the end of that row
+  'landing_jobs_prev': 'Vorherige Aufgaben',
   'landing_hide_advanced': 'Weitere Tools ausblenden',
   'landing_show_advanced': 'Weitere Tools anzeigen',
   'landing_advanced_title': 'Weitere Tools – komprimieren, zusammenfügen, umwandeln, OCR, schwärzen, Markdown',

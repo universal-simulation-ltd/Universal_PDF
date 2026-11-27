@@ -75,7 +75,7 @@ page.on('pageerror', (e) => errors.push(e.message))
 await page.goto(BASE)
 await page.waitForSelector('text=Try with example PDF')
 
-check('"Try with example PDF" is there', await page.locator('button:has-text("Try with example PDF")').isVisible())
+check('"Try with example PDF" is there', await page.locator('button:has-text("Try with example PDF")').first().isVisible())
 check('"More tools" is there', await page.locator('button[aria-controls="pdf-advanced-options"]').isVisible())
 check('no Compress button until More tools is opened',
   (await page.locator('button:has-text("Compress PDF(s)")').count()) === 0)

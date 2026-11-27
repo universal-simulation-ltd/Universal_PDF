@@ -136,6 +136,9 @@ export default {
   'landing_drop_to_compress': 'Drop to compress',
   'landing_compress': 'Compress PDF(s) — make one or several smaller', // first item under More tools; picking several files compresses them as a batch
   'landing_more_tools': 'More tools', // visible label beside the chevron that opens the extra tools on the landing page; keep it short, it shares a phone-width row with Try with example PDF
+  'landing_jobs_title': 'Start with the job', // heading over the row of job cards on the landing page (the phone app's carousel, on the web)
+  'landing_jobs_next': 'More jobs', // arrow button at the end of that row
+  'landing_jobs_prev': 'Earlier jobs',
   'landing_hide_advanced': 'Hide more tools',
   'landing_show_advanced': 'Show more tools',
   'landing_advanced_title': 'More tools — compress, merge, convert, OCR, redact, Markdown',

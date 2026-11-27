@@ -46,8 +46,8 @@ const KB_LIBRARY = 'https://opensource.unisim.co.uk/kb'
  * the phone app's only pointer to a UNI·SIM site is the credit on Tune
  * (store-listings README §7, "nothing that says one of many"). The guides are
  * in the app and read offline, and every source keeps the link to its own
- * publisher. The website's knowledge base still offers both. One switch, so
- * they can come back if James wants them.
+ * publisher. The website's knowledge base still offers both. Decided: they
+ * stay off on the phone (James, 2026-11-27).
  */
 const HOSTED_COPIES = false
 

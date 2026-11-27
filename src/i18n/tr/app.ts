@@ -135,6 +135,9 @@ const app: Messages['app'] = {
   'landing_drop_to_compress': 'Sıkıştırmak için bırakın',
   'landing_compress': 'PDF sıkıştır — bir veya birkaç dosyayı küçültün',
   'landing_more_tools': 'Diğer araçlar',
+  'landing_jobs_title': 'İşten başlayın', // heading over the row of job cards on the landing page (the phone app's carousel, on the web)
+  'landing_jobs_next': 'Diğer işler', // arrow button at the end of that row
+  'landing_jobs_prev': 'Önceki işler',
   'landing_hide_advanced': 'Diğer araçları gizle',
   'landing_show_advanced': 'Diğer araçları göster',
   'landing_advanced_title': 'Diğer araçlar — sıkıştır, birleştir, dönüştür, OCR, karart, Markdown',

@@ -23,6 +23,9 @@ import { usePreviewPane } from '../../hooks/usePreviewPane'
 import { useCoarsePointer } from '../../hooks/useCoarsePointer'
 import { CONTAINER } from '../../lib/layout'
 import FreeListPopover from './FreeListPopover'
+import JobRow, { type JobCard } from './JobRow'
+import { PATHS as JOB_ICON } from '../../native/icons'
+import { useShortcutStore } from '../../stores/shortcutStore'
 import { useT } from '../../i18n'
 
 // ⚠️ Every tool below carries pdf-lib, and the landing page is the first thing
@@ -290,6 +293,84 @@ export default function LandingPage() {
     }
   }
 
+  // ── The row of jobs under the hero (JobRow.tsx): the phone app's carousel,
+  // on the web. A job that works on one PDF picks it, opens it, and then puts
+  // the tool for that job in the hand — the same doors as "Redact text" above,
+  // one per job. The jobs that make a new PDF (merge, photos, scan) or have a
+  // dialog of their own here (compress, OCR) go straight to it.
+  const [jobBusy, setJobBusy] = useState<string | null>(null)
+
+  /** The system file picker for one PDF, straight from the click that asked. */
+  function pickPdf(): Promise<File | null> {
+    return new Promise((resolve) => {
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.accept = PDF_OR_OFFICE_ACCEPT
+      input.style.display = 'none'
+      const done = (file: File | null) => {
+        resolve(file)
+        input.remove()
+      }
+      input.addEventListener('change', () => done(input.files?.[0] ?? null))
+      input.addEventListener('cancel', () => done(null))
+      document.body.appendChild(input)
+      input.click()
+    })
+  }
+
+  /** Pick a PDF, open it, then `then()` once it is on screen. */
+  async function openThen(id: string, then: () => void) {
+    if (jobBusy) return
+    const file = await pickPdf()
+    if (!file) return
+    setJobBusy(id)
+    try {
+      if (await openFiles([file])) then()
+    } finally {
+      setJobBusy(null)
+    }
+  }
+  const arm = (tool: Parameters<ReturnType<typeof useAnnotationStore.getState>['setTool']>[0], colour?: string) => {
+    const a = useAnnotationStore.getState()
+    a.setSelected(null)
+    if (colour) a.setColor(colour)
+    a.setTool(tool)
+  }
+  const pdf = () => usePdfStore.getState()
+  const job = (id: string, key: string, icon: string, run: () => void): JobCard => ({
+    id,
+    label: t(`phone.${key}` as never),
+    note: t(`phone.${key}_note` as never),
+    icon,
+    run,
+  })
+  const jobCards: JobCard[] = [
+    {
+      id: 'open',
+      label: t('menu.open_pdf'),
+      note: '.pdf, .docx, .odt',
+      icon: JOB_ICON.folder,
+      primary: true,
+      run: () => void openThen('open', () => {}),
+    },
+    // The phone's own scanner where there is one; a photo of the page otherwise.
+    job('scan', 'scan', JOB_ICON.scan, () => (canScan ? void scanDocument() : setScanJob({ source: 'photo' }))),
+    { ...job('example', 'example', JOB_ICON.example, () => void openExample()), busyLabel: t('app.landing_opening_example') },
+    job('compress', 'job_compress', JOB_ICON.compress, () => compressInputRef.current?.click()),
+    job('sign', 'job_sign', JOB_ICON.sign, () => void openThen('sign', () => useShortcutStore.getState().ask('sign'))),
+    job('send-sign', 'job_send_sign', JOB_ICON.send, () => void openThen('send-sign', () => pdf().setSendForSignatureOpen(true))),
+    job('fill', 'job_fill', JOB_ICON.fill, () => void openThen('fill', () => arm('form'))),
+    job('merge', 'job_merge', JOB_ICON.merge, () => setMergeOpen(true)),
+    job('blackout', 'job_blackout', JOB_ICON.blackout, () => redactInputRef.current?.click()),
+    job('pages', 'job_pages', JOB_ICON.pages, () => void openThen('pages', () => pdf().setPageNavOpen(true))),
+    job('photos', 'job_photos', JOB_ICON.photos, () => setConvertMode('images-to-pdf')),
+    // Locking is part of Save here: the Export box has the password fields.
+    job('lock', 'job_lock', JOB_ICON.lock, () => void openThen('lock', () => useShortcutStore.getState().ask('export'))),
+    job('ocr', 'job_ocr', JOB_ICON.search, () => ocrInputRef.current?.click()),
+    job('compare', 'job_compare', JOB_ICON.compare, () => void openThen('compare', () => pdf().setCompareOpen(true))),
+    job('markup', 'job_markup', JOB_ICON.markup, () => void openThen('markup', () => arm('highlight'))),
+  ]
+
   // Universal Images' front door is a stack of full-width centred pills with an
   // "or" between them, and this box now speaks the same language. The old rows
   // here were chunky cards — 48px icon tile, title, subtitle, trailing arrow —
@@ -537,6 +618,10 @@ export default function LandingPage() {
                 hidden
                 onChange={onCompressFile}
               />
+              {/* Out here, not inside "More tools": the row of jobs under the
+                  hero opens these pickers too, whether that fold is open or not. */}
+              <input ref={ocrInputRef} type="file" accept="application/pdf" hidden onChange={onOcrFile} />
+              <input ref={redactInputRef} type="file" accept="application/pdf" hidden onChange={onRedactFile} />
 
               {advancedOpen && (
               <div id="pdf-advanced-options">
@@ -636,13 +721,6 @@ export default function LandingPage() {
                   <span aria-hidden="true">🔎</span>
                   {t('app.landing_ocr')}
                 </button>
-                <input
-                  ref={ocrInputRef}
-                  type="file"
-                  accept="application/pdf"
-                  hidden
-                  onChange={onOcrFile}
-                />
 
                 {/* Photo to PDF — the browser's road to a scan: pick a photo of
                     a page, line up its corners, and it is straightened into a
@@ -669,13 +747,6 @@ export default function LandingPage() {
                   <RedactIcon size={16} className="shrink-0" />
                   {t('app.landing_redact')}
                 </button>
-                <input
-                  ref={redactInputRef}
-                  type="file"
-                  accept="application/pdf"
-                  hidden
-                  onChange={onRedactFile}
-                />
 
                 <button
                   type="button"
@@ -775,6 +846,8 @@ export default function LandingPage() {
             column above the headline. Under the whole hero, never above it —
             the browser is the product, and nothing here should imply this
             page is the lesser version. */}
+        <JobRow cards={jobCards} busy={jobBusy ?? (opening ? 'example' : scanning ? 'scan' : compressing ? 'compress' : null)} />
+
         <DownloadRow />
       </div>
 

@@ -164,7 +164,8 @@ for (const [row, screen] of [
   ['Turn the pages into pictures', 'photos'],
 ]) {
   await openMore()
-  await page.getByRole('button', { name: row, exact: true }).click()
+  // Pages is a card since 2026-11-27 (its name carries its note); the rest are rows.
+  await page.getByRole('button', row === 'Pages' ? { name: /^Pages/ } : { name: row, exact: true }).click()
   await page.waitForTimeout(500)
   check(`${row} → the ${screen} page`, (await top()) === screen, json(await screens()))
   check(`${row}: no website dialog`, (await websiteDialogs()) === 0)
