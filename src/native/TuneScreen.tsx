@@ -5,6 +5,7 @@ import { useToolPrefs } from '../stores/toolPrefsStore'
 import { clearDismissedPrompts } from '../lib/resetDefaults'
 import { PAGE_SCROLL_ID, PAGE_SCROLLS, pageScrollDefault, type PageScroll } from '../lib/pageScroll'
 import { ABOUT_APP } from '../lib/aboutApp'
+import { openExternalUrl } from '../lib/externalLinks'
 import { disableSignatureLock, enableSignatureLock } from '../lib/signatureLock'
 import { useVaultStore, vaultAvailability, type Biometry } from '../lib/signatureVault'
 import { Icon, PATHS } from './icons'
@@ -150,7 +151,7 @@ export default function TuneScreen() {
             </select>
           </label>
           <LinkRow label={t('phone.howto')} onClick={() => useNav.getState().push('kb')} />
-          <LinkRow label={t('phone.privacy')} onClick={() => window.open(PRIVACY_URL, '_blank', 'noopener')} />
+          <LinkRow label={t('phone.privacy')} onClick={() => openExternalUrl(PRIVACY_URL)} />
           <LinkRow label={t('phone.about')} onClick={() => useNav.getState().push('about')} />
         </Slip>
 

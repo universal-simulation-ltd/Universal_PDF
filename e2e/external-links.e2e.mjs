@@ -141,6 +141,23 @@ async function run(native) {
     await page.waitForTimeout(400)
     await page.getByRole('button', { name: 'About', exact: true }).click()
     await page.waitForTimeout(700)
+    // ⚠️ Since 2026-11-27 the phone's About is a PAGE (src/native/AboutScreen),
+    // not the SDK's dialog: its rows are buttons that call `openExternalUrl`,
+    // which takes the in-app browser inside a native shell and never leaves a
+    // navigation for the platform to hand to Safari. So this half asks: did
+    // the row reach our opener, did no anchor navigation happen, and does the
+    // page still go back afterwards.
+    const anchors = await page.locator('.np-page-enter a[href]').count()
+    await page.locator('.np-page-enter').getByRole('button', { name: 'All the licences', exact: true }).click()
+    await page.waitForTimeout(1200)
+    const routed = await page.evaluate(() => window.__opened ?? [])
+    const stillThere = (await page.locator('.np-page-enter').getByRole('button', { name: 'All the licences', exact: true }).count()) === 1
+    await page.locator('.np-page-enter').getByRole('button', { name: 'Tune', exact: true }).click()
+    await page.waitForTimeout(500)
+    const closable = (await page.locator('.np-page-enter').count()) === 0
+    for (const p of context.pages()) if (p !== page) await p.close()
+    await context.close()
+    return { native: true, anchors, routed, stillThere, closable }
   } else {
     await page.setInputFiles('input[type=file]', { name: 'links.pdf', mimeType: 'application/pdf', buffer: pdf })
     await page.waitForSelector('[data-page-index="0"] canvas', { timeout: 30000 })
@@ -211,21 +228,16 @@ async function run(native) {
   return result
 }
 
-console.log('\ninside a native shell the click never reaches the platform')
+console.log('\ninside a native shell the tap never reaches the platform')
 const nat = await run(true)
-check('the full-credits link is the one under test', /THIRD-PARTY-NOTICES/.test(nat.href ?? ''), nat.href ?? '(no href)')
+check('the About page has no bare link for the platform to take', nat.anchors === 0, `${nat.anchors} anchor(s)`)
 check(
-  'the click is cancelled — the platform never gets to hand the app away',
-  nat.prevented === true,
-  `defaultPrevented was ${nat.prevented}`,
-)
-check(
-  'and the app opens it itself instead',
+  'the full-credits row reaches the app’s own opener',
   nat.routed.some((u) => /THIRD-PARTY-NOTICES/.test(u)),
   JSON.stringify(nat.routed),
 )
-check('the dialog is untouched by all this', nat.dialogStillOpen)
-check('and still closes', nat.closable)
+check('the page is untouched by all this', nat.stillThere)
+check('and still goes back', nat.closable)
 
 console.log('\nin a browser nothing changes')
 const web = await run(false)

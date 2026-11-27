@@ -1,5 +1,6 @@
 import { useT } from '../i18n'
 import { ABOUT_APP } from '../lib/aboutApp'
+import { openExternalUrl } from '../lib/externalLinks'
 import { goBack } from './nav'
 import { JobPage, LinkRow, ROW_RULE, Slip } from './parts'
 
@@ -12,14 +13,15 @@ import { JobPage, LinkRow, ROW_RULE, Slip } from './parts'
 // open-source projects it stands on. The credit stays on Tune's slip, the one
 // pointer outward.
 //
-// Every link here opens in the system browser and goes to this app's own
-// repository, never to a suite page.
+// Every link here goes to this app's own repository, never to a suite page.
 
 const REPO = ABOUT_APP.repo ?? 'https://github.com/universal-simulation-ltd/Universal_PDF'
 const PRIVACY = ABOUT_APP.proof ?? `${REPO}/blob/main/PRIVACY.md`
 const NOTICES = ABOUT_APP.noticesHref ?? `${REPO}/blob/main/THIRD-PARTY-NOTICES.md`
 
-const open = (url: string) => window.open(url, '_blank', 'noopener')
+// The in-app browser on a phone (lib/externalLinks): the app is never sent to
+// the background, which is what once left a screen that could not be closed.
+const open = openExternalUrl
 
 export default function AboutScreen() {
   const t = useT()

@@ -36,11 +36,6 @@ const OUT = process.env.E2E_RESULTS ?? join(tmpdir(), 'universal-pdf-e2e')
 // Specs this runner never starts, each with the reason. Remove a line once the
 // reason is gone — that is the whole fix-up list for e2e in CI.
 export const SKIP = {
-  // Its phone half opens About through Tune and expects the SDK's dialog; since
-  // 2026-11-27 the phone's About is a page (src/native/AboutScreen.tsx) whose
-  // rows go through window.open. Rewrite that half for the page (backlog, PDF
-  // App); the website half is unchanged.
-  'external-links': 'phone half expects the About dialog; the phone has an About page since 2026-11-27 (backlog, PDF App)',
   // Electron, not a browser: they drive the desktop app through
   // `playwright._electron` and need `npm run build:desktop` plus a display.
   // They load the dev server (ELECTRON_START_URL), so in practice the desktop
