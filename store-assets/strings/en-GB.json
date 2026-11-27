@@ -1,37 +1,71 @@
 {
-  "01-hero": {
-    "headline": ["PDFs that", "*just work.*"],
-    "sub": {
-      "phone": "Fill in, sign and mark up PDFs,\nright on your phone.",
-      "ipad": "Fill in, sign and mark up PDFs,\nright on your iPad."
-    }
+  "01-no-account": {
+    "headline": [
+      "No account.",
+      "*Nothing uploaded.*"
+    ],
+    "note": "a PDF app that stays\non your phone",
+    "stamp": "Free"
   },
-  "02-hero": {
-    "headline": ["All the tools,", "built in"],
-    "badges": ["Fill in forms", "Sign", "Redact", "Compress & merge"],
-    "sub": "Built by James Markey MBE\nand the UNI·SIM team"
+  "02-fill-in": {
+    "headline": [
+      "Fill it in",
+      "*on the page*"
+    ],
+    "note": "type straight into the boxes,\nno printer needed",
+    "stamp": "No printer"
   },
-  "03-fill-in": {
-    "headline": ["Type straight", "into the form"],
-    "caption": "The PDF's own form fields, filled in on the page",
-    "chips": ["Form fields", "Text anywhere", "Pictures", "QR codes"]
+  "03-sign": {
+    "headline": [
+      "Sign with",
+      "*your finger*"
+    ],
+    "note": "draw it once,\nkeep it for next time",
+    "stamp": "No account"
   },
-  "04-sign": {
-    "headline": ["Sign with", "your finger"],
-    "caption": "Draw it once, then put it on the line",
-    "chips": ["Draw", "Import", "Name & date", "Stamp"]
+  "04-signed": {
+    "headline": [
+      "Signed and",
+      "*ready to send*"
+    ],
+    "note": "no printer, no scanner,\nno pen"
   },
-  "05-mark-up": {
-    "headline": ["Mark it up"],
-    "caption": "Highlights and notes, saved into the PDF",
-    "chips": ["Highlighter", "Text", "Free drawing", "Ticks & crosses", "Lines, boxes & circles", "Redact"]
+  "05-black-out": {
+    "headline": [
+      "Black it out",
+      "*for good*"
+    ],
+    "note": "removed from the file,\nnot just covered up",
+    "stamp": "Redacted"
   },
-  "06-private": {
-    "headline": ["Your files", "stay yours"],
-    "caption": "Nothing is uploaded unless you choose to",
-    "chips": ["No ads", "No tracking", "No account needed", "Open source"]
+  "06-scan": {
+    "headline": [
+      "Scan",
+      "*the paper*"
+    ],
+    "note": "letters, forms and receipts\nbecome a PDF",
+    "stamp": "On your phone"
+  },
+  "07-send": {
+    "headline": [
+      "Send it",
+      "*your way*"
+    ],
+    "note": "smaller for email,\nor locked with a password",
+    "stamp": "Nothing\nuploaded"
+  },
+  "08-free": {
+    "headline": [
+      "Free and",
+      "*open source*"
+    ],
+    "note": "made by James Markey MBE\n& the UNI·SIM team",
+    "stamp": "No adverts"
   },
   "feature-graphic": {
-    "tagline": ["Fill in, sign and mark up PDFs.", "On your phone."]
+    "tagline": [
+      "Scan, fill in and sign PDFs.",
+      "No account. Nothing uploaded."
+    ]
   }
 }

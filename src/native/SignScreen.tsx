@@ -14,7 +14,7 @@ import { useScrollHint } from '@unisim/sdk'
 import { StampPreview } from '../components/Signature/StampPicker'
 import { STAMPS, STAMP_COLORS, STAMP_H, STAMP_SUFFIX, STAMP_W, isStampName, renderStampDataUrl, type StampShape } from '../lib/stamps'
 import { Icon, PATHS } from './icons'
-import { BackLink, Hl, Segmented, SwitchRow } from './parts'
+import { BackLink, FitLabel, Hl, Segmented, SwitchRow } from './parts'
 import { useNav } from './nav'
 import { pickFiles } from './jobs'
 
@@ -584,7 +584,9 @@ function DrawPad({
       <span aria-hidden="true" className="np-hand absolute left-[22px] bottom-[50px] text-[30px] text-[color:var(--np-orange-ink)]">×</span>
       <div aria-hidden="true" className="absolute left-11 right-6 bottom-[58px]" style={{ borderBottom: '1.5px solid var(--np-ink)' }} />
       {lines.length === 0 && (
-        <span className="np-hand absolute left-11 bottom-6 text-[22px] text-[color:var(--np-muted)]">{t('phone.sign_on_line')}</span>
+        <span className="np-hand absolute left-11 right-4 bottom-6 flex text-[color:var(--np-muted)]">
+          <FitLabel size={22} min={14}>{t('phone.sign_on_line')}</FitLabel>
+        </span>
       )}
       <canvas
         ref={canvasRef}

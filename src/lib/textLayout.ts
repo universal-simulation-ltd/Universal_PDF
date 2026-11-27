@@ -96,7 +96,12 @@ export function layoutText(a: TextAnnotation): TextLine[] {
     // Whitespace that a wrap has pushed to the head of a line is dropped, the
     // way a browser drops it — otherwise every wrapped line would start indented
     // by the space that used to separate the two words.
-    if (token.space && line.length === 0) continue
+    // ⚠️ Only a line a WRAP started. Spaces typed at the very start of the text
+    // are kept by the editor (`white-space: pre-wrap`), so they are kept here:
+    // dropped, a centred note's first line sat half a space further left on the
+    // canvas than it had been typed, and jumped when the editor closed (2pt on
+    // a fitted note; sticky-note e2e in WebKit, 2026-11-27).
+    if (token.space && line.length === 0 && lines.length > 1) continue
     line.push(token.run)
     width += w
   }

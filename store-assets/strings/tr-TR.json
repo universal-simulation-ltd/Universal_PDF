@@ -1,84 +1,71 @@
 {
-  "01-hero": {
+  "01-no-account": {
     "headline": [
-      "PDF’ler",
-      "*sorunsuz çalışır.*"
+      "Hesap yok.",
+      "*Yükleme yok.*"
     ],
-    "sub": {
-      "phone": "PDF’leri doldurun, imzalayın ve\nişaretleyin, doğrudan telefonda.",
-      "ipad": "PDF’leri doldurun, imzalayın ve\nişaretleyin, doğrudan iPad’de."
-    }
+    "note": "telefonunuzda kalan\nbir PDF uygulaması",
+    "stamp": "Ücretsiz"
   },
-  "02-hero": {
+  "02-fill-in": {
     "headline": [
-      "Tüm araçlar",
-      "yerleşik"
+      "Sayfanın",
+      "*üstünde doldurun*"
     ],
-    "badges": [
-      "Form doldurma",
-      "İmzalama",
-      "Karartma",
-      "Sıkıştırma ve birleştirme"
-    ],
-    "sub": "James Markey MBE ve UNI·SIM ekibi\ntarafından geliştirildi"
+    "note": "kutulara doğrudan yazın,\nyazıcı gerekmez",
+    "stamp": "Yazıcı yok"
   },
-  "03-fill-in": {
-    "headline": [
-      "Doğrudan forma",
-      "yazın"
-    ],
-    "caption": "PDF’in kendi form alanları, sayfada doldurulur",
-    "chips": [
-      "Form alanları",
-      "Her yere metin",
-      "Resimler",
-      "QR kodlar"
-    ]
-  },
-  "04-sign": {
+  "03-sign": {
     "headline": [
       "Parmağınızla",
-      "imzalayın"
+      "*imzalayın*"
     ],
-    "caption": "Bir kez çizin, sonra çizginin üstüne yerleştirin",
-    "chips": [
-      "Çizim",
-      "İçe aktarma",
-      "Ad ve tarih",
-      "Damga"
-    ]
+    "note": "bir kez çizin,\nsonrası için saklayın",
+    "stamp": "Hesap yok"
   },
-  "05-mark-up": {
+  "04-signed": {
     "headline": [
-      "İşaretleyin"
+      "İmzalandı,",
+      "*gönderime hazır*"
     ],
-    "caption": "Vurgular ve notlar, PDF’e kaydedilir",
-    "chips": [
-      "Vurgulayıcı",
-      "Metin",
-      "Serbest çizim",
-      "Onay ve çarpı",
-      "Çizgi, kutu ve daire",
-      "Karartma"
-    ]
+    "note": "yazıcı yok, tarayıcı yok,\nkalem yok"
   },
-  "06-private": {
+  "05-black-out": {
     "headline": [
-      "Dosyalarınız",
-      "sizde kalır"
+      "Kalıcı olarak",
+      "*karartın*"
     ],
-    "caption": "Siz seçmedikçe hiçbir şey yüklenmez",
-    "chips": [
-      "Reklam yok",
-      "İzleme yok",
-      "Hesap gerekmez",
-      "Açık kaynak"
-    ]
+    "note": "dosyadan silinir,\nyalnızca örtülmez",
+    "stamp": "Karartıldı"
+  },
+  "06-scan": {
+    "headline": [
+      "Kâğıdı",
+      "*tarayın*"
+    ],
+    "note": "mektuplar, formlar ve fişler\nPDF olur",
+    "stamp": "Telefonda"
+  },
+  "07-send": {
+    "headline": [
+      "İstediğiniz gibi",
+      "*gönderin*"
+    ],
+    "note": "e-posta için küçültün\nya da şifreyle kilitleyin",
+    "stamp": "Yükleme\nyok"
+  },
+  "08-free": {
+    "headline": [
+      "Ücretsiz ve",
+      "*açık kaynak*"
+    ],
+    "note": "James Markey MBE\n& UNI·SIM ekibi yaptı",
+    "stamp": "Reklam yok"
   },
   "feature-graphic": {
     "tagline": [
-      "PDF doldurun, imzalayın, işaretleyin.",
-      "Telefonda."
+      "PDF tarayın, doldurun, imzalayın.",
+      "Hesap yok. Yükleme yok."
     ]
   }
 }

@@ -5915,7 +5915,11 @@ function TextEditor({
         // x exactly.
         // A sticky note's words sit inside its card, where noteLayout puts
         // them, at the size it gives them.
-        left: (annotation.x + (nl ? nl.inset : 0)) * scale,
+        // ⚠️ Centred, the box is centred on the card too: the slack its width
+        // is given below (half a point and a pixel) would otherwise all be on
+        // the right, and the typed words sat half of it — 0.8pt at this zoom —
+        // right of where the canvas then drew them.
+        left: (annotation.x + (nl ? nl.inset : 0)) * scale - (nl && annotation.noteCentre ? (0.5 * scale + 1) / 2 : 0),
         top: (annotation.y + (nl ? nl.top : 0)) * scale - editorLift(fs * scale, FONT_STACK[annotation.fontFamily ?? 'sans']),
         color: annotation.color,
         fontSize: (fs * scale) + 'px',

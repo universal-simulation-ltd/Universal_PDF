@@ -181,7 +181,7 @@ try {
     for (let i = 0; i < 150 && !named; i++) {
       named = await reopened
         .evaluate(async () => {
-          const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+          const { usePdfStore } = await (await import('/e2e/app-reach.ts')).appImport('/src/stores/pdfStore.ts')
           return usePdfStore.getState().fileName
         })
         // A cold dev server reloads the page once it has re-optimised its deps,
@@ -224,7 +224,7 @@ try {
       for (const page of pages()) {
         const s = await page
           .evaluate(async () => {
-            const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+            const { usePdfStore } = await (await import('/e2e/app-reach.ts')).appImport('/src/stores/pdfStore.ts')
             const s = usePdfStore.getState()
             return { name: s.fileName, notice: s.importNotice }
           })

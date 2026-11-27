@@ -127,7 +127,7 @@ async function windowShowing(name, { timeout = 30000 } = {}) {
     for (const page of app.windows().filter((w) => w.url().startsWith('http') && !w.isClosed())) {
       const open = await page
         .evaluate(async () => {
-          const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+          const { usePdfStore } = await (await import('/e2e/app-reach.ts')).appImport('/src/stores/pdfStore.ts')
           return usePdfStore.getState().fileName
         })
         .catch(() => null)
@@ -171,7 +171,7 @@ async function openFileName(win, expected, { timeout = 30000 } = {}) {
   let name = null
   while (Date.now() < deadline) {
     name = await win.evaluate(async () => {
-      const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+      const { usePdfStore } = await (await import('/e2e/app-reach.ts')).appImport('/src/stores/pdfStore.ts')
       return usePdfStore.getState().fileName
     })
     if (name === expected) return name

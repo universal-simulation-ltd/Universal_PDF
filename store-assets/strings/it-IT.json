@@ -1,84 +1,71 @@
 {
-  "01-hero": {
+  "01-no-account": {
     "headline": [
-      "PDF che",
-      "*funzionano e basta.*"
+      "Senza account.",
+      "*Nulla viene caricato.*"
     ],
-    "sub": {
-      "phone": "Compila, firma e annota i PDF,\ndirettamente sul telefono.",
-      "ipad": "Compila, firma e annota i PDF,\ndirettamente sull’iPad."
-    }
+    "note": "un’app PDF che resta\nsul tuo telefono",
+    "stamp": "Gratis"
   },
-  "02-hero": {
+  "02-fill-in": {
     "headline": [
-      "Tutti gli strumenti,",
-      "integrati"
+      "Compilalo",
+      "*sulla pagina*"
     ],
-    "badges": [
-      "Compila moduli",
+    "note": "scrivi nelle caselle,\nsenza stampante",
+    "stamp": "Senza stampante"
+  },
+  "03-sign": {
+    "headline": [
       "Firma",
-      "Oscura",
-      "Comprimi e unisci"
+      "*con il dito*"
     ],
-    "sub": "Realizzato da James Markey MBE\ne dal team UNI·SIM"
+    "note": "disegnala una volta,\ntienila per la prossima",
+    "stamp": "Senza account"
   },
-  "03-fill-in": {
+  "04-signed": {
     "headline": [
-      "Scrivi direttamente",
-      "nel modulo"
+      "Firmato e",
+      "*pronto a partire*"
     ],
-    "caption": "I campi modulo del PDF stesso, compilati sulla pagina",
-    "chips": [
-      "Campi modulo",
-      "Testo ovunque",
-      "Immagini",
-      "Codici QR"
-    ]
+    "note": "niente stampante, niente scanner,\nniente penna"
   },
-  "04-sign": {
+  "05-black-out": {
     "headline": [
-      "Firma con",
-      "il dito"
+      "Oscuralo",
+      "*per sempre*"
     ],
-    "caption": "Disegnala una volta, poi mettila sulla riga",
-    "chips": [
-      "Disegna",
-      "Importa",
-      "Nome e data",
-      "Timbro"
-    ]
+    "note": "rimosso dal file,\nnon solo coperto",
+    "stamp": "Oscurato"
   },
-  "05-mark-up": {
+  "06-scan": {
     "headline": [
-      "Annota"
+      "Scansiona",
+      "*il foglio*"
     ],
-    "caption": "Evidenziazioni e note, salvate nel PDF",
-    "chips": [
-      "Evidenziatore",
-      "Testo",
-      "Mano libera",
-      "Spunte e croci",
-      "Linee, rettangoli e cerchi",
-      "Oscura"
-    ]
+    "note": "lettere, moduli e ricevute\ndiventano un PDF",
+    "stamp": "Sul telefono"
   },
-  "06-private": {
+  "07-send": {
     "headline": [
-      "I tuoi file",
-      "restano tuoi"
+      "Invialo",
+      "*come vuoi*"
     ],
-    "caption": "Non viene caricato nulla, se non lo scegli tu",
-    "chips": [
-      "Niente pubblicità",
-      "Niente tracciamento",
-      "Nessun account richiesto",
-      "Open source"
-    ]
+    "note": "più leggero per l’email,\no protetto da password",
+    "stamp": "Nulla viene\ncaricato"
+  },
+  "08-free": {
+    "headline": [
+      "Gratuita e",
+      "*open source*"
+    ],
+    "note": "fatta da James Markey MBE\n& il team UNI·SIM",
+    "stamp": "Niente pubblicità"
   },
   "feature-graphic": {
     "tagline": [
-      "Compila, firma e annota i PDF.",
-      "Sul tuo telefono."
+      "Scansiona, compila e firma i PDF.",
+      "Senza account. Nulla viene caricato."
     ]
   }
 }

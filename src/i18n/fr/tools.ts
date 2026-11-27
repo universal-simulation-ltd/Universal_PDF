@@ -303,6 +303,7 @@ const tools: Messages['tools'] = {
   'scan.paper_letter': 'Lettre US',
   'scan.make_searchable': 'Rendre interrogeable (OCR)',
   'scan.make_searchable_hint': 'Pour pouvoir rechercher et copier le texte. Plus long ; la première fois, le modèle OCR est téléchargé une seule fois.',
+  'scan.make_searchable_hint_offline': 'Pour pouvoir rechercher et copier le texte. Plus long ; tout se fait sur cet appareil.', // the phone apps, where every OCR model ships in the app
   'scan.create_empty': 'Créer le PDF',
   'scan.create_one': 'Créer le PDF ({count} page)',
   'scan.create_other': 'Créer le PDF ({count} pages)',

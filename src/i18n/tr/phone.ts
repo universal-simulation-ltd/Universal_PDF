@@ -240,6 +240,13 @@ const phone: Messages['phone'] = {
   'howto': 'Nasıl yapılır…',
   'privacy': 'Gizlilik',
   'about': 'Hakkında',
+  // The About page (Tune → About): a page of the phone's own, not the website's dialog
+  'about_licence': 'AGPL-3.0 lisansıyla açık kaynak: her satırı herkese açık, isteyen okuyup denetleyebilir.',
+  'about_source': 'Kaynak kodunu oku',
+  'about_report': 'Sorun bildir',
+  'about_built_with': 'bunlarla yapıldı…', // handwritten word above the list of open-source projects
+  'about_built_note': 'Bu uygulama şu açık kaynak projelerin üzerinde duruyor.',
+  'about_notices': 'Tüm lisanslar',
   'reset': 'Varsayılanlara sıfırla',
   'reset_done': 'İlk günkü haline döndü.',
   'tune_card': 'Ücretsiz, açık kaynak, reklam yok. Belgeleriniz bu telefonda kalır, asla bizden geçmez.',

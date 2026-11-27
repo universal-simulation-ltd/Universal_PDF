@@ -240,6 +240,13 @@ const phone: Messages['phone'] = {
   'howto': 'Come fare…',
   'privacy': 'Privacy',
   'about': 'Informazioni',
+  // The About page (Tune → About): a page of the phone's own, not the website's dialog
+  'about_licence': 'Open source con licenza AGPL-3.0: ogni riga è pubblica, chiunque può leggerla e verificarla.',
+  'about_source': 'Leggi il codice sorgente',
+  'about_report': 'Segnala un problema',
+  'about_built_with': 'costruita con…', // handwritten word above the list of open-source projects
+  'about_built_note': 'Questa app si regge su questi progetti open source.',
+  'about_notices': 'Tutte le licenze',
   'reset': 'Ripristina predefiniti',
   'reset_done': 'Tutto come all’inizio.',
   'tune_card': 'Gratuita, open source, niente pubblicità. I tuoi documenti restano su questo telefono e non passano mai da noi.',

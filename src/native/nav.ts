@@ -18,6 +18,8 @@ export type Screen =
   // One page large, over the Pages page (PagesScreen keeps both).
   | 'page-view'
   | 'kb' | 'kb-article'
+  // About, from Tune: a page, where the website has a dialog.
+  | 'about'
   // The jobs that make a new PDF (or read two), pages of their own: they open
   // from the Desk with no document as well as from What else.
   | 'scan' | 'merge' | 'photos' | 'ocr' | 'compare'
@@ -137,5 +139,5 @@ export function isJobPage(screen: Screen | null): boolean {
 
 /** The pages that may also stand over the tabs, with no document open. */
 export function overTabs(screen: Screen | null): boolean {
-  return isKnowledge(screen) || isJobPage(screen)
+  return isKnowledge(screen) || isJobPage(screen) || screen === 'about'
 }

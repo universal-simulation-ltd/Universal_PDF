@@ -101,8 +101,8 @@ async function dropFiles(files) {
 async function state() {
   return page.evaluate(async () => {
     const { usePdfStore } = await (globalThis.__appImport ?? ((p) => import(p)))('/src/stores/pdfStore.ts')
-    const { useTabStore } = await import('/src/stores/tabStore.ts')
-    const { useFormStore } = await import('/src/stores/formStore.ts')
+    const { useTabStore } = await (globalThis.__appImport ?? ((p) => import(p)))('/src/stores/tabStore.ts')
+    const { useFormStore } = await (globalThis.__appImport ?? ((p) => import(p)))('/src/stores/formStore.ts')
     const t = useTabStore.getState()
     const p = usePdfStore.getState()
     return {
@@ -157,7 +157,7 @@ try {
 
   console.log('\nAn amendment in one tab belongs to that tab')
   await page.evaluate(async () => {
-    const { useFormStore } = await import('/src/stores/formStore.ts')
+    const { useFormStore } = await (globalThis.__appImport ?? ((p) => import(p)))('/src/stores/formStore.ts')
     useFormStore.getState().setValue(0, 'probe', 'kept')
   })
   await page.waitForTimeout(400)

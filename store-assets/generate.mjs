@@ -1,11 +1,12 @@
 #!/usr/bin/env node
-// Regenerates the App Store and Google Play images for Universal PDF.
+// Regenerates the App Store and Google Play captures for Universal PDF.
 //
 //   npm run build:mobile                  # the bundle the iOS/Android shells load
-//   node store-assets/generate.mjs        # every screen, every device
+//   node store-assets/generate.mjs        # every screen, iPhone and Android
 //   node store-assets/generate.mjs 03     # only screens whose name starts 03
 //   DEVICE=iphone node store-assets/generate.mjs
 //   LOCALE=fr-FR node store-assets/generate.mjs   # raw/fr-FR/<device>/, the app in French
+//   DIST=/some/dir node store-assets/generate.mjs # a bundle built somewhere else
 //
 // Needs Playwright's Chromium. It is not a dependency of this repo, so either
 // `npm i --no-save playwright && npx playwright install chromium`, or point
@@ -13,19 +14,30 @@
 //
 // The screens are the real app: dist/ is served to the browser through
 // Playwright's request routing (no local server, no port), at each store
-// device's viewport and pixel ratio, and driven like a person would drive it.
-// Nothing off-app is loaded.
+// device's viewport and pixel ratio. Nothing off-app is loaded.
+//
+// THE PHONE SCREENS (iphone, android; ipad on request). Since the mobile-first
+// pass the phone app has screens of its own (src/native/), and those are what
+// the stores must show. The run sets the session flag shell.ts reads
+// (`unipdf:store-capture`), which mounts the phone screens in a browser and
+// hands this script the app's stores as `window.__pdfCapture` (NativeApp.tsx).
+// Each screen is put up through those stores, so nothing here depends on a
+// label's wording, and the app starts in LOCALE's language: every capture is
+// the app itself in that language, with the sample form in that language too.
+//
+// THE LAPTOP (DEVICE=laptop, opt-in) is the website in a desktop browser, for
+// the store header's laptop (layouts.mjs): driven by its English labels and
+// switched to LOCALE's language just before the capture, as before.
 //
 // The sample document is built here with pdf-lib: an application form for an
-// invented allotment society, with real AcroForm fields, filled in through the
-// app's own form layer. Every name, address and number on it is made up (the
-// phone number is from Ofcom's range reserved for fiction).
+// invented allotment society, with real AcroForm fields. Every name, address
+// and number on it is made up (the phone number is from Ofcom's range reserved
+// for fiction).
 //
-// Output (committed): the real captures, raw/iphone (1320x2580), raw/ipad
-// (2064x2664) and raw/android (1080x2172). The UNI·SIM store kit frames them
-// into the store screenshots in out/, drawing the status bar and home
-// indicator they leave out. store.json says which capture each screen shows,
-// strings/en-GB.json every word on it:
+// Output (committed): raw/iphone (1320x2580), raw/android (1080x2172) and
+// raw/laptop. The UNI·SIM store kit frames them into the store screenshots in
+// out/, drawing the status bar and home indicator they leave out. store.json
+// says which capture each screen shows, strings/<locale>.json every word on it:
 //
 //   node ../../Docs_UNI_SIM/store-kit/build.mjs store-assets
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
@@ -35,7 +47,7 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(here, '..')
-const dist = path.join(root, 'dist')
+const dist = process.env.DIST ? path.resolve(process.env.DIST) : path.join(root, 'dist')
 const { chromium } = await import(
   process.env.PLAYWRIGHT ? pathToFileURL(process.env.PLAYWRIGHT).href : 'playwright'
 )
@@ -45,7 +57,8 @@ const { chromium } = await import(
 // 62 + 34, iPad 13" 1376 pt less 24 + 20, an Android phone 780 dp less 32 + 24.
 const DEVICES = [
   { key: 'iphone', dir: 'raw/iphone', width: 440, height: 860, dpr: 3 },
-  { key: 'ipad', dir: 'raw/ipad', width: 1032, height: 1332, dpr: 2 },
+  // Opt-in until iPad is decided (done properly, or off for 1.0): DEVICE=ipad.
+  { key: 'ipad', dir: 'raw/ipad', width: 1032, height: 1332, dpr: 2, optIn: true },
   { key: 'android', dir: 'raw/android', width: 360, height: 724, dpr: 3 },
   // Not a store device: the web app on a 1440 × 900 laptop, a desktop browser
   // (no touch), for the store header's laptop (store-assets/layouts.mjs), as
@@ -60,10 +73,10 @@ const TYPES = {
   '.webmanifest': 'application/manifest+json', '.bcmap': 'application/octet-stream',
 }
 
-// The store locale being captured, and the app language it shows. The app is
-// DRIVEN in English either way — every selector above is an English label — and
-// switched to LOCALE's language just before the capture (window.__pdfSetLanguage,
-// see <I18nRoot>). en-GB keeps writing to raw/<device>/, as before.
+// The store locale being captured, and the app language it shows. The phone
+// screens start in that language. The laptop's website is driven in English
+// (its selectors are English labels) and switched just before the capture
+// (window.__pdfSetLanguage, see <I18nRoot>). en-GB writes to raw/<device>/.
 const LOCALE = process.env.LOCALE || 'en-GB'
 const APP_LANGUAGE = {
   'en-GB': 'en-gb', 'fr-FR': 'fr', 'es-ES': 'es', 'it-IT': 'it', 'de-DE': 'de',
@@ -281,7 +294,9 @@ async function deselect(page, dev) {
   await page.waitForTimeout(300)
 }
 
-const SCREENS = {
+// The website's screens: only the laptop is captured from them now, and the
+// store header shows its 04-signed.
+const WEB_SCREENS = {
   // First open.
   async '01-start'(page) {
     await page.waitForTimeout(600)
@@ -358,6 +373,123 @@ const SCREENS = {
   },
 }
 
+// ── The phone screens ──────────────────────────────────────────────────────
+// What the open document is called: the form's own title in the store locale.
+const SAMPLE_NAME = `${(SAMPLE?.subtitle ?? 'Allotment plot application').split('·')[0].trim()}.pdf`
+
+/** Run `fn(capture, arg)` in the page, with the app's stores (NativeApp.tsx). */
+const app = (page, fn, arg) => page.evaluate(`(${fn})(window.__pdfCapture, ${JSON.stringify(arg ?? null)})`)
+
+async function openSample(page, pdf) {
+  await app(page, async (c, { b64, name }) => {
+    const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0))
+    await c.openFiles([new File([bytes], name, { type: 'application/pdf' })])
+  }, { b64: pdf.toString('base64'), name: SAMPLE_NAME })
+  await page.locator('[data-page-index="0"] canvas').first().waitFor({ timeout: 30000 })
+  await page.waitForTimeout(1500)
+}
+async function fillSample(page) {
+  await app(page, (c, fields) => { for (const [name, value] of fields) c.forms.getState().setValue(0, name, value) },
+    FIELDS.map(([name, , , , value]) => [name, fieldValue(name, value)]))
+  await page.waitForTimeout(500)
+}
+/** A looping, joined-up line (a prolate trochoid), then a flick underneath, on the Sign page's pad. */
+async function drawSignature(page) {
+  const pad = page.locator('.np canvas[aria-label]').last()
+  await pad.waitFor()
+  await page.waitForTimeout(500)
+  const b = await pad.boundingBox()
+  const pts = []
+  for (let t = 0; t <= Math.PI * 11; t += 0.06) {
+    pts.push([0.14 + t * 0.02 - 0.045 * Math.sin(t), 0.46 - 0.17 * Math.cos(t) * (0.75 + 0.25 * Math.sin(t / 2.3))])
+  }
+  await page.mouse.move(b.x + pts[0][0] * b.width, b.y + pts[0][1] * b.height)
+  await page.mouse.down()
+  for (const [x, y] of pts) await page.mouse.move(b.x + x * b.width, b.y + y * b.height)
+  await page.mouse.up()
+  await page.waitForTimeout(400)
+}
+/** One stroke along a line of the page, in PDF points. */
+async function strokeAlong(page, x0, x1, y) {
+  const a = await at(page, x0, y), b = await at(page, x1, y)
+  await page.mouse.move(a.x, a.y)
+  await page.mouse.down()
+  for (let i = 1; i <= 24; i++) await page.mouse.move(a.x + ((b.x - a.x) * i) / 24, a.y + Math.sin(i / 3) * 0.6)
+  await page.mouse.up()
+  await page.waitForTimeout(450)
+}
+
+const PHONE_SCREENS = {
+  // The desk, with the form waiting on it.
+  async '01-desk'(page, { pdf }) {
+    await openSample(page, pdf)
+    await fillSample(page)
+    await app(page, (c) => c.leave())
+    await page.waitForTimeout(1500)
+  },
+  // The form, filled in on the page.
+  async '02-filled'(page, { pdf }) {
+    await openSample(page, pdf)
+    await fillSample(page)
+  },
+  // Drawing a signature.
+  async '03-sign'(page, { pdf }) {
+    await openSample(page, pdf)
+    await fillSample(page)
+    await app(page, (c) => c.nav.getState().push('sign'))
+    await drawSignature(page)
+  },
+  // The moment after it lands.
+  async '04-signed'(page, { pdf }) {
+    await openSample(page, pdf)
+    await fillSample(page)
+    await app(page, (c) => c.nav.getState().push('signed'))
+    await page.waitForTimeout(900)
+  },
+  // Blacking out two lines of the form's text, with the tools up.
+  async '05-black-out'(page, { pdf }) {
+    await openSample(page, pdf)
+    await fillSample(page)
+    await app(page, (c) => { c.nav.getState().openSheet('markup'); c.annotations.getState().setTool('redact') })
+    await page.waitForTimeout(700)
+    // Two lines of the printed text: a form's own boxes take a finger as a tap to type.
+    await strokeAlong(page, 42, 470, 714)
+    await strokeAlong(page, 42, 470, 699)
+    await strokeAlong(page, 42, 300, 684)
+    // Nothing left selected, so no mark's own pill sits over the page.
+    await app(page, (c) => c.annotations.getState().setSelected(null))
+    await page.waitForTimeout(400)
+  },
+  // Scan paper: two pages on the desk, ready to become a PDF. The "scans" are
+  // the sample form itself, so nothing real is pictured.
+  async '06-scan'(page, { pdf }) {
+    await openSample(page, pdf)
+    await fillSample(page)
+    const jpeg = await page.evaluate(() => document.querySelector('[data-page-index="0"] canvas').toDataURL('image/jpeg', 0.9).split(',')[1])
+    await app(page, (c) => c.leave())
+    await page.waitForTimeout(600)
+    await app(page, async (c, b64) => {
+      const bytes = () => Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0))
+      c.openJob({ kind: 'scan', source: 'camera', pages: [await c.scanPage(bytes()), await c.scanPage(bytes())] })
+    }, jpeg)
+    await page.waitForTimeout(1200)
+  },
+  // Send it on its way.
+  async '07-share'(page, { pdf }) {
+    await openSample(page, pdf)
+    await fillSample(page)
+    await app(page, (c) => c.nav.getState().push('share'))
+    await page.waitForTimeout(1500)
+  },
+  // Tune → (?): all free, nothing hidden.
+  async '08-free'(page) {
+    await app(page, (c) => c.nav.getState().setTab('tune'))
+    await page.waitForTimeout(400)
+    await page.locator('.np button', { hasText: /^\?$/ }).first().click()
+    await page.waitForTimeout(800)
+  },
+}
+
 // ── Running them ───────────────────────────────────────────────────────────
 function pngInfo(buf) {
   return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20), colourType: buf[25] }
@@ -385,41 +517,48 @@ const pdf = await samplePdf()
 let bad = 0
 for (const dev of devices) {
   await mkdir(path.join(here, rawDir(dev)), { recursive: true })
-  for (const [name, run] of Object.entries(SCREENS)) {
+  const phone = !dev.desk
+  for (const [name, run] of Object.entries(phone ? PHONE_SCREENS : WEB_SCREENS)) {
     if (only.length && !only.some((p) => name.startsWith(p))) continue
     const ctx = await browser.newContext({
       viewport: { width: dev.width, height: dev.height }, deviceScaleFactor: dev.dpr,
       isMobile: !dev.desk, hasTouch: !dev.desk, colorScheme: 'light', locale: LOCALE,
     })
-    // The one-off "welcome" toast a phone sees on its first document: dismissed,
-    // as it would be after the first open, so it doesn't sit over the page.
-    await ctx.addInitScript(() => {
+    await ctx.addInitScript(({ phone, language }) => {
+      // The one-off "welcome" toast a phone sees on its first document: dismissed,
+      // as it would be after the first open, so it doesn't sit over the page.
       try { localStorage.setItem('universal-pdf-mobile-welcome-dismissed', '1') } catch {}
-      // Start in English whatever the browser locale: the script's selectors are English.
+      if (phone) {
+        // The phone screens, in the store locale's language from the start.
+        try { sessionStorage.setItem('unipdf:store-capture', '1') } catch {}
+        try { localStorage.setItem('universal:language', language) } catch {}
+        return
+      }
+      // The website: start in English whatever the browser locale, as the
+      // script's selectors are English.
       try { localStorage.setItem('universal:language', 'en-gb') } catch {}
-      // The start screen's "Download it for offline use — Windows · macOS ·
-      // Android · iPhone" row is for the website. It is below the fold on a
-      // phone but in full view on an iPad, and a store screenshot of the app
-      // should not offer other platforms' builds. Hidden for the picture only.
+      // The start screen's "Download it for offline use" row offers other
+      // platforms' builds. Hidden for the picture only.
       document.addEventListener('DOMContentLoaded', () => {
         const css = document.createElement('style')
         css.textContent = 'section[aria-labelledby="get-the-app"]{display:none!important}'
         document.head.appendChild(css)
       })
-    })
+    }, { phone, language: APP_LANGUAGE })
     await serve(ctx)
     const page = await ctx.newPage()
     const errors = []
     page.on('pageerror', (e) => errors.push(String(e)))
     await page.goto(`${ORIGIN}/index.html`)
     await page.waitForTimeout(1200)
+    if (phone) await page.waitForFunction(() => !!window.__pdfCapture, null, { timeout: 30000 })
     try {
       await run(page, { dev, pdf })
     } catch (err) {
       console.error(`FAIL ${rawDir(dev)}/${name}: ${err.message.split('\n')[0]}`)
       bad++
     }
-    if (APP_LANGUAGE !== 'en-gb') {
+    if (!phone && APP_LANGUAGE !== 'en-gb') {
       await page.evaluate((l) => window.__pdfSetLanguage?.(l), APP_LANGUAGE)
       await page.waitForTimeout(500)
     }

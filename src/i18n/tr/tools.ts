@@ -303,6 +303,7 @@ const tools: Messages['tools'] = {
   'scan.paper_letter': 'US Letter',
   'scan.make_searchable': 'Aranabilir hale getir (OCR)',
   'scan.make_searchable_hint': 'Metni bulup kopyalayabilmeniz için. Daha uzun sürer; ilk seferde OCR modeli bir kez indirilir.',
+  'scan.make_searchable_hint_offline': 'Metni bulup kopyalayabilmeniz için. Daha uzun sürer; her şey bu cihazda yapılır.', // the phone apps, where every OCR model ships in the app
   'scan.create_empty': 'PDF oluştur',
   'scan.create_one': 'PDF oluştur ({count} sayfa)',
   'scan.create_other': 'PDF oluştur ({count} sayfa)',

@@ -6,6 +6,7 @@ import { formatSize } from '../components/Export/formatSize'
 import type { CompressQuality } from '../lib/export'
 import { SQUIGGLE } from './icons'
 import { useNav } from './nav'
+import { FitWord } from './parts'
 import { buildAnnotated, handOver, makeSmaller } from './output'
 import { leaveDocument } from './DocumentScreen'
 
@@ -94,10 +95,10 @@ export function SignedMoment() {
             )}
           </div>
           <div
-            className="np-tilt absolute right-3.5 top-[120px] rounded-[10px] px-3.5 py-2 flex flex-col items-center"
+            className="np-tilt absolute right-3.5 top-[120px] max-w-[calc(100%-22px)] rounded-[10px] px-3.5 py-2 flex flex-col items-center"
             style={{ border: '4px double #2353c9', color: '#2353c9', transform: 'rotate(-14deg)', background: 'rgba(255,255,255,0.6)' }}
           >
-            <span className="text-[26px] font-black tracking-[0.14em]">{t('phone.stamp_signed')}</span>
+            <FitWord size={26} className="font-black tracking-[0.14em]">{t('phone.stamp_signed')}</FitWord>
             <span className="text-[11px] font-bold tracking-[0.1em]">{date}</span>
           </div>
         </div>
@@ -201,10 +202,10 @@ export function SmallerMoment() {
           <Lines widths={['80%', '65%', '75%']} />
           {smaller && (
             <div
-              className="np-tilt absolute -left-[26px] top-[58px] rounded-[10px] px-2.5 py-1.5 flex flex-col items-center"
+              className="np-tilt absolute -left-[26px] top-[58px] max-w-[calc(100%+30px)] rounded-[10px] px-2.5 py-1.5 flex flex-col items-center"
               style={{ border: '4px double #f97316', color: '#c2410c', transform: 'rotate(-14deg)', background: 'rgba(255,255,255,0.88)' }}
             >
-              <span className="text-[20px] font-black tracking-[0.14em]">{t('phone.stamp_smaller')}</span>
+              <FitWord size={20} className="font-black tracking-[0.14em]">{t('phone.stamp_smaller')}</FitWord>
               <span className="text-[11px] font-extrabold tracking-[0.1em] whitespace-nowrap">
                 {formatSize(t, smaller.after)}
                 {worthIt ? ` · −${Math.round(saved * 100)}%` : ''}
@@ -284,10 +285,10 @@ export function BlackedMoment() {
             </div>
           ))}
           <div
-            className="np-tilt absolute right-3 top-[150px] rounded-[10px] px-3 py-2 flex flex-col items-center"
+            className="np-tilt absolute right-3 top-[150px] max-w-[calc(100%-20px)] rounded-[10px] px-3 py-2 flex flex-col items-center"
             style={{ border: '4px double #b42318', color: 'var(--np-red)', transform: 'rotate(-12deg)', background: 'rgba(255,255,255,0.8)' }}
           >
-            <span className="text-[22px] font-black tracking-[0.12em]">{t('phone.stamp_blacked')}</span>
+            <FitWord size={22} className="font-black tracking-[0.12em]">{t('phone.stamp_blacked')}</FitWord>
           </div>
         </div>
       </div>
@@ -334,10 +335,10 @@ export function SentMoment() {
             <span className="text-[12px] font-bold tracking-[0.08em] text-[#2353c9]">{t('phone.sign_here_box')}</span>
           </div>
           <div
-            className="np-tilt absolute right-3 top-[96px] rounded-[10px] px-3 py-2 flex flex-col items-center"
+            className="np-tilt absolute right-3 top-[96px] max-w-[calc(100%-20px)] rounded-[10px] px-3 py-2 flex flex-col items-center"
             style={{ border: '4px double #f97316', color: '#c2410c', transform: 'rotate(-14deg)', background: 'rgba(255,255,255,0.88)' }}
           >
-            <span className="text-[22px] font-black tracking-[0.12em] whitespace-nowrap">{t('phone.stamp_sent')}</span>
+            <FitWord size={22} className="font-black tracking-[0.12em]">{t('phone.stamp_sent')}</FitWord>
           </div>
         </div>
       </div>

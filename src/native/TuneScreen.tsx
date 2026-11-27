@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from 'react'
-import { AboutAppDialog, LANGUAGE_LABELS, SUPPORTED_LANGUAGES, useDefaultView, useLanguage, useResetAppDefaults, useUserPrefs } from '@unisim/sdk'
+import { LANGUAGE_LABELS, SUPPORTED_LANGUAGES, useDefaultView, useLanguage, useResetAppDefaults, useUserPrefs } from '@unisim/sdk'
 import { useT, type Language } from '../i18n'
 import { useToolPrefs } from '../stores/toolPrefsStore'
 import { clearDismissedPrompts } from '../lib/resetDefaults'
@@ -35,7 +35,6 @@ export default function TuneScreen() {
   const vaultOn = useVaultStore((s) => s.enabled)
   const [biometry, setBiometry] = useState<Biometry | null>(null)
   const [vaultBusy, setVaultBusy] = useState(false)
-  const [aboutOpen, setAboutOpen] = useState(false)
   const [freeOpen, setFreeOpen] = useState(false)
   const languageId = useId()
   // Light / Dark / Match my device (2026-11-21). `pref` is what applies: this
@@ -43,7 +42,6 @@ export default function TuneScreen() {
   // one sets this app's override; Reset to defaults clears it.
   const themePref = useThemeStore((s) => s.pref)
   const setThemeOverride = useThemeStore((s) => s.setOverride)
-  const themeNow = useThemeStore((s) => s.effective)
 
   const resetAll = useResetAppDefaults(() => {
     clearDismissedPrompts()
@@ -153,7 +151,7 @@ export default function TuneScreen() {
           </label>
           <LinkRow label={t('phone.howto')} onClick={() => useNav.getState().push('kb')} />
           <LinkRow label={t('phone.privacy')} onClick={() => window.open(PRIVACY_URL, '_blank', 'noopener')} />
-          <LinkRow label={t('phone.about')} onClick={() => setAboutOpen(true)} />
+          <LinkRow label={t('phone.about')} onClick={() => useNav.getState().push('about')} />
         </Slip>
 
         <button
@@ -194,7 +192,6 @@ export default function TuneScreen() {
         </div>
       </div>
 
-      <AboutAppDialog {...ABOUT_APP} open={aboutOpen} onClose={() => setAboutOpen(false)} theme={themeNow} />
       {freeOpen && <FreeSheet onClose={() => setFreeOpen(false)} />}
     </div>
   )

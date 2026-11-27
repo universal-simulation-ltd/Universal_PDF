@@ -7,7 +7,7 @@ import { QR_PRESETS, withBranding, type QrPlacement, type QrPreset } from '../li
 import { PLACEMENT_SIZE, renderQrPng } from '../lib/qr/render'
 import PresetGlyph, { QR_PRESET_KEYS } from '../components/Qr/PresetGlyph'
 import type { Annotation } from '../types/annotations'
-import { BackLink, Hl } from './parts'
+import { BackLink, FitLabel, Hl } from './parts'
 import { useNav } from './nav'
 
 // A QR code, a page of its own like Sign (James, 2026-10-18: "give QR a native
@@ -34,7 +34,10 @@ export default function QrScreen() {
   const qrEdit = usePdfStore((s) => s.qrEdit)
   const linkId = useId()
   const [base, setBase] = useState<QrDesign>(() =>
-    qrEdit ? qrEdit.placement.base : { ...DEFAULT_DESIGN, ...(QR_PRESETS.find((p) => p.name === 'Rounded')?.patch ?? {}) }
+    // A new code starts with an empty link box. The shared design's default is
+    // the suite's own address, which made a code for unisim.co.uk the first
+    // thing this page showed (the mobile-first pass, 2026-11-27).
+    qrEdit ? qrEdit.placement.base : { ...DEFAULT_DESIGN, ...(QR_PRESETS.find((p) => p.name === 'Rounded')?.patch ?? {}), data: '' }
   )
   const [presetName, setPresetName] = useState<string | null>(() => (qrEdit ? qrEdit.placement.presetName : 'Rounded'))
   const branding = qrEdit?.placement.branding ?? null
@@ -172,8 +175,8 @@ export default function QrScreen() {
                   }
                 >
                   <PresetGlyph preset={preset} />
-                  <span className="text-[13px] leading-tight" style={{ fontWeight: on ? 700 : 600, color: on ? 'var(--np-cobalt-deep)' : 'var(--np-ink-2)' }}>
-                    {key ? t(key) : preset.name}
+                  <span className="flex justify-center max-w-full min-w-0" style={{ fontWeight: on ? 700 : 600, color: on ? 'var(--np-cobalt-deep)' : 'var(--np-ink-2)' }}>
+                    <FitLabel size={13} min={10} className="leading-tight">{key ? t(key) : preset.name}</FitLabel>
                   </span>
                 </button>
               )

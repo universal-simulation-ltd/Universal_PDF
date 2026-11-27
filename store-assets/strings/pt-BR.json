@@ -1,84 +1,71 @@
 {
-  "01-hero": {
+  "01-no-account": {
     "headline": [
-      "PDFs que",
-      "*simplesmente funcionam.*"
+      "Sem conta.",
+      "*Nada é enviado.*"
     ],
-    "sub": {
-      "phone": "Preencha, assine e anote PDFs,\ndireto no seu celular.",
-      "ipad": "Preencha, assine e anote PDFs,\ndireto no seu iPad."
-    }
+    "note": "um app de PDF que fica\nno seu celular",
+    "stamp": "Grátis"
   },
-  "02-hero": {
+  "02-fill-in": {
     "headline": [
-      "Todas as ferramentas,",
-      "integradas"
+      "Preencha",
+      "*direto na página*"
     ],
-    "badges": [
-      "Preencher formulários",
-      "Assinar",
-      "Tarjar",
-      "Comprimir e juntar"
-    ],
-    "sub": "Feito por James Markey MBE\ne pela equipe UNI·SIM"
+    "note": "digite nos campos,\nsem impressora",
+    "stamp": "Sem impressora"
   },
-  "03-fill-in": {
+  "03-sign": {
     "headline": [
-      "Digite direto",
-      "no formulário"
+      "Assine",
+      "*com o dedo*"
     ],
-    "caption": "Os próprios campos do PDF, preenchidos na página",
-    "chips": [
-      "Campos de formulário",
-      "Texto em qualquer lugar",
-      "Imagens",
-      "Códigos QR"
-    ]
+    "note": "desenhe uma vez,\nguarde para a próxima",
+    "stamp": "Sem conta"
   },
-  "04-sign": {
+  "04-signed": {
     "headline": [
-      "Assine com",
-      "o dedo"
+      "Assinado e",
+      "*pronto para envio*"
     ],
-    "caption": "Desenhe uma vez e coloque na linha",
-    "chips": [
-      "Desenhar",
-      "Importar",
-      "Nome e data",
-      "Carimbo"
-    ]
+    "note": "sem impressora, sem scanner,\nsem caneta"
   },
-  "05-mark-up": {
+  "05-black-out": {
     "headline": [
-      "Faça anotações"
+      "Tarje",
+      "*de vez*"
     ],
-    "caption": "Destaques e notas, salvos no PDF",
-    "chips": [
-      "Marca-texto",
-      "Texto",
-      "Desenho livre",
-      "Certo e X",
-      "Linhas, retângulos e círculos",
-      "Tarjar"
-    ]
+    "note": "removido do arquivo,\nnão só coberto",
+    "stamp": "Tarjado"
   },
-  "06-private": {
+  "06-scan": {
     "headline": [
-      "Seus arquivos",
-      "continuam seus"
+      "Digitalize",
+      "*o papel*"
     ],
-    "caption": "Nada é enviado, a menos que você escolha",
-    "chips": [
-      "Sem anúncios",
-      "Sem rastreamento",
-      "Não precisa de conta",
-      "Código aberto"
-    ]
+    "note": "cartas, formulários e recibos\nviram um PDF",
+    "stamp": "No celular"
+  },
+  "07-send": {
+    "headline": [
+      "Envie",
+      "*do seu jeito*"
+    ],
+    "note": "menor para o e-mail,\nou protegido por senha",
+    "stamp": "Nada é\nenviado"
+  },
+  "08-free": {
+    "headline": [
+      "Grátis e de",
+      "*código aberto*"
+    ],
+    "note": "feito por James Markey MBE\n& a equipe UNI·SIM",
+    "stamp": "Sem anúncios"
   },
   "feature-graphic": {
     "tagline": [
-      "Preencha, assine e anote PDFs.",
-      "No seu celular."
+      "Digitalize, preencha e assine PDFs.",
+      "Sem conta. Nada é enviado."
     ]
   }
 }

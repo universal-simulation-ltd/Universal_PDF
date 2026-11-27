@@ -1,84 +1,71 @@
 {
-  "01-hero": {
+  "01-no-account": {
     "headline": [
-      "Des PDF,",
-      "*tout simplement.*"
+      "Sans compte.",
+      "*Rien n’est envoyé.*"
     ],
-    "sub": {
-      "phone": "Remplissez, signez et annotez vos PDF,\ndirectement sur votre téléphone.",
-      "ipad": "Remplissez, signez et annotez vos PDF,\ndirectement sur votre iPad."
-    }
+    "note": "une appli PDF qui reste\nsur votre téléphone",
+    "stamp": "Gratuit"
   },
-  "02-hero": {
+  "02-fill-in": {
     "headline": [
-      "Tous les outils,",
-      "intégrés"
+      "Remplissez",
+      "*sur la page*"
     ],
-    "badges": [
-      "Remplir des formulaires",
-      "Signer",
-      "Caviarder",
-      "Compresser et fusionner"
-    ],
-    "sub": "Conçu par James Markey MBE\net l’équipe UNI·SIM"
+    "note": "écrivez dans les cases,\nsans imprimante",
+    "stamp": "Sans imprimante"
   },
-  "03-fill-in": {
+  "03-sign": {
     "headline": [
-      "Saisissez directement",
-      "dans le formulaire"
+      "Signez",
+      "*avec le doigt*"
     ],
-    "caption": "Les champs du PDF lui-même, remplis sur la page",
-    "chips": [
-      "Champs de formulaire",
-      "Texte partout",
-      "Images",
-      "Codes QR"
-    ]
+    "note": "dessinez-la une fois,\ngardez-la pour la suivante",
+    "stamp": "Sans compte"
   },
-  "04-sign": {
+  "04-signed": {
     "headline": [
-      "Signez avec",
-      "le doigt"
+      "Signé et",
+      "*prêt à partir*"
     ],
-    "caption": "Dessinez-la une fois, puis placez-la sur la ligne",
-    "chips": [
-      "Dessiner",
-      "Importer",
-      "Nom et date",
-      "Tampon"
-    ]
+    "note": "ni imprimante, ni scanner,\nni stylo"
   },
-  "05-mark-up": {
+  "05-black-out": {
     "headline": [
-      "Annotez"
+      "Caviardez",
+      "*pour de bon*"
     ],
-    "caption": "Surlignages et notes, enregistrés dans le PDF",
-    "chips": [
-      "Surligneur",
-      "Texte",
-      "Dessin libre",
-      "Coches et croix",
-      "Lignes, rectangles et cercles",
-      "Caviarder"
-    ]
+    "note": "retiré du fichier,\npas seulement recouvert",
+    "stamp": "Caviardé"
   },
-  "06-private": {
+  "06-scan": {
     "headline": [
-      "Vos fichiers",
-      "restent les vôtres"
+      "Scannez",
+      "*le papier*"
     ],
-    "caption": "Rien n’est envoyé en ligne sans votre accord",
-    "chips": [
-      "Sans publicité",
-      "Sans pistage",
-      "Aucun compte requis",
-      "Open source"
-    ]
+    "note": "lettres, formulaires et reçus\ndeviennent un PDF",
+    "stamp": "Sur le téléphone"
+  },
+  "07-send": {
+    "headline": [
+      "Envoyez-le",
+      "*à votre façon*"
+    ],
+    "note": "plus léger pour l’e-mail,\nou verrouillé par mot de passe",
+    "stamp": "Rien\nn’est envoyé"
+  },
+  "08-free": {
+    "headline": [
+      "Gratuit et",
+      "*open source*"
+    ],
+    "note": "conçu par James Markey MBE\n& l’équipe UNI·SIM",
+    "stamp": "Sans publicité"
   },
   "feature-graphic": {
     "tagline": [
-      "Remplissez, signez et annotez vos PDF.",
-      "Sur votre téléphone."
+      "Scannez, remplissez et signez vos PDF.",
+      "Sans compte. Rien n’est envoyé."
     ]
   }
 }

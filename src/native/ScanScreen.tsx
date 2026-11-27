@@ -3,6 +3,7 @@ import { useT } from '../i18n'
 import CropEditor from '../components/Scan/CropEditor'
 import { useScanSession } from '../components/Scan/ScanDialog'
 import type { ScanPage } from '../lib/scan'
+import { ocrModelsBundled } from '../lib/ocr'
 import { Icon, PATHS } from './icons'
 import { BTN_PRIMARY, BTN_PRIMARY_STYLE, BTN_SECOND, BTN_SECOND_STYLE, JobPage, Segmented, Slip, SwitchRow } from './parts'
 import { goBack, useNav } from './nav'
@@ -192,7 +193,7 @@ function ScanPageView({ source, initialPages }: { source: 'camera' | 'photo'; in
             <SwitchRow
               first
               label={t('tools.scan.make_searchable')}
-              note={t('tools.scan.make_searchable_hint')}
+              note={t(ocrModelsBundled ? 'tools.scan.make_searchable_hint_offline' : 'tools.scan.make_searchable_hint')}
               checked={s.ocr}
               disabled={s.working}
               onChange={s.setOcr}

@@ -20,7 +20,7 @@ import { usePdfStore } from '../stores/pdfStore'
 import { getRecent, getRecentEdits, type RecentMeta } from '../lib/recents'
 import { formatSize } from '../components/Export/formatSize'
 import { AppMark, Dots, Icon, PATHS } from './icons'
-import { Hl, Sheet, SwipeRow } from './parts'
+import { Hl, Sheet, SwipeRow, useShrinkToFit } from './parts'
 import { useNav } from './nav'
 import { jobCards, runJob, useJobs, type JobCard, type JobId } from './jobs'
 import { examplePreview } from './examplePreview'
@@ -77,6 +77,8 @@ function whenText(t: ReturnType<typeof useT>, ms: number): string {
 
 export default function DeskScreen() {
   const t = useT()
+  // The headline's highlighted words never wrap, so a long language's are set smaller.
+  const headlineRef = useShrinkToFit<HTMLHeadingElement>(26, [t('phone.headline_hl')])
   const appTitle = usePhoneAppTitle()
   const cards = useMemo(() => jobCards(), [t])
   const busy = useJobs((s) => s.busy)
@@ -235,7 +237,7 @@ export default function DeskScreen() {
           )}
         </div>
 
-        <h1 className="np-serif m-0 text-[38px] leading-[1.06] font-bold tracking-[-0.015em]">
+        <h1 ref={headlineRef} className="np-serif m-0 text-[38px] leading-[1.06] font-bold tracking-[-0.015em]">
           {t('phone.headline_lead')}{' '}
           <Hl desk>{t('phone.headline_hl')}</Hl>
         </h1>

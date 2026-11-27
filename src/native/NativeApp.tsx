@@ -3,7 +3,10 @@ import { configurePhoneLayers, PhoneDialogHost, requestSearch, useEdgeSwipeBack,
 import { useT } from '../i18n'
 import { usePdfStore } from '../stores/pdfStore'
 import { useSignatureStore } from '../stores/signatureStore'
-import { useTabStore } from '../stores/tabStore'
+import { openFiles, useTabStore } from '../stores/tabStore'
+import { useAnnotationStore } from '../stores/annotationStore'
+import { useFormStore } from '../stores/formStore'
+import { storeCapture } from './shell'
 import { useShortcutStore } from '../stores/shortcutStore'
 import { setStatusBarOverDarkChrome } from '../lib/nativeOpen'
 import UnsavedChangesDialog from '../components/Exit/UnsavedChangesDialog'
@@ -21,6 +24,7 @@ import QrScreen from './QrScreen'
 import ShareScreen from './ShareScreen'
 import MoreSheet from './MoreSheet'
 import TuneScreen from './TuneScreen'
+import AboutScreen from './AboutScreen'
 import SignaturesScreen from './SignaturesScreen'
 import KnowledgeScreen, { useKnowledgeBaseRequests } from './KnowledgeScreen'
 import ScanScreen from './ScanScreen'
@@ -58,6 +62,26 @@ import './native.css'
 // (150) and the opening veil (140) and under the toast (400), where PDF's own
 // sheets always were.
 configurePhoneLayers({ baseZ: 200 })
+
+// For store-assets/generate.mjs only: the screenshots are these screens, in the
+// built bundle, in each language, and a built bundle has no module URLs to
+// import. So the capture run (a session flag only that script sets, see
+// shell.ts) is handed the stores it needs to put each screen up. Nothing a
+// user's session ever has.
+if (storeCapture()) {
+  Object.assign(window, {
+    __pdfCapture: {
+      nav: useNav,
+      pdf: usePdfStore,
+      annotations: useAnnotationStore,
+      forms: useFormStore,
+      openFiles,
+      openJob,
+      leave: leaveDocument,
+      scanPage: async (jpeg: Uint8Array) => (await import('../lib/scan')).pageFromJpeg(jpeg),
+    },
+  })
+}
 
 const ShortcutRunner = lazy(() => import('../components/Shortcuts/ShortcutRunner'))
 const onShortcutScan = (pages: ScanPage[]) => openJob({ kind: 'scan', source: 'camera', pages })
@@ -168,6 +192,7 @@ function JobPages({ top }: { top: Screen | null }) {
   return (
     <>
       {isKnowledge(top) && <KnowledgeScreen />}
+      {top === 'about' && <AboutScreen />}
       {top === 'scan' && <ScanScreen />}
       {top === 'merge' && <MergeScreen />}
       {top === 'photos' && <PhotosScreen />}

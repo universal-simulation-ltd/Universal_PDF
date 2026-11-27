@@ -304,6 +304,7 @@ export default {
   'scan.paper_letter': 'US Letter',
   'scan.make_searchable': 'Make searchable (OCR)',
   'scan.make_searchable_hint': 'So you can find and copy the text. Takes longer; the first time downloads the OCR model once.',
+  'scan.make_searchable_hint_offline': 'So you can find and copy the text. Takes longer; it all happens on this device.', // the phone apps, where every OCR model ships in the app
   'scan.create_empty': 'Create PDF',
   'scan.create_one': 'Create PDF ({count} page)',
   'scan.create_other': 'Create PDF ({count} pages)',

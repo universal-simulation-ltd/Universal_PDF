@@ -1,84 +1,71 @@
 {
-  "01-hero": {
+  "01-no-account": {
     "headline": [
-      "PDF que",
-      "*simplemente funcionan.*"
+      "Sin cuenta.",
+      "*Sin subir nada.*"
     ],
-    "sub": {
-      "phone": "Rellena, firma y anota PDF,\ndirectamente en tu móvil.",
-      "ipad": "Rellena, firma y anota PDF,\ndirectamente en tu iPad."
-    }
+    "note": "una app de PDF que se queda\nen tu móvil",
+    "stamp": "Gratis"
   },
-  "02-hero": {
+  "02-fill-in": {
     "headline": [
-      "Todas las herramientas,",
-      "integradas"
+      "Rellénalo",
+      "*sobre la página*"
     ],
-    "badges": [
-      "Rellenar formularios",
-      "Firmar",
-      "Censurar",
-      "Comprimir y unir"
-    ],
-    "sub": "Creado por James Markey MBE\ny el equipo de UNI·SIM"
+    "note": "escribe en las casillas,\nsin impresora",
+    "stamp": "Sin impresora"
   },
-  "03-fill-in": {
+  "03-sign": {
     "headline": [
-      "Escribe directamente",
-      "en el formulario"
+      "Firma",
+      "*con el dedo*"
     ],
-    "caption": "Los propios campos del PDF, rellenados en la página",
-    "chips": [
-      "Campos de formulario",
-      "Texto donde quieras",
-      "Imágenes",
-      "Códigos QR"
-    ]
+    "note": "dibújala una vez,\nguárdala para la próxima",
+    "stamp": "Sin cuenta"
   },
-  "04-sign": {
+  "04-signed": {
     "headline": [
-      "Firma con",
-      "el dedo"
+      "Firmado y",
+      "*listo para enviar*"
     ],
-    "caption": "Dibújala una vez y colócala en la línea",
-    "chips": [
-      "Dibujar",
-      "Importar",
-      "Nombre y fecha",
-      "Sello"
-    ]
+    "note": "sin impresora, sin escáner,\nsin boli"
   },
-  "05-mark-up": {
+  "05-black-out": {
     "headline": [
-      "Anótalo"
+      "Censúralo",
+      "*para siempre*"
     ],
-    "caption": "Resaltados y notas, guardados en el PDF",
-    "chips": [
-      "Resaltador",
-      "Texto",
-      "Dibujo libre",
-      "Marcas y cruces",
-      "Líneas, rectángulos y círculos",
-      "Censurar"
-    ]
+    "note": "eliminado del archivo,\nno solo tapado",
+    "stamp": "Censurado"
   },
-  "06-private": {
+  "06-scan": {
     "headline": [
-      "Tus archivos",
-      "son tuyos"
+      "Escanea",
+      "*el papel*"
     ],
-    "caption": "No se sube nada salvo que tú lo elijas",
-    "chips": [
-      "Sin anuncios",
-      "Sin rastreo",
-      "Sin cuenta obligatoria",
-      "Código abierto"
-    ]
+    "note": "cartas, formularios y recibos\nse vuelven un PDF",
+    "stamp": "En tu móvil"
+  },
+  "07-send": {
+    "headline": [
+      "Envíalo",
+      "*a tu manera*"
+    ],
+    "note": "más pequeño para el correo,\no con contraseña",
+    "stamp": "Sin subir\nnada"
+  },
+  "08-free": {
+    "headline": [
+      "Gratis y de",
+      "*código abierto*"
+    ],
+    "note": "hecho por James Markey MBE\n& el equipo de UNI·SIM",
+    "stamp": "Sin anuncios"
   },
   "feature-graphic": {
     "tagline": [
-      "Rellena, firma y anota PDF.",
-      "En tu móvil."
+      "Escanea, rellena y firma PDF.",
+      "Sin cuenta. Sin subir nada."
     ]
   }
 }

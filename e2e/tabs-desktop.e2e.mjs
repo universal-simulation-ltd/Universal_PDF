@@ -120,8 +120,8 @@ const appWindowCount = () =>
 async function stateOf(page) {
   return page
     .evaluate(async () => {
-      const { usePdfStore } = await import('/src/stores/pdfStore.ts')
-      const { useTabStore } = await import('/src/stores/tabStore.ts')
+      const { usePdfStore } = await (await import('/e2e/app-reach.ts')).appImport('/src/stores/pdfStore.ts')
+      const { useTabStore } = await (await import('/e2e/app-reach.ts')).appImport('/src/stores/tabStore.ts')
       const tabs = useTabStore.getState().tabs.map((t) => t.snapshot?.fileName ?? t.name)
       return { fileName: usePdfStore.getState().fileName, tabs }
     })
@@ -188,7 +188,7 @@ try {
   console.log('\nThat window goes back to the start screen, and another PDF is opened')
   if (alone) {
     await alone.page.evaluate(async () => {
-      const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+      const { usePdfStore } = await (await import('/e2e/app-reach.ts')).appImport('/src/stores/pdfStore.ts')
       usePdfStore.getState().reset()
     })
     await sleep(AFTER_BATCH_MS)
@@ -213,8 +213,8 @@ try {
   if (explorer) {
     const p = explorer.page
     await p.evaluate(async () => {
-      const { useFormStore } = await import('/src/stores/formStore.ts')
-      const { activateTab, useTabStore } = await import('/src/stores/tabStore.ts')
+      const { useFormStore } = await (await import('/e2e/app-reach.ts')).appImport('/src/stores/formStore.ts')
+      const { activateTab, useTabStore } = await (await import('/e2e/app-reach.ts')).appImport('/src/stores/tabStore.ts')
       const { tabs } = useTabStore.getState()
       useFormStore.getState().setValue(0, 'probe', 'echo')
       activateTab(tabs[1].id)

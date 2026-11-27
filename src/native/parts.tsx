@@ -351,6 +351,48 @@ export function FitLabel({ children, size, min = 9, className = '' }: { children
   )
 }
 
+/**
+ * Shrinks an element's type until its longest unbreakable run fits its width:
+ * the Desk's headline, whose highlighted words never wrap. "just work." fits a
+ * 360 px phone at 38 px; "einfach funktionieren." and "simplemente funcionan."
+ * ran off the edge (the mobile-first pass, 2026-11-27). Give the element its
+ * full size in CSS; this only ever makes it smaller, never below `min` px.
+ */
+export function useShrinkToFit<T extends HTMLElement>(min: number, deps: unknown[] = []) {
+  const ref = useRef<T>(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const fit = () => {
+      el.style.fontSize = ''
+      let size = parseFloat(getComputedStyle(el).fontSize)
+      while (el.scrollWidth > el.clientWidth + 1 && size > min) {
+        size -= 1
+        el.style.fontSize = `${size}px`
+      }
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(el)
+    return () => ro.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [min, ...deps])
+  return ref
+}
+
+/**
+ * A rubber stamp's word, or any one-line label in a box that sizes to its
+ * words: capped at its container's width, and set smaller when a language's
+ * word is longer than that ("UNTERSCHRIEBEN" for "SIGNED").
+ */
+export function FitWord({ children, size, min = 11, className = '' }: { children: string; size: number; min?: number; className?: string }) {
+  return (
+    <span className="flex justify-center max-w-full min-w-0">
+      <FitLabel size={size} min={min} className={className}>{children}</FitLabel>
+    </span>
+  )
+}
+
 /** A white rounded card that holds rows. */
 export function Card({ children }: { children: ReactNode }) {
   return (

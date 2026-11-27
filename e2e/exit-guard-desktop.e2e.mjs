@@ -119,8 +119,8 @@ async function launch(extra) {
 
 async function openExample(win) {
   await win.evaluate(async () => {
-    const { createExamplePdfFile } = await import('/src/lib/examplePdf.ts')
-    const { usePdfStore } = await import('/src/stores/pdfStore.ts')
+    const { createExamplePdfFile } = await (await import('/e2e/app-reach.ts')).appImport('/src/lib/examplePdf.ts')
+    const { usePdfStore } = await (await import('/e2e/app-reach.ts')).appImport('/src/stores/pdfStore.ts')
     await usePdfStore.getState().loadFile(await createExamplePdfFile())
   })
   await win.waitForSelector('canvas', { timeout: 30000 })
@@ -128,7 +128,7 @@ async function openExample(win) {
 
 async function amend(win) {
   await win.evaluate(async () => {
-    const { useAnnotationStore } = await import('/src/stores/annotationStore.ts')
+    const { useAnnotationStore } = await (await import('/e2e/app-reach.ts')).appImport('/src/stores/annotationStore.ts')
     useAnnotationStore.getState().add({
       id: 'e2e-desktop-rect',
       pageIndex: 0,

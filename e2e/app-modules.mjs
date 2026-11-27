@@ -14,8 +14,11 @@
 //
 //   await (globalThis.__appImport ?? ((p) => import(p)))('/src/stores/pdfStore.ts')
 //
-// so a page without the init script (an Electron window opened before it
-// could be added) falls back to the bare import, as before.
+// so a page without the init script falls back to the bare import. An
+// Electron window opens before an init script can be added: those specs use
+// e2e/app-reach.ts, which needs nothing in place before the page loads. It is
+// not only pdfStore — ANY app module a test imports has to come this way
+// (tabs.e2e.mjs failed 7 checks on a bare tabStore import until 2026-11-27).
 
 export async function keepAppModuleUrls(target) {
   await target.addInitScript(() => {

@@ -8,3 +8,63 @@
 .pdf-page-wrap { position: absolute; z-index: 1; }
 .pdf-page { width: 100%; height: 100%; display: block; overflow: visible; }
 .pdf-floor { z-index: 2; background: radial-gradient(closest-side, rgba(25, 18, 10, .38), rgba(25, 18, 10, 0)); }
+
+/* ── The screenshots: paper on a desk (the mobile-first pass, 2026-11-27) ────
+   The phone app's own look, for layouts.mjs's `desk` layout: the cobalt desk
+   or warm paper as the ground, coloured sheets lying about, the headline in
+   the app's serif with one line on the orange highlighter, a handwritten
+   margin note, and a rubber stamp. Sizes are in --u (the stage height / 932,
+   the design's unit), so one drawing serves the iPhone and Play shapes.
+   Source Serif 4 and Caveat are the app's own faces (fonts/, OFL). */
+@font-face { font-family: 'PD Serif'; font-style: normal; font-weight: 700; src: url(fonts/source-serif-4-latin-ext-700-normal.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: 'PD Serif'; font-style: normal; font-weight: 700; src: url(fonts/source-serif-4-latin-700-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'PD Serif'; font-style: italic; font-weight: 700; src: url(fonts/source-serif-4-latin-ext-700-italic.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: 'PD Serif'; font-style: italic; font-weight: 700; src: url(fonts/source-serif-4-latin-700-italic.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'PD Hand'; font-style: normal; font-weight: 700; src: url(fonts/caveat-latin-ext-700-normal.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: 'PD Hand'; font-style: normal; font-weight: 700; src: url(fonts/caveat-latin-700-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+.pd { --pd-cobalt: #1d47b3; --pd-cobalt-deep: #173a94; --pd-ink: #1a1d24; --pd-orange: #ea580c; --pd-cream: #fbf8f1; }
+.pd-desk { background: radial-gradient(120% 70% at 20% 0%, #2a5bd1 0%, #1d47b3 48%, #153689 100%); color: #fff; }
+.pd-paper { background: radial-gradient(120% 70% at 20% 0%, #f4f0e6 0%, #e7e2d7 55%, #d9d2c3 100%); color: var(--pd-ink); }
+.pd .stage > * { position: absolute; }
+
+/* The app's name, on the first screen only. */
+.pd-lock { display: flex; align-items: center; gap: calc(10 * var(--u)); font: 700 calc(21 * var(--u)) / 1 'PD Serif', Georgia, serif; }
+.pd-lock img { width: calc(36 * var(--u)); height: calc(36 * var(--u)); border-radius: 22%; box-shadow: 0 calc(4 * var(--u)) calc(10 * var(--u)) rgba(5, 15, 50, .35); }
+
+/* The headline: the serif, one line in italics on the highlighter. */
+.pd-head { font: 700 calc(54 * var(--u)) / 1.07 'PD Serif', Georgia, serif; letter-spacing: -.015em; }
+.pd-head .l { display: block; white-space: nowrap; overflow: visible; }
+.pd-head .hl { position: relative; z-index: 0; font-style: italic; display: inline-block; }
+.pd-head .hl::after { content: ''; position: absolute; z-index: -1; left: -.14em; right: -.1em; bottom: .07em; height: 46%;
+  background: var(--pd-orange); border-radius: .1em .28em .14em .07em; transform: rotate(-1.4deg); }
+.pd-paper .pd-head .hl::after { background: rgba(249, 115, 22, .8); }
+
+/* The handwritten margin note and its arrow. */
+.pd-note { font: 700 calc(29 * var(--u)) / 1.08 'PD Hand', cursive; color: #fde68a; transform-origin: left top; }
+.pd-paper .pd-note { color: var(--pd-cobalt-deep); }
+.pd-note .l { display: block; white-space: nowrap; }
+.pd-arrow { color: #fde68a; }
+.pd-paper .pd-arrow { color: var(--pd-cobalt-deep); }
+
+/* Coloured paper lying on the desk, each with a turned-down corner. */
+.pd-sheet { border-radius: calc(3 * var(--u)); box-shadow: 0 calc(14 * var(--u)) calc(30 * var(--u)) rgba(5, 15, 50, .34); overflow: hidden; }
+.pd-paper .pd-sheet { box-shadow: 0 calc(12 * var(--u)) calc(26 * var(--u)) rgba(60, 45, 20, .22); }
+.pd-sheet::after { content: ''; position: absolute; right: 0; top: 0; border-style: solid; border-width: 0 calc(26 * var(--u)) calc(26 * var(--u)) 0;
+  border-color: transparent var(--fold, rgba(0, 0, 0, .12)) transparent transparent; }
+.pd-sheet i { position: absolute; left: 12%; height: calc(5 * var(--u)); border-radius: calc(3 * var(--u)); background: rgba(23, 58, 148, .16); }
+
+/* The phone: a quieter shadow than the kit's orange-tinted one. */
+.pd .device { box-shadow: 0 2px 0 2px rgba(255, 255, 255, .08) inset, 0 calc(26 * var(--u)) calc(50 * var(--u)) calc(-12 * var(--u)) rgba(5, 12, 40, .6), 0 calc(10 * var(--u)) calc(22 * var(--u)) calc(-8 * var(--u)) rgba(0, 0, 0, .4); }
+
+/* The rubber stamp. */
+.pd-stamp { padding: calc(8 * var(--u)) calc(15 * var(--u)); border: calc(4 * var(--u)) double currentColor; border-radius: calc(10 * var(--u));
+  font: 900 calc(21 * var(--u)) / 1.05 'Nunito', system-ui, sans-serif; letter-spacing: .13em; text-transform: uppercase; white-space: nowrap; text-align: center;
+  background: rgba(255, 255, 255, .93); box-shadow: 0 calc(8 * var(--u)) calc(18 * var(--u)) rgba(5, 15, 50, .28); }
+.pd-stamp.blue { color: #2353c9; } .pd-stamp.orange { color: #c2410c; } .pd-stamp.red { color: #b42318; } .pd-stamp.green { color: #2f6b3a; }

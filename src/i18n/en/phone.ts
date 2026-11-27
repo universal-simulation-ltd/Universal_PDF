@@ -245,6 +245,13 @@ export default {
   'howto': 'How to…',
   'privacy': 'Privacy',
   'about': 'About',
+  // The About page (Tune → About): a page of the phone's own, not the website's dialog
+  'about_licence': 'Open source under the AGPL-3.0 licence: every line is public, for anyone to read and check.',
+  'about_source': 'Read the source code',
+  'about_report': 'Report a problem',
+  'about_built_with': 'built with…', // handwritten word above the list of open-source projects
+  'about_built_note': 'This app stands on these open-source projects.',
+  'about_notices': 'All the licences',
   'reset': 'Reset to defaults',
   'reset_done': 'Back to how it came.',
   'tune_card': 'Free, open source, no adverts. Your documents stay on this phone and never pass through us.',

@@ -23,6 +23,15 @@ const DEV_KEY = 'unipdf:dev-phone-screens'
 /** Set by `store-assets/generate.mjs` before the app loads, to capture the phone screens. */
 const CAPTURE_KEY = 'unipdf:store-capture'
 
+/** Is this the store-screenshot run (`store-assets/generate.mjs`)? Never true for a user. */
+export function storeCapture(): boolean {
+  try {
+    return typeof window !== 'undefined' && sessionStorage.getItem(CAPTURE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
 export function phoneScreens(): boolean {
   if (typeof window === 'undefined') return false
   if (window.desktop) return false
@@ -30,9 +39,7 @@ export function phoneScreens(): boolean {
   // The store screenshots are the phone screens, captured from the built
   // bundle in a browser. A session flag only a script sets before load —
   // never the address — so nobody on the website lands here by accident.
-  try {
-    if (sessionStorage.getItem(CAPTURE_KEY) === '1') return true
-  } catch { /* no storage: not a capture */ }
+  if (storeCapture()) return true
   if (!import.meta.env.DEV) return false
   try {
     const q = new URLSearchParams(window.location.search).get('app')

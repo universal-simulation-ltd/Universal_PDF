@@ -40,6 +40,17 @@ import { KEEP_FOCUS, leaveIfEmptyOnBlur, useSearchMode } from './searchMode'
 /** Where the suite's guide PDFs live: the SDK's KB_LIBRARY_URL, which it doesn't export. */
 const KB_LIBRARY = 'https://opensource.unisim.co.uk/kb'
 
+/**
+ * Off on the phone (the mobile-first pass, 2026-11-27): "Download this guide"
+ * and a source's "PDF" pill both open a file on opensource.unisim.co.uk, and
+ * the phone app's only pointer to a UNI·SIM site is the credit on Tune
+ * (store-listings README §7, "nothing that says one of many"). The guides are
+ * in the app and read offline, and every source keeps the link to its own
+ * publisher. The website's knowledge base still offers both. One switch, so
+ * they can come back if James wants them.
+ */
+const HOSTED_COPIES = false
+
 /** The paper colours of the Desk's cards, one per group in the order they come. */
 const HUES = [
   { bg: '#dfe7fb', ink: '#173a94', fold: '#b3c4ee' },
@@ -315,7 +326,7 @@ function ArticlePage({ article, list, hue }: { article: Article; list: Article[]
   const prev = at > 0 ? list[at - 1] : null
   const next = at >= 0 && at < list.length - 1 ? list[at + 1] : null
   const guideLang = language === 'en-gb' || language === 'en' ? 'en' : language
-  const guide = KNOWLEDGE_BASE.guides && config.product ? `${KB_LIBRARY}/${config.product}/${guideLang}/${article.id}.pdf` : null
+  const guide = HOSTED_COPIES && KNOWLEDGE_BASE.guides && config.product ? `${KB_LIBRARY}/${config.product}/${guideLang}/${article.id}.pdf` : null
   const sources = article.sources ?? []
 
   return (
@@ -412,7 +423,7 @@ function ArticleBody({ body }: { body: string }) {
 
 function SourceRow({ source: s, first, sdk }: { source: Source; first: boolean; sdk: (key: string) => string }) {
   const byline = [s.authors, s.publisher, s.year].filter(Boolean).join(' · ')
-  const pdf = s.pdf ? (/^https?:\/\//.test(s.pdf) ? s.pdf : `${KB_LIBRARY}/${s.pdf.replace(/^\//, '')}`) : null
+  const pdf = HOSTED_COPIES && s.pdf ? (/^https?:\/\//.test(s.pdf) ? s.pdf : `${KB_LIBRARY}/${s.pdf.replace(/^\//, '')}`) : null
   const pill = 'inline-flex items-center min-h-[32px] px-3 rounded-full text-[13px] font-semibold no-underline'
   return (
     <div className="px-3.5 py-3 flex flex-col gap-1" style={{ borderTop: first ? 0 : '1px solid var(--np-rule)' }}>

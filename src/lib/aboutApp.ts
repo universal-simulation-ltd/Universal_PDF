@@ -20,6 +20,8 @@ import credits from '../generated/credits.json'
 export const ABOUT_APP: AboutAppConfig = {
   repo: 'https://github.com/universal-simulation-ltd/Universal_PDF',
   proof: 'https://github.com/universal-simulation-ltd/Universal_PDF/blob/main/PRIVACY.md',
+  // The SDK's dialog says "MIT" unless told: this app is AGPL-3.0 (LICENSE).
+  licence: 'AGPL-3.0',
   subject: 'Your PDF',
   except: 'backup and send-to-sign',
   version: __APP_VERSION__,

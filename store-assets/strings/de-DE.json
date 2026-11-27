@@ -1,84 +1,71 @@
 {
-  "01-hero": {
+  "01-no-account": {
     "headline": [
-      "PDFs, die",
-      "*einfach funktionieren.*"
+      "Kein Konto.",
+      "*Kein Upload.*"
     ],
-    "sub": {
-      "phone": "PDFs ausfüllen, unterschreiben und\nkommentieren – direkt auf dem Handy.",
-      "ipad": "PDFs ausfüllen, unterschreiben und\nkommentieren – direkt auf dem iPad."
-    }
+    "note": "eine PDF-App, die auf\ndeinem Handy bleibt",
+    "stamp": "Kostenlos"
   },
-  "02-hero": {
+  "02-fill-in": {
     "headline": [
-      "Alle Werkzeuge,",
-      "eingebaut"
+      "Ausfüllen,",
+      "*direkt auf der Seite*"
     ],
-    "badges": [
-      "Formulare ausfüllen",
-      "Unterschreiben",
-      "Schwärzen",
-      "Komprimieren & zusammenfügen"
-    ],
-    "sub": "Entwickelt von James Markey MBE\nund dem UNI·SIM-Team"
+    "note": "einfach in die Felder tippen,\nganz ohne Drucker",
+    "stamp": "Ohne Drucker"
   },
-  "03-fill-in": {
+  "03-sign": {
     "headline": [
-      "Direkt ins Formular",
-      "schreiben"
+      "Unterschreib",
+      "*mit dem Finger*"
     ],
-    "caption": "Die Formularfelder des PDFs selbst, auf der Seite ausgefüllt",
-    "chips": [
-      "Formularfelder",
-      "Text überall",
-      "Bilder",
-      "QR-Codes"
-    ]
+    "note": "einmal zeichnen,\nfürs nächste Mal aufheben",
+    "stamp": "Kein Konto"
   },
-  "04-sign": {
+  "04-signed": {
     "headline": [
-      "Mit dem Finger",
-      "unterschreiben"
+      "Unterschrieben",
+      "*und versandbereit*"
     ],
-    "caption": "Einmal zeichnen, dann auf die Linie setzen",
-    "chips": [
-      "Zeichnen",
-      "Importieren",
-      "Name & Datum",
-      "Stempel"
-    ]
+    "note": "kein Drucker, kein Scanner,\nkein Stift"
   },
-  "05-mark-up": {
+  "05-black-out": {
     "headline": [
-      "Kommentieren"
+      "Schwärzen,",
+      "*und zwar endgültig*"
     ],
-    "caption": "Markierungen und Notizen, im PDF gespeichert",
-    "chips": [
-      "Textmarker",
-      "Text",
-      "Freihand",
-      "Häkchen & Kreuze",
-      "Linien, Rechtecke & Kreise",
-      "Schwärzen"
-    ]
+    "note": "aus der Datei entfernt,\nnicht bloß überdeckt",
+    "stamp": "Geschwärzt"
   },
-  "06-private": {
+  "06-scan": {
     "headline": [
-      "Deine Dateien",
-      "bleiben deine"
+      "Scann",
+      "*das Papier*"
     ],
-    "caption": "Nichts wird hochgeladen, außer du willst es",
-    "chips": [
-      "Keine Werbung",
-      "Kein Tracking",
-      "Kein Konto nötig",
-      "Open Source"
-    ]
+    "note": "aus Briefen, Formularen und\nBelegen wird ein PDF",
+    "stamp": "Auf dem Handy"
+  },
+  "07-send": {
+    "headline": [
+      "Verschick es,",
+      "*wie du willst*"
+    ],
+    "note": "kleiner für die E-Mail\noder mit Passwort",
+    "stamp": "Kein\nUpload"
+  },
+  "08-free": {
+    "headline": [
+      "Kostenlos und",
+      "*Open Source*"
+    ],
+    "note": "gemacht von James Markey MBE\n& dem UNI·SIM-Team",
+    "stamp": "Keine Werbung"
   },
   "feature-graphic": {
     "tagline": [
-      "PDFs ausfüllen, unterschreiben, kommentieren.",
-      "Auf deinem Handy."
+      "PDFs scannen, ausfüllen, unterschreiben.",
+      "Kein Konto. Kein Upload."
     ]
   }
 }

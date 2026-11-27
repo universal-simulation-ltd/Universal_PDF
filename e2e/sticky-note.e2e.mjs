@@ -80,7 +80,7 @@ doc.addPage([595, 842])
 const pdf = Buffer.from(await doc.save())
 
 const playwright = await loadPlaywright()
-const browser = await playwright.chromium.launch()
+const browser = await playwright[process.env.E2E_BROWSER || 'chromium'].launch()
 const context = await browser.newContext({ viewport: { width: 1400, height: 900 }, deviceScaleFactor: 2 })
 const page = await context.newPage()
 page.on('pageerror', (e) => failures.push('page error: ' + e.message))
@@ -259,8 +259,9 @@ const canvasInk = (r) =>
 // The same measure for both states: a real screenshot of the page, its dark
 // pixels inside `r` (page points). While typing, the letters are the browser's
 // (the editor); after, they're the canvas's — so this is what the eye sees.
-const shotInk = async (r) => {
-  const png = (await page.screenshot()).toString('base64')
+const shot = async () => (await page.screenshot()).toString('base64')
+const shotInk = async (r, png) => {
+  png ??= await shot()
   return page.evaluate(
     async ({ png, r }) => {
       const img = new Image()
@@ -291,6 +292,35 @@ const shotInk = async (r) => {
     { png, r },
   )
 }
+// The same, line by line: each line's own left and right edge. The box round
+// ALL the lines hides a line that moves sideways behind a longer one, and one
+// line moving is exactly what a centring disagreement looks like.
+const lineInk = async (png, note) => {
+  const nl = await page.evaluate(async (a) => {
+    const n = (await import('/src/lib/textLayout.ts')).noteLayout(a)
+    return { top: n.top, size: n.fontSize, count: n.lines.length }
+  }, note)
+  const out = []
+  for (let i = 0; i < nl.count; i++) {
+    out.push(await shotInk({ x: note.x - 6, y: note.y + nl.top + i * nl.size * 1.25, width: note.wrapWidth + 12, height: nl.size * 1.25 }, png))
+  }
+  return out
+}
+// How far the furthest-moved line edge went sideways between two of those.
+const sideways = (p, q) =>
+  p.length === q.length && p.every((b, i) => b && q[i])
+    ? Math.max(...p.flatMap((b, i) => [Math.abs(b.x1 - q[i].x1), Math.abs(b.x2 - q[i].x2)]))
+    : Infinity
+// The caret at the end of what is there, or everything selected. ⚠️ Not the
+// End key: on a Mac it moves the caret in Chromium and does nothing in WebKit,
+// where the typing then REPLACED the selected words — so the WebKit run was
+// testing a different note (one starting with a space) and nobody knew.
+const caret = (where) =>
+  page.evaluate((where) => {
+    const sel = window.getSelection()
+    sel.selectAllChildren(document.querySelector('[contenteditable="true"]'))
+    if (where === 'end') sel.collapseToEnd()
+  }, where)
 const editorFontPx = () =>
   page.evaluate(() => {
     const el = document.querySelector('[contenteditable="true"]')
@@ -334,7 +364,7 @@ await page.screenshot({ path: join(SHOTS, 'sticky-note-fit-short.png'), clip: { 
 // More words: smaller, still inside the card, which keeps its size.
 await page.mouse.dblclick(sx(card.x + card.width / 2), sy(card.y + card.height / 2))
 await page.waitForTimeout(300)
-await page.keyboard.press('End')
+await caret('end')
 await page.keyboard.type(' there, please check the totals on page four before Friday')
 await page.waitForTimeout(200)
 const font2 = await editorFontPx()
@@ -342,16 +372,42 @@ check('Fit: more words get smaller as they are typed', font2 < fontWhileTyping -
 // A margin round the card to catch words spilling over — but not as far as
 // the floating pill, which sits ~11pt under the card.
 const wide = { ...card, x: card.x - 6, y: card.y - 6, width: card.width + 12, height: card.height + 9 }
-const ed2 = await shotInk(wide)
+const edPng2 = await shot()
+const ed2 = await shotInk(wide, edPng2)
 check('…and stay inside the card while being typed', ed2 && ed2.x1 >= card.x && ed2.x2 <= card.x + card.width && ed2.y2 <= card.y + card.height, json({ ed2, card }))
 await commitEditor()
 ;[fn] = await notes()
-const ink2 = await shotInk(wide)
+const inkPng2 = await shot()
+const ink2 = await shotInk(wide, inkPng2)
 check('the card keeps its size', Math.abs(fn.wrapWidth - card.width) < 0.01, json(fn))
 check('the words fit inside it on the page', ink2 && ink2.x1 >= card.x && ink2.x2 <= card.x + card.width && ink2.y2 <= card.y + card.height, json({ ink2, card }))
 check('nothing moves when the editor closes (longer text)', same(ink2, ed2, 2), json({ ink2, ed2 }))
+check('all of it was typed', fn.text === 'Hi there, please check the totals on page four before Friday', json(fn.text))
+{
+  // Each centred line on its own: the editor is the browser's text layout, the
+  // page is the canvas's, and they have to agree on every line's middle.
+  const typed = await lineInk(edPng2, fn)
+  const drawn = await lineInk(inkPng2, fn)
+  check('…and no LINE moves sideways', typed.length > 1 && sideways(typed, drawn) < 1.5, json({ moved: sideways(typed, drawn), typed, drawn }))
+}
 await page.screenshot({ path: join(SHOTS, 'sticky-note-fit-long.png'), clip: { x: canvasBox.x, y: canvasBox.y, width: 420, height: 360 } })
 const fitted = await page.evaluate(async (a) => (await import('/src/lib/textLayout.ts')).noteLayout(a).fontSize, fn)
+{
+  // A note that STARTS with a space. The editor keeps it (pre-wrap) and centres
+  // the line with it; the canvas used to drop it and centre the line without,
+  // so the first line jumped half a space left as the editor closed.
+  await page.mouse.dblclick(sx(card.x + card.width / 2), sy(card.y + card.height / 2))
+  await page.waitForTimeout(300)
+  await caret('all')
+  await page.keyboard.type('  spaced out, then enough words to wrap on to another line')
+  await page.waitForTimeout(200)
+  const typedPng = await shot()
+  await commitEditor()
+  const [sp] = await notes()
+  const typed = await lineInk(typedPng, sp)
+  const drawn = await lineInk(await shot(), sp)
+  check('a note that starts with a space keeps its place too', sp.text.startsWith('  spaced') && typed.length > 1 && sideways(typed, drawn) < 1.5, json({ text: sp.text, moved: sideways(typed, drawn), typed, drawn }))
+}
 const prefsNow = () => page.evaluate(async () => { const { useToolPrefs } = await import('/src/stores/toolPrefsStore.ts'); const p = useToolPrefs.getState(); return [p.noteTopLeft, p.noteSetSize] })
 check('the pill changes that note only, not how new notes start', json(await prefsNow()) === '[false,false]')
 

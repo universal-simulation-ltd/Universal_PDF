@@ -36,10 +36,16 @@ const OUT = process.env.E2E_RESULTS ?? join(tmpdir(), 'universal-pdf-e2e')
 // Specs this runner never starts, each with the reason. Remove a line once the
 // reason is gone — that is the whole fix-up list for e2e in CI.
 export const SKIP = {
+  // Its phone half opens About through Tune and expects the SDK's dialog; since
+  // 2026-11-27 the phone's About is a page (src/native/AboutScreen.tsx) whose
+  // rows go through window.open. Rewrite that half for the page (backlog, PDF
+  // App); the website half is unchanged.
+  'external-links': 'phone half expects the About dialog; the phone has an About page since 2026-11-27 (backlog, PDF App)',
   // Electron, not a browser: they drive the desktop app through
   // `playwright._electron` and need `npm run build:desktop` plus a display.
-  // They also still bare-import the store, because their window opens before
-  // an init script can land (backlog, PDF App, "e2e fragility", 2026-10-17).
+  // They load the dev server (ELECTRON_START_URL), so in practice the desktop
+  // build is not needed; their window opens before an init script can land, so
+  // they reach the app's modules through e2e/app-reach.ts instead.
   'exit-guard-desktop': 'Electron desktop spec (needs a desktop build and a display)',
   'os-open-desktop': 'Electron desktop spec (needs a desktop build and a display)',
   'save-folder-desktop': 'Electron desktop spec (needs a desktop build and a display)',
@@ -58,9 +64,6 @@ export const SKIP = {
   // Needs its own artefacts, not the dev server.
   csp: 'drives the PRODUCTION build (npm run build first); not a dev-server spec',
   extension: 'drives extension/dist (npm run build:extension first) in a headed Chromium',
-  // Known broken, not flaky: its drag-and-drop checks fail (7 of them, also
-  // against the old file) — backlog, PDF App, "e2e fragility".
-  tabs: 'drag-and-drop checks fail (known, backlog PDF App "e2e fragility")',
 }
 
 // Skipped only in one engine or on one OS, as { browser?, platform?, why }:

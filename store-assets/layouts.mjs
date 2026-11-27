@@ -1,6 +1,8 @@
-// Universal PDF's own creative layout, rendered by the UNI·SIM store kit
+// Universal PDF's own creative layouts, rendered by the UNI·SIM store kit
 // (Docs_UNI_SIM/store-kit/build.mjs reads it through store.json "layouts";
 // the look is store.css).
+//
+//   desk         The screenshots: paper on a desk. Described above `desk()`.
 //
 //   page-header  The App Store product page header (3840×1646, 21:9), which
 //                the open-source portal's app grid also shows as the card art
@@ -125,7 +127,74 @@ function pageHeader(ctx, t, [r], layer = 'full') {
     <img class="unisim-mark" src="/kit/brand/unisim-icon-white.png" alt="UNI·SIM" style="width:${size}px;right:${inset}px;top:${inset}px">`}`)
 }
 
+// ── The screenshots: paper on a desk (the mobile-first pass, 2026-11-27) ────
+// The phone app's own design (store-listings README §7), not the kit's orange
+// format: what the app looks like, carried out to the picture round it.
+//
+//   desk   One screen. The ground is the cobalt desk or warm paper
+//          (store.json `ground`: "desk" | "paper", alternating down the set).
+//          Coloured sheets lie about behind the phone (`sheets`, three of
+//          peach / green / yellow / lavender / blue / cream). The headline is
+//          in the app's serif with its `*starred*` line in italics on the
+//          orange highlighter, as every page heading in the app is. Under it
+//          a handwritten margin note (`note`) with an arrow to the phone, and
+//          a rubber stamp (`stamp`; `stampTone` blue / orange / red / green,
+//          `stampSide` left / right, `stampY` units down the phone) like the
+//          app's SIGNED and SMALLER. `hero: true` adds the icon and name
+//          above the headline (the first screen only). `lean` tilts the phone.
+//
+// Strings per screen: headline (one or two lines), note (a line, or two with
+// "\n"), stamp (optional). The phone holds a real capture of the phone
+// screens in that language (generate.mjs). Drawn in units of the stage
+// height / 932, so Play's wider, shorter stage gets the same drawing.
+const SHEETS = {
+  peach: ['#fbd9c0', '#e2b596'], green: ['#cfe8cf', '#a9cfa9'], yellow: ['#fbe08a', '#dfbf58'],
+  lavender: ['#e4dcf7', '#c5b7e6'], blue: ['#cfdcf7', '#aabfec'], cream: ['#fbf8f1', '#ddd6c8'],
+}
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+const lines = (v) => [v].flat().flatMap((x) => String(x).split('\n'))
+/** A headline line: `*words*` go on the highlighter. */
+const headLine = (l) => `<span class="l">${esc(l).replace(/\*([^*]+)\*/g, '<span class="hl">$1</span>')}</span>`
+
+function desk(ctx, t, [cap]) {
+  const c = ctx.cls
+  const [SW, SH] = c.stage
+  const u = SH / 932, W = SW / u
+  const o = ctx.screen ?? {}
+  const px = (n) => `${Math.round(n * u)}px`
+  const ground = o.ground === 'paper' ? 'paper' : 'desk'
+  const devW = W > 480 ? 326 : 304
+  const devLeft = (W - devW) / 2 + (o.shift ?? 0)
+  const headTop = o.hero ? 106 : 66
+  const devTop = o.hero ? 322 : 292
+  const head = lines(t.headline)
+  const note = t.note ? lines(t.note) : []
+  const noteTop = headTop + head.length * 58 + 12
+  const sheet = (name, x, y, w, h, rot) => {
+    const [fill, fold] = SHEETS[name] ?? SHEETS.cream
+    return `<div class="pd-sheet" style="left:${px(x)};top:${px(y)};width:${px(w)};height:${px(h)};background:${fill};--fold:${fold};transform:rotate(${rot}deg);z-index:1">
+      <i style="top:22%;width:52%"></i><i style="top:31%;width:68%"></i><i style="top:40%;width:44%"></i></div>`
+  }
+  const [s1, s2, s3] = o.sheets ?? ['peach', 'green', 'yellow']
+  const stampSide = o.stampSide === 'left' ? 'left' : 'right'
+  const stamp = t.stamp
+    ? `<div class="pd-stamp ${o.stampTone ?? 'blue'}" style="${stampSide}:${px(14)};top:${px(devTop + (o.stampY ?? 330))};transform:rotate(${stampSide === 'left' ? 9 : -11}deg);z-index:6">${lines(t.stamp).map(esc).join('<br>')}</div>`
+    : ''
+  return `<div class="canvas pd pd-${ground}" style="--fit:${ctx.fit};--u:${u}px"><div class="stage clip" style="--stage-w:${SW}px;--stage-h:${SH}px">
+    ${o.hero ? `<div class="pd-lock" style="left:${px(30)};top:${px(52)}"><img src="/icon.png" alt=""><span>${esc(ctx.app)}</span></div>` : ''}
+    <h1 class="pd-head" data-fit style="left:${px(30)};top:${px(headTop)};width:${px(W - 60)};margin:0">${head.map(headLine).join('')}</h1>
+    ${note.length ? `<div class="pd-note" data-fit style="left:${px(34)};top:${px(noteTop)};width:${px(W - 158)};transform:rotate(-2.2deg)">${note.map((l) => `<span class="l">${esc(l)}</span>`).join('')}</div>
+    <svg class="pd-arrow" viewBox="0 0 80 70" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="left:${px(W - 108)};top:${px(noteTop + 4)};width:${px(66)};height:${px(58)};z-index:4"><path d="M10 12c30-8 54 6 58 40M52 40l16 14 8-20"/></svg>` : ''}
+    ${sheet(s1, devLeft - 78, devTop + 70, 176, 228, -9)}
+    ${sheet(s2, devLeft + devW - 96, devTop + 236, 180, 232, 7)}
+    ${sheet(s3, devLeft - 92, devTop + 452, 184, 236, 5)}
+    ${ctx.kit.device(ctx, cap, { w: Math.round(devW * u), left: Math.round(devLeft * u), top: Math.round(devTop * u), rot: o.lean ?? -2, z: 3 })}
+    ${stamp}
+  </div></div>`
+}
+
 export const LAYOUTS = {
+  desk,
   'page-header': (ctx, t, caps) => pageHeader(ctx, t, caps),
   'page-header-back': (ctx, t, caps) => pageHeader(ctx, t, caps, 'back'),
   'page-header-front': (ctx, t, caps) => pageHeader(ctx, t, caps, 'front'),

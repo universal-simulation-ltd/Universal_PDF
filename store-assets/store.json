@@ -4,17 +4,168 @@
   "captures": "draw",
   "layouts": "layouts.mjs",
   "css": "store.css",
-  "devices": ["iphone", "ipad", "android", "header"],
-  "video": { "raw": ["01-start", "03-draw-signature", "05-annotate", "06-more-tools"], "hero": 1 },
+  "devices": [
+    "iphone",
+    "android",
+    "header"
+  ],
+  "video": {
+    "raw": [
+      "01-desk",
+      "03-sign",
+      "05-black-out",
+      "07-share"
+    ],
+    "hero": 1
+  },
   "screens": [
-    { "id": "01-hero", "layout": "hero-open", "raw": ["04-signed", "06-more-tools"] },
-    { "id": "02-hero", "layout": "hero-close", "raw": "06-more-tools" },
-    { "id": "03-fill-in", "layout": "feature", "raw": "02-fill-form", "hot": 0 },
-    { "id": "04-sign", "layout": "feature", "raw": "03-draw-signature", "hot": 0 },
-    { "id": "05-mark-up", "layout": "feature", "raw": "05-annotate", "hot": 0 },
-    { "id": "06-private", "layout": "feature", "raw": "01-start", "hot": 0 },
-    { "id": "header", "layout": "page-header", "raw": ["06-more-tools"], "strings": "01-hero", "on": ["header"] },
-    { "id": "header-back", "layout": "page-header-back", "raw": ["06-more-tools"], "strings": "01-hero", "on": ["header"] },
-    { "id": "header-front", "layout": "page-header-front", "raw": ["06-more-tools"], "strings": "01-hero", "on": ["header"], "alpha": true }
+    {
+      "id": "01-no-account",
+      "layout": "desk",
+      "raw": "01-desk",
+      "hero": true,
+      "ground": "desk",
+      "lean": -3,
+      "sheets": [
+        "peach",
+        "yellow",
+        "green"
+      ],
+      "stampTone": "orange",
+      "stampY": 300
+    },
+    {
+      "id": "02-fill-in",
+      "layout": "desk",
+      "raw": "02-filled",
+      "ground": "paper",
+      "lean": 2,
+      "sheets": [
+        "blue",
+        "peach",
+        "yellow"
+      ],
+      "stampTone": "blue",
+      "stampSide": "right",
+      "stampY": 455
+    },
+    {
+      "id": "03-sign",
+      "layout": "desk",
+      "raw": "03-sign",
+      "ground": "desk",
+      "lean": -2,
+      "sheets": [
+        "yellow",
+        "lavender",
+        "peach"
+      ],
+      "stampTone": "blue",
+      "stampY": 392
+    },
+    {
+      "id": "04-signed",
+      "layout": "desk",
+      "raw": "04-signed",
+      "ground": "paper",
+      "lean": 2.5,
+      "sheets": [
+        "green",
+        "yellow",
+        "blue"
+      ]
+    },
+    {
+      "id": "05-black-out",
+      "layout": "desk",
+      "raw": "05-black-out",
+      "ground": "desk",
+      "lean": -2,
+      "sheets": [
+        "lavender",
+        "peach",
+        "green"
+      ],
+      "stampTone": "red",
+      "stampSide": "left",
+      "stampY": 300
+    },
+    {
+      "id": "06-scan",
+      "layout": "desk",
+      "raw": "06-scan",
+      "ground": "paper",
+      "lean": 2,
+      "sheets": [
+        "peach",
+        "green",
+        "lavender"
+      ],
+      "stampTone": "green",
+      "stampY": 462
+    },
+    {
+      "id": "07-send",
+      "layout": "desk",
+      "raw": "07-share",
+      "ground": "desk",
+      "lean": -2.5,
+      "sheets": [
+        "green",
+        "yellow",
+        "peach"
+      ],
+      "stampTone": "orange",
+      "stampSide": "left",
+      "stampY": 430
+    },
+    {
+      "id": "08-free",
+      "layout": "desk",
+      "raw": "08-free",
+      "ground": "paper",
+      "lean": 2,
+      "sheets": [
+        "yellow",
+        "blue",
+        "peach"
+      ],
+      "stampTone": "blue",
+      "stampY": 140
+    },
+    {
+      "id": "header",
+      "layout": "page-header",
+      "raw": [
+        "01-desk"
+      ],
+      "strings": "01-no-account",
+      "on": [
+        "header"
+      ]
+    },
+    {
+      "id": "header-back",
+      "layout": "page-header-back",
+      "raw": [
+        "01-desk"
+      ],
+      "strings": "01-no-account",
+      "on": [
+        "header"
+      ]
+    },
+    {
+      "id": "header-front",
+      "layout": "page-header-front",
+      "raw": [
+        "01-desk"
+      ],
+      "strings": "01-no-account",
+      "on": [
+        "header"
+      ],
+      "alpha": true
+    }
   ]
 }
