@@ -1085,7 +1085,12 @@ let penSeen = false
 // ⚠️ Not verifiable off a real iPad with a Pencil: a browser has no stylus
 // touches. If the Pencil is ever found scrolling the page instead of drawing,
 // turn this off and the tools reserve the gesture again, as before.
-const PENCIL_FINGER_SCROLL = true
+//
+// ⚠️ Only where a touch says what made it (`Touch.touchType`: WebKit on an
+// iPad or iPhone). Everywhere else a pen's drag would simply scroll the page
+// once the tools stopped reserving the gesture — a Windows pen in Chrome, an
+// Android stylus — so there the tools keep it, as they always have.
+const PENCIL_FINGER_SCROLL = typeof Touch !== 'undefined' && 'touchType' in Touch.prototype
 const penListeners = new Set<() => void>()
 function notePenSeen() {
   if (penSeen) return
