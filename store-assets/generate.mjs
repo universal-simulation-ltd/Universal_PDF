@@ -2,7 +2,7 @@
 // Regenerates the App Store and Google Play captures for Universal PDF.
 //
 //   npm run build:mobile                  # the bundle the iOS/Android shells load
-//   node store-assets/generate.mjs        # every screen, iPhone and Android
+//   node store-assets/generate.mjs        # every screen: iPhone, iPad and Android
 //   node store-assets/generate.mjs 03     # only screens whose name starts 03
 //   DEVICE=iphone node store-assets/generate.mjs
 //   LOCALE=fr-FR node store-assets/generate.mjs   # raw/fr-FR/<device>/, the app in French
@@ -16,7 +16,7 @@
 // Playwright's request routing (no local server, no port), at each store
 // device's viewport and pixel ratio. Nothing off-app is loaded.
 //
-// THE PHONE SCREENS (iphone, android; ipad on request). Since the mobile-first
+// THE PHONE SCREENS (iphone, ipad, android). Since the mobile-first
 // pass the phone app has screens of its own (src/native/), and those are what
 // the stores must show. The run sets the session flag shell.ts reads
 // (`unipdf:store-capture`), which mounts the phone screens in a browser and
@@ -34,8 +34,8 @@
 // and number on it is made up (the phone number is from Ofcom's range reserved
 // for fiction).
 //
-// Output (committed): raw/iphone (1320x2580), raw/android (1080x2172) and
-// raw/laptop. The UNI·SIM store kit frames them into the store screenshots in
+// Output (committed): raw/iphone (1320x2580), raw/ipad (2064x2664),
+// raw/android (1080x2172) and raw/laptop. The UNI·SIM store kit frames them into the store screenshots in
 // out/, drawing the status bar and home indicator they leave out. store.json
 // says which capture each screen shows, strings/<locale>.json every word on it:
 //
@@ -57,8 +57,9 @@ const { chromium } = await import(
 // 62 + 34, iPad 13" 1376 pt less 24 + 20, an Android phone 780 dp less 32 + 24.
 const DEVICES = [
   { key: 'iphone', dir: 'raw/iphone', width: 440, height: 860, dpr: 3 },
-  // Opt-in until iPad is decided (done properly, or off for 1.0): DEVICE=ipad.
-  { key: 'ipad', dir: 'raw/ipad', width: 1032, height: 1332, dpr: 2, optIn: true },
+  // The same screens in their tablet layout (native.css, 700 px and up), and
+  // saying "device" where a phone says "phone" (src/native/deviceWords.ts).
+  { key: 'ipad', dir: 'raw/ipad', width: 1032, height: 1332, dpr: 2, tablet: true },
   { key: 'android', dir: 'raw/android', width: 360, height: 724, dpr: 3 },
   // Not a store device: the web app on a 1440 × 900 laptop, a desktop browser
   // (no touch), for the store header's laptop (store-assets/layouts.mjs), as
@@ -524,13 +525,14 @@ for (const dev of devices) {
       viewport: { width: dev.width, height: dev.height }, deviceScaleFactor: dev.dpr,
       isMobile: !dev.desk, hasTouch: !dev.desk, colorScheme: 'light', locale: LOCALE,
     })
-    await ctx.addInitScript(({ phone, language }) => {
+    await ctx.addInitScript(({ phone, language, tablet }) => {
       // The one-off "welcome" toast a phone sees on its first document: dismissed,
       // as it would be after the first open, so it doesn't sit over the page.
       try { localStorage.setItem('universal-pdf-mobile-welcome-dismissed', '1') } catch {}
       if (phone) {
         // The phone screens, in the store locale's language from the start.
         try { sessionStorage.setItem('unipdf:store-capture', '1') } catch {}
+        if (tablet) try { sessionStorage.setItem('unipdf:device', 'tablet') } catch {}
         try { localStorage.setItem('universal:language', language) } catch {}
         return
       }
@@ -544,7 +546,7 @@ for (const dev of devices) {
         css.textContent = 'section[aria-labelledby="get-the-app"]{display:none!important}'
         document.head.appendChild(css)
       })
-    }, { phone, language: APP_LANGUAGE })
+    }, { phone, language: APP_LANGUAGE, tablet: !!dev.tablet })
     await serve(ctx)
     const page = await ctx.newPage()
     const errors = []

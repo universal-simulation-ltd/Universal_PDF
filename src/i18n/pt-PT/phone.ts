@@ -372,6 +372,13 @@ const phone: Messages['phone'] = {
   'sendsign_boxes_other': '{count} campos «Assine aqui»',
   'sendsign_no_box': 'Ainda sem campo. Toque na página onde devem assinar, ou envie assim: pode assinar-se em qualquer lado.', // handwritten; sharing works without a box
   'sendsign_share': 'Partilhar para assinar…',
+  // On a tablet (an iPad) the same lines say "device", not "phone" (deviceWords.ts)
+  'open_files_note_tablet': 'qualquer PDF deste dispositivo',
+  'desk_only_here_tablet': 'só neste dispositivo',
+  'doc_remove_tablet': 'Tirar deste dispositivo',
+  'tune_card_tablet': 'Gratuita, de código aberto, sem anúncios. Os documentos ficam neste dispositivo e nunca passam por nós.',
+  'sigs_note_tablet': 'Guardadas só neste dispositivo.',
+  'merge_note_tablet': 'Escolha os PDF, ponha-os por ordem e passam a ser um só. Nada sai deste dispositivo.',
 }
 
 export default phone

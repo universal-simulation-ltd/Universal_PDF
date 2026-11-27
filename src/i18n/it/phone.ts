@@ -372,6 +372,13 @@ const phone: Messages['phone'] = {
   'sendsign_boxes_other': '{count} riquadri «Firma qui»',
   'sendsign_no_box': 'Ancora nessun riquadro. Tocca la pagina dove va la firma, o invialo così: si può firmare ovunque.', // handwritten; sharing works without a box
   'sendsign_share': 'Condividi da firmare…',
+  // On a tablet (an iPad) the same lines say "device", not "phone" (deviceWords.ts)
+  'open_files_note_tablet': 'qualsiasi PDF su questo dispositivo',
+  'desk_only_here_tablet': 'solo su questo dispositivo',
+  'doc_remove_tablet': 'Toglilo da questo dispositivo',
+  'tune_card_tablet': 'Gratuita, open source, niente pubblicità. I tuoi documenti restano su questo dispositivo e non passano mai da noi.',
+  'sigs_note_tablet': 'Conservate solo su questo dispositivo.',
+  'merge_note_tablet': 'Scegli i PDF, mettili in ordine e diventano uno solo. Niente lascia questo dispositivo.',
 }
 
 export default phone

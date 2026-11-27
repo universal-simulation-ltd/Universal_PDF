@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { FILL_WARNING_KEY } from '../../lib/resetDefaults'
 import { createPortal } from 'react-dom'
 import { GrowingTextarea } from '@unisim/sdk'
@@ -1073,6 +1073,33 @@ function SigField({
 // or palm can't draw with the pen or highlighter (see onPointerDown).
 let penSeen = false
 
+// With a pen in the hand, a finger is free to move the page (James,
+// 2026-11-27, iPad "done properly": draw with the Pencil while a finger
+// scrolls and zooms, as Notes and Freeform do). So once a pen has been seen,
+// the freehand tools stop reserving every touch (`touch-action: none`) and go
+// back to panning, and the pen's own touches are kept from scrolling one at a
+// time: WebKit applies `touch-action` to the Pencil like any other touch, and
+// what tells them apart is `Touch.touchType === 'stylus'`, which a native
+// touchstart can cancel (see the listener in the component).
+//
+// ⚠️ Not verifiable off a real iPad with a Pencil: a browser has no stylus
+// touches. If the Pencil is ever found scrolling the page instead of drawing,
+// turn this off and the tools reserve the gesture again, as before.
+const PENCIL_FINGER_SCROLL = true
+const penListeners = new Set<() => void>()
+function notePenSeen() {
+  if (penSeen) return
+  penSeen = true
+  for (const l of penListeners) l()
+}
+function subscribePen(l: () => void) {
+  penListeners.add(l)
+  return () => {
+    penListeners.delete(l)
+  }
+}
+const isStylusTouch = (t: Touch) => (t as Touch & { touchType?: string }).touchType === 'stylus'
+
 // Every page's size at scale 1, once per document — "Put on every page" needs
 // them all to place the copies, and its button needs them to know whether the
 // selected mark is already on every page (James, 2026-10-19). Keyed on the
@@ -1656,6 +1683,24 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // The pen's own touches never scroll the page, whatever `touch-action` says
+  // (see PENCIL_FINGER_SCROLL). Cancelling the touchstart leaves the pointer
+  // events the tools draw from untouched.
+  const penInHand = useSyncExternalStore(subscribePen, () => penSeen)
+  useEffect(() => {
+    const container = stageRef.current?.container()
+    if (!container || !PENCIL_FINGER_SCROLL || !penInHand) return
+    function onPenTouch(e: TouchEvent) {
+      if (e.cancelable && [...e.changedTouches].some(isStylusTouch)) e.preventDefault()
+    }
+    container.addEventListener('touchstart', onPenTouch, { passive: false })
+    container.addEventListener('touchmove', onPenTouch, { passive: false })
+    return () => {
+      container.removeEventListener('touchstart', onPenTouch)
+      container.removeEventListener('touchmove', onPenTouch)
+    }
+  }, [penInHand])
+
   // A hold counting down when the tool changes (or the page unmounts as it
   // scrolls out) must not fire into a tool that no longer wants a box.
   useEffect(() => {
@@ -1667,7 +1712,11 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   }, [tool])
 
   function onPointerDown(e: Konva.KonvaEventObject<PointerEvent>) {
-    if (e.evt.pointerType === 'pen') penSeen = true
+    if (e.evt.pointerType === 'pen') notePenSeen()
+    // With a pen in the hand and a freehand tool up, a finger (or the palm
+    // resting beside the pen) is the page's to scroll, not a second pointer:
+    // counted, it would read as a pinch and throw the pen's stroke away.
+    if (penSeen && e.evt.pointerType === 'touch' && (tool === 'draw' || tool === 'highlight' || redactFreehand)) return
     activePointerIds.current.add(e.evt.pointerId)
     if (activePointerIds.current.size > 1 || pinching) {
       // Multi-touch (pinch-to-zoom) — abort any in-progress drawing stroke
@@ -3091,7 +3140,10 @@ export default function AnnotationLayer({ pageIndex, width, height, scale }: Pro
   // Select-area wins its gesture back per-gesture with a hold (see the
   // touchmove listener), not through this property, and a drag on an
   // annotation is claimed by Konva cancelling the touchmove, on either axis.
-  const touchAction = dragDrawTool ? 'none' : 'pan-x pan-y pinch-zoom'
+  // …and, with a pen in the hand, the freehand tools too: the finger moves
+  // the page and the pen draws (see PENCIL_FINGER_SCROLL).
+  const fingerMovesPage = PENCIL_FINGER_SCROLL && penInHand && (tool === 'draw' || tool === 'highlight' || redactFreehand)
+  const touchAction = dragDrawTool && !fingerMovesPage ? 'none' : 'pan-x pan-y pinch-zoom'
 
   // Mirrors the drop sizing above (cap included) so the ghost under the cursor
   // is exactly what gets placed.

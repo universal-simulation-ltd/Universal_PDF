@@ -4,7 +4,10 @@
       "Hesap yok.",
       "*Yükleme yok.*"
     ],
-    "note": "telefonunuzda kalan\nbir PDF uygulaması",
+    "note": {
+      "phone": "telefonunuzda kalan\nbir PDF uygulaması",
+      "ipad": "iPad’inizde kalan\nbir PDF uygulaması"
+    },
     "stamp": "Ücretsiz"
   },
   "02-fill-in": {
@@ -44,7 +47,10 @@
       "*tarayın*"
     ],
     "note": "mektuplar, formlar ve fişler\nPDF olur",
-    "stamp": "Telefonda"
+    "stamp": {
+      "phone": "Telefonda",
+      "ipad": "iPad’de"
+    }
   },
   "07-send": {
     "headline": [

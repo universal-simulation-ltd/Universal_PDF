@@ -377,4 +377,11 @@ export default {
   'sendsign_boxes_other': '{count} “Sign here” boxes on it',
   'sendsign_no_box': 'No box yet. Tap the page where they should sign, or send it as it is: they can sign anywhere on it.', // handwritten; sharing works without a box
   'sendsign_share': 'Share for signing…',
+  // On a tablet (an iPad) the same lines say "device", not "phone" (deviceWords.ts)
+  'open_files_note_tablet': 'any PDF on this device',
+  'desk_only_here_tablet': 'only on this device',
+  'doc_remove_tablet': 'Take it off this device',
+  'tune_card_tablet': 'Free, open source, no adverts. Your documents stay on this device and never pass through us.',
+  'sigs_note_tablet': 'Kept on this device only.',
+  'merge_note_tablet': 'Pick the PDFs, put them in order, and they become one. Nothing leaves this device.',
 }

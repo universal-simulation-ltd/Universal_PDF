@@ -247,7 +247,7 @@ export default function MarkupSheet() {
     <section
       ref={sheetRef}
       aria-label={t('phone.markup_tools_aria')}
-      className="flex-none relative z-[60] rounded-t-[26px] pt-1 flex flex-col gap-3.5"
+      className="np-markup flex-none relative z-[60] rounded-t-[26px] pt-1 flex flex-col gap-3.5"
       style={{
         background: 'var(--np-sheet)',
         boxShadow: '0 -10px 30px rgba(60,45,20,0.2)',

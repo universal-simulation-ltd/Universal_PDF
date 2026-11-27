@@ -4,7 +4,10 @@
       "No account.",
       "*Nothing uploaded.*"
     ],
-    "note": "a PDF app that stays\non your phone",
+    "note": {
+      "phone": "a PDF app that stays\non your phone",
+      "ipad": "a PDF app that stays\non your iPad"
+    },
     "stamp": "Free"
   },
   "02-fill-in": {
@@ -44,7 +47,10 @@
       "*the paper*"
     ],
     "note": "letters, forms and receipts\nbecome a PDF",
-    "stamp": "On your phone"
+    "stamp": {
+      "phone": "On your phone",
+      "ipad": "On your iPad"
+    }
   },
   "07-send": {
     "headline": [

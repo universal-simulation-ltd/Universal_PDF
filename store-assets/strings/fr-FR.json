@@ -4,7 +4,10 @@
       "Sans compte.",
       "*Rien n’est envoyé.*"
     ],
-    "note": "une appli PDF qui reste\nsur votre téléphone",
+    "note": {
+      "phone": "une appli PDF qui reste\nsur votre téléphone",
+      "ipad": "une appli PDF qui reste\nsur votre iPad"
+    },
     "stamp": "Gratuit"
   },
   "02-fill-in": {
@@ -44,7 +47,10 @@
       "*le papier*"
     ],
     "note": "lettres, formulaires et reçus\ndeviennent un PDF",
-    "stamp": "Sur le téléphone"
+    "stamp": {
+      "phone": "Sur le téléphone",
+      "ipad": "Sur l’iPad"
+    }
   },
   "07-send": {
     "headline": [

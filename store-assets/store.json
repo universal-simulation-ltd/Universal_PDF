@@ -6,6 +6,7 @@
   "css": "store.css",
   "devices": [
     "iphone",
+    "ipad",
     "android",
     "header"
   ],

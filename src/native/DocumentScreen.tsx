@@ -67,7 +67,26 @@ export default function DocumentScreen() {
   const openSheet = useNav((s) => s.openSheet)
   const closeSheet = useNav((s) => s.closeSheet)
   const push = useNav((s) => s.push)
-  const { canUndo, undo } = useUndo()
+  const { canUndo, undo, canRedo, redo } = useUndo()
+  // A keyboard on an iPad: ⌘Z takes back the last mark and ⇧⌘Z puts it back,
+  // as everywhere else on the system. Not while a box is being typed in,
+  // where the keys belong to the words.
+  const keys = useRef({ canUndo, undo, canRedo, redo })
+  keys.current = { canUndo, undo, canRedo, redo }
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'z') return
+      const el = e.target as HTMLElement | null
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
+      const k = keys.current
+      if (e.shiftKey ? !k.canRedo : !k.canUndo) return
+      e.preventDefault()
+      if (e.shiftKey) k.redo()
+      else k.undo()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [])
   const markingUp = sheet === 'markup'
   const mainRef = useRef<HTMLElement>(null)
   const pageOnTop = useNav((s) => s.screens.length > 0)
@@ -283,7 +302,7 @@ export default function DocumentScreen() {
         aria-label={t('phone.tools_aria')}
         aria-hidden={markingUp || undefined}
         {...(markingUp ? { inert: '' } : {})}
-        className={`absolute left-3.5 right-3.5 grid grid-cols-4 px-1.5 py-2 rounded-3xl ${markingUp ? 'z-[50]' : 'z-[60]'}`}
+        className={`np-docbar absolute left-3.5 right-3.5 grid grid-cols-4 px-1.5 py-2 rounded-3xl ${markingUp ? 'z-[50]' : 'z-[60]'}`}
         style={{
           bottom: 'calc(env(safe-area-inset-bottom) + 18px)',
           background: 'var(--np-sheet)',

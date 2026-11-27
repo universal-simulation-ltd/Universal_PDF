@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from 'react'
 import { LANGUAGE_LABELS, SUPPORTED_LANGUAGES, useDefaultView, useLanguage, useResetAppDefaults, useUserPrefs } from '@unisim/sdk'
 import { useT, type Language } from '../i18n'
+import { deviceKey } from './deviceWords'
 import { useToolPrefs } from '../stores/toolPrefsStore'
 import { clearDismissedPrompts } from '../lib/resetDefaults'
 import { PAGE_SCROLL_ID, PAGE_SCROLLS, pageScrollDefault, type PageScroll } from '../lib/pageScroll'
@@ -82,8 +83,8 @@ export default function TuneScreen() {
           : t('sign.vault_biometric')
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain" style={{ background: 'var(--np-paper)' }}>
-      <div className="px-5 pb-6 flex flex-col gap-4" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 22px)' }}>
+    <div className="np-tabscreen flex-1 min-h-0 overflow-y-auto overscroll-contain" style={{ background: 'var(--np-paper)' }}>
+      <div className="np-column px-5 pb-6 flex flex-col gap-4" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 22px)' }}>
         <h1 className="np-serif m-0 text-[36px] font-bold">
           <Hl>{t('phone.tune_hl')}</Hl> {t('phone.tune_rest')}
         </h1>
@@ -172,7 +173,7 @@ export default function TuneScreen() {
           style={{ boxShadow: '0 6px 14px rgba(23,30,50,0.1)', transform: 'rotate(-1deg)' }}
         >
           <div className="flex gap-2.5 items-start">
-            <p className="m-0 flex-1 text-[14px] leading-[1.45] text-[color:var(--np-ink-2)]">{t('phone.tune_card')}</p>
+            <p className="m-0 flex-1 text-[14px] leading-[1.45] text-[color:var(--np-ink-2)]">{t(deviceKey('tune_card'))}</p>
             <button
               type="button"
               aria-label={t('app.landing_free_open')}

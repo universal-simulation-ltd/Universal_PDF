@@ -4,7 +4,10 @@
       "Sin cuenta.",
       "*Sin subir nada.*"
     ],
-    "note": "una app de PDF que se queda\nen tu móvil",
+    "note": {
+      "phone": "una app de PDF que se queda\nen tu móvil",
+      "ipad": "una app de PDF que se queda\nen tu iPad"
+    },
     "stamp": "Gratis"
   },
   "02-fill-in": {
@@ -44,7 +47,10 @@
       "*el papel*"
     ],
     "note": "cartas, formularios y recibos\nse vuelven un PDF",
-    "stamp": "En tu móvil"
+    "stamp": {
+      "phone": "En tu móvil",
+      "ipad": "En tu iPad"
+    }
   },
   "07-send": {
     "headline": [

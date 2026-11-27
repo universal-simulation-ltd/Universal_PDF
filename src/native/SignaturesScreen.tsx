@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useT } from '../i18n'
+import { deviceKey } from './deviceWords'
 import { useSignatureStore } from '../stores/signatureStore'
 import { unlockSignatures } from '../lib/signatureLock'
 import { useVaultStore } from '../lib/signatureVault'
@@ -24,13 +25,13 @@ export default function SignaturesScreen() {
   const saved = signatures.filter((s) => !s.id.startsWith('uid-main:'))
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain" style={{ background: 'var(--np-paper)' }}>
-      <div className="px-5 pb-6 flex flex-col gap-4" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 22px)' }}>
+    <div className="np-tabscreen flex-1 min-h-0 overflow-y-auto overscroll-contain" style={{ background: 'var(--np-paper)' }}>
+      <div className="np-column px-5 pb-6 flex flex-col gap-4" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 22px)' }}>
         <div className="flex flex-col gap-1">
           <h1 className="np-serif m-0 text-[36px] font-bold">
             {t('phone.sigs_lead')} <Hl>{t('phone.sigs_hl')}</Hl>
           </h1>
-          <span className="text-[13px] text-[color:var(--np-muted)]">{t('phone.sigs_note')}</span>
+          <span className="text-[13px] text-[color:var(--np-muted)]">{t(deviceKey('sigs_note'))}</span>
         </div>
 
         {locked ? (

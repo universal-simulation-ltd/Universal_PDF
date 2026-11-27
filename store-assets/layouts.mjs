@@ -163,13 +163,19 @@ function desk(ctx, t, [cap]) {
   const o = ctx.screen ?? {}
   const px = (n) => `${Math.round(n * u)}px`
   const ground = o.ground === 'paper' ? 'paper' : 'desk'
-  const devW = W > 480 ? 326 : 304
+  // An iPad's screen is 4:3, so its frame is wide: it fills more of the stage
+  // and the stamp sits further down it.
+  const pad = c.frame === 'ipad'
+  const devW = pad ? 520 : W > 480 ? 326 : 304
   const devLeft = (W - devW) / 2 + (o.shift ?? 0)
   const headTop = o.hero ? 106 : 66
-  const devTop = o.hero ? 322 : 292
+  const devTop = (o.hero ? 322 : 292) + (pad ? 44 : 0)
   const head = lines(t.headline)
   const note = t.note ? lines(t.note) : []
-  const noteTop = headTop + head.length * 58 + 12
+  // On the iPad's wider stage the words are set larger, to hold their own
+  // beside a bigger device.
+  const k = pad ? 1.24 : 1
+  const noteTop = headTop + head.length * 58 * k + 12
   const sheet = (name, x, y, w, h, rot) => {
     const [fill, fold] = SHEETS[name] ?? SHEETS.cream
     return `<div class="pd-sheet" style="left:${px(x)};top:${px(y)};width:${px(w)};height:${px(h)};background:${fill};--fold:${fold};transform:rotate(${rot}deg);z-index:1">
@@ -178,12 +184,12 @@ function desk(ctx, t, [cap]) {
   const [s1, s2, s3] = o.sheets ?? ['peach', 'green', 'yellow']
   const stampSide = o.stampSide === 'left' ? 'left' : 'right'
   const stamp = t.stamp
-    ? `<div class="pd-stamp ${o.stampTone ?? 'blue'}" style="${stampSide}:${px(14)};top:${px(devTop + (o.stampY ?? 330))};transform:rotate(${stampSide === 'left' ? 9 : -11}deg);z-index:6">${lines(t.stamp).map(esc).join('<br>')}</div>`
+    ? `<div class="pd-stamp ${o.stampTone ?? 'blue'}" style="${stampSide}:${px(14)};top:${px(devTop + (pad ? o.stampYPad ?? o.stampY ?? 330 : o.stampY ?? 330))};transform:rotate(${stampSide === 'left' ? 9 : -11}deg);z-index:6">${lines(t.stamp).map(esc).join('<br>')}</div>`
     : ''
   return `<div class="canvas pd pd-${ground}" style="--fit:${ctx.fit};--u:${u}px"><div class="stage clip" style="--stage-w:${SW}px;--stage-h:${SH}px">
     ${o.hero ? `<div class="pd-lock" style="left:${px(30)};top:${px(52)}"><img src="/icon.png" alt=""><span>${esc(ctx.app)}</span></div>` : ''}
-    <h1 class="pd-head" data-fit style="left:${px(30)};top:${px(headTop)};width:${px(W - 60)};margin:0">${head.map(headLine).join('')}</h1>
-    ${note.length ? `<div class="pd-note" data-fit style="left:${px(34)};top:${px(noteTop)};width:${px(W - 158)};transform:rotate(-2.2deg)">${note.map((l) => `<span class="l">${esc(l)}</span>`).join('')}</div>
+    <h1 class="pd-head" data-fit style="left:${px(30)};top:${px(headTop)};width:${px(W - 60)};margin:0;font-size:${px(54 * k)}">${head.map(headLine).join('')}</h1>
+    ${note.length ? `<div class="pd-note" data-fit style="left:${px(34)};top:${px(noteTop)};width:${px(W - 158)};transform:rotate(-2.2deg);font-size:${px(29 * k)}">${note.map((l) => `<span class="l">${esc(l)}</span>`).join('')}</div>
     <svg class="pd-arrow" viewBox="0 0 80 70" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="left:${px(W - 108)};top:${px(noteTop + 4)};width:${px(66)};height:${px(58)};z-index:4"><path d="M10 12c30-8 54 6 58 40M52 40l16 14 8-20"/></svg>` : ''}
     ${sheet(s1, devLeft - 78, devTop + 70, 176, 228, -9)}
     ${sheet(s2, devLeft + devW - 96, devTop + 236, 180, 232, 7)}

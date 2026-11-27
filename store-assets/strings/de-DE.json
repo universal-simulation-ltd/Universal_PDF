@@ -4,7 +4,10 @@
       "Kein Konto.",
       "*Kein Upload.*"
     ],
-    "note": "eine PDF-App, die auf\ndeinem Handy bleibt",
+    "note": {
+      "phone": "eine PDF-App, die auf\ndeinem Handy bleibt",
+      "ipad": "eine PDF-App, die auf\ndeinem iPad bleibt"
+    },
     "stamp": "Kostenlos"
   },
   "02-fill-in": {
@@ -44,7 +47,10 @@
       "*das Papier*"
     ],
     "note": "aus Briefen, Formularen und\nBelegen wird ein PDF",
-    "stamp": "Auf dem Handy"
+    "stamp": {
+      "phone": "Auf dem Handy",
+      "ipad": "Auf dem iPad"
+    }
   },
   "07-send": {
     "headline": [

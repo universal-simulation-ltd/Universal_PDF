@@ -1,4 +1,5 @@
 import { useT } from '../i18n'
+import { deviceKey } from './deviceWords'
 import { ABOUT_APP } from '../lib/aboutApp'
 import { openExternalUrl } from '../lib/externalLinks'
 import { goBack } from './nav'
@@ -27,7 +28,7 @@ export default function AboutScreen() {
   const t = useT()
   const ships = ABOUT_APP.credits?.ships ?? []
   return (
-    <JobPage backLabel={t('phone.tab_tune')} onBack={() => void goBack()} lead="Universal" hl="PDF" note={t('phone.tune_card')}>
+    <JobPage backLabel={t('phone.tab_tune')} onBack={() => void goBack()} lead="Universal" hl="PDF" note={t(deviceKey('tune_card'))}>
       <Slip tilt="-0.5deg">
         <p className="m-0 px-3.5 py-3 text-[14px] leading-[1.45] text-[color:var(--np-ink-2)]">{t('phone.about_licence')}</p>
         <LinkRow label={t('phone.privacy')} onClick={() => open(PRIVACY)} />

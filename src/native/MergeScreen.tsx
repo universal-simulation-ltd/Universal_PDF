@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { useT } from '../i18n'
+import { deviceKey } from './deviceWords'
 import { mergePdfs } from '../lib/convert'
 import { openFiles } from '../stores/tabStore'
 import { formatSize } from '../components/Export/formatSize'
@@ -88,7 +89,7 @@ function MergePage({ initial }: { initial: File | null }) {
       onBack={back}
       lead={t('phone.merge_lead')}
       hl={t('phone.merge_hl')}
-      note={t('phone.merge_note')}
+      note={t(deviceKey('merge_note'))}
       footer={
         <>
           <button type="button" className={BTN_PRIMARY} style={BTN_PRIMARY_STYLE} disabled={!can} onClick={() => void run(true)}>

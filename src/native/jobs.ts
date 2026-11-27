@@ -1,3 +1,4 @@
+import { deviceKey } from './deviceWords'
 import { create } from 'zustand'
 import { openFiles } from '../stores/tabStore'
 import { usePdfStore } from '../stores/pdfStore'
@@ -91,7 +92,7 @@ export function jobCards(): JobCard[] {
   const c = (id: JobId, key: string, icon: string): JobCard => ({
     id,
     label: t(`phone.${key}` as never),
-    note: t(`phone.${key}_note` as never),
+    note: key === 'open_files' ? t(deviceKey('open_files_note')) : t(`phone.${key}_note` as never),
     icon,
   })
   return [

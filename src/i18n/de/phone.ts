@@ -372,6 +372,13 @@ const phone: Messages['phone'] = {
   'sendsign_boxes_other': '{count} Felder „Hier unterschreiben“',
   'sendsign_no_box': 'Noch kein Feld. Tipp auf die Stelle, wo unterschrieben werden soll, oder schick es so: Unterschreiben geht überall.', // handwritten; sharing works without a box
   'sendsign_share': 'Zum Unterschreiben teilen…',
+  // On a tablet (an iPad) the same lines say "device", not "phone" (deviceWords.ts)
+  'open_files_note_tablet': 'jedes PDF auf diesem Gerät',
+  'desk_only_here_tablet': 'nur auf diesem Gerät',
+  'doc_remove_tablet': 'Von diesem Gerät entfernen',
+  'tune_card_tablet': 'Kostenlos, Open Source, keine Werbung. Deine Dokumente bleiben auf diesem Gerät und laufen nie über uns.',
+  'sigs_note_tablet': 'Nur auf diesem Gerät gespeichert.',
+  'merge_note_tablet': 'Wähl die PDFs aus, bring sie in die richtige Reihenfolge, und sie werden eins. Nichts verlässt dieses Gerät.',
 }
 
 export default phone

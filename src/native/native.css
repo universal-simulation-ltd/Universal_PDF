@@ -400,3 +400,188 @@
   --uph-scrim: rgba(0, 0, 0, 0.6);
   --uph-grip: #4f4a41;
 }
+
+/* ── iPad (James, 2026-11-27: "do properly for iPad") ────────────────────────
+   The same screens, laid out for a tablet from 700 px across (BlackBook's
+   TABLET_QUERY). Below that — an iPhone, and an iPad's Slide Over and narrow
+   Split View panes — nothing here applies and the phone layout stands, so
+   every multitasking width is one of the two.
+
+     • The three tabs are a rail down the left edge, not a bar at the foot.
+     • The Desk's jobs are all laid out on the desk, not in a carousel; lying
+       down, the desk is on the left and "On your desk" a panel on the right.
+     • Tune and the signature drawer keep to a reading column.
+     • A page over the tabs or the document (Sign, Share, Scan, About…) is a
+       card over what is under it, as an iPad's form sheet is; the page grid,
+       Compare and the guides get a wider one.
+     • The document's four tools are a centred bar, Mark up's tools a centred
+       tray, and a bottom sheet is as wide as its words need, not the screen.
+
+   The website's page / zoom / Present strip in the shared viewer is `md:` and
+   would show under the document at this width: never on these screens. */
+.np [data-viewer-bar] {
+  display: none !important;
+}
+
+@media (min-width: 700px) {
+  .np-tabbar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 96px;
+    z-index: 5;
+    grid-template-columns: 1fr;
+    grid-auto-rows: min-content;
+    align-content: start;
+    row-gap: 22px;
+    padding: calc(env(safe-area-inset-top) + 30px) 8px 0 calc(env(safe-area-inset-left) + 8px);
+    border-top: 0 !important;
+    border-right: 1px solid var(--np-line);
+  }
+  /* Over the Desk the status bar's clock is white (the desk is cobalt), and
+     the clock sits over the rail: the rail's top strip is desk there too. */
+  .np-deskroot:not([data-searching]) ~ .np-tabbar::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: -1px;
+    top: 0;
+    height: env(safe-area-inset-top);
+    background: var(--np-desk);
+  }
+  .np-tabscreen {
+    margin-left: 96px;
+  }
+  .np-column {
+    width: 100%;
+    max-width: 680px;
+    margin-inline: auto;
+    padding-top: calc(env(safe-area-inset-top) + 40px) !important;
+  }
+
+  /* The Desk */
+  .np-desk-top > div > div {
+    padding: calc(env(safe-area-inset-top) + 26px) 40px 40px !important;
+    gap: 22px;
+  }
+  .np-desk-top h1 {
+    font-size: 54px;
+  }
+  .np-desk-top .np-jobs {
+    flex-wrap: wrap;
+    overflow: visible;
+    margin: 0;
+    padding: 6px 0 4px;
+    gap: 20px 16px;
+    scroll-snap-type: none !important;
+  }
+  .np-desk-top .np-jobs > button {
+    width: 152px;
+    height: 148px;
+  }
+  .np-jobs-dots,
+  .np-swipe-hint {
+    display: none;
+  }
+  [data-desk-panel] {
+    padding-inline: 40px;
+  }
+
+  /* A page, as a card over what is under it */
+  .np-pagelayer {
+    align-items: center;
+    justify-content: center;
+    padding: calc(env(safe-area-inset-top) + 28px) 28px calc(env(safe-area-inset-bottom) + 28px);
+    background: rgba(18, 24, 44, 0.42);
+    animation: np-fade 180ms ease-out;
+  }
+  .np-pagecard {
+    flex: 0 1 auto;
+    width: min(640px, 100%);
+    height: min(880px, 100%);
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(5, 10, 30, 0.45);
+  }
+  .np-pagecard--wide {
+    width: min(960px, 100%);
+    height: min(1040px, 100%);
+  }
+  .np-pagecard--wide ol.grid-cols-2 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  /* Inside a card there is no status bar to keep clear of. */
+  .np-pagecard header {
+    padding-top: 10px !important;
+  }
+  .np-pagecard .np-page-enter {
+    animation-name: np-rise;
+  }
+
+  /* The document */
+  .np-docbar {
+    left: 50% !important;
+    right: auto !important;
+    width: 440px;
+    transform: translateX(-50%);
+  }
+  .np-markup {
+    align-self: center;
+    width: min(720px, calc(100% - 48px));
+    border-radius: 26px !important;
+    margin-bottom: calc(env(safe-area-inset-bottom) + 18px);
+    padding-bottom: 16px !important;
+    box-shadow: 0 12px 34px rgba(60, 45, 20, 0.24) !important;
+  }
+
+  /* Every tool fits the tray at this width: no row to scroll, no fade. */
+  .np-markup [role='group'] {
+    justify-content: center;
+    overflow: visible;
+    -webkit-mask-image: none !important;
+    mask-image: none !important;
+  }
+  .np-markup [role='group'] > button {
+    width: 74px;
+  }
+
+  /* A bottom sheet: a card at the foot, not the width of the screen. */
+  .np-sheet {
+    max-width: 580px;
+    margin: 0 auto;
+    bottom: calc(env(safe-area-inset-bottom) + 24px);
+    border-radius: 26px;
+    padding-bottom: 18px;
+    box-shadow: 0 20px 60px rgba(5, 10, 30, 0.35);
+  }
+}
+
+/* Lying down: the desk beside what is on it. */
+@media (min-width: 1180px) {
+  .np-deskroot {
+    flex-direction: row;
+  }
+  .np-desk-top {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow-y: auto;
+  }
+  .np-desk-top[data-collapsed] {
+    display: none;
+  }
+  .np-desk-top .np-jobs > button {
+    width: 140px;
+    height: 138px;
+  }
+  [data-desk-panel] {
+    flex: 0 0 380px;
+    margin-top: 0 !important;
+    border-radius: 28px 0 0 28px !important;
+    padding: calc(env(safe-area-inset-top) + 34px) 28px 0 !important;
+  }
+  .np-desk-top[data-collapsed] + [data-desk-panel] {
+    flex: 1 1 auto;
+    border-radius: 0 !important;
+  }
+}

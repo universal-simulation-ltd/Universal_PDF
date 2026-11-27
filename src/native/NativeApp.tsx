@@ -139,7 +139,7 @@ export default function NativeApp({ launching }: { launching: boolean }) {
           <DocumentLayer />
           {doc && <DocumentScreen />}
           {top && (
-            <PageLayer swipeBack={hasBackLink(top)}>
+            <PageLayer swipeBack={hasBackLink(top)} wide={isWide(top)}>
               {top === 'sign' && <SignScreen onDone={() => useNav.getState().pop()} />}
               {top === 'share' && <ShareScreen />}
               {top === 'signed' && <SignedMoment />}
@@ -169,7 +169,7 @@ export default function NativeApp({ launching }: { launching: boolean }) {
           {tab === 'tune' && <TuneScreen />}
           <TabBar />
           {overTabs && (
-            <PageLayer swipeBack>
+            <PageLayer swipeBack wide={isWide(tabTop)}>
               <JobPages top={tabTop} />
             </PageLayer>
           )}
@@ -232,16 +232,30 @@ function DocumentLayer() {
  * history entry again for the next Back. `goBack()` answers false for a page
  * that asks first (Scan), which keeps it.
  */
-function PageLayer({ swipeBack, children }: { swipeBack: boolean; children: React.ReactNode }) {
+function PageLayer({ swipeBack, wide = false, children }: { swipeBack: boolean; wide?: boolean; children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
   const { isTop } = usePhoneLayer('page', () => goBack())
   useEdgeSwipeBack(ref, swipeBack && isTop, () => void goBack())
   usePagePullToType(ref)
   return (
-    <div ref={ref} className="absolute inset-0 z-[150] flex flex-col">
-      {children}
+    // On an iPad (native.css, 700 px and up) the page is a card over what is
+    // under it, as a form sheet is: the layer is the dimmed ground, and a tap
+    // on it goes back like the back link does.
+    <div
+      ref={ref}
+      className="np-pagelayer absolute inset-0 z-[150] flex flex-col"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && swipeBack) void goBack()
+      }}
+    >
+      <div className={`np-pagecard${wide ? ' np-pagecard--wide' : ''} flex-1 min-h-0 flex flex-col relative`}>{children}</div>
     </div>
   )
+}
+
+/** The pages that want more room than a form on an iPad: the page grid, two PDFs side by side, the guides. */
+function isWide(screen: Screen | null): boolean {
+  return screen === 'pages' || screen === 'page-view' || screen === 'compare' || isKnowledge(screen)
 }
 
 /** The pages whose back link is `pop()`: every page but the moments. */
@@ -260,7 +274,7 @@ function TabBar() {
   return (
     <nav
       aria-label={t('phone.tabs_aria')}
-      className="flex-none grid grid-cols-3 px-3 pt-2"
+      className="np-tabbar flex-none grid grid-cols-3 px-3 pt-2"
       style={{ background: 'var(--np-slip)', borderTop: '1px solid var(--np-line)', paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)' }}
     >
       {items.map((it) => {

@@ -372,6 +372,13 @@ const phone: Messages['phone'] = {
   'sendsign_boxes_other': '{count} “Burayı imzalayın” kutusu',
   'sendsign_no_box': 'Henüz kutu yok. İmzalanacak yere dokunun ya da olduğu gibi gönderin: her yere imza atılabilir.', // handwritten; sharing works without a box
   'sendsign_share': 'İmza için paylaş…',
+  // On a tablet (an iPad) the same lines say "device", not "phone" (deviceWords.ts)
+  'open_files_note_tablet': 'bu cihazdaki herhangi bir PDF',
+  'desk_only_here_tablet': 'yalnızca bu cihazda',
+  'doc_remove_tablet': 'Bu cihazdan kaldır',
+  'tune_card_tablet': 'Ücretsiz, açık kaynak, reklam yok. Belgeleriniz bu cihazda kalır, asla bizden geçmez.',
+  'sigs_note_tablet': 'Yalnızca bu cihazda saklanır.',
+  'merge_note_tablet': 'PDF’leri seçin, sıraya koyun, tek bir dosya olsunlar. Hiçbir şey bu cihazdan çıkmaz.',
 }
 
 export default phone

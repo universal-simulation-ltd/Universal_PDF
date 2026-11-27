@@ -848,6 +848,8 @@ export default function PdfViewer() {
 
     function onStart(e: TouchEvent) {
       if (e.touches.length !== 2 || !el) return
+      // A pen and the hand resting beside it are not a pinch.
+      if ([...e.touches].some((t) => (t as Touch & { touchType?: string }).touchType === 'stylus')) return
       // Announce the pinch so the annotation layer can abandon whatever the
       // first finger had started — a two-finger gesture is a zoom and nothing
       // else, never a zoom plus a half-committed drag.
@@ -1133,6 +1135,8 @@ export default function PdfViewer() {
       stopCoast()
       swipe = null
       if (e.touches.length !== 1 || !horizontalRef.current) return
+      // The pen draws; it never turns the page.
+      if ((e.touches[0] as Touch & { touchType?: string }).touchType === 'stylus') return
       if (useAnnotationStore.getState().tool === 'hand') return // pans both ways itself
       const t = e.touches[0]
       swipe = { id: t.identifier, x: t.clientX, y: t.clientY, left: 0, ours: null, v: 0, lastY: t.clientY, t: e.timeStamp }
@@ -1455,7 +1459,7 @@ export default function PdfViewer() {
     <div className="flex flex-col h-full">
       {/* Page / zoom / Present bar — pinned to the BOTTOM via order-last (the
           flex column otherwise keeps it in source order at the top). */}
-      <div className="hidden md:block bg-slate-100 border-t border-slate-200 order-last">
+      <div data-viewer-bar className="hidden md:block bg-slate-100 border-t border-slate-200 order-last">
         <div style={{ paddingRight: 'var(--doc-scrollbar-width, 0px)' }}>
         <div
           className="mx-auto w-full grid grid-cols-[auto_1fr_auto] items-center gap-2 py-1.5 text-sm text-slate-600"

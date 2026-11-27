@@ -15,6 +15,7 @@ import {
   useSelection,
 } from '@unisim/sdk'
 import { useT, intlLocale, getT } from '../i18n'
+import { deviceKey } from './deviceWords'
 import { DESK_PULL_HINT_KEY } from '../lib/resetDefaults'
 import { usePdfStore } from '../stores/pdfStore'
 import { getRecent, getRecentEdits, type RecentMeta } from '../lib/recents'
@@ -209,8 +210,8 @@ export default function DeskScreen() {
   }
 
   return (
-    <div ref={rootRef} className="flex-1 min-h-0 flex flex-col" style={{ background: searching ? 'var(--np-paper)' : 'var(--np-desk)' }}>
-      <div className="np-collapse flex-none" data-collapsed={searching || undefined} aria-hidden={searching || undefined} {...(searching ? { inert: '' } : {})}>
+    <div ref={rootRef} data-searching={searching || undefined} className="np-tabscreen np-deskroot flex-1 min-h-0 flex flex-col" style={{ background: searching ? 'var(--np-paper)' : 'var(--np-desk)' }}>
+      <div className="np-desk-top np-collapse flex-none" data-collapsed={searching || undefined} aria-hidden={searching || undefined} {...(searching ? { inert: '' } : {})}>
       {/* ⚠️ The grid's child has no padding of its own: padding can't fold to 0. */}
       <div>
       <div
@@ -290,7 +291,7 @@ export default function DeskScreen() {
               )
             })}
           </div>
-          <div aria-hidden="true" className="flex justify-center gap-[5px]">
+          <div aria-hidden="true" className="np-jobs-dots flex justify-center gap-[5px]">
             {cards.map((c, i) => (
               <span
                 key={c.id}
@@ -299,7 +300,7 @@ export default function DeskScreen() {
               />
             ))}
           </div>
-          <p className="np-hand np-tilt m-0 mt-0.5 text-[22px] leading-none text-center" style={{ color: 'var(--np-sticky)', transform: 'rotate(-1deg)' }}>
+          <p className="np-swipe-hint np-hand np-tilt m-0 mt-0.5 text-[22px] leading-none text-center" style={{ color: 'var(--np-sticky)', transform: 'rotate(-1deg)' }}>
             {t('phone.swipe_hint')}
           </p>
         </section>
@@ -321,7 +322,7 @@ export default function DeskScreen() {
           <div>
             <div className="flex items-baseline justify-between gap-3 pb-2.5">
               <h2 className="np-serif m-0 text-[22px] font-bold">{t('phone.desk_title')}</h2>
-              <span className="text-[13px] text-[color:var(--np-muted)]">{t('phone.desk_only_here')}</span>
+              <span className="text-[13px] text-[color:var(--np-muted)]">{t(deviceKey('desk_only_here'))}</span>
             </div>
           </div>
         </div>
@@ -565,7 +566,7 @@ export default function DeskScreen() {
             className="min-h-[54px] rounded-[18px] text-[16px] font-semibold flex flex-col items-center justify-center"
             style={{ background: 'var(--np-slip)', border: '1px solid var(--np-line)', color: 'var(--np-red)' }}
           >
-            {t('phone.doc_remove')}
+            {t(deviceKey('doc_remove'))}
           </button>
           <p className="m-0 mb-1 text-[13px] text-center text-[color:var(--np-muted)]">{t('phone.doc_remove_note')}</p>
         </Sheet>
